@@ -1,0 +1,111 @@
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import Kakao from "next-auth/providers/kakao";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
+    Kakao({
+      clientId: process.env.AUTH_KAKAO_ID!,
+      clientSecret: process.env.AUTH_KAKAO_SECRET!,
+    }),
+    Credentials({
+      credentials: {
+        email: { label: "이메일", type: "email" },
+        password: { label: "비밀번호", type: "password" },
+      },
+      async authorize(credentials) {
+        const res = await fetch(`${API}/api/members/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password,
+          }),
+        });
+
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return {
+          id: String(data.member.id),
+          email: data.member.email,
+          name: data.member.nickname,
+          accessToken: data.access_token,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user, account, trigger, session }) {
+      // 아바타 업데이트 트리거
+      if (trigger === "update" && session?.picture !== undefined) {
+        token.picture = session.picture;
+        return token;
+      }
+
+      // 소셜 로그인 최초 인증 시 백엔드에서 JWT 발급
+      if (account?.provider === "google" || account?.provider === "kakao") {
+        try {
+          const res = await fetch(`${API}/api/members/social-login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              provider: account.provider,
+              provider_id: account.providerAccountId,
+              email: user?.email,
+              name: user?.name,
+              avatar_url: user?.image,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            token.accessToken = data.access_token;
+            token.memberId = data.member.id;
+            token.picture = data.member.avatar_url ?? user?.image ?? null;
+          }
+        } catch {
+          // 소셜 로그인 실패 시 토큰 그대로 반환 (세션 거부는 signIn 콜백에서 처리)
+        }
+        return token;
+      }
+
+      // Credentials 최초 로그인
+      if (user && (user as { accessToken?: string }).accessToken) {
+        token.accessToken = (user as { accessToken: string }).accessToken;
+        token.memberId = Number(user.id);
+        return token;
+      }
+
+      // 기존 세션 유지 — memberId가 없으면 accessToken payload에서 복원
+      if (!token.memberId && token.accessToken) {
+        try {
+          const payload = JSON.parse(
+            Buffer.from((token.accessToken as string).split(".")[1], "base64").toString()
+          );
+          token.memberId = Number(payload.sub);
+        } catch {}
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      session.memberId = token.memberId as number;
+      if (token.picture !== undefined) {
+        session.user.image = token.picture as string | null;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/members/login",
+  },
+  session: { strategy: "jwt" },
+});

@@ -1,0 +1,28 @@
+from sqlalchemy import Column, Integer, String, Date, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from app.core.database import Base
+
+
+class BulletinExtraction(Base):
+    __tablename__ = "bulletin_extractions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=False)
+
+    title = Column(String(300), nullable=False)
+    content = Column(Text)
+    group_name = Column(String(100))       # "안나회", "레지오" 등
+    event_date = Column(Date, nullable=True)
+    location = Column(String(200), nullable=True)
+    event_type = Column(String(50))        # "순례", "모임", "행사" 등
+
+    fingerprint = Column(String(64), index=True)   # 중복 감지용 해시
+
+    status = Column(String(20), default="pending")  # pending / approved / rejected
+    target_board_id = Column(Integer, ForeignKey("boards.id"), nullable=True)
+    created_post_id = Column(Integer, nullable=True)   # 승인 후 생성된 게시글 id
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    bulletin = relationship("Bulletin", backref="extractions")

@@ -1,0 +1,37 @@
+# 환경변수 (절대 커밋 금지)
+backend/.env
+frontend/.env.local
+frontend/.env*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+backend/venv/
+backend/.venv/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/.pytest_cache/
+
+# 업로드 파일
+backend/uploads/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# 로그
+*.log

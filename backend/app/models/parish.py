@@ -1,0 +1,24 @@
+from sqlalchemy import Column, Integer, String, Date, Text, Float
+from app.core.database import Base
+
+
+class Parish(Base):
+    __tablename__ = "parishes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(100), unique=True, nullable=False)  # "sejong-peter"
+    name = Column(String(200), nullable=False)               # "세종성베드로성당"
+    diocese = Column(String(100))                            # "대전교구"
+    address = Column(String(300))
+    lat = Column(Float, nullable=True)   # 위도 (예: 36.5040)
+    lng = Column(Float, nullable=True)   # 경도 (예: 127.2494)
+    phone = Column(String(20))
+    founded_at = Column(Date)
+    description = Column(Text)
+    pastor_name = Column(String(100))
+    pastor_message = Column(Text)
+    pastor_photo_url = Column(String(500))
+    mass_schedule = Column(Text)  # JSON 문자열로 저장
+    fax = Column(String(20))
+    cafe_url = Column(String(500))
+    band_url = Column(String(500))

@@ -1,0 +1,495 @@
+"use client";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
+
+type AccessMode = "public" | "write-restricted" | "members-only";
+
+interface Moderator {
+  id: number;
+  nickname: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+interface Board {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  is_active: boolean;
+  members_only_write: boolean;
+  members_only_read: boolean;
+  posts_per_page: number;
+  exclude_from_search: boolean;
+  moderator: Moderator | null;
+}
+
+function getAccessMode(b: Board): AccessMode {
+  if (b.members_only_read) return "members-only";
+  if (b.members_only_write) return "write-restricted";
+  return "public";
+}
+
+function accessModeToFields(mode: AccessMode) {
+  if (mode === "members-only") return { members_only_read: true, members_only_write: true };
+  if (mode === "write-restricted") return { members_only_read: false, members_only_write: true };
+  return { members_only_read: false, members_only_write: false };
+}
+
+const ACCESS_LABELS: Record<AccessMode, { label: string; badge: string; color: string }> = {
+  "public":           { label: "공개",      badge: "누구나 보기·쓰기",       color: "bg-green-50 text-green-600" },
+  "write-restricted": { label: "쓰기 제한",  badge: "누구나 보기, 회원만 쓰기", color: "bg-blue-50 text-blue-600" },
+  "members-only":     { label: "회원 전용",  badge: "회원만 보기·쓰기",        color: "bg-purple-50 text-purple-600" },
+};
+
+function getAdminToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("admin_token");
+}
+
+// 관리자 검색 드롭다운 컴포넌트
+function ModeratorPicker({
+  current,
+  onChange,
+}: {
+  current: Moderator | null;
+  onChange: (m: Moderator | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Moderator[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  async function search(q: string) {
+    setQuery(q);
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/members/admin/search?q=${encodeURIComponent(q)}&limit=8`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setResults(await res.json());
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      {current ? (
+        <div className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+          {current.avatar_url && (
+            <img
+              src={current.avatar_url.startsWith("http") ? current.avatar_url : `${API}${current.avatar_url}`}
+              alt=""
+              className="w-5 h-5 rounded-full object-cover"
+            />
+          )}
+          <span className="font-medium">{current.nickname}</span>
+          <span className="text-gray-400 text-xs">{current.email}</span>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="ml-1 text-gray-400 hover:text-red-400 text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <div>
+          <input
+            value={query}
+            onChange={(e) => { search(e.target.value); setOpen(true); }}
+            onFocus={() => { search(query); setOpen(true); }}
+            placeholder="닉네임·이메일 검색..."
+            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {open && results.length > 0 && (
+            <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {results.map((m) => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => { onChange(m); setQuery(""); setOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left text-sm"
+                  >
+                    {m.avatar_url ? (
+                      <img
+                        src={m.avatar_url.startsWith("http") ? m.avatar_url : `${API}${m.avatar_url}`}
+                        alt=""
+                        className="w-6 h-6 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {m.nickname[0]}
+                      </span>
+                    )}
+                    <span className="font-medium">{m.nickname}</span>
+                    <span className="text-gray-400 text-xs truncate">{m.email}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminBoardsPage() {
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    access_mode: "write-restricted" as AccessMode,
+    posts_per_page: 20,
+    exclude_from_search: false,
+    moderator_id: null as number | null,
+  });
+  const [formModerator, setFormModerator] = useState<Moderator | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  useEffect(() => { fetchBoards(); }, []);
+
+  async function fetchBoards() {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards?include_inactive=true`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setBoards(await res.json());
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const token = getAdminToken();
+    const { access_mode, moderator_id: _, ...rest } = form;
+    const body = {
+      ...rest,
+      ...accessModeToFields(access_mode),
+      moderator_id: formModerator?.id ?? null,
+    };
+    try {
+      const res = await fetch(`${API}/api/boards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.detail || "게시판 생성에 실패했습니다."); return; }
+      setBoards((prev) => [...prev, data]);
+      setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 20, exclude_from_search: false, moderator_id: null });
+      setFormModerator(null);
+      setShowForm(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function patchBoard(board: Board, patch: Record<string, unknown>) {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    }
+  }
+
+  async function deleteBoard(board: Board) {
+    if (!confirm(`"${board.name}" 게시판을 삭제하시겠습니까? 모든 게시글도 삭제됩니다.`)) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setBoards((prev) => prev.filter((b) => b.id !== board.id));
+  }
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
+            ← 대시보드
+          </Link>
+          <h1 className="text-2xl font-bold mt-1">게시판 관리</h1>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          + 게시판 추가
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+          <h2 className="font-semibold">새 게시판</h2>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">게시판 이름</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="자유게시판"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">슬러그 (URL)</label>
+              <input
+                value={form.slug}
+                onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
+                required
+                pattern="[a-z0-9-]+"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="free"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">설명</label>
+            <input
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="게시판 설명 (선택)"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">접근 설정</label>
+              <div className="space-y-1.5">
+                {(["public", "write-restricted", "members-only"] as AccessMode[]).map((mode) => (
+                  <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="access_mode"
+                      checked={form.access_mode === mode}
+                      onChange={() => setForm((p) => ({ ...p, access_mode: mode }))}
+                    />
+                    <span className="font-medium">{ACCESS_LABELS[mode].label}</span>
+                    <span className="text-gray-400 text-xs">{ACCESS_LABELS[mode].badge}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">게시판 관리자</label>
+              <ModeratorPicker current={formModerator} onChange={setFormModerator} />
+              <p className="text-xs text-gray-400 mt-1">지정 시 해당 회원이 모든 게시글 수정·삭제 가능</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.exclude_from_search}
+                onChange={(e) => setForm((p) => ({ ...p, exclude_from_search: e.target.checked }))}
+                className="rounded"
+              />
+              통합검색 제외
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              페이지당 게시글
+              <input
+                type="number" min={1} max={100}
+                value={form.posts_per_page}
+                onChange={(e) => setForm((p) => ({ ...p, posts_per_page: parseInt(e.target.value) || 20 }))}
+                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              개
+            </label>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => setShowForm(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-100 transition-colors">
+              취소
+            </button>
+            <button type="submit" disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+              {loading ? "생성 중..." : "생성"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-2">
+        {boards.length === 0 && <p className="text-center py-12 text-gray-500">게시판이 없습니다.</p>}
+        {boards.map((board) => {
+          const mode = getAccessMode(board);
+          const modeInfo = ACCESS_LABELS[mode];
+          const isExpanded = expandedId === board.id;
+
+          return (
+            <div key={board.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              {/* 기본 행 */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{board.name}</span>
+                    <span className="text-xs text-gray-400">/{board.slug}</span>
+                    {!board.is_active && (
+                      <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">비활성</span>
+                    )}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${modeInfo.color}`}>
+                      {modeInfo.label}
+                    </span>
+                    {board.exclude_from_search && (
+                      <span className="text-xs px-2 py-0.5 bg-orange-50 text-orange-500 rounded-full">검색 제외</span>
+                    )}
+                    {board.moderator && (
+                      <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full">
+                        관리자: {board.moderator.nickname}
+                      </span>
+                    )}
+                  </div>
+                  {board.description && (
+                    <p className="text-sm text-gray-500 mt-0.5 truncate">{board.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-3">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : board.id)}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                  >
+                    {isExpanded ? "접기" : "설정"}
+                  </button>
+                  <button
+                    onClick={() => patchBoard(board, { is_active: !board.is_active })}
+                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                      board.is_active ? "border-gray-300 hover:bg-gray-50" : "border-green-300 text-green-600 hover:bg-green-50"
+                    }`}
+                  >
+                    {board.is_active ? "비활성화" : "활성화"}
+                  </button>
+                  <button
+                    onClick={() => deleteBoard(board)}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+
+              {/* 확장 설정 패널 */}
+              {isExpanded && (
+                <BoardSettingsPanel board={board} onUpdate={(updated) =>
+                  setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+                } />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: Board) => void }) {
+  const [accessMode, setAccessMode] = useState<AccessMode>(getAccessMode(board));
+  const [moderator, setModerator] = useState<Moderator | null>(board.moderator);
+  const [excludeSearch, setExcludeSearch] = useState(board.exclude_from_search);
+  const [postsPerPage, setPostsPerPage] = useState(board.posts_per_page);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        ...accessModeToFields(accessMode),
+        moderator_id: moderator?.id ?? null,
+        exclude_from_search: excludeSearch,
+        posts_per_page: postsPerPage,
+      }),
+    });
+    if (res.ok) onUpdate(await res.json());
+    setSaving(false);
+  }
+
+  return (
+    <div className="border-t border-gray-100 bg-gray-50 p-4 grid grid-cols-2 gap-6">
+      {/* 접근 설정 */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">접근 설정</p>
+        <div className="space-y-1.5">
+          {(["public", "write-restricted", "members-only"] as AccessMode[]).map((mode) => (
+            <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={`access-${board.id}`}
+                checked={accessMode === mode}
+                onChange={() => setAccessMode(mode)}
+              />
+              <span className="font-medium">{ACCESS_LABELS[mode].label}</span>
+              <span className="text-gray-400 text-xs">{ACCESS_LABELS[mode].badge}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* 게시판 관리자 */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">게시판 관리자</p>
+        <ModeratorPicker current={moderator} onChange={setModerator} />
+        <p className="text-xs text-gray-400 mt-1">모든 게시글 수정·삭제 권한 부여</p>
+      </div>
+
+      {/* 기타 */}
+      <div className="col-span-2 flex items-center gap-6">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={excludeSearch}
+            onChange={(e) => setExcludeSearch(e.target.checked)}
+            className="rounded"
+          />
+          통합검색 제외
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          페이지당 게시글
+          <input
+            type="number" min={1} max={100}
+            value={postsPerPage}
+            onChange={(e) => setPostsPerPage(parseInt(e.target.value) || 20)}
+            className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none"
+          />
+          개
+        </label>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {saving ? "저장 중..." : "저장"}
+        </button>
+      </div>
+    </div>
+  );
+}

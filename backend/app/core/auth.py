@@ -1,0 +1,96 @@
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from app.core.config import settings
+from app.core.database import get_db
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7일
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+
+def create_access_token(sub: str, role: str = "admin") -> str:
+    """role: 'admin' | 'member'"""
+    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    return jwt.encode(
+        {"sub": sub, "role": role, "exp": expire},
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+def _decode_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 인증 정보입니다.")
+
+
+def get_current_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    from app.models.admin import Admin
+
+    payload = _decode_token(credentials.credentials)
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
+
+    admin = db.query(Admin).filter(Admin.username == payload.get("sub")).first()
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="관리자를 찾을 수 없습니다.")
+    return admin
+
+
+def get_optional_member(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[object]:
+    """토큰이 없으면 None, 있으면 Member 반환 (비회원 허용 엔드포인트용)."""
+    if not credentials:
+        return None
+    try:
+        from app.models.member import Member
+        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") != "member":
+            return None
+        return db.query(Member).filter(
+            Member.id == int(payload.get("sub", 0)),
+            Member.is_active == True,
+        ).first()
+    except Exception:
+        return None
+
+
+def get_current_member(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    from app.models.member import Member
+
+    payload = _decode_token(credentials.credentials)
+    if payload.get("role") != "member":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="회원 로그인이 필요합니다.")
+
+    member = db.query(Member).filter(
+        Member.id == int(payload.get("sub", 0)),
+        Member.is_active == True,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="회원을 찾을 수 없습니다.")
+    return member
