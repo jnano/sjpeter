@@ -299,6 +299,7 @@ function VisionTab() {
 
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
+  const [boardSlugs, setBoardSlugs] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
@@ -306,8 +307,21 @@ function CommunityTab() {
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const res = await fetch(`${API}/api/content/community`);
-    if (res.ok) setItems(await res.json());
+    const [communityRes, boardsRes] = await Promise.all([
+      fetch(`${API}/api/content/community`),
+      fetch(`${API}/api/boards?include_inactive=true`),
+    ]);
+    if (communityRes.ok) setItems(await communityRes.json());
+    if (boardsRes.ok) {
+      const boards: { slug: string }[] = await boardsRes.json();
+      setBoardSlugs(new Set(boards.map((b) => b.slug)));
+    }
+  }
+
+  function slugFromUrl(url: string | null): string | null {
+    if (!url) return null;
+    const m = url.match(/^\/boards\/([^/]+)\/?$/);
+    return m ? m[1] : null;
   }
 
   useEffect(() => { load(); }, []);
@@ -400,16 +414,38 @@ function CommunityTab() {
               </div>
             ) : (
               <div key={g.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm">{g.name}</p>
-                    {g.link_url && <span className="text-xs text-blue-500 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">게시판 연결</span>}
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm">{g.name}</p>
                   {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
                   {g.activity_time && <p className="text-xs text-gray-400 mt-0.5">{g.activity_time}</p>}
-                  {g.link_url && <p className="text-xs text-blue-400 mt-0.5">{g.link_url}</p>}
+                  {(() => {
+                    const slug = slugFromUrl(g.link_url);
+                    const boardExists = slug !== null && boardSlugs.has(slug);
+                    return (
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {g.link_url && (
+                          <span className="text-xs text-gray-400 font-mono">{g.link_url}</span>
+                        )}
+                        {g.link_url && boardExists ? (
+                          <a
+                            href={`/admin/boards`}
+                            className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors font-medium"
+                          >
+                            관리하기
+                          </a>
+                        ) : (
+                          <a
+                            href="/admin/boards"
+                            className="text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors font-medium"
+                          >
+                            {g.link_url ? "게시판 없음 — 만들기" : "게시판 만들기"}
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div className="flex gap-3 shrink-0">
+                <div className="flex gap-3 shrink-0 ml-4">
                   <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", link_url: g.link_url ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
                 </div>
