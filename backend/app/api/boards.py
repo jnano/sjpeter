@@ -306,6 +306,37 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             url=g.link_url or "/community",
         ))
 
+    # ── 댓글 검색 ──────────────────────────────────────────
+    # 이미 게시글 결과에 포함된 post_id는 제외 (중복 방지)
+    matched_post_ids = {p.id for p in posts}
+    seen_comment_post_ids: set[int] = set(matched_post_ids)
+
+    comment_rows = (
+        db.query(Comment)
+        .join(Post, Comment.post_id == Post.id)
+        .join(Board, Post.board_id == Board.id)
+        .options(joinedload(Comment.post).joinedload(Post.board))
+        .filter(Board.is_active == True)
+        .filter(Board.exclude_from_search == False)
+        .filter(Board.members_only_read == False)  # 공개 게시판만 노출
+        .filter(Comment.content.ilike(keyword))
+        .order_by(desc(Comment.created_at))
+        .limit(50)  # 중복 제거 후 최대 20개를 확보하기 위한 여유
+        .all()
+    )
+    for c in comment_rows:
+        if c.post_id in seen_comment_post_ids:
+            continue
+        seen_comment_post_ids.add(c.post_id)
+        content_results.append(ContentSearchItem(
+            type="comment", label="댓글",
+            title=c.post.title,
+            excerpt=_make_excerpt(c.content, q),
+            url=f"/boards/{c.post.board.slug}/{c.post_id}",
+        ))
+        if len([r for r in content_results if r.type == "comment"]) >= 20:
+            break
+
     return SearchOut(results=results, content_results=content_results, total=total, page=page, limit=limit)
 
 
