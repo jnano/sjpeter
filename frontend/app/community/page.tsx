@@ -5,40 +5,40 @@ export const metadata: Metadata = {
   description: "세종성베드로성당 사목평의회 및 각 분과 소개",
 };
 
-const councils = [
-  {
-    name: "사목평의회",
-    desc: "본당 운영 전반을 논의하고 결정하는 최고 의결 기구",
-    members: "회장단 및 각 분과 대표",
-  },
-  {
-    name: "레지아 마리애",
-    desc: "성모 마리아를 통한 사도직 수행 — 병자 방문, 본당 봉사",
-    members: "매주 화요일 활동",
-  },
-  {
-    name: "성가대",
-    desc: "미사의 전례 음악을 담당하는 봉사자 모임",
-    members: "주일 미사 봉사",
-  },
-  {
-    name: "청년회",
-    desc: "20–40대 청년 신앙 공동체. 신앙 활동 및 봉사",
-    members: "매달 모임",
-  },
-  {
-    name: "교리반",
-    desc: "예비신자, 어린이, 청소년 교리 교육 담당",
-    members: "주일 오전",
-  },
-  {
-    name: "구역·반 모임",
-    desc: "지역별 소공동체 모임. 신앙 나눔 및 상호 돌봄",
-    members: "구역별 자율 운영",
-  },
-];
+const API = process.env.NEXT_PUBLIC_API_URL;
 
-export default function CommunityPage() {
+interface CommunityGroup {
+  id: number;
+  name: string;
+  description: string | null;
+  activity_time: string | null;
+  sort_order: number;
+}
+
+async function getCommunity(): Promise<CommunityGroup[]> {
+  try {
+    const res = await fetch(`${API}/api/content/community`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+async function getPhone(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.phone ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function CommunityPage() {
+  const [groups, phone] = await Promise.all([getCommunity(), getPhone()]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-8">
@@ -51,9 +51,9 @@ export default function CommunityPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {councils.map((group) => (
+        {groups.map((group) => (
           <div
-            key={group.name}
+            key={group.id}
             className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 hover:border-[var(--color-primary)] hover:shadow-sm transition-all"
           >
             <div className="flex items-start gap-3">
@@ -62,12 +62,16 @@ export default function CommunityPage() {
                 <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg mb-1">
                   {group.name}
                 </h3>
-                <p className="text-sm text-[var(--color-text)] leading-relaxed mb-2">
-                  {group.desc}
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] inline-block px-2 py-0.5 rounded">
-                  {group.members}
-                </p>
+                {group.description && (
+                  <p className="text-sm text-[var(--color-text)] leading-relaxed mb-2">
+                    {group.description}
+                  </p>
+                )}
+                {group.activity_time && (
+                  <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] inline-block px-2 py-0.5 rounded">
+                    {group.activity_time}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -79,7 +83,9 @@ export default function CommunityPage() {
           새가족이신가요?
         </p>
         <p className="text-sm text-[var(--color-text-muted)]">
-          본당 사무실(044-000-0000)로 연락하시거나 주일 미사 후 안내 데스크를 방문해 주세요.
+          {phone
+            ? `본당 사무실(${phone})로 연락하시거나 주일 미사 후 안내 데스크를 방문해 주세요.`
+            : "본당 사무실로 연락하시거나 주일 미사 후 안내 데스크를 방문해 주세요."}
         </p>
       </div>
     </div>

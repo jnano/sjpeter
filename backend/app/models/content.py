@@ -1,0 +1,33 @@
+from sqlalchemy import Column, Integer, String, Text, Boolean
+from app.core.database import Base
+
+
+class HistoryItem(Base):
+    __tablename__ = "history_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    year = Column(Integer, nullable=False)
+    event = Column(String(300), nullable=False)
+    detail = Column(Text)
+    highlight = Column(Boolean, default=False)
+    is_current = Column(Boolean, default=False)
+    sort_order = Column(Integer, default=0)
+
+
+class Vision(Base):
+    __tablename__ = "visions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    year = Column(Integer, nullable=False)
+    motto = Column(String(300), nullable=False)
+    is_current = Column(Boolean, default=False)
+
+
+class CommunityGroup(Base):
+    __tablename__ = "community_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    activity_time = Column(String(200))
+    sort_order = Column(Integer, default=0)

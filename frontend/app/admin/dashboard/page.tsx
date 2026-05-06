@@ -67,13 +67,14 @@ export default function DashboardPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* 액션 카드들 */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           {[
             { href: "/admin/bulletin/new", icon: "📤", label: "주보 업로드", desc: "PDF 등록" },
             { href: "/admin/notices", icon: "📢", label: "공지 관리", desc: "작성·수정·삭제" },
             { href: "/admin/parish", icon: "⛪", label: "성당 정보", desc: "미사 시간·신부님" },
             { href: "/admin/boards", icon: "💬", label: "게시판 관리", desc: "생성·활성화" },
             { href: "/admin/members", icon: "👥", label: "회원 관리", desc: "활성화·비활성화·삭제" },
+            { href: "/admin/content", icon: "📄", label: "페이지 콘텐츠", desc: "연혁·지표·단체" },
           ].map((card) => (
             <Link
               key={card.label}

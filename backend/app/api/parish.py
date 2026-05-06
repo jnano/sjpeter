@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -24,6 +25,7 @@ class MassSchedule(BaseModel):
 
 class ParishUpdate(BaseModel):
     name: Optional[str] = None
+    diocese: Optional[str] = None
     address: Optional[str] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
@@ -31,7 +33,11 @@ class ParishUpdate(BaseModel):
     fax: Optional[str] = None
     cafe_url: Optional[str] = None
     band_url: Optional[str] = None
+    description: Optional[str] = None
+    member_count: Optional[int] = None
+    founded_at: Optional[date] = None
     pastor_name: Optional[str] = None
+    pastor_appointed: Optional[str] = None
     pastor_message: Optional[str] = None
     mass_schedule: Optional[MassSchedule] = None
 
@@ -47,7 +53,11 @@ class ParishOut(BaseModel):
     fax: Optional[str]
     cafe_url: Optional[str]
     band_url: Optional[str]
+    description: Optional[str]
+    member_count: Optional[int]
+    founded_at: Optional[date]
     pastor_name: Optional[str]
+    pastor_appointed: Optional[str]
     pastor_message: Optional[str]
     pastor_photo_url: Optional[str]
     mass_schedule: Optional[MassSchedule]
@@ -81,7 +91,11 @@ def _parish_to_out(parish: Parish) -> ParishOut:
         fax=parish.fax,
         cafe_url=parish.cafe_url,
         band_url=parish.band_url,
+        description=parish.description,
+        member_count=parish.member_count,
+        founded_at=parish.founded_at,
         pastor_name=parish.pastor_name,
+        pastor_appointed=parish.pastor_appointed,
         pastor_message=parish.pastor_message,
         pastor_photo_url=parish.pastor_photo_url,
         mass_schedule=schedule,

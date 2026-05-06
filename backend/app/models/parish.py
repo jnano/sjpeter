@@ -15,7 +15,9 @@ class Parish(Base):
     phone = Column(String(20))
     founded_at = Column(Date)
     description = Column(Text)
+    member_count = Column(Integer, nullable=True)            # 신자 수
     pastor_name = Column(String(100))
+    pastor_appointed = Column(String(100))                   # 부임 시기 (예: 2023년 3월)
     pastor_message = Column(Text)
     pastor_photo_url = Column(String(500))
     mass_schedule = Column(Text)  # JSON 문자열로 저장

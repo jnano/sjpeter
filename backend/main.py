@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from app.api import bulletins, notices, auth, members, boards, parish, gospel
+from app.api import bulletins, notices, auth, members, boards, parish, gospel, content
 from app.core.config import settings
 from app.core.database import create_tables
 import os
@@ -24,6 +24,7 @@ app.include_router(members.router, prefix="/api")
 app.include_router(boards.router)  # prefix 포함됨
 app.include_router(parish.router, prefix="/api")
 app.include_router(gospel.router, prefix="/api")
+app.include_router(content.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -98,6 +99,46 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # parishes 추가 컬럼
+        for col, col_type in [
+            ("member_count", "INTEGER"),
+            ("pastor_appointed", "VARCHAR(100)"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE parishes ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+            except Exception:
+                pass
+
+        # 정적 콘텐츠 테이블 생성
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS history_items (
+                id SERIAL PRIMARY KEY,
+                year INTEGER NOT NULL,
+                event VARCHAR(300) NOT NULL,
+                detail TEXT,
+                highlight BOOLEAN DEFAULT FALSE,
+                is_current BOOLEAN DEFAULT FALSE,
+                sort_order INTEGER DEFAULT 0
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS visions (
+                id SERIAL PRIMARY KEY,
+                year INTEGER NOT NULL,
+                motto VARCHAR(300) NOT NULL,
+                is_current BOOLEAN DEFAULT FALSE
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS community_groups (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                description TEXT,
+                activity_time VARCHAR(200),
+                sort_order INTEGER DEFAULT 0
+            )
+        """))
+
         conn.commit()
 
 
@@ -105,6 +146,7 @@ def _seed_initial_data():
     from app.core.database import SessionLocal
     from app.models.parish import Parish
     from app.models.admin import Admin
+    from app.models.content import HistoryItem, Vision, CommunityGroup
     from app.core.auth import hash_password
 
     db = SessionLocal()
@@ -127,6 +169,49 @@ def _seed_initial_data():
                 hashed_password=hash_password("change-this-password"),
             ))
             db.commit()
+
+        # 연혁 초기 데이터
+        if not db.query(HistoryItem).first():
+            history_seed = [
+                HistoryItem(year=2011, event="세종성베드로성당 설립", detail="세종특별자치시 출범과 함께 세종시 최초 가톨릭 본당으로 설립. 초대 주임신부 부임.", highlight=True, is_current=False, sort_order=0),
+                HistoryItem(year=2012, event="성당 건물 축성", detail="현재 성당 건물이 완공되어 축성 미사를 봉헌.", highlight=False, is_current=False, sort_order=1),
+                HistoryItem(year=2015, event="신자 수 200명 돌파", detail="세종시 인구 증가와 함께 공동체가 빠르게 성장.", highlight=False, is_current=False, sort_order=2),
+                HistoryItem(year=2019, event="창립 8주년 — 사목평의회 창설", detail="본당 운영의 민주적 참여를 위한 사목평의회 공식 발족.", highlight=False, is_current=False, sort_order=3),
+                HistoryItem(year=2021, event="창립 10주년 기념 행사", detail="10주년 감사 미사 및 공동체 축제 개최. 주보 500호 달성.", highlight=True, is_current=False, sort_order=4),
+                HistoryItem(year=2023, event="현 주임신부 부임", detail="새로운 사목 시대의 시작.", highlight=False, is_current=False, sort_order=5),
+                HistoryItem(year=2026, event="현재", detail="신자 약 480명. 주보 제623호 발행 중.", highlight=False, is_current=True, sort_order=6),
+            ]
+            db.add_all(history_seed)
+            db.commit()
+
+        # 사목지표 초기 데이터
+        if not db.query(Vision).first():
+            vision_seed = [
+                Vision(year=2026, motto="거룩한 향기의 해", is_current=True),
+                Vision(year=2025, motto="사랑으로 하나 되는 공동체", is_current=False),
+                Vision(year=2024, motto="말씀 안에서 성장하는 해", is_current=False),
+                Vision(year=2023, motto="새로운 출발, 함께하는 신앙", is_current=False),
+                Vision(year=2022, motto="희망을 향하여", is_current=False),
+                Vision(year=2021, motto="창립 10주년 — 감사와 새로운 다짐", is_current=False),
+                Vision(year=2020, motto="코로나를 넘어 — 연결된 신앙", is_current=False),
+                Vision(year=2019, motto="하느님 안에서 하나 되는 공동체", is_current=False),
+            ]
+            db.add_all(vision_seed)
+            db.commit()
+
+        # 단체/분과 초기 데이터
+        if not db.query(CommunityGroup).first():
+            community_seed = [
+                CommunityGroup(name="사목평의회", description="본당 운영 전반을 논의하고 결정하는 최고 의결 기구", activity_time="회장단 및 각 분과 대표", sort_order=0),
+                CommunityGroup(name="레지아 마리애", description="성모 마리아를 통한 사도직 수행 — 병자 방문, 본당 봉사", activity_time="매주 화요일 활동", sort_order=1),
+                CommunityGroup(name="성가대", description="미사의 전례 음악을 담당하는 봉사자 모임", activity_time="주일 미사 봉사", sort_order=2),
+                CommunityGroup(name="청년회", description="20–40대 청년 신앙 공동체. 신앙 활동 및 봉사", activity_time="매달 모임", sort_order=3),
+                CommunityGroup(name="교리반", description="예비신자, 어린이, 청소년 교리 교육 담당", activity_time="주일 오전", sort_order=4),
+                CommunityGroup(name="구역·반 모임", description="지역별 소공동체 모임. 신앙 나눔 및 상호 돌봄", activity_time="구역별 자율 운영", sort_order=5),
+            ]
+            db.add_all(community_seed)
+            db.commit()
+
     finally:
         db.close()
 

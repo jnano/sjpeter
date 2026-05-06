@@ -1,0 +1,458 @@
+"use client";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
+
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("admin_token");
+}
+
+// ─── Types ────────────────────────────────────────────────
+
+interface HistoryItem {
+  id: number;
+  year: number;
+  event: string;
+  detail: string | null;
+  highlight: boolean;
+  is_current: boolean;
+  sort_order: number;
+}
+
+interface Vision {
+  id: number;
+  year: number;
+  motto: string;
+  is_current: boolean;
+}
+
+interface CommunityGroup {
+  id: number;
+  name: string;
+  description: string | null;
+  activity_time: string | null;
+  sort_order: number;
+}
+
+const inputCls = "px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full";
+const btnPrimary = "px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50";
+const btnDanger = "text-xs text-red-400 hover:text-red-600";
+const btnEdit = "text-xs text-blue-500 hover:text-blue-700";
+
+// ─── History Tab ──────────────────────────────────────────
+
+function HistoryTab() {
+  const [items, setItems] = useState<HistoryItem[]>([]);
+  const [form, setForm] = useState({ year: new Date().getFullYear(), event: "", detail: "", highlight: false, is_current: false, sort_order: 0 });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ year: 0, event: "", detail: "", highlight: false, is_current: false, sort_order: 0 });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/history`);
+    if (res.ok) setItems(await res.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.event.trim()) return;
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(form),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), event: "", detail: "", highlight: false, is_current: false, sort_order: 0 }); load(); }
+  }
+
+  async function update(id: number) {
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/history/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(editForm),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+  }
+
+  async function remove(id: number) {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await fetch(`${API}/api/content/history/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    load();
+  }
+
+  return (
+    <div className="space-y-6">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 연혁 추가</h3>
+        <form onSubmit={create} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">연도</label>
+              <input type="number" value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">순서</label>
+              <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">사건명</label>
+            <input value={form.event} onChange={(e) => setForm((p) => ({ ...p, event: e.target.value }))} className={inputCls} placeholder="예: 성당 창립" required />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">상세 설명</label>
+            <textarea value={form.detail} onChange={(e) => setForm((p) => ({ ...p, detail: e.target.value }))} rows={2} className={`${inputCls} resize-none`} placeholder="상세 내용 (선택)" />
+          </div>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.highlight} onChange={(e) => setForm((p) => ({ ...p, highlight: e.target.checked }))} className="rounded" />
+              강조 표시
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.is_current} onChange={(e) => setForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
+              현재 표시
+            </label>
+          </div>
+          <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
+        </form>
+      </section>
+
+      <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">연혁 목록 ({items.length}건)</h3>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {items.map((item) =>
+            editId === item.id ? (
+              <div key={item.id} className="p-4 bg-blue-50 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="number" value={editForm.year} onChange={(e) => setEditForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
+                  <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
+                </div>
+                <input value={editForm.event} onChange={(e) => setEditForm((p) => ({ ...p, event: e.target.value }))} className={inputCls} />
+                <textarea value={editForm.detail ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, detail: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={editForm.highlight} onChange={(e) => setEditForm((p) => ({ ...p, highlight: e.target.checked }))} className="rounded" />
+                    강조
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={editForm.is_current} onChange={(e) => setEditForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
+                    현재
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => update(item.id)} disabled={loading} className={btnPrimary}>저장</button>
+                  <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                </div>
+              </div>
+            ) : (
+              <div key={item.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-500 w-12">{item.year}</span>
+                    <span className="font-medium text-sm">{item.event}</span>
+                    {item.highlight && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">강조</span>}
+                    {item.is_current && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">현재</span>}
+                  </div>
+                  {item.detail && <p className="text-xs text-gray-400 mt-1 ml-14">{item.detail}</p>}
+                </div>
+                <div className="flex gap-3 shrink-0">
+                  <button onClick={() => { setEditId(item.id); setEditForm({ year: item.year, event: item.event, detail: item.detail ?? "", highlight: item.highlight, is_current: item.is_current, sort_order: item.sort_order }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => remove(item.id)} className={btnDanger}>삭제</button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Vision Tab ───────────────────────────────────────────
+
+function VisionTab() {
+  const [items, setItems] = useState<Vision[]>([]);
+  const [form, setForm] = useState({ year: new Date().getFullYear(), motto: "", is_current: false });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ year: 0, motto: "", is_current: false });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/visions`);
+    if (res.ok) setItems(await res.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.motto.trim()) return;
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/visions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(form),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", is_current: false }); load(); }
+  }
+
+  async function update(id: number) {
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/visions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(editForm),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+  }
+
+  async function remove(id: number) {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await fetch(`${API}/api/content/visions/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    load();
+  }
+
+  return (
+    <div className="space-y-6">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 사목지표 추가</h3>
+        <form onSubmit={create} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">연도</label>
+            <input type="number" value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">지표 (슬로건)</label>
+            <input value={form.motto} onChange={(e) => setForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} placeholder="예: 거룩한 향기의 해" required />
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form.is_current} onChange={(e) => setForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
+            올해 지표로 표시
+          </label>
+          <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
+        </form>
+      </section>
+
+      <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">사목지표 목록 ({items.length}건)</h3>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {items.map((v) =>
+            editId === v.id ? (
+              <div key={v.id} className="p-4 bg-blue-50 space-y-3">
+                <input type="number" value={editForm.year} onChange={(e) => setEditForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
+                <input value={editForm.motto} onChange={(e) => setEditForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} />
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={editForm.is_current} onChange={(e) => setEditForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
+                  올해 지표
+                </label>
+                <div className="flex gap-2">
+                  <button onClick={() => update(v.id)} disabled={loading} className={btnPrimary}>저장</button>
+                  <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                </div>
+              </div>
+            ) : (
+              <div key={v.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-gray-500 w-12">{v.year}</span>
+                  <span className="text-sm">&ldquo;{v.motto}&rdquo;</span>
+                  {v.is_current && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">올해</span>}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setEditId(v.id); setEditForm({ year: v.year, motto: v.motto, is_current: v.is_current }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => remove(v.id)} className={btnDanger}>삭제</button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Community Tab ────────────────────────────────────────
+
+function CommunityTab() {
+  const [items, setItems] = useState<CommunityGroup[]>([]);
+  const [form, setForm] = useState({ name: "", description: "", activity_time: "", sort_order: 0 });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", activity_time: "", sort_order: 0 });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/community`);
+    if (res.ok) setItems(await res.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/community`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(form),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ name: "", description: "", activity_time: "", sort_order: 0 }); load(); }
+  }
+
+  async function update(id: number) {
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/community/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(editForm),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+  }
+
+  async function remove(id: number) {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await fetch(`${API}/api/content/community/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    load();
+  }
+
+  return (
+    <div className="space-y-6">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 단체/분과 추가</h3>
+        <form onSubmit={create} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">단체명</label>
+              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="예: 성가대" required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">순서</label>
+              <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">설명</label>
+            <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} placeholder="단체 소개" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">활동 시간</label>
+            <input value={form.activity_time} onChange={(e) => setForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="예: 매주 화요일" />
+          </div>
+          <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
+        </form>
+      </section>
+
+      <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">단체/분과 목록 ({items.length}건)</h3>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {items.map((g) =>
+            editId === g.id ? (
+              <div key={g.id} className="p-4 bg-blue-50 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="단체명" />
+                  <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
+                </div>
+                <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
+                <input value={editForm.activity_time} onChange={(e) => setEditForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="활동 시간" />
+                <div className="flex gap-2">
+                  <button onClick={() => update(g.id)} disabled={loading} className={btnPrimary}>저장</button>
+                  <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                </div>
+              </div>
+            ) : (
+              <div key={g.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
+                <div>
+                  <p className="font-medium text-sm">{g.name}</p>
+                  {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
+                  {g.activity_time && <p className="text-xs text-gray-400 mt-0.5">{g.activity_time}</p>}
+                </div>
+                <div className="flex gap-3 shrink-0">
+                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────
+
+const TABS = [
+  { key: "history", label: "연혁" },
+  { key: "vision", label: "사목지표" },
+  { key: "community", label: "단체/분과" },
+] as const;
+
+type TabKey = typeof TABS[number]["key"];
+
+export default function AdminContentPage() {
+  const [tab, setTab] = useState<TabKey>("history");
+
+  return (
+    <div className="p-8 max-w-3xl mx-auto">
+      <div className="mb-6">
+        <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← 대시보드</Link>
+        <h1 className="text-2xl font-bold mt-1">페이지 콘텐츠 관리</h1>
+        <p className="text-sm text-gray-500 mt-1">연혁, 사목지표, 단체/분과 내용을 관리합니다.</p>
+      </div>
+
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              tab === t.key
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "history" && <HistoryTab />}
+      {tab === "vision" && <VisionTab />}
+      {tab === "community" && <CommunityTab />}
+    </div>
+  );
+}
