@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const MEMBER_ONLY = ["/members/me", "/boards/"];
+const MEMBER_ONLY = ["/members/me"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
