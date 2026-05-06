@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import PostDetail from "./PostDetail";
+import { auth } from "@/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -44,10 +45,12 @@ interface Post {
   board: BoardInfo | null;
 }
 
-async function getPost(slug: string, postId: string): Promise<Post | null> {
+async function getPost(slug: string, postId: string, token?: string): Promise<Post | null> {
   try {
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
     const res = await fetch(`${API}/api/boards/${slug}/posts/${postId}`, {
       cache: "no-store",
+      headers,
     });
     if (!res.ok) return null;
     return res.json();
@@ -62,7 +65,9 @@ export default async function PostPage({
   params: Promise<{ slug: string; postId: string }>;
 }) {
   const { slug, postId } = await params;
-  const post = await getPost(slug, postId);
+  const session = await auth();
+  const token = (session as { accessToken?: string } | null)?.accessToken;
+  const post = await getPost(slug, postId, token);
 
   if (!post) notFound();
 

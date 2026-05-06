@@ -46,9 +46,13 @@ async function getBoard(slug: string): Promise<Board | null> {
   }
 }
 
-async function getPosts(slug: string, page: number): Promise<PostListOut> {
+async function getPosts(slug: string, page: number, token?: string): Promise<PostListOut> {
   try {
-    const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, { cache: "no-store" });
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
+      cache: "no-store",
+      headers,
+    });
     if (!res.ok) return { posts: [], total: 0, posts_per_page: 20 };
     return res.json();
   } catch {
@@ -91,7 +95,8 @@ export default async function BoardPage({
     );
   }
 
-  const postList = await getPosts(slug, page);
+  const token = (session as { accessToken?: string } | null)?.accessToken;
+  const postList = await getPosts(slug, page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
 
   return (
