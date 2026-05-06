@@ -8,11 +8,12 @@ interface Board {
   slug: string;
   description: string;
   members_only_write: boolean;
+  members_only_read: boolean;
 }
 
 async function getBoards(): Promise<Board[]> {
   try {
-    const res = await fetch(`${API}/api/boards`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/api/boards`, { cache: "no-store" });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -49,8 +50,11 @@ export default async function BoardsPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {board.members_only_write && (
-                  <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">회원 전용</span>
+                {board.members_only_read && (
+                  <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">🔒 회원 전용</span>
+                )}
+                {!board.members_only_read && board.members_only_write && (
+                  <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">쓰기 회원 전용</span>
                 )}
                 <span className="text-[var(--color-text-muted)]">›</span>
               </div>

@@ -38,7 +38,7 @@ interface Board {
 
 async function getBoard(slug: string): Promise<Board | null> {
   try {
-    const res = await fetch(`${API}/api/boards/${slug}`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/api/boards/${slug}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
