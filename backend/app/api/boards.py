@@ -192,8 +192,17 @@ class SearchResultItem(BaseModel):
         from_attributes = True
 
 
+class ContentSearchItem(BaseModel):
+    type: str          # "history" | "vision" | "community"
+    label: str         # 배지에 표시할 분류명
+    title: str
+    excerpt: str
+    url: str           # 이동할 페이지 URL
+
+
 class SearchOut(BaseModel):
     results: list[SearchResultItem]
+    content_results: list[ContentSearchItem]
     total: int
     page: int
     limit: int
@@ -230,11 +239,15 @@ def _make_excerpt(content: str, keyword: str) -> str:
 
 @router.get("/api/search", response_model=SearchOut)
 def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+    from app.models.content import HistoryItem, Vision, CommunityGroup
+
     q = q.strip()
     if not q:
-        return SearchOut(results=[], total=0, page=page, limit=limit)
+        return SearchOut(results=[], content_results=[], total=0, page=page, limit=limit)
 
     keyword = f"%{q}%"
+
+    # ── 게시글 검색 (paginated) ───────────────────────────
     base_query = (
         db.query(Post)
         .join(Board, Post.board_id == Board.id)
@@ -260,7 +273,40 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             board=BoardSummary.model_validate(p.board),
             member=AuthorOut.model_validate(p.member) if p.member else None,
         ))
-    return SearchOut(results=results, total=total, page=page, limit=limit)
+
+    # ── 콘텐츠 페이지 검색 (전체 반환, 페이지네이션 없음) ─
+    content_results: list[ContentSearchItem] = []
+
+    for h in db.query(HistoryItem).filter(
+        or_(HistoryItem.event.ilike(keyword), HistoryItem.detail.ilike(keyword))
+    ).order_by(HistoryItem.sort_order).all():
+        excerpt = _make_excerpt(h.detail or "", q) if h.detail else f"{h.year}년"
+        content_results.append(ContentSearchItem(
+            type="history", label="연혁",
+            title=f"{h.year}년 — {h.event}",
+            excerpt=excerpt,
+            url="/history",
+        ))
+
+    for v in db.query(Vision).filter(Vision.motto.ilike(keyword)).order_by(Vision.year.desc()).all():
+        content_results.append(ContentSearchItem(
+            type="vision", label="사목지표",
+            title=v.motto,
+            excerpt=f"{v.year}년 사목지표",
+            url="/vision",
+        ))
+
+    for g in db.query(CommunityGroup).filter(
+        or_(CommunityGroup.name.ilike(keyword), CommunityGroup.description.ilike(keyword))
+    ).order_by(CommunityGroup.sort_order).all():
+        content_results.append(ContentSearchItem(
+            type="community", label="단체/분과",
+            title=g.name,
+            excerpt=g.description or "",
+            url=g.link_url or "/community",
+        ))
+
+    return SearchOut(results=results, content_results=content_results, total=total, page=page, limit=limit)
 
 
 # ── 게시판 ────────────────────────────────────────────────
