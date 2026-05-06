@@ -30,4 +30,5 @@ class CommunityGroup(Base):
     name = Column(String(200), nullable=False)
     description = Column(Text)
     activity_time = Column(String(200))
+    link_url = Column(String(500), nullable=True)
     sort_order = Column(Integer, default=0)

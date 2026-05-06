@@ -299,9 +299,9 @@ function VisionTab() {
 
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
-  const [form, setForm] = useState({ name: "", description: "", activity_time: "", sort_order: 0 });
+  const [form, setForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
   const [editId, setEditId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", activity_time: "", sort_order: 0 });
+  const [editForm, setEditForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -322,7 +322,7 @@ function CommunityTab() {
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ name: "", description: "", activity_time: "", sort_order: 0 }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 }); load(); }
   }
 
   async function update(id: number) {
@@ -370,6 +370,10 @@ function CommunityTab() {
             <label className="block text-xs font-medium text-gray-600 mb-1">활동 시간</label>
             <input value={form.activity_time} onChange={(e) => setForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="예: 매주 화요일" />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판 URL</label>
+            <input value={form.link_url} onChange={(e) => setForm((p) => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="예: /boards/youth (게시판 slug 앞에 /boards/ 입력)" />
+          </div>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
@@ -388,6 +392,7 @@ function CommunityTab() {
                 </div>
                 <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
                 <input value={editForm.activity_time} onChange={(e) => setEditForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="활동 시간" />
+                <input value={editForm.link_url} onChange={(e) => setEditForm((p) => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="연결 게시판 URL (예: /boards/youth)" />
                 <div className="flex gap-2">
                   <button onClick={() => update(g.id)} disabled={loading} className={btnPrimary}>저장</button>
                   <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
@@ -396,12 +401,16 @@ function CommunityTab() {
             ) : (
               <div key={g.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
                 <div>
-                  <p className="font-medium text-sm">{g.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{g.name}</p>
+                    {g.link_url && <span className="text-xs text-blue-500 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">게시판 연결</span>}
+                  </div>
                   {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
                   {g.activity_time && <p className="text-xs text-gray-400 mt-0.5">{g.activity_time}</p>}
+                  {g.link_url && <p className="text-xs text-blue-400 mt-0.5">{g.link_url}</p>}
                 </div>
                 <div className="flex gap-3 shrink-0">
-                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", link_url: g.link_url ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
                 </div>
               </div>

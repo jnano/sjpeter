@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "함께하는 이들",
@@ -12,6 +13,7 @@ interface CommunityGroup {
   name: string;
   description: string | null;
   activity_time: string | null;
+  link_url: string | null;
   sort_order: number;
 }
 
@@ -51,17 +53,21 @@ export default async function CommunityPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {groups.map((group) => (
-          <div
-            key={group.id}
-            className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 hover:border-[var(--color-primary)] hover:shadow-sm transition-all"
-          >
+        {groups.map((group) => {
+          const inner = (
             <div className="flex items-start gap-3">
               <span className="text-[var(--color-accent)] text-xl mt-0.5">✝</span>
-              <div>
-                <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg mb-1">
-                  {group.name}
-                </h3>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg">
+                    {group.name}
+                  </h3>
+                  {group.link_url && (
+                    <span className="text-xs text-[var(--color-primary)] border border-[var(--color-primary)]/30 px-1.5 py-0.5 rounded shrink-0">
+                      게시판 →
+                    </span>
+                  )}
+                </div>
                 {group.description && (
                   <p className="text-sm text-[var(--color-text)] leading-relaxed mb-2">
                     {group.description}
@@ -74,8 +80,25 @@ export default async function CommunityPage() {
                 )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+
+          return group.link_url ? (
+            <Link
+              key={group.id}
+              href={group.link_url}
+              className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 hover:border-[var(--color-primary)] hover:shadow-sm transition-all block"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div
+              key={group.id}
+              className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6"
+            >
+              {inner}
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-8 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-6 text-center">

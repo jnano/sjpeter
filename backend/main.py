@@ -135,9 +135,16 @@ def _migrate_add_columns():
                 name VARCHAR(200) NOT NULL,
                 description TEXT,
                 activity_time VARCHAR(200),
+                link_url VARCHAR(500),
                 sort_order INTEGER DEFAULT 0
             )
         """))
+        try:
+            conn.execute(text(
+                "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS link_url VARCHAR(500)"
+            ))
+        except Exception:
+            pass
 
         conn.commit()
 

@@ -130,6 +130,7 @@ class CommunityGroupIn(BaseModel):
     name: str
     description: Optional[str] = None
     activity_time: Optional[str] = None
+    link_url: Optional[str] = None
     sort_order: int = 0
 
 
@@ -138,6 +139,7 @@ class CommunityGroupOut(BaseModel):
     name: str
     description: Optional[str]
     activity_time: Optional[str]
+    link_url: Optional[str]
     sort_order: int
 
     class Config:
