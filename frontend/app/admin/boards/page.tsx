@@ -416,6 +416,13 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   const [postsPerPage, setPostsPerPage] = useState(board.posts_per_page);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setAccessMode(getAccessMode(board));
+    setModerator(board.moderator);
+    setExcludeSearch(board.exclude_from_search);
+    setPostsPerPage(board.posts_per_page);
+  }, [board.members_only_read, board.members_only_write, board.moderator, board.exclude_from_search, board.posts_per_page]);
+
   async function save() {
     setSaving(true);
     const token = getAdminToken();

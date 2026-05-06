@@ -89,6 +89,7 @@ def _migrate_add_columns():
 
         # boards 접근 제어 + 관리자 컬럼
         for ddl in [
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_write BOOLEAN DEFAULT TRUE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_read BOOLEAN DEFAULT FALSE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS moderator_id INTEGER REFERENCES members(id) ON DELETE SET NULL",
         ]:

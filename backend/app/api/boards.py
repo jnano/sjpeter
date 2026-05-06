@@ -267,7 +267,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
 
 @router.get("/api/boards", response_model=list[BoardOut])
 def list_boards(include_inactive: bool = False, db: Session = Depends(get_db)):
-    query = db.query(Board)
+    query = db.query(Board).options(joinedload(Board.moderator))
     if not include_inactive:
         query = query.filter(Board.is_active == True)
     boards = query.all()
@@ -282,7 +282,12 @@ def list_boards(include_inactive: bool = False, db: Session = Depends(get_db)):
 
 @router.get("/api/boards/{slug}", response_model=BoardOut)
 def get_board(slug: str, db: Session = Depends(get_db)):
-    board = db.query(Board).filter(Board.slug == slug, Board.is_active == True).first()
+    board = (
+        db.query(Board)
+        .options(joinedload(Board.moderator))
+        .filter(Board.slug == slug, Board.is_active == True)
+        .first()
+    )
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
     count = db.query(Post).filter(Post.board_id == board.id).count()
@@ -312,7 +317,12 @@ def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), _:
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(board, k, v)
     db.commit()
-    db.refresh(board)
+    board = (
+        db.query(Board)
+        .options(joinedload(Board.moderator))
+        .filter(Board.slug == slug)
+        .first()
+    )
     count = db.query(Post).filter(Post.board_id == board.id).count()
     out = BoardOut.model_validate(board)
     out.post_count = count
