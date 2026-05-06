@@ -45,10 +45,11 @@ async function fetchSearch(q: string, page: number): Promise<SearchOut> {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; page?: string };
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const q = (searchParams.q ?? "").trim();
-  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
+  const { q: qParam = "", page: pageParam = "1" } = await searchParams;
+  const q = qParam.trim();
+  const page = Math.max(1, parseInt(pageParam, 10));
 
   if (!q) {
     return (
