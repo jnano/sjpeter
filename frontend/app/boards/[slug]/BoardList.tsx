@@ -44,39 +44,6 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
 export default function BoardList({ posts, slug, currentPage, totalPages, currentView }: Props) {
   return (
     <>
-      {/* 툴바 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-1 border border-[var(--color-border)] rounded-lg p-1">
-          <Link
-            href={pageUrl(slug, 1, "list")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              currentView === "list"
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-[var(--color-text-muted)] hover:bg-gray-100"
-            }`}
-          >
-            목록
-          </Link>
-          <Link
-            href={pageUrl(slug, 1, "photo")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              currentView === "photo"
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-[var(--color-text-muted)] hover:bg-gray-100"
-            }`}
-          >
-            사진
-          </Link>
-        </div>
-        <Link
-          href={`/boards/${slug}/write`}
-          className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
-        >
-          글쓰기
-        </Link>
-      </div>
-
-      {/* 게시글 목록 */}
       {posts.length === 0 ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
           아직 작성된 글이 없습니다. 첫 번째 글을 남겨보세요.
@@ -87,7 +54,6 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
         <PhotoView posts={posts} slug={slug} />
       )}
 
-      {/* 페이지네이션 */}
       {totalPages > 1 && (
         <Pagination
           slug={slug}
@@ -198,9 +164,7 @@ function Pagination({
         href={pageUrl(slug, Math.max(1, currentPage - 1), view)}
         aria-disabled={currentPage === 1}
         className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
-          currentPage === 1
-            ? "pointer-events-none opacity-30"
-            : "hover:bg-gray-50"
+          currentPage === 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
         }`}
       >
         ‹
@@ -230,9 +194,7 @@ function Pagination({
         href={pageUrl(slug, Math.min(totalPages, currentPage + 1), view)}
         aria-disabled={currentPage === totalPages}
         className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
-          currentPage === totalPages
-            ? "pointer-events-none opacity-30"
-            : "hover:bg-gray-50"
+          currentPage === totalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
         }`}
       >
         ›

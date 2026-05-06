@@ -60,6 +60,33 @@ async function getPosts(slug: string, page: number, token?: string): Promise<Pos
   }
 }
 
+function ViewToggle({ slug, view }: { slug: string; view: "list" | "photo" }) {
+  return (
+    <div className="flex items-center gap-px border border-[var(--color-border)] rounded-lg overflow-hidden">
+      <Link
+        href={`/boards/${slug}?view=list`}
+        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+          view === "list"
+            ? "bg-[var(--color-primary)] text-white"
+            : "text-[var(--color-text-muted)] hover:bg-gray-50"
+        }`}
+      >
+        목록
+      </Link>
+      <Link
+        href={`/boards/${slug}?view=photo`}
+        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+          view === "photo"
+            ? "bg-[var(--color-primary)] text-white"
+            : "text-[var(--color-text-muted)] hover:bg-gray-50"
+        }`}
+      >
+        사진
+      </Link>
+    </div>
+  );
+}
+
 export default async function BoardPage({
   params,
   searchParams,
@@ -70,6 +97,7 @@ export default async function BoardPage({
   const { slug } = await params;
   const { page: pageStr = "1", view = "list" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr) || 1);
+  const currentView = view === "photo" ? "photo" : "list";
 
   const [board, session] = await Promise.all([getBoard(slug), auth()]);
 
@@ -86,8 +114,10 @@ export default async function BoardPage({
           <p className="text-4xl mb-4">🔒</p>
           <p className="font-semibold text-[var(--color-text)]">회원 전용 게시판입니다.</p>
           <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">로그인 후 이용하실 수 있습니다.</p>
-          <Link href={`/members/login?callbackUrl=/boards/${slug}`}
-            className="px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary-dark)] transition-colors">
+          <Link
+            href={`/members/login?callbackUrl=/boards/${slug}`}
+            className="px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary-dark)] transition-colors"
+          >
             로그인
           </Link>
         </div>
@@ -98,17 +128,39 @@ export default async function BoardPage({
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const postList = await getPosts(slug, page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
+  const canWrite = !board.members_only_write || !!session;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <Link href="/boards" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+      {/* 헤더: 뒤로가기 + 제목 + 컨트롤 한 줄 */}
+      <div className="mb-6">
+        <Link
+          href="/boards"
+          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+        >
           ← 게시판 목록
         </Link>
-        <h1 className="text-2xl font-bold text-[var(--color-primary)] mt-2">{board.name}</h1>
-        {board.description && (
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">{board.description}</p>
-        )}
+
+        <div className="flex items-center justify-between mt-2 gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-[var(--color-primary)] truncate">{board.name}</h1>
+            {board.description && (
+              <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{board.description}</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <ViewToggle slug={slug} view={currentView} />
+            {canWrite && (
+              <Link
+                href={`/boards/${slug}/write`}
+                className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
+              >
+                글쓰기
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
       <BoardList
@@ -116,7 +168,7 @@ export default async function BoardPage({
         slug={slug}
         currentPage={page}
         totalPages={totalPages}
-        currentView={view === "photo" ? "photo" : "list"}
+        currentView={currentView}
       />
     </div>
   );
