@@ -146,17 +146,18 @@ export default function Header() {
               🔍
             </button>
           <button
-            className="p-2 rounded hover:bg-white/10 transition-colors"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
-            aria-expanded={menuOpen}
-          >
-            <span className="block w-6 h-0.5 bg-white mb-1.5 transition-transform" />
-            <span
-              className={`block w-6 h-0.5 bg-white mb-1.5 transition-opacity ${menuOpen ? "opacity-0" : ""}`}
-            />
-            <span className="block w-6 h-0.5 bg-white transition-transform" />
-          </button>
+              className="p-2 rounded hover:bg-white/10 transition-colors"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
+              aria-expanded={menuOpen}
+            >
+              <span className="block w-6 h-0.5 bg-white mb-1.5 transition-transform" />
+              <span
+                className={`block w-6 h-0.5 bg-white mb-1.5 transition-opacity ${menuOpen ? "opacity-0" : ""}`}
+              />
+              <span className="block w-6 h-0.5 bg-white transition-transform" />
+            </button>
+          </div>
         </div>
 
         {/* 모바일 검색창 */}
