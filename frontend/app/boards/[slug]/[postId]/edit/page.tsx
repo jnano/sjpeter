@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -193,14 +194,7 @@ export default function EditPage() {
           className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-lg"
         />
 
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="내용을 입력하세요..."
-          rows={14}
-          required
-          className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
-        />
+        <MarkdownEditor value={content} onChange={setContent} height={350} />
 
         {/* 첨부파일 영역 */}
         <div className="border border-dashed border-[var(--color-border)] rounded-lg p-4 space-y-3">

@@ -104,6 +104,15 @@ function LoginForm() {
           />
         </div>
 
+        <div className="flex justify-end">
+          <Link
+            href="/members/forgot-password"
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+          >
+            비밀번호를 잊으셨나요?
+          </Link>
+        </div>
+
         <button
           type="submit"
           disabled={loading}

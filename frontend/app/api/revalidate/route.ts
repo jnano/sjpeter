@@ -1,4 +1,5 @@
-import { revalidateTag } from "next/cache";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const revalidateTag: (tag: string) => void = require("next/cache").revalidateTag;
 import { NextRequest, NextResponse } from "next/server";
 
 // tag 쿼리 파라미터로 특정 태그만, 없으면 전체 무효화

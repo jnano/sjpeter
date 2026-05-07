@@ -1,13 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from app.api import bulletins, notices, auth, members, boards, parish, gospel, content
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events
 from app.core.config import settings
 from app.core.database import create_tables
 import os
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+
 app = FastAPI(title=settings.PROJECT_NAME)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +34,7 @@ app.include_router(boards.router)  # prefix 포함됨
 app.include_router(parish.router, prefix="/api")
 app.include_router(gospel.router, prefix="/api")
 app.include_router(content.router, prefix="/api")
+app.include_router(events.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -62,6 +72,9 @@ def _migrate_add_columns():
 
         # members 소셜 로그인 컬럼
         for col, col_type in [
+            ("name", "VARCHAR(100)"),
+            ("phone", "VARCHAR(20)"),
+            ("receive_notification", "BOOLEAN DEFAULT FALSE"),
             ("hashed_password", "VARCHAR(200)"),
             ("social_provider", "VARCHAR(20)"),
             ("social_id", "VARCHAR(200)"),
@@ -81,10 +94,26 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # 세례명(nickname) unique 제약 해제 — 동명 세례명 허용
+        try:
+            conn.execute(text(
+                "ALTER TABLE members DROP CONSTRAINT IF EXISTS members_nickname_key"
+            ))
+        except Exception:
+            pass
+
         # boards 검색 제외 컬럼
         try:
             conn.execute(text(
                 "ALTER TABLE boards ADD COLUMN IF NOT EXISTS exclude_from_search BOOLEAN DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
+
+        # boards 게시판 관리자 전용 쓰기 컬럼
+        try:
+            conn.execute(text(
+                "ALTER TABLE boards ADD COLUMN IF NOT EXISTS moderator_only_write BOOLEAN DEFAULT FALSE"
             ))
         except Exception:
             pass
@@ -167,6 +196,12 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        try:
+            conn.execute(text(
+                "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS board_slug VARCHAR(100)"
+            ))
+        except Exception:
+            pass
 
         # 정적 페이지 테이블
         conn.execute(text("""
@@ -191,6 +226,89 @@ def _migrate_add_columns():
                 is_published BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
+        # 사목평의회 구성원 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS council_members (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                role VARCHAR(200) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                photo_url VARCHAR(500),
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        """))
+
+        # 이메일 인증 컬럼
+        try:
+            conn.execute(text(
+                "ALTER TABLE members ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
+
+        # 관리 활동 로그 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS admin_logs (
+                id SERIAL PRIMARY KEY,
+                admin_identifier VARCHAR(200) NOT NULL,
+                action VARCHAR(100) NOT NULL,
+                target_type VARCHAR(50),
+                target_id INTEGER,
+                detail TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
+        # 행사 캘린더 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(300) NOT NULL,
+                description TEXT,
+                event_date DATE NOT NULL,
+                end_date DATE,
+                start_time VARCHAR(10),
+                location VARCHAR(300),
+                category VARCHAR(50) DEFAULT 'general',
+                is_public BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
+        # 댓글 대댓글 parent_id
+        try:
+            conn.execute(text(
+                "ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE"
+            ))
+        except Exception:
+            pass
+
+        # 이메일 인증 토큰 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                token VARCHAR(200) NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
+        # 비밀번호 재설정 토큰 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                token VARCHAR(200) NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
             )
         """))
 

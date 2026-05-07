@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from app.core.database import Base
 
@@ -12,9 +12,10 @@ class Board(Base):
     slug = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(String(300))
     is_active = Column(Boolean, default=True)
-    members_only_write = Column(Boolean, default=True)   # True: 회원만 쓰기
-    members_only_read = Column(Boolean, default=False)   # True: 회원만 보기
-    members_selected = Column(Boolean, default=False)    # True: 지정 회원만 접근
+    members_only_write = Column(Boolean, default=True)      # True: 회원만 쓰기
+    members_only_read = Column(Boolean, default=False)      # True: 회원만 보기
+    members_selected = Column(Boolean, default=False)       # True: 지정 회원만 접근
+    moderator_only_write = Column(Boolean, default=False)   # True: 게시판 관리자만 쓰기
     posts_per_page = Column(Integer, default=20)
     exclude_from_search = Column(Boolean, default=False)
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
@@ -61,9 +62,11 @@ class Comment(Base):
     id = Column(Integer, primary_key=True, index=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     post = relationship("Post", back_populates="comments")
     member = relationship("Member", backref="comments")
+    replies = relationship("Comment", backref=backref("parent", remote_side="Comment.id"), cascade="all, delete-orphan", foreign_keys="Comment.parent_id")

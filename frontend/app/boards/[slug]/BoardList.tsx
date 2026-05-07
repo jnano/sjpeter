@@ -11,7 +11,7 @@ interface Author {
 interface Post {
   id: number;
   title: string;
-  member: Author;
+  member: Author | null;
   view_count: number;
   comment_count: number;
   created_at: string;
@@ -96,7 +96,7 @@ function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
                 )}
               </p>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {post.member.nickname} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
+                {post.member?.nickname ?? "성당"} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
               </p>
             </div>
           </div>
@@ -143,7 +143,7 @@ function PhotoView({ posts, slug }: { posts: Post[]; slug: string }) {
               )}
             </p>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {post.member.nickname} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
+              {post.member?.nickname ?? "성당"} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
             </p>
           </div>
         </Link>

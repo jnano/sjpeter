@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.core.database import get_db
 from app.core.auth import verify_password, create_access_token, _decode_token
 from app.models.admin import Admin
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 bearer_scheme = HTTPBearer()
@@ -47,7 +51,8 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/admin-login", response_model=AdminLoginResponse)
-def admin_login_unified(body: AdminLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session = Depends(get_db)):
     """슈퍼 관리자(admin 아이디) 또는 위임 관리자(이메일) 통합 로그인."""
     from app.models.member import Member
 
@@ -55,6 +60,8 @@ def admin_login_unified(body: AdminLoginRequest, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.username == body.identifier).first()
     if admin and verify_password(body.password, admin.hashed_password):
         token = create_access_token(sub=admin.username, role="admin")
+        from app.core.admin_log import log_action
+        log_action(db, admin.username, "admin_login", detail="슈퍼관리자 로그인")
         return AdminLoginResponse(
             access_token=token,
             role="admin",
@@ -80,6 +87,35 @@ def admin_login_unified(body: AdminLoginRequest, db: Session = Depends(get_db)):
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="아이디/이메일 또는 비밀번호가 올바르지 않습니다.",
+    )
+
+
+@router.post("/admin-session", response_model=AdminLoginResponse)
+def exchange_member_token_for_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    """회원 JWT로 어드민 세션 토큰을 발급한다 (is_admin=True 회원 전용)."""
+    from app.models.member import Member
+
+    payload = _decode_token(credentials.credentials)
+    if payload.get("role") != "member":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="회원 토큰이 필요합니다.")
+
+    member = db.query(Member).filter(
+        Member.id == int(payload.get("sub", 0)),
+        Member.is_admin == True,
+        Member.is_active == True,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 없습니다.")
+
+    token = create_access_token(sub=str(member.id), role="member")
+    return AdminLoginResponse(
+        access_token=token,
+        role="member",
+        display_name=member.nickname,
+        is_super_admin=False,
     )
 
 

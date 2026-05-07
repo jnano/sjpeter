@@ -40,6 +40,7 @@ class BoardIn(BaseModel):
     members_only_write: bool = True
     members_only_read: bool = False
     members_selected: bool = False
+    moderator_only_write: bool = False
     posts_per_page: int = 20
     exclude_from_search: bool = False
     moderator_id: Optional[int] = None
@@ -52,6 +53,7 @@ class BoardUpdate(BaseModel):
     members_only_write: Optional[bool] = None
     members_only_read: Optional[bool] = None
     members_selected: Optional[bool] = None
+    moderator_only_write: Optional[bool] = None
     is_active: Optional[bool] = None
     posts_per_page: Optional[int] = None
     exclude_from_search: Optional[bool] = None
@@ -77,10 +79,12 @@ class BoardOut(BaseModel):
     members_only_write: bool
     members_only_read: bool = False
     members_selected: bool = False
+    moderator_only_write: bool = False
     posts_per_page: int = 20
     post_count: int = 0
     exclude_from_search: bool = False
     moderator: Optional[ModeratorOut] = None
+    moderator_id: Optional[int] = None
     allowed_members: list[AllowedMemberOut] = []
 
     class Config:
@@ -103,6 +107,7 @@ class AuthorOut(BaseModel):
 
 class CommentIn(BaseModel):
     content: str
+    parent_id: Optional[int] = None
 
 
 class CommentOut(BaseModel):
@@ -110,6 +115,8 @@ class CommentOut(BaseModel):
     content: str
     created_at: datetime
     member: AuthorOut
+    parent_id: Optional[int] = None
+    replies: list["CommentOut"] = []
 
     class Config:
         from_attributes = True
@@ -160,7 +167,7 @@ class PostSummary(BaseModel):
     created_at: datetime
     comment_count: int = 0
     thumbnail_url: Optional[str] = None
-    member: AuthorOut
+    member: Optional[AuthorOut] = None
 
     class Config:
         from_attributes = True
@@ -532,6 +539,8 @@ def create_post(
     current: Member = Depends(get_current_member),
 ):
     board = _get_board_or_404(slug, db)
+    if board.moderator_only_write and board.moderator_id != current.id and not current.is_admin:
+        raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
     post = Post(board_id=board.id, member_id=current.id, **body.model_dump())
     db.add(post)
     db.commit()
@@ -553,17 +562,22 @@ def get_post(slug: str, post_id: int, db: Session = Depends(get_db), viewer: Opt
     post = _get_post_or_404(slug, post_id, db)
     post.view_count += 1
     db.commit()
-    return (
+    post_obj = (
         db.query(Post)
         .options(
             joinedload(Post.member),
             joinedload(Post.comments).joinedload(Comment.member),
+            joinedload(Post.comments).joinedload(Comment.replies).joinedload(Comment.member),
             joinedload(Post.attachments),
             joinedload(Post.board),
         )
         .filter(Post.id == post_id)
         .first()
     )
+    # 최상위 댓글(parent_id=None)만 PostOut에 포함; 대댓글은 replies에 있음
+    if post_obj:
+        post_obj.comments = [c for c in post_obj.comments if c.parent_id is None]
+    return post_obj
 
 
 @router.put("/api/boards/{slug}/posts/{post_id}", response_model=PostOut)
@@ -615,11 +629,36 @@ def create_comment(
     current: Member = Depends(get_current_member),
 ):
     _get_post_or_404(slug, post_id, db)
-    comment = Comment(post_id=post_id, member_id=current.id, content=body.content)
+    if body.parent_id:
+        parent = db.query(Comment).filter(Comment.id == body.parent_id, Comment.post_id == post_id).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="부모 댓글을 찾을 수 없습니다.")
+    comment = Comment(post_id=post_id, member_id=current.id, content=body.content, parent_id=body.parent_id)
     db.add(comment)
     db.commit()
     db.refresh(comment)
     return db.query(Comment).options(joinedload(Comment.member)).filter(Comment.id == comment.id).first()
+
+
+@router.put("/api/boards/{slug}/posts/{post_id}/comments/{comment_id}", response_model=CommentOut)
+def update_comment(
+    slug: str,
+    post_id: int,
+    comment_id: int,
+    body: CommentIn,
+    db: Session = Depends(get_db),
+    current: Member = Depends(get_current_member),
+):
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
+    if comment.member_id != current.id:
+        raise HTTPException(status_code=403, detail="본인 댓글만 수정할 수 있습니다.")
+    if not body.content.strip():
+        raise HTTPException(status_code=400, detail="댓글 내용을 입력해 주세요.")
+    comment.content = body.content.strip()
+    db.commit()
+    return db.query(Comment).options(joinedload(Comment.member)).filter(Comment.id == comment_id).first()
 
 
 @router.delete("/api/boards/{slug}/posts/{post_id}/comments/{comment_id}", status_code=204)

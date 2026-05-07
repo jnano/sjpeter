@@ -14,6 +14,8 @@ interface Comment {
   content: string;
   created_at: string;
   member: Author;
+  parent_id: number | null;
+  replies: Comment[];
 }
 
 interface Attachment {

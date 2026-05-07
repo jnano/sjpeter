@@ -33,6 +33,8 @@ interface Board {
   description: string;
   members_only_write: boolean;
   members_only_read: boolean;
+  moderator_only_write: boolean;
+  moderator_id: number | null;
   posts_per_page: number;
 }
 
@@ -126,9 +128,12 @@ export default async function BoardPage({
   }
 
   const token = (session as { accessToken?: string } | null)?.accessToken;
+  const memberId = (session as { memberId?: number } | null)?.memberId ?? null;
   const postList = await getPosts(slug, page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
-  const canWrite = !board.members_only_write || !!session;
+  const canWrite = board.moderator_only_write
+    ? memberId !== null && memberId === board.moderator_id
+    : !board.members_only_write || !!session;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
@@ -164,15 +169,6 @@ export default async function BoardPage({
         currentView={currentView}
       />
 
-      {/* 하단 우측: 게시판 목록으로 */}
-      <div className="flex justify-end mt-6">
-        <Link
-          href="/boards"
-          className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
-        >
-          게시판 목록
-        </Link>
-      </div>
     </div>
   );
 }

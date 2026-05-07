@@ -8,6 +8,14 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     ANTHROPIC_API_KEY: str = ""
 
+    # SMTP 설정 (비밀번호 찾기 이메일 발송)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SITE_URL: str = "http://localhost:3000"
+
     class Config:
         env_file = ".env"
 
