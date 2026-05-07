@@ -122,6 +122,9 @@ class CommentOut(BaseModel):
         from_attributes = True
 
 
+CommentOut.model_rebuild()
+
+
 class AttachmentOut(BaseModel):
     id: int
     original_name: str

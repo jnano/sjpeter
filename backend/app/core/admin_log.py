@@ -3,6 +3,15 @@ from sqlalchemy import text
 from typing import Optional
 
 
+def get_admin_identifier(admin) -> str:
+    """Admin 또는 Member 객체에서 로그용 식별자를 추출한다."""
+    username = getattr(admin, "username", None)
+    if username:
+        return username
+    nickname = getattr(admin, "nickname", None)
+    return f"member:{nickname}" if nickname else f"id:{getattr(admin, 'id', '?')}"
+
+
 def log_action(
     db: Session,
     admin_identifier: str,

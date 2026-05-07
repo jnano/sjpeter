@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from app.core.database import get_db
 from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin
 from app.core.config import settings
-from app.core.admin_log import log_action
+from app.core.admin_log import log_action, get_admin_identifier
 from app.models.member import Member
 from app.models.admin import Admin
 from app.models.board import Post
@@ -215,7 +215,7 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),
-        member=member,
+        member=_member_out(member),
     )
 
 
@@ -255,7 +255,7 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
 
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),
-        member=member,
+        member=_member_out(member),
     )
 
 
@@ -471,7 +471,7 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     if datetime.utcnow() > row.expires_at:
         raise HTTPException(status_code=400, detail="링크가 만료되었습니다. 다시 요청해 주세요.")
 
-    member = db.query(Member).get(row.member_id)
+    member = db.get(Member, row.member_id)
     if not member or not member.is_active:
         raise HTTPException(status_code=400, detail="유효하지 않은 계정입니다.")
 
@@ -651,7 +651,7 @@ def admin_activate_member(
     member.is_active = True
     db.commit()
     db.refresh(member)
-    log_action(db, _admin.username, "activate_member", "member", member_id, f"{member.email}")
+    log_action(db, get_admin_identifier(_admin), "activate_member", "member", member_id, f"{member.email}")
     return _to_admin_out(member, db)
 
 
@@ -665,7 +665,7 @@ def admin_deactivate_member(
     member.is_active = False
     db.commit()
     db.refresh(member)
-    log_action(db, _admin.username, "deactivate_member", "member", member_id, f"{member.email}")
+    log_action(db, get_admin_identifier(_admin), "deactivate_member", "member", member_id, f"{member.email}")
     return _to_admin_out(member, db)
 
 
@@ -683,7 +683,7 @@ def admin_delete_member(
     db.execute(text("DELETE FROM posts WHERE member_id = :id"), {"id": member_id})
     db.execute(text("DELETE FROM members WHERE id = :id"), {"id": member_id})
     db.commit()
-    log_action(db, _admin.username, "delete_member", "member", member_id, member_email)
+    log_action(db, get_admin_identifier(_admin), "delete_member", "member", member_id, member_email)
     return {"ok": True}
 
 

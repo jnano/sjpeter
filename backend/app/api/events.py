@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import date, datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin
-from app.core.admin_log import log_action
+from app.core.admin_log import log_action, get_admin_identifier
 from app.models.admin import Admin
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -72,7 +72,7 @@ def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = De
         "cat": body.category, "pub": body.is_public,
     }).fetchone()
     db.commit()
-    log_action(db, admin.username, "create_event", "event", row.id, body.title)
+    log_action(db, get_admin_identifier(admin), "create_event", "event", row.id, body.title)
     return _row_to_dict(row)
 
 
@@ -99,4 +99,4 @@ def delete_event(event_id: int, db: Session = Depends(get_db), admin: Admin = De
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="행사를 찾을 수 없습니다.")
     db.commit()
-    log_action(db, admin.username, "delete_event", "event", event_id)
+    log_action(db, get_admin_identifier(admin), "delete_event", "event", event_id)
