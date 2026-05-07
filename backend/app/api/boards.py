@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from app.core.database import get_db
-from app.core.auth import get_current_admin, get_current_member, get_optional_member
+from app.core.auth import get_current_admin, get_current_member, get_current_author, get_optional_member
 from app.core.config import settings
 from app.models.board import Board, Post, Comment, BoardAllowedMember
 from app.models.attachment import Attachment
@@ -539,12 +539,14 @@ def create_post(
     slug: str,
     body: PostIn,
     db: Session = Depends(get_db),
-    current: Member = Depends(get_current_member),
+    current: Optional[Member] = Depends(get_current_author),
 ):
     board = _get_board_or_404(slug, db)
-    if board.moderator_only_write and board.moderator_id != current.id and not current.is_admin:
+    if board.moderator_only_write and (
+        current is None or (board.moderator_id != current.id and not current.is_admin)
+    ):
         raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
-    post = Post(board_id=board.id, member_id=current.id, **body.model_dump())
+    post = Post(board_id=board.id, member_id=current.id if current else None, **body.model_dump())
     db.add(post)
     db.commit()
     db.refresh(post)
@@ -589,11 +591,11 @@ def update_post(
     post_id: int,
     body: PostIn,
     db: Session = Depends(get_db),
-    current: Member = Depends(get_current_member),
+    current: Optional[Member] = Depends(get_current_author),
 ):
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
-    if post.member_id != current.id and board.moderator_id != current.id:
+    if current and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
     post.title = body.title
     post.content = body.content
@@ -611,11 +613,11 @@ def delete_post(
     slug: str,
     post_id: int,
     db: Session = Depends(get_db),
-    current: Member = Depends(get_current_member),
+    current: Optional[Member] = Depends(get_current_author),
 ):
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
-    if post.member_id != current.id and board.moderator_id != current.id:
+    if current and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 삭제할 수 있습니다.")
     db.delete(post)
     db.commit()
@@ -742,10 +744,10 @@ async def upload_attachment(
     post_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current: Member = Depends(get_current_member),
+    current: Optional[Member] = Depends(get_current_author),
 ):
     post = _get_post_or_404(slug, post_id, db)
-    if post.member_id != current.id:
+    if current and post.member_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글에만 파일을 첨부할 수 있습니다.")
 
     original = file.filename or "file"
@@ -783,10 +785,10 @@ def delete_attachment(
     post_id: int,
     attachment_id: int,
     db: Session = Depends(get_db),
-    current: Member = Depends(get_current_member),
+    current: Optional[Member] = Depends(get_current_author),
 ):
     post = _get_post_or_404(slug, post_id, db)
-    if post.member_id != current.id:
+    if current and post.member_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글의 파일만 삭제할 수 있습니다.")
 
     att = db.query(Attachment).filter(Attachment.id == attachment_id, Attachment.post_id == post_id).first()

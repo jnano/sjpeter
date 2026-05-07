@@ -37,7 +37,7 @@ export default function GalleryAdminPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPosts(data.items ?? []);
+        setPosts(data.posts ?? []);
       }
     } finally {
       setLoading(false);

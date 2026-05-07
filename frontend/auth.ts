@@ -33,10 +33,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!res.ok) return null;
 
         const data = await res.json();
+        const displayName = data.member.name
+          ? `${data.member.name}(${data.member.nickname})`
+          : data.member.nickname;
         return {
           id: String(data.member.id),
           email: data.member.email,
-          name: data.member.nickname,
+          name: displayName,
           accessToken: data.access_token,
         };
       },
@@ -44,9 +47,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
-      // 아바타 업데이트 트리거
-      if (trigger === "update" && session?.picture !== undefined) {
-        token.picture = session.picture;
+      // 클라이언트 업데이트 트리거 (아바타·이름 변경)
+      if (trigger === "update") {
+        if (session?.picture !== undefined) token.picture = session.picture;
+        if (session?.name !== undefined) token.name = session.name;
         return token;
       }
 
@@ -68,7 +72,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             const data = await res.json();
             token.accessToken = data.access_token;
             token.memberId = data.member.id;
-            token.picture = data.member.avatar_url ?? user?.image ?? null;
+            token.name = data.member.name
+              ? `${data.member.name}(${data.member.nickname})`
+              : data.member.nickname;
+            const av = data.member.avatar_url;
+            token.picture = av
+              ? av.startsWith("/") ? `${API}${av}` : av
+              : (user?.image ?? null);
           }
         } catch {
           // 소셜 로그인 실패 시 토큰 그대로 반환 (세션 거부는 signIn 콜백에서 처리)
@@ -98,6 +108,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.memberId = token.memberId as number;
+      if (token.name) session.user.name = token.name as string;
       if (token.picture !== undefined) {
         session.user.image = token.picture as string | null;
       }

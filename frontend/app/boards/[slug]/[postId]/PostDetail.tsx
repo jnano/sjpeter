@@ -59,9 +59,12 @@ interface Post {
 
 function Avatar({ author, size = 24 }: { author: Author | null; size?: number }) {
   if (author?.avatar_url) {
+    const src = author.avatar_url.startsWith("/")
+      ? `${API}${author.avatar_url}`
+      : author.avatar_url;
     return (
       <Image
-        src={author.avatar_url}
+        src={src}
         alt={author.nickname}
         width={size}
         height={size}
@@ -297,7 +300,11 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
       { method: "DELETE", headers: authHeader }
     );
     if (res.ok) {
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setComments((prev) =>
+        prev
+          .filter((c) => c.id !== commentId)
+          .map((c) => ({ ...c, replies: c.replies.filter((r) => r.id !== commentId) }))
+      );
     }
   }
 

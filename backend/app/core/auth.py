@@ -108,6 +108,35 @@ def get_optional_member(
         return None
 
 
+def get_current_author(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    """게시글 작성·수정·삭제: 로그인 회원 또는 슈퍼관리자 모두 허용.
+    슈퍼관리자는 None 반환 → member_id=None 으로 게시글 생성."""
+    from app.models.member import Member
+    from app.models.admin import Admin
+
+    payload = _decode_token(credentials.credentials)
+    role = payload.get("role")
+
+    if role == "member":
+        member = db.query(Member).filter(
+            Member.id == int(payload.get("sub", 0)),
+            Member.is_active == True,
+        ).first()
+        if not member:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="회원을 찾을 수 없습니다.")
+        return member
+
+    if role == "admin":
+        admin = db.query(Admin).filter(Admin.username == payload.get("sub")).first()
+        if admin:
+            return None  # 슈퍼관리자: member_id 없이 처리
+
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="로그인이 필요합니다.")
+
+
 def get_current_member(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
