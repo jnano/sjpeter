@@ -179,6 +179,21 @@ def _migrate_add_columns():
             )
         """))
 
+        # 묵상 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS meditations (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                scripture VARCHAR(300),
+                body TEXT NOT NULL,
+                author VARCHAR(100),
+                published_date DATE NOT NULL,
+                is_published BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
         conn.commit()
 
 

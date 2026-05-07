@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date
 from datetime import datetime
 from app.core.database import Base
 
@@ -43,4 +43,19 @@ class StaticPage(Base):
     title = Column(String(200), nullable=False)
     subtitle = Column(String(300), nullable=True)
     body = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Meditation(Base):
+    """작은 묵상 — 새 글 저장 시 이전 글은 자동으로 아카이브됨."""
+    __tablename__ = "meditations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    scripture = Column(String(300), nullable=True)   # 성경 구절 (예: 요한 3,16)
+    body = Column(Text, nullable=False)
+    author = Column(String(100), nullable=True)      # 작성자 이름 (선택)
+    published_date = Column(Date, nullable=False)    # 발행일
+    is_published = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

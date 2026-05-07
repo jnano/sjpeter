@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date, datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin
-from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage
+from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation
 from app.models.admin import Admin
 
 router = APIRouter(prefix="/content", tags=["content"])
@@ -224,3 +226,101 @@ def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_
     db.commit()
     db.refresh(page)
     return page
+
+
+# ─── Meditation ────────────────────────────────────────────
+
+class MeditationIn(BaseModel):
+    title: str
+    scripture: Optional[str] = None
+    body: str
+    author: Optional[str] = None
+    published_date: date
+    is_published: bool = True
+
+
+class MeditationOut(BaseModel):
+    id: int
+    title: str
+    scripture: Optional[str]
+    body: str
+    author: Optional[str]
+    published_date: date
+    is_published: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MeditationListOut(BaseModel):
+    items: list[MeditationOut]
+    total: int
+
+
+@router.get("/meditations/current", response_model=Optional[MeditationOut])
+def get_current_meditation(db: Session = Depends(get_db)):
+    item = (
+        db.query(Meditation)
+        .filter(Meditation.is_published == True)
+        .order_by(desc(Meditation.published_date), desc(Meditation.id))
+        .first()
+    )
+    return item
+
+
+@router.get("/meditations", response_model=MeditationListOut)
+def list_meditations(page: int = 1, limit: int = 12, db: Session = Depends(get_db)):
+    q = db.query(Meditation).filter(Meditation.is_published == True)
+    total = q.count()
+    items = (
+        q.order_by(desc(Meditation.published_date), desc(Meditation.id))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return {"items": items, "total": total}
+
+
+@router.get("/meditations/admin", response_model=MeditationListOut)
+def list_meditations_admin(page: int = 1, limit: int = 20, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    total = db.query(Meditation).count()
+    items = (
+        db.query(Meditation)
+        .order_by(desc(Meditation.published_date), desc(Meditation.id))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return {"items": items, "total": total}
+
+
+@router.post("/meditations", response_model=MeditationOut, status_code=201)
+def create_meditation(body: MeditationIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = Meditation(**body.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.put("/meditations/{item_id}", response_model=MeditationOut)
+def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    for k, v in body.model_dump().items():
+        setattr(item, k, v)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/meditations/{item_id}", status_code=204)
+def delete_meditation(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    db.delete(item)
+    db.commit()

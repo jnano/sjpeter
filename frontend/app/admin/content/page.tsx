@@ -567,9 +567,270 @@ function PagesTab() {
   );
 }
 
+// ─── Meditation Tab ───────────────────────────────────────
+
+interface Meditation {
+  id: number;
+  title: string;
+  scripture: string | null;
+  body: string;
+  author: string | null;
+  published_date: string;
+  is_published: boolean;
+}
+
+const emptyMedForm = {
+  title: "",
+  scripture: "",
+  body: "",
+  author: "",
+  published_date: new Date().toISOString().slice(0, 10),
+  is_published: true,
+};
+
+function MeditationTab() {
+  const [items, setItems] = useState<Meditation[]>([]);
+  const [total, setTotal] = useState(0);
+  const [form, setForm] = useState({ ...emptyMedForm });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ ...emptyMedForm });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/meditations/admin`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setItems(data.items);
+      setTotal(data.total);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function flash(m: string) {
+    setMsg(m);
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.body.trim()) return;
+    setLoading(true);
+    const body = {
+      title: form.title.trim(),
+      scripture: form.scripture.trim() || null,
+      body: form.body.trim(),
+      author: form.author.trim() || null,
+      published_date: form.published_date,
+      is_published: form.is_published,
+    };
+    const res = await fetch(`${API}/api/content/meditations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(body),
+    });
+    setLoading(false);
+    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); load(); }
+  }
+
+  async function update(id: number) {
+    setLoading(true);
+    const body = {
+      title: editForm.title.trim(),
+      scripture: editForm.scripture.trim() || null,
+      body: editForm.body.trim(),
+      author: editForm.author.trim() || null,
+      published_date: editForm.published_date,
+      is_published: editForm.is_published,
+    };
+    const res = await fetch(`${API}/api/content/meditations/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(body),
+    });
+    setLoading(false);
+    if (res.ok) { flash("수정되었습니다."); setEditId(null); load(); }
+  }
+
+  async function remove(id: number) {
+    if (!confirm("삭제하시겠습니까? 복구할 수 없습니다.")) return;
+    await fetch(`${API}/api/content/meditations/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    load();
+  }
+
+  function startEdit(item: Meditation) {
+    setEditId(item.id);
+    setEditForm({
+      title: item.title,
+      scripture: item.scripture ?? "",
+      body: item.body,
+      author: item.author ?? "",
+      published_date: item.published_date,
+      is_published: item.is_published,
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+
+      {/* 새 묵상 작성 폼 */}
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 묵상 작성</h3>
+        <form onSubmit={create} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">발행일 <span className="text-red-400">*</span></label>
+              <input
+                type="date"
+                value={form.published_date}
+                onChange={(e) => setForm((p) => ({ ...p, published_date: e.target.value }))}
+                className={inputCls}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">성경 구절</label>
+              <input
+                value={form.scripture}
+                onChange={(e) => setForm((p) => ({ ...p, scripture: e.target.value }))}
+                className={inputCls}
+                placeholder="예: 요한 3,16  /  마태 5,1-12"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">제목 <span className="text-red-400">*</span></label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              className={inputCls}
+              placeholder="묵상 제목"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">본문 <span className="text-red-400">*</span></label>
+            <textarea
+              value={form.body}
+              onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
+              rows={8}
+              className={`${inputCls} resize-y`}
+              placeholder="묵상 내용을 입력하세요. 줄바꿈이 그대로 표시됩니다."
+              required
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">작성자 (선택)</label>
+              <input
+                value={form.author}
+                onChange={(e) => setForm((p) => ({ ...p, author: e.target.value }))}
+                className={inputCls}
+                placeholder="예: 주임 신부 홍길동"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer shrink-0 mt-4">
+              <input
+                type="checkbox"
+                checked={form.is_published}
+                onChange={(e) => setForm((p) => ({ ...p, is_published: e.target.checked }))}
+                className="rounded"
+              />
+              바로 게시
+            </label>
+          </div>
+          <button type="submit" disabled={loading} className={btnPrimary}>등록</button>
+        </form>
+      </section>
+
+      {/* 목록 */}
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">
+          묵상 목록 <span className="text-gray-400 font-normal text-sm">({total}편)</span>
+        </h3>
+        <div className="space-y-3">
+          {items.length === 0 && <p className="text-sm text-gray-400 text-center py-8">등록된 묵상이 없습니다.</p>}
+          {items.map((item, idx) => (
+            <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+              {editId === item.id ? (
+                <div className="p-4 bg-blue-50 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">발행일</label>
+                      <input type="date" value={editForm.published_date} onChange={(e) => setEditForm((p) => ({ ...p, published_date: e.target.value }))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">성경 구절</label>
+                      <input value={editForm.scripture} onChange={(e) => setEditForm((p) => ({ ...p, scripture: e.target.value }))} className={inputCls} placeholder="요한 3,16" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">제목</label>
+                    <input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">본문</label>
+                    <textarea value={editForm.body} onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))} rows={8} className={`${inputCls} resize-y`} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">작성자</label>
+                      <input value={editForm.author} onChange={(e) => setEditForm((p) => ({ ...p, author: e.target.value }))} className={inputCls} />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer shrink-0 mt-4">
+                      <input type="checkbox" checked={editForm.is_published} onChange={(e) => setEditForm((p) => ({ ...p, is_published: e.target.checked }))} className="rounded" />
+                      게시됨
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => update(item.id)} disabled={loading} className={btnPrimary}>저장</button>
+                    <button onClick={() => setEditId(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">취소</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {idx === 0 && (
+                        <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">최신</span>
+                      )}
+                      {!item.is_published && (
+                        <span className="text-[10px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">비공개</span>
+                      )}
+                      <span className="text-xs text-gray-400">{item.published_date}</span>
+                      {item.scripture && (
+                        <span className="text-xs text-[var(--color-accent)]">{item.scripture}</span>
+                      )}
+                    </div>
+                    <p className="font-medium text-sm text-gray-800">{item.title}</p>
+                    {item.author && <p className="text-xs text-gray-400 mt-0.5">{item.author}</p>}
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.body.slice(0, 100)}</p>
+                  </div>
+                  <div className="flex gap-3 shrink-0">
+                    <button onClick={() => startEdit(item)} className={btnEdit}>수정</button>
+                    <button onClick={() => remove(item.id)} className={btnDanger}>삭제</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────
 
 const TABS = [
+  { key: "meditation", label: "작은 묵상" },
   { key: "history", label: "연혁" },
   { key: "vision", label: "사목지표" },
   { key: "community", label: "단체/분과" },
@@ -585,7 +846,7 @@ export default function AdminContentPage() {
   const rawTab = searchParams.get("tab");
   const tab: TabKey = (TABS.map((t) => t.key) as string[]).includes(rawTab ?? "")
     ? (rawTab as TabKey)
-    : "history";
+    : "meditation";
 
   function setTab(key: TabKey) {
     router.push(`/admin/content?tab=${key}`);
@@ -595,7 +856,7 @@ export default function AdminContentPage() {
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">페이지 콘텐츠 관리</h1>
-        <p className="text-sm text-gray-500 mt-1">연혁, 사목지표, 단체/분과 내용을 관리합니다.</p>
+        <p className="text-sm text-gray-500 mt-1">묵상, 연혁, 사목지표, 단체/분과 내용을 관리합니다.</p>
       </div>
 
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1">
@@ -614,6 +875,7 @@ export default function AdminContentPage() {
         ))}
       </div>
 
+      {tab === "meditation" && <MeditationTab />}
       {tab === "history" && <HistoryTab />}
       {tab === "vision" && <VisionTab />}
       {tab === "community" && <CommunityTab />}
