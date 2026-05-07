@@ -2,14 +2,14 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, func
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin, get_current_member, get_optional_member
 from app.core.config import settings
-from app.models.board import Board, Post, Comment
+from app.models.board import Board, Post, Comment, BoardAllowedMember
 from app.models.attachment import Attachment
 from app.models.member import Member
 from app.models.admin import Admin
@@ -26,6 +26,7 @@ router = APIRouter(tags=["boards"])
 class ModeratorOut(BaseModel):
     id: int
     nickname: str
+    email: str = ""
     avatar_url: Optional[str] = None
 
     class Config:
@@ -38,6 +39,7 @@ class BoardIn(BaseModel):
     description: Optional[str] = None
     members_only_write: bool = True
     members_only_read: bool = False
+    members_selected: bool = False
     posts_per_page: int = 20
     exclude_from_search: bool = False
     moderator_id: Optional[int] = None
@@ -49,10 +51,21 @@ class BoardUpdate(BaseModel):
     description: Optional[str] = None
     members_only_write: Optional[bool] = None
     members_only_read: Optional[bool] = None
+    members_selected: Optional[bool] = None
     is_active: Optional[bool] = None
     posts_per_page: Optional[int] = None
     exclude_from_search: Optional[bool] = None
     moderator_id: Optional[int] = None
+
+
+class AllowedMemberOut(BaseModel):
+    id: int
+    nickname: str
+    email: str
+    avatar_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class BoardOut(BaseModel):
@@ -63,10 +76,12 @@ class BoardOut(BaseModel):
     is_active: bool
     members_only_write: bool
     members_only_read: bool = False
+    members_selected: bool = False
     posts_per_page: int = 20
     post_count: int = 0
     exclude_from_search: bool = False
     moderator: Optional[ModeratorOut] = None
+    allowed_members: list[AllowedMemberOut] = []
 
     class Config:
         from_attributes = True
@@ -260,16 +275,22 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     total = base_query.count()
     posts = base_query.offset((max(1, page) - 1) * limit).limit(limit).all()
 
+    post_ids = [p.id for p in posts]
+    comment_counts = dict(
+        db.query(Comment.post_id, func.count(Comment.id))
+        .filter(Comment.post_id.in_(post_ids))
+        .group_by(Comment.post_id)
+        .all()
+    ) if post_ids else {}
     results = []
     for p in posts:
-        comment_count = db.query(Comment).filter(Comment.post_id == p.id).count()
         results.append(SearchResultItem(
             id=p.id,
             title=p.title,
             excerpt=_make_excerpt(p.content, q),
             view_count=p.view_count,
             created_at=p.created_at,
-            comment_count=comment_count,
+            comment_count=comment_counts.get(p.id, 0),
             board=BoardSummary.model_validate(p.board),
             member=AuthorOut.model_validate(p.member) if p.member else None,
         ))
@@ -307,10 +328,6 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     # ── 댓글 검색 ──────────────────────────────────────────
-    # 이미 게시글 결과에 포함된 post_id는 제외 (중복 방지)
-    matched_post_ids = {p.id for p in posts}
-    seen_comment_post_ids: set[int] = set(matched_post_ids)
-
     comment_rows = (
         db.query(Comment)
         .join(Post, Comment.post_id == Post.id)
@@ -318,24 +335,19 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .options(joinedload(Comment.post).joinedload(Post.board))
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
-        .filter(Board.members_only_read == False)  # 공개 게시판만 노출
+        .filter(Board.members_only_read == False)
         .filter(Comment.content.ilike(keyword))
         .order_by(desc(Comment.created_at))
-        .limit(50)  # 중복 제거 후 최대 20개를 확보하기 위한 여유
+        .limit(20)
         .all()
     )
     for c in comment_rows:
-        if c.post_id in seen_comment_post_ids:
-            continue
-        seen_comment_post_ids.add(c.post_id)
         content_results.append(ContentSearchItem(
             type="comment", label="댓글",
             title=c.post.title,
             excerpt=_make_excerpt(c.content, q),
             url=f"/boards/{c.post.board.slug}/{c.post_id}",
         ))
-        if len([r for r in content_results if r.type == "comment"]) >= 20:
-            break
 
     return SearchOut(results=results, content_results=content_results, total=total, page=page, limit=limit)
 
@@ -357,6 +369,37 @@ def list_boards(include_inactive: bool = False, db: Session = Depends(get_db)):
     return result
 
 
+def _board_out(board: Board, db: Session) -> BoardOut:
+    count = db.query(Post).filter(Post.board_id == board.id).count()
+    out = BoardOut.model_validate(board)
+    out.post_count = count
+    out.allowed_members = [
+        AllowedMemberOut.model_validate(bam.member)
+        for bam in db.query(BoardAllowedMember)
+            .options(joinedload(BoardAllowedMember.member))
+            .filter(BoardAllowedMember.board_id == board.id)
+            .all()
+    ]
+    return out
+
+
+class AllowedMemberIn(BaseModel):
+    member_id: int
+
+
+def _check_selected_access(board: Board, viewer: Optional[Member], db: Session):
+    if not board.members_selected:
+        return
+    if not viewer:
+        raise HTTPException(status_code=403, detail="접근 권한이 있는 회원만 볼 수 있는 게시판입니다.")
+    exists = db.query(BoardAllowedMember).filter(
+        BoardAllowedMember.board_id == board.id,
+        BoardAllowedMember.member_id == viewer.id,
+    ).first()
+    if not exists:
+        raise HTTPException(status_code=403, detail="접근 권한이 없는 게시판입니다.")
+
+
 @router.get("/api/boards/{slug}", response_model=BoardOut)
 def get_board(slug: str, db: Session = Depends(get_db)):
     board = (
@@ -367,10 +410,7 @@ def get_board(slug: str, db: Session = Depends(get_db)):
     )
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
-    count = db.query(Post).filter(Post.board_id == board.id).count()
-    out = BoardOut.model_validate(board)
-    out.post_count = count
-    return out
+    return _board_out(board, db)
 
 
 @router.post("/api/boards", response_model=BoardOut, status_code=201)
@@ -394,16 +434,50 @@ def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), _:
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(board, k, v)
     db.commit()
-    board = (
-        db.query(Board)
-        .options(joinedload(Board.moderator))
-        .filter(Board.slug == slug)
-        .first()
-    )
-    count = db.query(Post).filter(Post.board_id == board.id).count()
-    out = BoardOut.model_validate(board)
-    out.post_count = count
-    return out
+    board = db.query(Board).options(joinedload(Board.moderator)).filter(Board.slug == slug).first()
+    return _board_out(board, db)
+
+
+@router.get("/api/boards/{slug}/allowed-members", response_model=list[AllowedMemberOut])
+def list_allowed_members(slug: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    board = db.query(Board).filter(Board.slug == slug).first()
+    if not board:
+        raise HTTPException(status_code=404)
+    rows = (db.query(BoardAllowedMember)
+            .options(joinedload(BoardAllowedMember.member))
+            .filter(BoardAllowedMember.board_id == board.id).all())
+    return [AllowedMemberOut.model_validate(r.member) for r in rows]
+
+
+@router.post("/api/boards/{slug}/allowed-members", status_code=201)
+def add_allowed_member(slug: str, body: AllowedMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    board = db.query(Board).filter(Board.slug == slug).first()
+    if not board:
+        raise HTTPException(status_code=404)
+    if not db.query(Member).filter(Member.id == body.member_id).first():
+        raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
+    exists = db.query(BoardAllowedMember).filter(
+        BoardAllowedMember.board_id == board.id,
+        BoardAllowedMember.member_id == body.member_id,
+    ).first()
+    if not exists:
+        db.add(BoardAllowedMember(board_id=board.id, member_id=body.member_id))
+        db.commit()
+    return {"ok": True}
+
+
+@router.delete("/api/boards/{slug}/allowed-members/{member_id}", status_code=204)
+def remove_allowed_member(slug: str, member_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    board = db.query(Board).filter(Board.slug == slug).first()
+    if not board:
+        raise HTTPException(status_code=404)
+    row = db.query(BoardAllowedMember).filter(
+        BoardAllowedMember.board_id == board.id,
+        BoardAllowedMember.member_id == member_id,
+    ).first()
+    if row:
+        db.delete(row)
+        db.commit()
 
 
 @router.delete("/api/boards/{slug}", status_code=204)
@@ -422,6 +496,7 @@ def list_posts(slug: str, page: int = 1, db: Session = Depends(get_db), viewer: 
     board = _get_board_or_404(slug, db)
     if board.members_only_read and not viewer:
         raise HTTPException(status_code=403, detail="회원만 볼 수 있는 게시판입니다.")
+    _check_selected_access(board, viewer, db)
     per_page = max(1, board.posts_per_page)
     skip = (max(1, page) - 1) * per_page
     total = db.query(Post).filter(Post.board_id == board.id).count()
@@ -432,10 +507,17 @@ def list_posts(slug: str, page: int = 1, db: Session = Depends(get_db), viewer: 
         .order_by(desc(Post.created_at))
         .offset(skip).limit(per_page).all()
     )
+    post_ids = [p.id for p in posts]
+    comment_counts = dict(
+        db.query(Comment.post_id, func.count(Comment.id))
+        .filter(Comment.post_id.in_(post_ids))
+        .group_by(Comment.post_id)
+        .all()
+    ) if post_ids else {}
     result = []
     for p in posts:
         s = PostSummary.model_validate(p)
-        s.comment_count = db.query(Comment).filter(Comment.post_id == p.id).count()
+        s.comment_count = comment_counts.get(p.id, 0)
         first_img = next((a for a in p.attachments if a.is_image), None)
         s.thumbnail_url = first_img.file_url if first_img else None
         result.append(s)
@@ -456,7 +538,7 @@ def create_post(
     db.refresh(post)
     return (
         db.query(Post)
-        .options(joinedload(Post.member), joinedload(Post.comments).joinedload(Comment.member), joinedload(Post.attachments))
+        .options(joinedload(Post.member), joinedload(Post.attachments))
         .filter(Post.id == post.id)
         .first()
     )
@@ -467,6 +549,7 @@ def get_post(slug: str, post_id: int, db: Session = Depends(get_db), viewer: Opt
     board = _get_board_or_404(slug, db)
     if board.members_only_read and not viewer:
         raise HTTPException(status_code=403, detail="회원만 볼 수 있는 게시판입니다.")
+    _check_selected_access(board, viewer, db)
     post = _get_post_or_404(slug, post_id, db)
     post.view_count += 1
     db.commit()
@@ -567,17 +650,23 @@ def my_posts(db: Session = Depends(get_db), current: Member = Depends(get_curren
         .order_by(desc(Post.created_at))
         .all()
     )
+    post_ids = [p.id for p in posts]
+    comment_counts = dict(
+        db.query(Comment.post_id, func.count(Comment.id))
+        .filter(Comment.post_id.in_(post_ids))
+        .group_by(Comment.post_id)
+        .all()
+    ) if post_ids else {}
     result = []
     for p in posts:
-        out = MyPostOut(
+        result.append(MyPostOut(
             id=p.id,
             title=p.title,
             view_count=p.view_count,
             created_at=p.created_at,
-            comment_count=db.query(Comment).filter(Comment.post_id == p.id).count(),
+            comment_count=comment_counts.get(p.id, 0),
             board=BoardSummary(id=p.board.id, name=p.board.name, slug=p.board.slug),
-        )
-        result.append(out)
+        ))
     return result
 
 

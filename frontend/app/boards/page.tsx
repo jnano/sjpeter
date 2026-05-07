@@ -13,7 +13,7 @@ interface Board {
 
 async function getBoards(): Promise<Board[]> {
   try {
-    const res = await fetch(`${API}/api/boards`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/boards`, { next: { revalidate: 300 } });
     if (!res.ok) return [];
     return res.json();
   } catch {

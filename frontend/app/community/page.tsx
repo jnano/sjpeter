@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "함께하는 이들",
@@ -19,7 +20,7 @@ interface CommunityGroup {
 
 async function getCommunity(): Promise<CommunityGroup[]> {
   try {
-    const res = await fetch(`${API}/api/content/community`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/content/community`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -29,7 +30,7 @@ async function getCommunity(): Promise<CommunityGroup[]> {
 
 async function getPhone(): Promise<string | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.phone ?? null;
@@ -42,15 +43,9 @@ export default async function CommunityPage() {
   const [groups, phone] = await Promise.all([getCommunity(), getPhone()]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">
-          함께하는 이들
-        </h1>
-        <p className="text-[var(--color-text-muted)]">
-          세종성베드로성당을 이루는 사람들과 모임을 소개합니다.
-        </p>
-      </div>
+    <>
+      <PageHeader group="우리 성당" title="우리 가족" subtitle="세종성베드로성당을 이루는 사람들과 모임을 소개합니다" />
+      <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="grid sm:grid-cols-2 gap-4">
         {groups.map((group) => {
@@ -112,5 +107,6 @@ export default async function CommunityPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

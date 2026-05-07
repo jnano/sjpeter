@@ -1,112 +1,124 @@
 import type { Metadata } from "next";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
-  title: "오늘의 말씀",
-  description: "가톨릭굿뉴스 오늘의 말씀 — 매일 전례 말씀",
+  title: "오늘의 복음",
+  description: "가톨릭굿뉴스 매일미사 — 오늘의 복음",
 };
 
-interface Reading {
-  title: string;
-  reference: string;
-  text: string;
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+interface GospelToday {
+  date: string;
+  liturgical_season: string | null;
+  gospel_reference: string | null;
+  gospel_text: string | null;
 }
 
-async function fetchDailyWord(): Promise<{
-  date: string;
-  liturgicalSeason: string;
-  readings: Reading[];
-  gospel: Reading | null;
-} | null> {
+async function fetchGospel(): Promise<GospelToday | null> {
   try {
-    // 가톨릭굿뉴스 RSS 연동 — Phase 3에서 완성
-    // 현재는 오늘 날짜 기반 구조만 반환
-    const today = new Date().toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-
-    return {
-      date: today,
-      liturgicalSeason: "부활 제5주일",
-      readings: [
-        {
-          title: "제1독서",
-          reference: "사도 9,26-31",
-          text: "사울이 예루살렘에 이르러 제자들과 어울리려고 하였으나, 그가 제자가 된 것을 믿지 않아 모두 그를 두려워하였다. 그때 바르나바가 그를 데리고 사도들에게 가서, 그가 다마스쿠스로 가는 길에서 주님을 보았으며 주님이 그에게 말씀하셨고, 또 그가 다마스쿠스에서 예수님의 이름으로 담대하게 말하였다는 것을 이야기하여 주었다.",
-        },
-      ],
-      gospel: {
-        title: "복음",
-        reference: "요한 15,1-8",
-        text: "그때에 예수님께서 제자들에게 말씀하셨다. '나는 참포도나무요 나의 아버지는 농부이시다. 나에게 붙어 있으면서 열매를 맺지 못하는 가지는 아버지께서 다 잘라 내시고, 열매를 맺는 가지는 더 많은 열매를 맺도록 깨끗이 손질하신다.'",
-      },
-    };
+    const res = await fetch(`${API}/api/gospel/today`, { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? json.data : null;
   } catch {
     return null;
   }
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("ko-KR", {
+    year: "numeric", month: "long", day: "numeric", weekday: "long",
+  });
+}
+
 export default async function WordPage() {
-  const word = await fetchDailyWord();
+  const gospel = await fetchGospel();
+
+  const subtitle = gospel
+    ? `${formatDate(gospel.date)}${gospel.liturgical_season ? " · " + gospel.liturgical_season : ""}`
+    : "오늘 선포되는 하느님의 말씀";
+
+  const missaUrl = gospel
+    ? `https://maria.catholic.or.kr/mi_pr/missa/missa.asp?goMonth=${gospel.date}`
+    : "https://maria.catholic.or.kr/mi_pr/missa/missa.asp";
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">
-          오늘의 말씀
-        </h1>
-        {word && (
-          <p className="text-[var(--color-text-muted)]">
-            {word.date} · {word.liturgicalSeason}
-          </p>
-        )}
-      </div>
+    <>
+      <PageHeader group="말씀과 기도" title="오늘의 복음" subtitle={subtitle} />
+      <div className="max-w-3xl mx-auto px-4 py-8">
 
-      {!word ? (
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center">
-          <p className="text-[var(--color-text-muted)]">말씀을 불러오는 중입니다…</p>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {/* 독서들 */}
-          {word.readings.map((reading, i) => (
-            <div
-              key={i}
-              className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6"
+        {!gospel ? (
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center">
+            <p className="text-4xl mb-4">📖</p>
+            <p className="font-sans font-semibold text-[var(--color-primary)] mb-2">말씀을 불러올 수 없습니다</p>
+            <p className="text-sm text-[var(--color-text-muted)] mb-6">
+              가톨릭굿뉴스 서버에 일시적인 문제가 있을 수 있습니다.
+            </p>
+            <a
+              href="https://maria.catholic.or.kr/mi_pr/missa/missa.asp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              <div className="flex items-baseline gap-3 mb-4">
-                <h2 className="font-serif font-bold text-[var(--color-primary)]">
-                  {reading.title}
-                </h2>
-                <span className="text-sm text-[var(--color-text-muted)]">
-                  {reading.reference}
-                </span>
-              </div>
-              <p className="leading-relaxed text-[var(--color-text)]">{reading.text}</p>
-            </div>
-          ))}
+              굿뉴스에서 직접 보기 →
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-5">
 
-          {/* 복음 — 강조 */}
-          {word.gospel && (
-            <div className="bg-[var(--color-primary)] text-white rounded-xl p-6">
-              <div className="flex items-baseline gap-3 mb-4">
-                <h2 className="font-serif font-bold text-xl">복음</h2>
-                <span className="text-white/70 text-sm">{word.gospel.reference}</span>
+            {/* 복음 본문 */}
+            <div className="bg-[var(--color-primary)] text-white rounded-xl p-8">
+              <div className="flex items-baseline gap-3 mb-5">
+                <h2 className="font-sans font-bold text-xl text-white">복음</h2>
+                {gospel.gospel_reference && (
+                  <span className="text-white/70 text-sm">{gospel.gospel_reference}</span>
+                )}
               </div>
-              <p className="leading-relaxed">{word.gospel.text}</p>
-            </div>
-          )}
 
-          {/* 출처 */}
-          <div className="text-center">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              출처: 가톨릭굿뉴스 (catholics.or.kr)
+              {gospel.gospel_text ? (
+                <p className="leading-relaxed text-white/90 text-base whitespace-pre-line">
+                  {gospel.gospel_text}
+                </p>
+              ) : (
+                <p className="text-white/50 italic text-sm">복음 본문을 가져오지 못했습니다.</p>
+              )}
+            </div>
+
+            {/* 전례 정보 */}
+            {gospel.liturgical_season && (
+              <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl px-6 py-4 flex items-center gap-3">
+                <span className="text-[var(--color-accent)] text-lg">✝</span>
+                <div>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-0.5">오늘의 전례</p>
+                  <p className="text-sm font-medium text-[var(--color-primary)]">{gospel.liturgical_season}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 전체 미사 독서 링크 */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-sans font-semibold text-[var(--color-primary)] mb-1">오늘의 전체 미사 말씀</p>
+                <p className="text-sm text-[var(--color-text-muted)]">제1독서, 화답송, 복음환호송, 복음 전문을 굿뉴스에서 확인하세요.</p>
+              </div>
+              <a
+                href={missaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+              >
+                굿뉴스 보기 →
+              </a>
+            </div>
+
+            {/* 출처 */}
+            <p className="text-center text-xs text-[var(--color-text-muted)]">
+              출처: 가톨릭인터넷 굿뉴스 (catholic.or.kr) · 매일 자동 업데이트
             </p>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }

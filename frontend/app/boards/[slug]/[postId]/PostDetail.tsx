@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -54,20 +55,20 @@ interface Post {
 }
 
 function Avatar({ author, size = 24 }: { author: Author; size?: number }) {
-  const style = { width: size, height: size };
   if (author.avatar_url) {
     return (
-      <img
+      <Image
         src={author.avatar_url}
         alt={author.nickname}
-        style={style}
+        width={size}
+        height={size}
         className="rounded-full object-cover shrink-0"
       />
     );
   }
   return (
     <span
-      style={style}
+      style={{ width: size, height: size }}
       className="rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[10px] font-bold text-[var(--color-primary)] shrink-0"
     >
       {author.nickname[0]}
@@ -137,7 +138,7 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
       {/* 제목 + 메타 */}
       <div className="mt-4 border-b border-[var(--color-border)] pb-6 mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)] mb-3">{post.title}</h1>
-        <div className="flex items-center justify-between text-sm text-[var(--color-text-muted)]">
+        <div className="flex items-center text-sm text-[var(--color-text-muted)]">
           <span className="flex items-center gap-1.5">
             <Avatar author={post.member} size={20} />
             {post.member.nickname} ·{" "}
@@ -148,19 +149,6 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
             })}{" "}
             · 조회 {post.view_count}
           </span>
-          {canEditPost && (
-            <div className="flex gap-3">
-              <Link
-                href={`/boards/${slug}/${post.id}/edit`}
-                className="hover:text-[var(--color-primary)] transition-colors"
-              >
-                수정
-              </Link>
-              <button onClick={deletePost} className="hover:text-red-500 transition-colors">
-                삭제
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -176,18 +164,19 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
         return (
           <div className="mb-12 space-y-4">
             {images.length > 0 && (
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col items-center gap-5">
                 {images.map((att) => (
                   <a
                     key={att.id}
                     href={`${API}${att.file_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="max-w-[90%]"
                   >
                     <img
                       src={`${API}${att.file_url}`}
                       alt={att.original_name}
-                      className="w-40 h-40 object-cover rounded-lg border border-[var(--color-border)] hover:opacity-90 transition-opacity"
+                      className="max-w-full h-auto rounded-lg border border-[var(--color-border)] hover:opacity-90 transition-opacity"
                     />
                   </a>
                 ))}
@@ -212,6 +201,32 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
           </div>
         );
       })()}
+
+      {/* 액션 바 */}
+      <div className="flex justify-end gap-2 mb-8 pt-4 border-t border-[var(--color-border)]">
+        {canEditPost && (
+          <>
+            <Link
+              href={`/boards/${slug}/${post.id}/edit`}
+              className="px-4 py-1.5 border border-[var(--color-border)] text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors text-[var(--color-text-muted)]"
+            >
+              수정
+            </Link>
+            <button
+              onClick={deletePost}
+              className="px-4 py-1.5 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors text-red-500"
+            >
+              삭제
+            </button>
+          </>
+        )}
+        <Link
+          href={`/boards/${slug}`}
+          className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
+        >
+          목록으로
+        </Link>
+      </div>
 
       {/* 댓글 */}
       <div>

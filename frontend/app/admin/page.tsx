@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API = "http://localhost:8000";
+
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,10 +18,10 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/auth/login", {
+      const res = await fetch(`${API}/api/auth/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ identifier, password }),
       });
 
       if (!res.ok) {
@@ -27,9 +29,11 @@ export default function AdminLoginPage() {
         throw new Error(data.detail ?? "로그인 실패");
       }
 
-      const { access_token } = await res.json();
-      localStorage.setItem("admin_token", access_token);
-      // proxy.ts 인증 검사용 쿠키 (7일)
+      const data = await res.json();
+      localStorage.setItem("admin_token", data.access_token);
+      localStorage.setItem("admin_display_name", data.display_name);
+      localStorage.setItem("admin_role", data.role);
+      localStorage.setItem("admin_is_super", String(data.is_super_admin));
       document.cookie = `admin_authed=1; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
       router.push("/admin/dashboard");
     } catch (err) {
@@ -64,16 +68,16 @@ export default function AdminLoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-              아이디
+              아이디 또는 이메일
             </label>
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               autoFocus
               className="w-full border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
-              placeholder="admin"
+              placeholder="admin 또는 이메일"
             />
           </div>
 

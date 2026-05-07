@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 from app.core.database import get_db
-from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin
+from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin
 from app.core.config import settings
 from app.models.member import Member
 from app.models.admin import Admin
@@ -64,6 +64,8 @@ class MemberAdminOut(BaseModel):
     avatar_url: Optional[str] = None
     social_provider: Optional[str] = None
     is_active: bool
+    is_admin: bool = False
+    has_password: bool = True   # 비밀번호 설정 여부 (소셜 전용 여부 판단용)
     post_count: int = 0
     created_at: datetime
 
@@ -299,6 +301,8 @@ def admin_list_members(
             avatar_url=m.avatar_url,
             social_provider=m.social_provider,
             is_active=m.is_active,
+            is_admin=m.is_admin,
+            has_password=m.hashed_password is not None,
             post_count=post_counts.get(m.id, 0),
             created_at=m.created_at,
         )
@@ -306,6 +310,34 @@ def admin_list_members(
     ]
 
     return MemberListResponse(items=items, total=total, page=page, size=size)
+
+
+@router.post("/admin/create", response_model=MemberAdminOut, status_code=201)
+def admin_create_member(
+    body: RegisterRequest,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """관리자가 회원을 직접 등록한다."""
+    if len(body.nickname) < 2:
+        raise HTTPException(status_code=400, detail="닉네임은 2자 이상이어야 합니다.")
+    if len(body.password) < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다.")
+    if db.query(Member).filter(Member.email == body.email).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다.")
+    if db.query(Member).filter(Member.nickname == body.nickname).first():
+        raise HTTPException(status_code=400, detail="이미 사용 중인 닉네임입니다.")
+
+    member = Member(
+        email=body.email,
+        nickname=body.nickname,
+        hashed_password=hash_password(body.password),
+        is_active=True,
+    )
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    return _to_admin_out(member, db)
 
 
 @router.put("/admin/{member_id}/activate", response_model=MemberAdminOut)
@@ -350,6 +382,49 @@ def admin_delete_member(
     return {"ok": True}
 
 
+@router.patch("/admin/{member_id}/reset-password")
+def admin_reset_password(
+    member_id: int,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """관리자·위임관리자 — 회원 비밀번호를 초기값(0629)으로 초기화."""
+    member = _get_member_or_404(member_id, db)
+    member.hashed_password = hash_password("0629")
+    db.commit()
+    return {"ok": True}
+
+
+@router.patch("/admin/{member_id}/grant-admin", response_model=MemberAdminOut)
+def grant_admin(
+    member_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_super_admin),
+):
+    """슈퍼 관리자만 호출 가능 — 회원에게 관리 권한 부여.
+    비밀번호가 없는 소셜 회원도 지정 가능하나, 실제 관리자 패널 로그인은
+    비밀번호 설정 후에만 가능하다."""
+    member = _get_member_or_404(member_id, db)
+    member.is_admin = True
+    db.commit()
+    db.refresh(member)
+    return _to_admin_out(member, db)
+
+
+@router.patch("/admin/{member_id}/revoke-admin", response_model=MemberAdminOut)
+def revoke_admin(
+    member_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_super_admin),
+):
+    """슈퍼 관리자만 호출 가능 — 회원 관리 권한 회수."""
+    member = _get_member_or_404(member_id, db)
+    member.is_admin = False
+    db.commit()
+    db.refresh(member)
+    return _to_admin_out(member, db)
+
+
 # ── 헬퍼 ──────────────────────────────────────────────────
 
 def _get_member_or_404(member_id: int, db: Session) -> Member:
@@ -368,6 +443,8 @@ def _to_admin_out(member: Member, db: Session) -> MemberAdminOut:
         avatar_url=member.avatar_url,
         social_provider=member.social_provider,
         is_active=member.is_active,
+        is_admin=member.is_admin,
+        has_password=member.hashed_password is not None,
         post_count=post_count,
         created_at=member.created_at,
     )

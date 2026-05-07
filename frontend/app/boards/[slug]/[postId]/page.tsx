@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import PostDetail from "./PostDetail";
 import { auth } from "@/auth";
 
@@ -73,12 +72,6 @@ export default async function PostPage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <Link
-        href={`/boards/${slug}`}
-        className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
-      >
-        ← 목록으로
-      </Link>
       <PostDetail post={post} slug={slug} />
     </div>
   );

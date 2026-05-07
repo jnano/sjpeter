@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -33,7 +33,15 @@ interface CommunityGroup {
   name: string;
   description: string | null;
   activity_time: string | null;
+  link_url: string | null;
   sort_order: number;
+}
+
+interface StaticPage {
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  body: string | null;
 }
 
 const inputCls = "px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full";
@@ -320,7 +328,7 @@ function CommunityTab() {
 
   function slugFromUrl(url: string | null): string | null {
     if (!url) return null;
-    const m = url.match(/^\/boards\/([^/]+)\/?$/);
+    const m = url.match(/\/boards\/([^/]+)\/?$/);
     return m ? m[1] : null;
   }
 
@@ -428,14 +436,14 @@ function CommunityTab() {
                         )}
                         {g.link_url && boardExists ? (
                           <a
-                            href={`/admin/boards`}
+                            href={`/admin/boards?expand=${slug}`}
                             className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors font-medium"
                           >
                             관리하기
                           </a>
                         ) : (
                           <a
-                            href="/admin/boards"
+                            href="/admin/boards?create=true"
                             className="text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors font-medium"
                           >
                             {g.link_url ? "게시판 없음 — 만들기" : "게시판 만들기"}
@@ -458,24 +466,135 @@ function CommunityTab() {
   );
 }
 
+// ─── Pages Tab ───────────────────────────────────────────
+
+const PAGE_LABELS: Record<string, string> = {
+  saint: "성 베드로",
+  council: "사목평의회",
+  meditation: "작은 묵상",
+  prayer: "기도문 모음",
+};
+
+function PagesTab() {
+  const [pages, setPages] = useState<StaticPage[]>([]);
+  const [editSlug, setEditSlug] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", subtitle: "", body: "" });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/pages`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) setPages(await res.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function save(slug: string) {
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/pages/${slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(editForm),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("저장되었습니다."); setEditSlug(null); load(); }
+  }
+
+  return (
+    <div className="space-y-4">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+      <p className="text-xs text-gray-500">각 페이지의 제목·부제·본문을 수정합니다. 본문은 줄바꿈이 그대로 표시됩니다.</p>
+
+      <div className="space-y-3">
+        {pages.map((page) =>
+          editSlug === page.slug ? (
+            <div key={page.slug} className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-mono text-blue-400">/{page.slug}</span>
+                <span className="font-semibold text-sm text-gray-700">{PAGE_LABELS[page.slug] ?? page.slug}</span>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">제목</label>
+                <input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">부제 (선택)</label>
+                <input value={editForm.subtitle} onChange={(e) => setEditForm((p) => ({ ...p, subtitle: e.target.value }))} className={inputCls} placeholder="페이지 아래에 작은 글씨로 표시됩니다" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">본문</label>
+                <textarea
+                  value={editForm.body}
+                  onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))}
+                  rows={10}
+                  className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}
+                  placeholder="내용을 입력하세요. 줄바꿈은 그대로 반영됩니다."
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => save(page.slug)} disabled={loading} className={btnPrimary}>저장</button>
+                <button onClick={() => setEditSlug(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+              </div>
+            </div>
+          ) : (
+            <div key={page.slug} className="bg-white border border-gray-200 rounded-xl p-5 flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono text-gray-400">/{page.slug}</span>
+                  <span className="font-semibold text-sm">{PAGE_LABELS[page.slug] ?? page.slug}</span>
+                </div>
+                <p className="text-sm font-medium text-gray-700">{page.title}</p>
+                {page.subtitle && <p className="text-xs text-gray-400 mt-0.5">{page.subtitle}</p>}
+                {page.body ? (
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2 whitespace-pre-line">{page.body}</p>
+                ) : (
+                  <p className="text-xs text-orange-400 mt-1">본문 없음 — 수정 버튼으로 내용을 추가하세요.</p>
+                )}
+              </div>
+              <button
+                onClick={() => { setEditSlug(page.slug); setEditForm({ title: page.title, subtitle: page.subtitle ?? "", body: page.body ?? "" }); }}
+                className={btnEdit}
+              >
+                수정
+              </button>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────
 
 const TABS = [
   { key: "history", label: "연혁" },
   { key: "vision", label: "사목지표" },
   { key: "community", label: "단체/분과" },
+  { key: "pages", label: "페이지 내용" },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
 
 export default function AdminContentPage() {
-  const [tab, setTab] = useState<TabKey>("history");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const rawTab = searchParams.get("tab");
+  const tab: TabKey = (TABS.map((t) => t.key) as string[]).includes(rawTab ?? "")
+    ? (rawTab as TabKey)
+    : "history";
+
+  function setTab(key: TabKey) {
+    router.push(`/admin/content?tab=${key}`);
+  }
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← 대시보드</Link>
-        <h1 className="text-2xl font-bold mt-1">페이지 콘텐츠 관리</h1>
+        <h1 className="text-2xl font-bold">페이지 콘텐츠 관리</h1>
         <p className="text-sm text-gray-500 mt-1">연혁, 사목지표, 단체/분과 내용을 관리합니다.</p>
       </div>
 
@@ -498,6 +617,7 @@ export default function AdminContentPage() {
       {tab === "history" && <HistoryTab />}
       {tab === "vision" && <VisionTab />}
       {tab === "community" && <CommunityTab />}
+      {tab === "pages" && <PagesTab />}
     </div>
   );
 }

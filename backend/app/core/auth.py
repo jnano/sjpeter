@@ -45,11 +45,42 @@ def get_current_admin(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ):
+    """슈퍼 관리자(admin) 또는 위임 관리자(is_admin=True 회원) 모두 허용."""
+    from app.models.admin import Admin
+    from app.models.member import Member
+
+    payload = _decode_token(credentials.credentials)
+    role = payload.get("role")
+
+    if role == "admin":
+        admin = db.query(Admin).filter(Admin.username == payload.get("sub")).first()
+        if not admin:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="관리자를 찾을 수 없습니다.")
+        return admin
+
+    if role == "member":
+        member = db.query(Member).filter(
+            Member.id == int(payload.get("sub", 0)),
+            Member.is_admin == True,
+            Member.is_active == True,
+        ).first()
+        if not member:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
+        return member
+
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
+
+
+def get_current_super_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    """슈퍼 관리자(admin 계정)만 허용 — 권한 부여·회수 등 민감 작업용."""
     from app.models.admin import Admin
 
     payload = _decode_token(credentials.credentials)
     if payload.get("role") != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="최고 관리자 권한이 필요합니다.")
 
     admin = db.query(Admin).filter(Admin.username == payload.get("sub")).first()
     if not admin:

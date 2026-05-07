@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from datetime import datetime
 from app.core.database import Base
 
 
@@ -32,3 +33,14 @@ class CommunityGroup(Base):
     activity_time = Column(String(200))
     link_url = Column(String(500), nullable=True)
     sort_order = Column(Integer, default=0)
+
+
+class StaticPage(Base):
+    """관리자가 내용을 직접 편집하는 정적 페이지 (slug로 식별)."""
+    __tablename__ = "static_pages"
+
+    slug = Column(String(100), primary_key=True)   # 예: "saint", "council"
+    title = Column(String(200), nullable=False)
+    subtitle = Column(String(300), nullable=True)
+    body = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.core.database import get_db
 from app.core.auth import get_current_admin
-from app.models.content import HistoryItem, Vision, CommunityGroup
+from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage
 from app.models.admin import Admin
 
 router = APIRouter(prefix="/content", tags=["content"])
@@ -36,7 +36,7 @@ class HistoryItemOut(BaseModel):
 
 @router.get("/history", response_model=list[HistoryItemOut])
 def list_history(db: Session = Depends(get_db)):
-    return db.query(HistoryItem).order_by(HistoryItem.sort_order, HistoryItem.year).all()
+    return db.query(HistoryItem).order_by(HistoryItem.year.desc(), HistoryItem.sort_order).all()
 
 
 @router.post("/history", response_model=HistoryItemOut)
@@ -180,3 +180,47 @@ def delete_community(group_id: int, db: Session = Depends(get_db), _: Admin = De
     db.delete(group)
     db.commit()
     return {"ok": True}
+
+
+# ─── Static Pages ─────────────────────────────────────────
+
+class StaticPageOut(BaseModel):
+    slug: str
+    title: str
+    subtitle: Optional[str]
+    body: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class StaticPageIn(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    body: Optional[str] = None
+
+
+@router.get("/pages", response_model=list[StaticPageOut])
+def list_static_pages(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    return db.query(StaticPage).order_by(StaticPage.slug).all()
+
+
+@router.get("/pages/{slug}", response_model=StaticPageOut)
+def get_static_page(slug: str, db: Session = Depends(get_db)):
+    page = db.query(StaticPage).filter_by(slug=slug).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="페이지를 찾을 수 없습니다.")
+    return page
+
+
+@router.put("/pages/{slug}", response_model=StaticPageOut)
+def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    page = db.query(StaticPage).filter_by(slug=slug).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="페이지를 찾을 수 없습니다.")
+    page.title = body.title
+    page.subtitle = body.subtitle
+    page.body = body.body
+    db.commit()
+    db.refresh(page)
+    return page

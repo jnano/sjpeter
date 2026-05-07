@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "우리의 역사",
@@ -19,7 +20,7 @@ interface HistoryItem {
 
 async function getHistory(): Promise<HistoryItem[]> {
   try {
-    const res = await fetch(`${API}/api/content/history`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/content/history`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -31,15 +32,9 @@ export default async function HistoryPage() {
   const historyItems = await getHistory();
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">
-          우리의 역사
-        </h1>
-        <p className="text-[var(--color-text-muted)]">
-          2011년 창립부터 현재까지 — 세종성베드로성당의 걸어온 길
-        </p>
-      </div>
+    <>
+      <PageHeader group="우리 성당" title="걸어온 길" subtitle="현재부터 창립까지 — 세종성베드로성당의 역사" />
+      <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="relative">
         <div className="absolute left-[5.5rem] top-0 bottom-0 w-0.5 bg-[var(--color-border)]" />
@@ -109,5 +104,6 @@ export default async function HistoryPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

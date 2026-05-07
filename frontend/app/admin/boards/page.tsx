@@ -1,12 +1,20 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
-type AccessMode = "public" | "write-restricted" | "members-only";
+type AccessMode = "public" | "write-restricted" | "members-only" | "selected-members";
 
 interface Moderator {
+  id: number;
+  nickname: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+interface AllowedMember {
   id: number;
   nickname: string;
   email: string;
@@ -21,27 +29,32 @@ interface Board {
   is_active: boolean;
   members_only_write: boolean;
   members_only_read: boolean;
+  members_selected: boolean;
   posts_per_page: number;
   exclude_from_search: boolean;
   moderator: Moderator | null;
+  allowed_members: AllowedMember[];
 }
 
 function getAccessMode(b: Board): AccessMode {
+  if (b.members_selected) return "selected-members";
   if (b.members_only_read) return "members-only";
   if (b.members_only_write) return "write-restricted";
   return "public";
 }
 
 function accessModeToFields(mode: AccessMode) {
-  if (mode === "members-only") return { members_only_read: true, members_only_write: true };
-  if (mode === "write-restricted") return { members_only_read: false, members_only_write: true };
-  return { members_only_read: false, members_only_write: false };
+  if (mode === "members-only") return { members_only_read: true, members_only_write: true, members_selected: false };
+  if (mode === "write-restricted") return { members_only_read: false, members_only_write: true, members_selected: false };
+  if (mode === "selected-members") return { members_only_read: false, members_only_write: false, members_selected: true };
+  return { members_only_read: false, members_only_write: false, members_selected: false };
 }
 
 const ACCESS_LABELS: Record<AccessMode, { label: string; badge: string; color: string }> = {
-  "public":           { label: "공개",      badge: "누구나 보기·쓰기",       color: "bg-green-50 text-green-600" },
-  "write-restricted": { label: "쓰기 제한",  badge: "누구나 보기, 회원만 쓰기", color: "bg-blue-50 text-blue-600" },
-  "members-only":     { label: "회원 전용",  badge: "회원만 보기·쓰기",        color: "bg-purple-50 text-purple-600" },
+  "public":           { label: "공개",        badge: "누구나 보기·쓰기",         color: "bg-green-50 text-green-600" },
+  "write-restricted": { label: "쓰기 제한",    badge: "누구나 보기, 회원만 쓰기",   color: "bg-blue-50 text-blue-600" },
+  "members-only":     { label: "회원 전용",    badge: "회원만 보기·쓰기",          color: "bg-purple-50 text-purple-600" },
+  "selected-members": { label: "지정 회원",    badge: "선택된 회원만 보기·쓰기",    color: "bg-amber-50 text-amber-600" },
 };
 
 function getAdminToken() {
@@ -158,8 +171,30 @@ export default function AdminBoardsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => { fetchBoards(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      setShowForm(true);
+      setTimeout(() => {
+        document.getElementById("board-create-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const expandSlug = searchParams.get("expand");
+    if (!expandSlug || boards.length === 0) return;
+    const target = boards.find((b) => b.slug === expandSlug);
+    if (target) {
+      setExpandedId(target.id);
+      setTimeout(() => {
+        document.getElementById(`board-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [boards, searchParams]);
 
   async function fetchBoards() {
     const token = getAdminToken();
@@ -224,10 +259,7 @@ export default function AdminBoardsPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
-            ← 대시보드
-          </Link>
-          <h1 className="text-2xl font-bold mt-1">게시판 관리</h1>
+          <h1 className="text-2xl font-bold">게시판 관리</h1>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -238,7 +270,7 @@ export default function AdminBoardsPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+        <form id="board-create-form" onSubmit={handleCreate} className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
           <h2 className="font-semibold">새 게시판</h2>
           {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -246,6 +278,7 @@ export default function AdminBoardsPage() {
             <div>
               <label className="block text-sm font-medium mb-1">게시판 이름</label>
               <input
+                autoFocus
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                 required
@@ -345,7 +378,7 @@ export default function AdminBoardsPage() {
           const isExpanded = expandedId === board.id;
 
           return (
-            <div key={board.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div key={board.id} id={`board-${board.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               {/* 기본 행 */}
               <div className="flex items-center justify-between p-4">
                 <div className="flex-1 min-w-0">
@@ -372,6 +405,13 @@ export default function AdminBoardsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-3">
+                  <Link
+                    href={`/boards/${board.slug}`}
+                    target="_blank"
+                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                  >
+                    보기 ↗
+                  </Link>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : board.id)}
                     className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
@@ -410,43 +450,106 @@ export default function AdminBoardsPage() {
 }
 
 function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: Board) => void }) {
+  const [name, setName] = useState(board.name);
+  const [description, setDescription] = useState(board.description ?? "");
   const [accessMode, setAccessMode] = useState<AccessMode>(getAccessMode(board));
   const [moderator, setModerator] = useState<Moderator | null>(board.moderator);
   const [excludeSearch, setExcludeSearch] = useState(board.exclude_from_search);
   const [postsPerPage, setPostsPerPage] = useState(board.posts_per_page);
+  const [allowedMembers, setAllowedMembers] = useState<AllowedMember[]>(board.allowed_members ?? []);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
+    setName(board.name);
+    setDescription(board.description ?? "");
     setAccessMode(getAccessMode(board));
     setModerator(board.moderator);
     setExcludeSearch(board.exclude_from_search);
     setPostsPerPage(board.posts_per_page);
-  }, [board.members_only_read, board.members_only_write, board.moderator, board.exclude_from_search, board.posts_per_page]);
+    setAllowedMembers(board.allowed_members ?? []);
+  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator, board.exclude_from_search, board.posts_per_page, board.allowed_members]);
 
   async function save() {
     setSaving(true);
+    setSaveError("");
     const token = getAdminToken();
-    const res = await fetch(`${API}/api/boards/${board.slug}`, {
-      method: "PUT",
+    try {
+      const res = await fetch(`${API}/api/boards/${board.slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          ...accessModeToFields(accessMode),
+          moderator_id: moderator?.id ?? null,
+          exclude_from_search: excludeSearch,
+          posts_per_page: postsPerPage,
+        }),
+      });
+      if (res.ok) {
+        onUpdate(await res.json());
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.detail || `저장 실패 (${res.status})`);
+      }
+    } catch {
+      setSaveError("네트워크 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function addAllowedMember(member: Moderator) {
+    if (allowedMembers.some((m) => m.id === member.id)) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/allowed-members`, {
+      method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        ...accessModeToFields(accessMode),
-        moderator_id: moderator?.id ?? null,
-        exclude_from_search: excludeSearch,
-        posts_per_page: postsPerPage,
-      }),
+      body: JSON.stringify({ member_id: member.id }),
     });
-    if (res.ok) onUpdate(await res.json());
-    setSaving(false);
+    if (res.ok) setAllowedMembers((prev) => [...prev, { id: member.id, nickname: member.nickname, email: member.email, avatar_url: member.avatar_url }]);
+  }
+
+  async function removeAllowedMember(memberId: number) {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/allowed-members/${memberId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setAllowedMembers((prev) => prev.filter((m) => m.id !== memberId));
   }
 
   return (
     <div className="border-t border-gray-100 bg-gray-50 p-4 grid grid-cols-2 gap-6">
+      {/* 이름·설명 */}
+      <div className="col-span-2 grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">게시판 이름</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">설명</label>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="게시판 설명 (선택)"
+            className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400"
+          />
+        </div>
+      </div>
+
       {/* 접근 설정 */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase mb-2">접근 설정</p>
         <div className="space-y-1.5">
-          {(["public", "write-restricted", "members-only"] as AccessMode[]).map((mode) => (
+          {(["public", "write-restricted", "members-only", "selected-members"] as AccessMode[]).map((mode) => (
             <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="radio"
@@ -467,6 +570,34 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         <ModeratorPicker current={moderator} onChange={setModerator} />
         <p className="text-xs text-gray-400 mt-1">모든 게시글 수정·삭제 권한 부여</p>
       </div>
+
+      {/* 지정 회원 목록 */}
+      {accessMode === "selected-members" && (
+        <div className="col-span-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">접근 허용 회원</p>
+          <div className="mb-2">
+            <ModeratorPicker current={null} onChange={(m) => m && addAllowedMember(m)} />
+          </div>
+          {allowedMembers.length === 0 ? (
+            <p className="text-xs text-gray-400">허용된 회원이 없습니다. 위에서 회원을 검색해 추가하세요.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allowedMembers.map((m) => (
+                <div key={m.id} className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs">
+                  <span className="font-medium text-amber-800">{m.nickname}</span>
+                  <span className="text-amber-500">{m.email}</span>
+                  <button
+                    onClick={() => removeAllowedMember(m.id)}
+                    className="text-amber-400 hover:text-red-500 ml-0.5"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 기타 */}
       <div className="col-span-2 flex items-center gap-6">
@@ -489,13 +620,16 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           />
           개
         </label>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {saving ? "저장 중..." : "저장"}
-        </button>
+        <div className="ml-auto flex items-center gap-3">
+          {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? "저장 중..." : "저장"}
+          </button>
+        </div>
       </div>
     </div>
   );

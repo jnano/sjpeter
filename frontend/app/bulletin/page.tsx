@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Bulletin } from "@/lib/api";
 import BulletinClient from "./BulletinClient";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "주보",
@@ -21,5 +22,10 @@ async function getBulletins(): Promise<Bulletin[]> {
 
 export default async function BulletinPage() {
   const bulletins = await getBulletins();
-  return <BulletinClient bulletins={bulletins} />;
+  return (
+    <>
+      <PageHeader group="말씀과 기도" title="주보 아카이브" subtitle="이번 주 주보와 지난 주보를 한 자리에서 만납니다" />
+      <BulletinClient bulletins={bulletins} />
+    </>
+  );
 }

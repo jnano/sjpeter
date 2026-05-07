@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "신부님",
@@ -23,7 +24,7 @@ interface VisionOut {
 
 async function getParish(): Promise<ParishOut | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -33,7 +34,7 @@ async function getParish(): Promise<ParishOut | null> {
 
 async function getCurrentVision(): Promise<VisionOut | null> {
   try {
-    const res = await fetch(`${API}/api/content/visions`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/content/visions`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const visions: VisionOut[] = await res.json();
     return visions.find((v) => v.is_current) ?? visions[0] ?? null;
@@ -42,24 +43,27 @@ async function getCurrentVision(): Promise<VisionOut | null> {
   }
 }
 
+function resolvePhotoUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${API}${url}`;
+}
+
 export default async function PastorPage() {
   const [parish, vision] = await Promise.all([getParish(), getCurrentVision()]);
+  const photoUrl = resolvePhotoUrl(parish?.pastor_photo_url ?? null);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">
-          신부님
-        </h1>
-        <p className="text-[var(--color-text-muted)]">주임신부님을 소개합니다.</p>
-      </div>
+    <>
+      <PageHeader group="우리 성당" title="사제의 발자취" subtitle="주임 신부님과 함께하는 본당 공동체" />
+      <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <div className="bg-[var(--color-primary)] text-white px-8 py-6">
           <div className="flex items-center gap-6">
-            {parish?.pastor_photo_url ? (
+            {photoUrl ? (
               <img
-                src={parish.pastor_photo_url}
+                src={photoUrl}
                 alt="신부님 사진"
                 className="w-24 h-24 rounded-full object-cover shrink-0 border-2 border-white/30"
               />
@@ -113,5 +117,6 @@ export default async function PastorPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

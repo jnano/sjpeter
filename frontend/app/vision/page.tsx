@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "사목지표",
@@ -16,7 +17,7 @@ interface VisionOut {
 
 async function getVisions(): Promise<VisionOut[]> {
   try {
-    const res = await fetch(`${API}/api/content/visions`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/content/visions`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -26,7 +27,7 @@ async function getVisions(): Promise<VisionOut[]> {
 
 async function getPastorName(): Promise<string | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.pastor_name ?? null;
@@ -40,15 +41,9 @@ export default async function VisionPage() {
   const current = visions.find((v) => v.is_current) ?? visions[0];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">
-          사목지표
-        </h1>
-        <p className="text-[var(--color-text-muted)]">
-          매년 신부님이 제시하는 사목지표는 한 해의 씨앗입니다.
-        </p>
-      </div>
+    <>
+      <PageHeader group="본당 가족" title="이 해의 사목 방향" subtitle="매년 신부님이 제시하는 한 해의 씨앗" />
+      <div className="max-w-4xl mx-auto px-4 py-8">
 
       {current && (
         <div className="bg-[var(--color-primary)] text-white rounded-xl p-8 mb-8 text-center">
@@ -102,5 +97,6 @@ export default async function VisionPage() {
         지표는 씨앗이고, 한 해의 기록은 그 씨앗이 자란 나무입니다.
       </p>
     </div>
+    </>
   );
 }

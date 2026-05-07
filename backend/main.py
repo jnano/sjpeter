@@ -13,8 +13,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(auth.router, prefix="/api")
@@ -66,6 +66,7 @@ def _migrate_add_columns():
             ("social_provider", "VARCHAR(20)"),
             ("social_id", "VARCHAR(200)"),
             ("avatar_url", "VARCHAR(500)"),
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
         ]:
             try:
                 conn.execute(text(
@@ -93,11 +94,32 @@ def _migrate_add_columns():
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_write BOOLEAN DEFAULT TRUE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_read BOOLEAN DEFAULT FALSE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS moderator_id INTEGER REFERENCES members(id) ON DELETE SET NULL",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_selected BOOLEAN DEFAULT FALSE",
         ]:
             try:
                 conn.execute(text(ddl))
             except Exception:
                 pass
+
+        # 지정 회원 접근 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS board_allowed_members (
+                id SERIAL PRIMARY KEY,
+                board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                UNIQUE (board_id, member_id)
+            )
+        """))
+
+        # 신부님 사진 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pastor_photos (
+                id SERIAL PRIMARY KEY,
+                url VARCHAR(500) NOT NULL,
+                is_selected BOOLEAN DEFAULT FALSE,
+                uploaded_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
 
         # parishes 추가 컬럼
         for col, col_type in [
@@ -146,6 +168,17 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # 정적 페이지 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS static_pages (
+                slug VARCHAR(100) PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                subtitle VARCHAR(300),
+                body TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
         conn.commit()
 
 
@@ -153,7 +186,7 @@ def _seed_initial_data():
     from app.core.database import SessionLocal
     from app.models.parish import Parish
     from app.models.admin import Admin
-    from app.models.content import HistoryItem, Vision, CommunityGroup
+    from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage
     from app.core.auth import hash_password
 
     db = SessionLocal()
@@ -217,6 +250,58 @@ def _seed_initial_data():
                 CommunityGroup(name="구역·반 모임", description="지역별 소공동체 모임. 신앙 나눔 및 상호 돌봄", activity_time="구역별 자율 운영", sort_order=5),
             ]
             db.add_all(community_seed)
+            db.commit()
+
+        # 정적 페이지 초기 데이터
+        if not db.query(StaticPage).first():
+            pages = [
+                StaticPage(
+                    slug="saint",
+                    title="성 베드로",
+                    subtitle="반석 위에 세운 교회의 수호성인",
+                    body="예수님께서 시몬에게 베드로(반석)라는 이름을 주시며 말씀하셨습니다.\n"
+                         "\"나는 이 반석 위에 내 교회를 세울 터인즉 저승의 세력도 그것을 이기지 못할 것이다.\" (마태 16,18)\n\n"
+                         "세종성베드로성당은 성 베드로 사도의 신앙과 용기를 본받아,\n"
+                         "세종 땅에 하느님 나라를 세워가는 공동체입니다.\n\n"
+                         "갈릴래아 어부 출신의 평범한 사람이었지만, 예수님의 부르심에 응답하여\n"
+                         "교회의 초석이 된 베드로처럼,\n"
+                         "우리 공동체도 날마다 주님께 더 가까이 나아가길 다짐합니다.",
+                ),
+                StaticPage(
+                    slug="council",
+                    title="사목평의회",
+                    subtitle="본당 공동체의 사목 방향을 함께 의논하는 기구",
+                    body="사목평의회는 주임신부님을 중심으로 본당 운영의 주요 사항을 협의하고\n"
+                         "공동체 발전을 위해 함께 기도하고 실천하는 본당 최고 의결 기구입니다.\n\n"
+                         "구성: 회장단, 각 분과 대표, 구역장 대표\n"
+                         "회의: 분기별 정기회의 및 필요시 임시회의\n\n"
+                         "문의사항은 본당 사무실로 연락해 주시기 바랍니다.",
+                ),
+                StaticPage(
+                    slug="meditation",
+                    title="작은 묵상",
+                    subtitle="말씀 안에서 머무는 시간",
+                    body="\"그의 법을 밤낮으로 묵상하는 사람, 그는 시냇가에 심긴 나무와 같아\n"
+                         "제때에 열매를 내며 잎이 시들지 않으니, 그가 하는 일마다 잘 되리라.\" (시편 1,2-3)\n\n"
+                         "이 공간은 신앙 안에서 작은 묵상을 나누는 곳입니다.\n"
+                         "말씀, 기도, 삶의 이야기를 함께 나누어 주세요.\n\n"
+                         "※ 내용은 관리자가 수시로 업데이트합니다.",
+                ),
+                StaticPage(
+                    slug="prayer",
+                    title="기도문 모음",
+                    subtitle="함께 드리는 기도",
+                    body="기도는 하느님과 나누는 대화입니다.\n\n"
+                         "[ 아침 기도 ]\n"
+                         "주님, 오늘 하루도 당신의 뜻 안에서 살아가게 하소서.\n\n"
+                         "[ 식사 전 기도 ]\n"
+                         "주님, 이 음식을 주신 것과 저희를 사랑해 주심에 감사드립니다.\n\n"
+                         "[ 저녁 기도 ]\n"
+                         "오늘 하루 동안 주신 은혜에 감사드리며, 평안한 밤을 허락하소서.\n\n"
+                         "※ 더 많은 기도문은 관리자가 계속 추가할 예정입니다.",
+                ),
+            ]
+            db.add_all(pages)
             db.commit()
 
     finally:

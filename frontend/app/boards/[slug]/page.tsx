@@ -38,7 +38,7 @@ interface Board {
 
 async function getBoard(slug: string): Promise<Board | null> {
   try {
-    const res = await fetch(`${API}/api/boards/${slug}`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/boards/${slug}`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -50,7 +50,7 @@ async function getPosts(slug: string, page: number, token?: string): Promise<Pos
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
     const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
-      cache: "no-store",
+      next: { revalidate: 300 },
       headers,
     });
     if (!res.ok) return { posts: [], total: 0, posts_per_page: 20 };
@@ -132,16 +132,9 @@ export default async function BoardPage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      {/* 헤더: 뒤로가기 + 제목 + 컨트롤 한 줄 */}
+      {/* 헤더: 제목 + 컨트롤 */}
       <div className="mb-6">
-        <Link
-          href="/boards"
-          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-        >
-          ← 게시판 목록
-        </Link>
-
-        <div className="flex items-center justify-between mt-2 gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-[var(--color-primary)] truncate">{board.name}</h1>
             {board.description && (
@@ -170,6 +163,16 @@ export default async function BoardPage({
         totalPages={totalPages}
         currentView={currentView}
       />
+
+      {/* 하단 우측: 게시판 목록으로 */}
+      <div className="flex justify-end mt-6">
+        <Link
+          href="/boards"
+          className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
+        >
+          게시판 목록
+        </Link>
+      </div>
     </div>
   );
 }

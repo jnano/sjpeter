@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -77,10 +78,12 @@ function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {post.thumbnail_url && (
-              <img
+              <Image
                 src={`${API}${post.thumbnail_url}`}
                 alt=""
-                className="w-10 h-10 object-cover rounded shrink-0 border border-[var(--color-border)]"
+                width={40}
+                height={40}
+                className="object-cover rounded shrink-0 border border-[var(--color-border)]"
               />
             )}
             <div className="min-w-0">
@@ -116,11 +119,15 @@ function PhotoView({ posts, slug }: { posts: Post[]; slug: string }) {
           className="group rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all"
         >
           {post.thumbnail_url ? (
-            <img
-              src={`${API}${post.thumbnail_url}`}
-              alt={post.title}
-              className="w-full aspect-square object-cover group-hover:opacity-90 transition-opacity"
-            />
+            <div className="relative w-full aspect-square">
+              <Image
+                src={`${API}${post.thumbnail_url}`}
+                alt={post.title}
+                fill
+                className="object-cover group-hover:opacity-90 transition-opacity"
+                sizes="(max-width: 640px) 50vw, 33vw"
+              />
+            </div>
           ) : (
             <div className="w-full aspect-square bg-gray-100 flex items-center justify-center">
               <span className="text-3xl text-gray-300">📄</span>

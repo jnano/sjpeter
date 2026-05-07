@@ -3,27 +3,81 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const navItems = [
-  { href: "/bulletin", label: "주보" },
-  { href: "/about", label: "성당 소개" },
-  { href: "/pastor", label: "신부님" },
-  { href: "/history", label: "우리의 역사" },
-  { href: "/vision", label: "사목지표" },
-  { href: "/community", label: "함께하는 이들" },
-  { href: "/boards", label: "게시판" },
-  { href: "/word", label: "오늘의 말씀" },
-  { href: "/info", label: "오시는 길" },
+const navGroups = [
+  {
+    label: "우리 성당",
+    subtitle: "반석 위에",
+    items: [
+      { href: "/about", label: "성당 안내" },
+      { href: "/saint", label: "성 베드로" },
+      { href: "/community", label: "우리 가족" },
+      { href: "/history", label: "걸어온 길" },
+      { href: "/pastor", label: "사제의 발자취" },
+      { href: "/info", label: "찾아오시는 길" },
+    ],
+  },
+  {
+    label: "본당 가족",
+    subtitle: "어부의 뜰",
+    items: [
+      { href: "/council", label: "사목평의회" },
+      { href: "/groups", label: "분과와 단체" },
+      { href: "/vision", label: "이 해의 사목 방향" },
+    ],
+  },
+  {
+    label: "말씀과 기도",
+    subtitle: "말씀의 그물",
+    items: [
+      { href: "/word", label: "오늘의 복음" },
+      { href: "/bulletin", label: "주보 아카이브" },
+      { href: "/meditation", label: "작은 묵상" },
+      { href: "/prayer", label: "기도문 모음" },
+    ],
+  },
+  {
+    label: "알림과 나눔",
+    subtitle: "열린 문",
+    items: [
+      { href: "/boards/notice", label: "공지·알림" },
+      { href: "/boards", label: "자유 글터" },
+      { href: "/boards/news", label: "공동체 소식" },
+    ],
+  },
+  {
+    label: "사진 기록",
+    subtitle: "갈릴래아의 기억",
+    items: [
+      { href: "/gallery/liturgy", label: "전례의 순간" },
+      { href: "/gallery/events", label: "함께한 시간" },
+    ],
+  },
 ];
+
+interface Breadcrumb { group: string; title: string }
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [breadcrumb, setBreadcrumb] = useState<Breadcrumb | null>(null);
+
+  useEffect(() => {
+    const onHide = (e: Event) => setBreadcrumb((e as CustomEvent<Breadcrumb>).detail);
+    const onShow = () => setBreadcrumb(null);
+    window.addEventListener("breadcrumb-hide", onHide);
+    window.addEventListener("breadcrumb-show", onShow);
+    return () => {
+      window.removeEventListener("breadcrumb-hide", onHide);
+      window.removeEventListener("breadcrumb-show", onShow);
+    };
+  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -37,13 +91,10 @@ export default function Header() {
   return (
     <header className="bg-[var(--color-primary)] text-white shadow-lg sticky top-0 z-50">
       {/* 상단 정보 바 */}
-      <div className="border-b border-white/10 text-sm">
+      <div className="border-b border-white/10 text-sm bg-[#9B2335]">
         <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
           <span className="text-white/70">대전교구 세종성베드로성당</span>
           <div className="flex items-center gap-4 text-white/70">
-            <a href="tel:044-000-0000" className="hover:text-white transition-colors">
-              ☏ 044-000-0000
-            </a>
             {session ? (
               <div className="flex items-center gap-3">
                 <Link href="/members/me" className="flex items-center gap-1.5 hover:text-white transition-colors">
@@ -75,47 +126,96 @@ export default function Header() {
       {/* 메인 헤더 */}
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* 로고 */}
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 group"
-          >
-            <span className="text-[var(--color-accent-light)] text-2xl leading-none">✝</span>
-            <div>
-              <div className="font-serif font-bold text-lg leading-tight tracking-tight">
-                세종성베드로성당
+          {/* 로고 + 스크롤 breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+              <span className="text-[var(--color-accent-light)] text-2xl leading-none">✝</span>
+              <div>
+                <div className="font-serif font-bold text-lg leading-tight tracking-tight">
+                  세종성베드로성당
+                </div>
+                <div className="text-white/60 text-xs leading-none">
+                  St. Peter&apos;s Cathedral, Sejong
+                </div>
               </div>
-              <div className="text-white/60 text-xs leading-none">
-                St. Peter&apos;s Cathedral, Sejong
-              </div>
-            </div>
-          </Link>
+            </Link>
+
+            {/* 페이지 breadcrumb — PageHeader가 스크롤로 가려질 때 표시 */}
+            <span
+              className={`hidden md:flex items-center gap-1.5 text-xs text-white/60 transition-all duration-300 overflow-hidden whitespace-nowrap ${
+                breadcrumb
+                  ? "opacity-100 max-w-xs translate-x-0"
+                  : "opacity-0 max-w-0 -translate-x-2 pointer-events-none"
+              }`}
+            >
+              <span className="text-white/30 text-sm">›</span>
+              <span>{breadcrumb?.group}</span>
+              <span className="text-white/30 text-sm">›</span>
+              <span className="text-white font-medium">{breadcrumb?.title}</span>
+            </span>
+          </div>
 
           {/* 데스크톱 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? "bg-white/20 text-white"
-                    : "text-white/80 hover:text-white hover:bg-white/10"
-                }`}
+          <nav className="hidden md:flex items-center h-full">
+            {navGroups.map((group, idx) => (
+              <div
+                key={group.label}
+                className="relative h-full flex items-center"
+                onMouseEnter={() => setOpenGroup(idx)}
+                onMouseLeave={() => setOpenGroup(null)}
               >
-                {item.label}
-              </Link>
+                <button
+                  className={`px-4 h-full text-sm font-medium transition-colors whitespace-nowrap ${
+                    openGroup === idx
+                      ? "text-white bg-white/10"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {group.label}
+                </button>
+
+                {/* 드롭다운 */}
+                {openGroup === idx && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-44 bg-white text-[var(--color-text)] shadow-xl z-50 border border-[var(--color-border)]">
+                    {/* 서사형 부제 */}
+                    <div className="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+                      <span className="text-[11px] italic text-[var(--color-accent)] font-medium tracking-wide">
+                        {group.subtitle}
+                      </span>
+                    </div>
+                    {/* 항목 */}
+                    <ul>
+                      {group.items.map((item) => (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setOpenGroup(null)}
+                            className={`block px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
+                              pathname === item.href
+                                ? "text-[var(--color-primary)] font-semibold bg-[var(--color-surface-warm)]"
+                                : "text-[var(--color-text)]"
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             ))}
-            {/* 데스크톱 검색 */}
+
+            {/* 검색 */}
             {searchOpen ? (
-              <form onSubmit={handleSearch} className="flex items-center ml-1">
+              <form onSubmit={handleSearch} className="flex items-center ml-2">
                 <input
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
                   placeholder="검색어 입력..."
-                  className="w-44 px-3 py-1.5 text-sm rounded-l bg-white/10 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:bg-white/20"
+                  className="w-40 px-3 py-1.5 text-sm rounded-l bg-white/10 text-white placeholder-white/50 border border-white/30 focus:outline-none focus:bg-white/20"
                 />
                 <button
                   type="submit"
@@ -128,7 +228,7 @@ export default function Header() {
             ) : (
               <button
                 onClick={() => setSearchOpen(true)}
-                className="p-2 rounded text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 ml-2 rounded text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="검색"
               >
                 🔍
@@ -136,7 +236,7 @@ export default function Header() {
             )}
           </nav>
 
-          {/* 모바일 햄버거 버튼 */}
+          {/* 모바일 버튼 */}
           <div className="md:hidden flex items-center gap-1">
             <button
               onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}
@@ -145,16 +245,14 @@ export default function Header() {
             >
               🔍
             </button>
-          <button
+            <button
               className="p-2 rounded hover:bg-white/10 transition-colors"
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => { setMenuOpen(!menuOpen); setOpenGroup(null); }}
               aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
               aria-expanded={menuOpen}
             >
               <span className="block w-6 h-0.5 bg-white mb-1.5 transition-transform" />
-              <span
-                className={`block w-6 h-0.5 bg-white mb-1.5 transition-opacity ${menuOpen ? "opacity-0" : ""}`}
-              />
+              <span className={`block w-6 h-0.5 bg-white mb-1.5 transition-opacity ${menuOpen ? "opacity-0" : ""}`} />
               <span className="block w-6 h-0.5 bg-white transition-transform" />
             </button>
           </div>
@@ -180,25 +278,49 @@ export default function Header() {
           </form>
         )}
 
-        {/* 모바일 메뉴 */}
+        {/* 모바일 메뉴 — 그룹 아코디언 */}
         {menuOpen && (
-          <nav className="md:hidden border-t border-white/10 py-3 pb-4">
-            <div className="grid grid-cols-2 gap-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`px-3 py-2.5 rounded text-sm font-medium transition-colors ${
-                    pathname === item.href
-                      ? "bg-white/20 text-white"
-                      : "text-white/80 hover:text-white hover:bg-white/10"
-                  }`}
+          <nav className="md:hidden border-t border-white/10 py-2 pb-4">
+            {navGroups.map((group, idx) => (
+              <div key={group.label}>
+                <button
+                  onClick={() => setOpenGroup(openGroup === idx ? null : idx)}
+                  className="w-full flex items-center justify-between px-3 py-3 text-sm font-medium text-white/90 hover:bg-white/10 transition-colors"
                 >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+                  <span>{group.label}</span>
+                  <span
+                    className={`text-white/50 text-xs transition-transform duration-200 ${
+                      openGroup === idx ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+                {openGroup === idx && (
+                  <div className="bg-white/5 border-t border-b border-white/10">
+                    <div className="px-5 py-2">
+                      <span className="text-[11px] italic text-[var(--color-accent-light)] tracking-wide">
+                        {group.subtitle}
+                      </span>
+                    </div>
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => { setMenuOpen(false); setOpenGroup(null); }}
+                        className={`block px-7 py-2.5 text-sm transition-colors ${
+                          pathname === item.href
+                            ? "text-white font-semibold"
+                            : "text-white/75 hover:text-white"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </nav>
         )}
       </div>

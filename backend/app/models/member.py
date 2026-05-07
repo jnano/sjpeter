@@ -16,4 +16,5 @@ class Member(Base):
     avatar_url = Column(String(500), nullable=True)
 
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)   # 위임 관리자 여부
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -35,13 +35,7 @@ export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] })
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">주보</h1>
-        <p className="text-[var(--color-text-muted)]">
-          이번 주 주보와 지난 주보 아카이브를 확인하세요.
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-8">
 
       <div className="grid md:grid-cols-5 gap-8">
         {/* 이번 주 주보 */}

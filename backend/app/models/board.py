@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -14,6 +14,7 @@ class Board(Base):
     is_active = Column(Boolean, default=True)
     members_only_write = Column(Boolean, default=True)   # True: 회원만 쓰기
     members_only_read = Column(Boolean, default=False)   # True: 회원만 보기
+    members_selected = Column(Boolean, default=False)    # True: 지정 회원만 접근
     posts_per_page = Column(Integer, default=20)
     exclude_from_search = Column(Boolean, default=False)
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
@@ -21,6 +22,19 @@ class Board(Base):
 
     posts = relationship("Post", back_populates="board", cascade="all, delete-orphan")
     moderator = relationship("Member", foreign_keys=[moderator_id])
+    allowed_member_rows = relationship("BoardAllowedMember", back_populates="board", cascade="all, delete-orphan")
+
+
+class BoardAllowedMember(Base):
+    __tablename__ = "board_allowed_members"
+    __table_args__ = (UniqueConstraint("board_id", "member_id"),)
+
+    id = Column(Integer, primary_key=True)
+    board_id = Column(Integer, ForeignKey("boards.id", ondelete="CASCADE"), nullable=False)
+    member_id = Column(Integer, ForeignKey("members.id", ondelete="CASCADE"), nullable=False)
+
+    board = relationship("Board", back_populates="allowed_member_rows")
+    member = relationship("Member")
 
 
 class Post(Base):

@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -88,8 +87,7 @@ export default function AdminNoticesPage() {
     <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← 대시보드</Link>
-          <h1 className="text-2xl font-bold mt-1">공지 관리</h1>
+          <h1 className="text-2xl font-bold">공지 관리</h1>
         </div>
         <button
           onClick={openCreate}

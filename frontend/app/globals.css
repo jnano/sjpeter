@@ -26,8 +26,22 @@
   --font-serif: var(--font-noto-serif-kr), "Apple SD Gothic Neo", Georgia, serif;
 }
 
+/* ── 디자인 확장 변수 ── */
+:root {
+  --navy-deep: #0d1b33;
+  --navy: #1a2f4e;
+  --gold: #b8975a;
+  --gold-light: #d4b483;
+  --gold-pale: #e8d8b4;
+  --burgundy: #8b1a30;
+  --cream-dark: #f0ead8;
+  --stone: #8a7a6a;
+  --text-soft: #5a5040;
+  --border-gold: rgba(184,151,90,0.15);
+}
+
 html {
-  font-size: 17px; /* 60대 이상 접근성 — 기본 font-size 키움 */
+  font-size: 14.5px; /* 60대 이상 접근성 — 기본 font-size 키움 */
 }
 
 body {
@@ -41,7 +55,7 @@ body {
 
 /* 한국어 제목용 */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   letter-spacing: -0.02em;
   line-height: 1.4;
 }

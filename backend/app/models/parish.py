@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, Text, Float
+from sqlalchemy import Column, Integer, String, Date, Text, Float, Boolean, DateTime
+from datetime import datetime
 from app.core.database import Base
 
 
@@ -24,3 +25,12 @@ class Parish(Base):
     fax = Column(String(20))
     cafe_url = Column(String(500))
     band_url = Column(String(500))
+
+
+class PastorPhoto(Base):
+    __tablename__ = "pastor_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String(500), nullable=False)
+    is_selected = Column(Boolean, default=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
