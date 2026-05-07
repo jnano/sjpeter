@@ -26,7 +26,7 @@ interface MeditationListOut {
 async function getMeditations(page: number): Promise<MeditationListOut> {
   try {
     const res = await fetch(`${API}/api/content/meditations?page=${page}&limit=12`, {
-      next: { revalidate: 1800 },
+      cache: "no-store",
     });
     if (!res.ok) return { items: [], total: 0 };
     return res.json();
