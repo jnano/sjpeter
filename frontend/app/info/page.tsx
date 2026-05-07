@@ -115,11 +115,11 @@ export default async function InfoPage() {
                   {sundayEntries.map((e, i) => (
                     <div
                       key={i}
-                      className="bg-[var(--color-primary)] rounded-xl px-4 py-4 text-center text-white shadow"
+                      className="bg-white border border-[var(--color-border)] rounded-xl px-4 py-4 text-center shadow-sm"
                     >
-                      <p className="text-2xl font-bold tracking-tight leading-none mb-1.5">{e.time}</p>
+                      <p className="text-2xl font-bold tracking-tight leading-none mb-1.5 text-[var(--color-primary)]">{e.time}</p>
                       {e.note && (
-                        <p className="text-[11px] text-white/70 leading-tight">{e.note}</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] leading-tight">{e.note}</p>
                       )}
                     </div>
                   ))}
