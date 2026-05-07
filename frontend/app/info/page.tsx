@@ -97,9 +97,9 @@ export default async function InfoPage() {
           .filter((g) => g.list.length > 0);
 
         return (
-          <div className="mb-5 overflow-hidden rounded-xl">
+          <div className="mb-5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             {/* 헤더 */}
-            <div className="px-2 py-4 flex items-center gap-3">
+            <div className="px-6 py-4 flex items-center gap-3">
               <span className="text-[var(--color-accent)] text-xl">✝</span>
               <h2 className="font-serif font-bold text-[var(--color-primary)] text-lg tracking-wide">미사 시간</h2>
             </div>
