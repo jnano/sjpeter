@@ -134,13 +134,19 @@ export default function Header() {
                 <div className="font-serif font-bold text-lg leading-tight tracking-tight">
                   세종성베드로성당
                 </div>
-                <div className="text-white/60 text-xs leading-none">
-                  St. Peter&apos;s Cathedral, Sejong
+                {/* 모바일: 스크롤 시 서브타이틀 → 페이지 제목으로 전환 */}
+                <div className="relative text-xs leading-none h-[1.1em] overflow-hidden">
+                  <span className={`absolute inset-0 text-white/60 transition-opacity duration-300 ${breadcrumb ? "opacity-0" : "opacity-100"}`}>
+                    St. Peter&apos;s Cathedral, Sejong
+                  </span>
+                  <span className={`absolute inset-0 text-white/90 font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-opacity duration-300 ${breadcrumb ? "opacity-100" : "opacity-0"}`}>
+                    {breadcrumb?.title}
+                  </span>
                 </div>
               </div>
             </Link>
 
-            {/* 페이지 breadcrumb — PageHeader가 스크롤로 가려질 때 표시 */}
+            {/* 데스크톱 breadcrumb — 로고 옆 */}
             <span
               className={`hidden md:flex items-center gap-1.5 text-xs text-white/60 transition-all duration-300 overflow-hidden whitespace-nowrap ${
                 breadcrumb
