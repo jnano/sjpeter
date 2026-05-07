@@ -87,32 +87,121 @@ export default async function InfoPage() {
         )}
       </div>
 
-      {groupedDays.length > 0 && (
-        <div className="mb-5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
-          <h2 className="font-serif font-bold text-[var(--color-primary)] mb-4">미사 시간</h2>
-          <div className="space-y-3 text-sm">
-            {groupedDays.map((day) => {
-              const dayEntries = sortedEntries.filter((e) => e.day === day);
-              return (
-                <div key={day} className="flex gap-4">
-                  <span className="text-[var(--color-text-muted)] w-24 shrink-0">{day}</span>
-                  <span>
-                    {dayEntries.map((e, i) => (
-                      <span key={i}>
-                        {i > 0 && " / "}
-                        {e.time}{e.note ? ` (${e.note})` : ""}
-                      </span>
-                    ))}
-                  </span>
+      {sortedEntries.length > 0 && (() => {
+        const sundayEntries  = sortedEntries.filter((e) => e.day === "주일");
+        const saturdayEntries = sortedEntries.filter((e) => e.day === "토요일");
+        const holidayEntries = sortedEntries.filter((e) => e.day === "공휴일");
+        const weekdayOrder = ["월요일", "화요일", "수요일", "목요일", "금요일"];
+        const weekdayEntries = weekdayOrder
+          .map((d) => ({ day: d, list: sortedEntries.filter((e) => e.day === d) }))
+          .filter((g) => g.list.length > 0);
+
+        return (
+          <div className="mb-5 overflow-hidden rounded-xl border border-[var(--color-border)] shadow-sm">
+            {/* 헤더 */}
+            <div className="bg-[var(--color-primary)] px-6 py-4 flex items-center gap-3">
+              <span className="text-[var(--color-accent-light)] text-xl">✝</span>
+              <h2 className="font-serif font-bold text-white text-lg tracking-wide">미사 시간</h2>
+            </div>
+
+            {/* 주일 */}
+            {sundayEntries.length > 0 && (
+              <div className="bg-[var(--color-primary)]/[0.04] border-b border-[var(--color-border)] px-6 py-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-block w-1.5 h-5 rounded-full bg-[var(--color-accent)]" />
+                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">주일 미사</h3>
                 </div>
-              );
-            })}
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
+                  {sundayEntries.map((e, i) => (
+                    <div
+                      key={i}
+                      className="bg-[var(--color-primary)] rounded-xl px-4 py-4 text-center text-white shadow"
+                    >
+                      <p className="text-2xl font-bold tracking-tight leading-none mb-1.5">{e.time}</p>
+                      {e.note && (
+                        <p className="text-[11px] text-white/70 leading-tight">{e.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 평일 */}
+            {weekdayEntries.length > 0 && (
+              <div className="bg-white border-b border-[var(--color-border)] px-6 py-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-block w-1.5 h-5 rounded-full bg-[var(--color-border-dark)]" />
+                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">평일 미사</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-6">
+                  {weekdayEntries.map(({ day, list }) => (
+                    <div key={day} className="flex items-start gap-3">
+                      <span className="text-xs font-semibold text-white bg-[var(--color-text-muted)] rounded px-1.5 py-0.5 mt-0.5 shrink-0 w-14 text-center">
+                        {day.replace("요일", "")}
+                      </span>
+                      <div className="space-y-1">
+                        {list.map((e, i) => (
+                          <div key={i}>
+                            <span className="font-bold text-[var(--color-text)] text-sm">{e.time}</span>
+                            {e.note && (
+                              <span className="text-[11px] text-[var(--color-text-muted)] ml-1.5">{e.note}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 토요일 */}
+            {saturdayEntries.length > 0 && (
+              <div className="bg-indigo-50/60 border-b border-[var(--color-border)] px-6 py-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-block w-1.5 h-5 rounded-full bg-indigo-400" />
+                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">토요일 미사</h3>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {saturdayEntries.map((e, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-4 py-2.5 shadow-sm">
+                      <span className="font-bold text-indigo-700 text-base">{e.time}</span>
+                      {e.note && (
+                        <span className="text-xs text-indigo-500 border-l border-indigo-200 pl-2">{e.note}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 공휴일 */}
+            {holidayEntries.length > 0 && (
+              <div className="bg-amber-50/60 border-b border-[var(--color-border)] px-6 py-4">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded px-2 py-1">공휴일</span>
+                  {holidayEntries.map((e, i) => (
+                    <span key={i} className="text-sm font-bold text-[var(--color-text)]">
+                      {e.time}{e.note ? ` · ${e.note}` : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 안내 메시지 */}
+            {parish?.mass_schedule?.note && (
+              <div className="bg-[var(--color-surface-warm)] px-6 py-3 flex items-start gap-2">
+                <span className="text-[var(--color-text-muted)] text-xs mt-0.5 shrink-0">ⓘ</span>
+                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                  {parish.mass_schedule.note}
+                </p>
+              </div>
+            )}
           </div>
-          {parish?.mass_schedule?.note && (
-            <p className="mt-3 text-xs text-[var(--color-text-muted)]">{parish.mass_schedule.note}</p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       <div className="grid md:grid-cols-2 gap-5">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
