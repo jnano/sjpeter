@@ -41,7 +41,16 @@ async function getParish(): Promise<Parish | null> {
 
 export default async function InfoPage() {
   const parish = await getParish();
-  const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
+  let appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
+  if (!appKey) {
+    try {
+      const cfgRes = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300 } });
+      if (cfgRes.ok) {
+        const cfg = await cfgRes.json();
+        appKey = cfg.KAKAO_MAP_KEY ?? "";
+      }
+    } catch {}
+  }
 
   const name = parish?.name ?? "세종성베드로성당";
   const address = parish?.address ?? "세종특별자치시 도움5로 00";

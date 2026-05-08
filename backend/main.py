@@ -9,6 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
+from app.api import settings_api
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -42,6 +43,8 @@ app.include_router(gospel.router, prefix="/api")
 app.include_router(content.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(archive.router, prefix="/api")
+app.include_router(settings_api.router)
+app.include_router(settings_api.internal_router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -356,6 +359,44 @@ def _migrate_add_columns():
             INSERT INTO event_board_mappings (event_type, board_id)
             VALUES ('기타', NULL)
             ON CONFLICT (event_type) DO NOTHING
+        """))
+
+        # use_calendar 컬럼 추가
+        conn.execute(text(
+            "ALTER TABLE event_board_mappings ADD COLUMN IF NOT EXISTS use_calendar BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
+
+        # 사이트 설정 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                label VARCHAR(200) NOT NULL,
+                description TEXT,
+                is_secret BOOLEAN NOT NULL DEFAULT FALSE,
+                group_name VARCHAR(50) NOT NULL DEFAULT '기타'
+            )
+        """))
+
+        # 기본 설정 항목 씨드 (ON CONFLICT DO NOTHING — 기존값 보호)
+        conn.execute(text("""
+            INSERT INTO site_settings (key, label, description, is_secret, group_name) VALUES
+            ('SITE_URL',              '사이트 URL',            '이메일 링크 등에 사용되는 홈페이지 주소',         FALSE, '사이트'),
+            ('SMTP_FROM',             '발신자 이름/주소',       '예: 세종성베드로성당 <noreply@sjpeter.com>',      FALSE, '사이트'),
+            ('SMTP_HOST',             'SMTP 서버',             '예: smtp.gmail.com',                            FALSE, '이메일'),
+            ('SMTP_PORT',             'SMTP 포트',             '일반적으로 587 (TLS)',                           FALSE, '이메일'),
+            ('SMTP_USER',             'SMTP 계정',             '발송에 사용할 이메일 계정',                       FALSE, '이메일'),
+            ('SMTP_PASSWORD',         'SMTP 비밀번호',          'Gmail 앱 비밀번호 (16자리)',                     TRUE,  '이메일'),
+            ('AWS_REGION',            'AWS 리전',              '예: ap-northeast-1 (도쿄)',                      FALSE, 'AI'),
+            ('AWS_ACCESS_KEY_ID',     'AWS 액세스 키 ID',      'IAM 사용자 액세스 키',                            TRUE,  'AI'),
+            ('AWS_SECRET_ACCESS_KEY', 'AWS 시크릿 키',         'IAM 사용자 시크릿 액세스 키',                     TRUE,  'AI'),
+            ('GOOGLE_CLIENT_ID',      'Google 클라이언트 ID',  'Google OAuth 앱 클라이언트 ID',                   TRUE,  'OAuth'),
+            ('GOOGLE_CLIENT_SECRET',  'Google 클라이언트 시크릿', 'Google OAuth 앱 클라이언트 시크릿',             TRUE,  'OAuth'),
+            ('KAKAO_CLIENT_ID',       '카카오 클라이언트 ID',   '카카오 OAuth 앱 REST API 키',                    TRUE,  'OAuth'),
+            ('KAKAO_CLIENT_SECRET',   '카카오 클라이언트 시크릿', '카카오 OAuth 앱 시크릿 키',                     TRUE,  'OAuth'),
+            ('KAKAO_MAP_KEY',         '카카오맵 JavaScript 키', '카카오맵 API JavaScript 키',                     TRUE,  'OAuth'),
+            ('AUTH_SECRET',           'NextAuth 시크릿',       '세션 암호화 키 (32자 이상 임의 문자열)',             TRUE,  '보안')
+            ON CONFLICT (key) DO NOTHING
         """))
 
         conn.commit()

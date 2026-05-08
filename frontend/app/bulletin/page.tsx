@@ -20,12 +20,25 @@ async function getBulletins(): Promise<Bulletin[]> {
   }
 }
 
+async function getKakaoKey(): Promise<string> {
+  const envKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
+  if (envKey) return envKey;
+  try {
+    const res = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300 } });
+    if (res.ok) {
+      const cfg = await res.json();
+      return cfg.KAKAO_MAP_KEY ?? "";
+    }
+  } catch {}
+  return "";
+}
+
 export default async function BulletinPage() {
-  const bulletins = await getBulletins();
+  const [bulletins, kakaoKey] = await Promise.all([getBulletins(), getKakaoKey()]);
   return (
     <>
       <PageHeader group="말씀과 기도" title="주보 아카이브" subtitle="이번 주 주보와 지난 주보를 한 자리에서 만납니다" />
-      <BulletinClient bulletins={bulletins} />
+      <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} />
     </>
   );
 }

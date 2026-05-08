@@ -18,9 +18,7 @@ const SAMPLE_BULLETINS: Bulletin[] = [
   },
 ];
 
-const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
-
-function shareToKakao(b: Bulletin) {
+function shareToKakao(b: Bulletin, kakaoKey: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const kakao = (window as any).Kakao;
   if (!kakao?.isInitialized()) return;
@@ -38,7 +36,7 @@ function shareToKakao(b: Bulletin) {
   });
 }
 
-export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] }) {
+export default function BulletinClient({ bulletins, kakaoKey = "" }: { bulletins: Bulletin[]; kakaoKey?: string }) {
   const list = bulletins.length > 0 ? bulletins : SAMPLE_BULLETINS;
   const latest = list[0];
 
@@ -63,7 +61,7 @@ export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] })
         onLoad={() => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const k = (window as any).Kakao;
-          if (k && !k.isInitialized() && KAKAO_KEY) k.init(KAKAO_KEY);
+          if (k && !k.isInitialized() && kakaoKey) k.init(kakaoKey);
         }}
       />
 
@@ -126,9 +124,9 @@ export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] })
               >
                 ↗ 새 창으로 보기
               </a>
-              {KAKAO_KEY && (
+              {kakaoKey && (
                 <button
-                  onClick={() => shareToKakao(latest)}
+                  onClick={() => shareToKakao(latest, kakaoKey)}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   style={{ backgroundColor: "#FEE500", color: "#3C1E1E" }}
                 >
