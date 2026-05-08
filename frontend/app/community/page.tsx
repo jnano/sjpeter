@@ -15,6 +15,7 @@ interface CommunityGroup {
   description: string | null;
   activity_time: string | null;
   link_url: string | null;
+  board_slug: string | null;
   sort_order: number;
 }
 
@@ -57,7 +58,7 @@ export default async function CommunityPage() {
                   <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg">
                     {group.name}
                   </h3>
-                  {group.link_url && (
+                  {group.board_slug && (
                     <span className="text-xs text-[var(--color-primary)] border border-[var(--color-primary)]/30 px-1.5 py-0.5 rounded shrink-0">
                       게시판 →
                     </span>
@@ -77,10 +78,10 @@ export default async function CommunityPage() {
             </div>
           );
 
-          return group.link_url ? (
+          return group.board_slug ? (
             <Link
               key={group.id}
-              href={group.link_url}
+              href={`/boards/${group.board_slug}`}
               className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 hover:border-[var(--color-primary)] hover:shadow-sm transition-all block"
             >
               {inner}

@@ -34,14 +34,27 @@ interface CommunityGroup {
   description: string | null;
   activity_time: string | null;
   link_url: string | null;
+  board_slug: string | null;
   sort_order: number;
 }
+
+interface BoardOption { slug: string; name: string; }
 
 interface StaticPage {
   slug: string;
   title: string;
   subtitle: string | null;
   body: string | null;
+}
+
+interface CouncilMember {
+  id: number;
+  name: string;
+  role: string;
+  category: string;
+  photo_url: string | null;
+  sort_order: number;
+  is_active: boolean;
 }
 
 const inputCls = "px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full";
@@ -305,31 +318,27 @@ function VisionTab() {
 
 // ─── Community Tab ────────────────────────────────────────
 
+const emptyComForm = { name: "", description: "", activity_time: "", board_slug: "", sort_order: 0 };
+
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
-  const [boardSlugs, setBoardSlugs] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
+  const [boards, setBoards] = useState<BoardOption[]>([]);
+  const [form, setForm] = useState({ ...emptyComForm });
   const [editId, setEditId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 });
+  const [editForm, setEditForm] = useState({ ...emptyComForm });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
   async function load() {
     const [communityRes, boardsRes] = await Promise.all([
       fetch(`${API}/api/content/community`),
-      fetch(`${API}/api/boards?include_inactive=true`),
+      fetch(`${API}/api/boards`),
     ]);
     if (communityRes.ok) setItems(await communityRes.json());
     if (boardsRes.ok) {
-      const boards: { slug: string }[] = await boardsRes.json();
-      setBoardSlugs(new Set(boards.map((b) => b.slug)));
+      const bs: { slug: string; name: string }[] = await boardsRes.json();
+      setBoards(bs.map((b) => ({ slug: b.slug, name: b.name })));
     }
-  }
-
-  function slugFromUrl(url: string | null): string | null {
-    if (!url) return null;
-    const m = url.match(/\/boards\/([^/]+)\/?$/);
-    return m ? m[1] : null;
   }
 
   useEffect(() => { load(); }, []);
@@ -341,10 +350,10 @@ function CommunityTab() {
     const res = await fetch(`${API}/api/content/community`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, board_slug: form.board_slug || null }),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ name: "", description: "", activity_time: "", link_url: "", sort_order: 0 }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyComForm }); load(); }
   }
 
   async function update(id: number) {
@@ -352,7 +361,7 @@ function CommunityTab() {
     const res = await fetch(`${API}/api/content/community/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(editForm),
+      body: JSON.stringify({ ...editForm, board_slug: editForm.board_slug || null }),
     });
     setLoading(false);
     if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
@@ -365,6 +374,17 @@ function CommunityTab() {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     load();
+  }
+
+  function BoardSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>
+        <option value="">— 연결 안 함 —</option>
+        {boards.map((b) => (
+          <option key={b.slug} value={b.slug}>{b.name} ({b.slug})</option>
+        ))}
+      </select>
+    );
   }
 
   return (
@@ -393,8 +413,8 @@ function CommunityTab() {
             <input value={form.activity_time} onChange={(e) => setForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="예: 매주 화요일" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판 URL</label>
-            <input value={form.link_url} onChange={(e) => setForm((p) => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="예: /boards/youth (게시판 slug 앞에 /boards/ 입력)" />
+            <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
+            <BoardSelect value={form.board_slug} onChange={(v) => setForm((p) => ({ ...p, board_slug: v }))} />
           </div>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
@@ -414,7 +434,10 @@ function CommunityTab() {
                 </div>
                 <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
                 <input value={editForm.activity_time} onChange={(e) => setEditForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="활동 시간" />
-                <input value={editForm.link_url} onChange={(e) => setEditForm((p) => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="연결 게시판 URL (예: /boards/youth)" />
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
+                  <BoardSelect value={editForm.board_slug} onChange={(v) => setEditForm((p) => ({ ...p, board_slug: v }))} />
+                </div>
                 <div className="flex gap-2">
                   <button onClick={() => update(g.id)} disabled={loading} className={btnPrimary}>저장</button>
                   <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
@@ -426,35 +449,18 @@ function CommunityTab() {
                   <p className="font-medium text-sm">{g.name}</p>
                   {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
                   {g.activity_time && <p className="text-xs text-gray-400 mt-0.5">{g.activity_time}</p>}
-                  {(() => {
-                    const slug = slugFromUrl(g.link_url);
-                    const boardExists = slug !== null && boardSlugs.has(slug);
-                    return (
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {g.link_url && (
-                          <span className="text-xs text-gray-400 font-mono">{g.link_url}</span>
-                        )}
-                        {g.link_url && boardExists ? (
-                          <a
-                            href={`/admin/boards?expand=${slug}`}
-                            className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors font-medium"
-                          >
-                            관리하기
-                          </a>
-                        ) : (
-                          <a
-                            href="/admin/boards?create=true"
-                            className="text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors font-medium"
-                          >
-                            {g.link_url ? "게시판 없음 — 만들기" : "게시판 만들기"}
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <div className="mt-1.5">
+                    {g.board_slug ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+                        <span>🔗</span> {boards.find((b) => b.slug === g.board_slug)?.name ?? g.board_slug}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">게시판 미연결</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-3 shrink-0 ml-4">
-                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", link_url: g.link_url ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", board_slug: g.board_slug ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
                 </div>
               </div>
@@ -563,6 +569,199 @@ function PagesTab() {
           )
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Council Tab ──────────────────────────────────────────
+
+const COUNCIL_CATEGORIES = ["회장단", "분과대표", "구역장대표"];
+const emptyCouncilForm = { name: "", role: "", category: "회장단", sort_order: 0, is_active: true };
+
+function CouncilTab() {
+  const [items, setItems] = useState<CouncilMember[]>([]);
+  const [form, setForm] = useState({ ...emptyCouncilForm });
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ ...emptyCouncilForm });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [photoUploading, setPhotoUploading] = useState<number | null>(null);
+
+  async function load() {
+    const res = await fetch(`${API}/api/content/council/admin`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) setItems(await res.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.role.trim()) return;
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/council`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(form),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyCouncilForm }); load(); }
+  }
+
+  async function update(id: number) {
+    setLoading(true);
+    const res = await fetch(`${API}/api/content/council/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(editForm),
+    });
+    setLoading(false);
+    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+  }
+
+  async function remove(id: number) {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await fetch(`${API}/api/content/council/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    load();
+  }
+
+  async function uploadPhoto(id: number, file: File) {
+    setPhotoUploading(id);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API}/api/content/council/${id}/photo`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+    });
+    setPhotoUploading(null);
+    if (res.ok) { setMsg("사진이 업로드되었습니다."); load(); }
+    else { setMsg("사진 업로드에 실패했습니다."); }
+  }
+
+  const grouped = COUNCIL_CATEGORIES.map((cat) => ({
+    category: cat,
+    members: items.filter((m) => m.category === cat),
+  }));
+
+  return (
+    <div className="space-y-6">
+      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
+
+      {/* 추가 폼 */}
+      <section className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">구성원 추가</h3>
+        <form onSubmit={create} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">이름</label>
+              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="홍길동" required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">직책</label>
+              <input value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} className={inputCls} placeholder="사목회장" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">카테고리</label>
+              <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} className={inputCls}>
+                {COUNCIL_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">순서</label>
+              <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} className="rounded" />
+            현직 표시
+          </label>
+          <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
+        </form>
+      </section>
+
+      {/* 카테고리별 목록 */}
+      {grouped.map(({ category, members }) => (
+        <section key={category} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="font-semibold text-gray-700 text-sm">{category}</h3>
+            <span className="text-xs text-gray-400">{members.length}명</span>
+          </div>
+          {members.length === 0 ? (
+            <p className="text-sm text-gray-400 px-6 py-4">등록된 구성원이 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {members.map((m) => (
+                <div key={m.id} className="px-6 py-3">
+                  {editId === m.id ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="이름" />
+                        <input value={editForm.role} onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))} className={inputCls} placeholder="직책" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select value={editForm.category} onChange={(e) => setEditForm((p) => ({ ...p, category: e.target.value }))} className={inputCls}>
+                          {COUNCIL_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                        <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={editForm.is_active} onChange={(e) => setEditForm((p) => ({ ...p, is_active: e.target.checked }))} className="rounded" />
+                        현직
+                      </label>
+                      <div className="flex gap-2">
+                        <button onClick={() => update(m.id)} disabled={loading} className={btnPrimary}>저장</button>
+                        <button onClick={() => setEditId(null)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      {/* 사진 */}
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+                        {m.photo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.photo_url.startsWith("http") ? m.photo_url : `${API}${m.photo_url}`} alt={m.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-bold">{m.name.slice(-1)}</div>
+                        )}
+                      </div>
+                      {/* 정보 */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-gray-800">{m.name}</span>
+                          <span className="text-xs text-gray-500">{m.role}</span>
+                          {!m.is_active && <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">비활성</span>}
+                        </div>
+                        <p className="text-xs text-gray-400">순서: {m.sort_order}</p>
+                      </div>
+                      {/* 액션 */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <label className="text-xs text-purple-500 hover:text-purple-700 cursor-pointer">
+                          {photoUploading === m.id ? "업로드 중…" : "사진 변경"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(m.id, f); e.target.value = ""; }}
+                          />
+                        </label>
+                        <button onClick={() => { setEditId(m.id); setEditForm({ name: m.name, role: m.role, category: m.category, sort_order: m.sort_order, is_active: m.is_active }); }} className={btnEdit}>수정</button>
+                        <button onClick={() => remove(m.id)} className={btnDanger}>삭제</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
@@ -831,6 +1030,7 @@ function MeditationTab() {
 
 const TABS = [
   { key: "meditation", label: "작은 묵상" },
+  { key: "council", label: "사목평의회" },
   { key: "history", label: "연혁" },
   { key: "vision", label: "사목지표" },
   { key: "community", label: "단체/분과" },
@@ -876,6 +1076,7 @@ export default function AdminContentPage() {
       </div>
 
       {tab === "meditation" && <MeditationTab />}
+      {tab === "council" && <CouncilTab />}
       {tab === "history" && <HistoryTab />}
       {tab === "vision" && <VisionTab />}
       {tab === "community" && <CommunityTab />}

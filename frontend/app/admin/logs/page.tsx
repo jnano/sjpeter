@@ -64,7 +64,7 @@ export default function AdminLogsPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">관리 활동 로그</h1>
         <span className="text-sm text-[var(--color-text-muted)]">전체 {total.toLocaleString()}건</span>

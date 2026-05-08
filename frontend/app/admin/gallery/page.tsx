@@ -94,7 +94,7 @@ export default function GalleryAdminPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-6">갤러리 관리</h1>
 
       {/* 게시판 선택 */}

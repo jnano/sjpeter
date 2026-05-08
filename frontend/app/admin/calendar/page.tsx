@@ -115,8 +115,18 @@ export default function AdminCalendarPage() {
   const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]));
 
   return (
-    <div className="p-6 max-w-5xl">
-      <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-6">행사 캘린더 관리</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-primary)]">행사 캘린더 관리</h1>
+        <a
+          href="/calendar"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm border border-[var(--color-border)] hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          사용자 페이지 보기 →
+        </a>
+      </div>
 
       {/* 월 이동 */}
       <div className="flex items-center gap-3 mb-6">

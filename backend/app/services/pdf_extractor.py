@@ -10,12 +10,18 @@ def extract_text(pdf_path: str) -> str:
 
 
 def pdf_to_images_b64(pdf_path: str, max_pages: int = 6) -> list[str]:
-    """각 페이지를 JPEG base64로 변환 (2배 해상도)."""
+    """각 페이지를 JPEG base64로 변환 (Bedrock 5MB 제한 준수)."""
     doc = fitz.open(pdf_path)
     result = []
     for page in list(doc)[:max_pages]:
-        pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-        result.append(base64.b64encode(pixmap.tobytes("jpeg")).decode())
+        # 1.5x 해상도 + 품질 75로 5MB 이하 유지
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+        jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=75)
+        # 여전히 크면 1x로 재시도
+        if len(jpeg_bytes) > 4 * 1024 * 1024:
+            pixmap = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+            jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=70)
+        result.append(base64.b64encode(jpeg_bytes).decode())
     return result
 
 

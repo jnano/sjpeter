@@ -7,10 +7,20 @@ export default function AdminNav() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [isSuper, setIsSuper] = useState(false);
+  const [draftCount, setDraftCount] = useState(0);
 
   useEffect(() => {
     setDisplayName(localStorage.getItem("admin_display_name") ?? "");
     setIsSuper(localStorage.getItem("admin_is_super") === "true");
+    const token = localStorage.getItem("admin_token");
+    if (token) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/boards/drafts/count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d) setDraftCount(d.count ?? 0); })
+        .catch(() => {});
+    }
   }, []);
 
   function handleLogout() {
@@ -30,25 +40,42 @@ export default function AdminNav() {
         <span className="text-white/50 text-sm">— 세종성베드로성당</span>
       </Link>
       <div className="flex items-center gap-4">
-        {displayName && (
+        <Link href="/admin/drafts" className="relative text-sm text-white/70 hover:text-white transition-colors">
+          임시저장
+          {draftCount > 0 && (
+            <span className="absolute -top-2 -right-4 bg-amber-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+              {draftCount}
+            </span>
+          )}
+        </Link>
+        <Link href="/admin/event-mapping" className="text-sm text-white/70 hover:text-white transition-colors">
+          분류 설정
+        </Link>
+        <Link href="/admin/docs" className="text-sm text-white/70 hover:text-white transition-colors">
+          문서
+        </Link>
+        {isSuper && displayName && (
           <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              isSuper ? "bg-yellow-400/20 text-yellow-300 border border-yellow-400/30" : "bg-white/10 text-white/70 border border-white/20"
-            }`}>
-              {isSuper ? "최고관리자" : "관리자"}
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
+              최고관리자
             </span>
             <span className="text-sm text-white/90 font-medium">{displayName}</span>
           </div>
         )}
-        <Link href="/" className="text-sm text-white/70 hover:text-white transition-colors">
-          사이트 보기
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-white/70 hover:text-white transition-colors"
-        >
-          로그아웃
-        </button>
+        {isSuper ? (
+          <button
+            onClick={handleLogout}
+            className="text-sm text-white/70 hover:text-white transition-colors"
+          >
+            로그아웃
+          </button>
+        ) : (
+          displayName && (
+            <span className="text-sm text-white/70">
+              {displayName}님 관리자 페이지에 접속하셨습니다.
+            </span>
+          )
+        )}
       </div>
     </div>
   );

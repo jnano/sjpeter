@@ -1,16 +1,17 @@
 import type { NextConfig } from "next";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const apiOrigin = new URL(apiUrl);
-
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/boards/photo", destination: "/gallery/events", permanent: true },
+      { source: "/boards/photo/:postId", destination: "/gallery/events/:postId", permanent: true },
+    ];
+  },
   images: {
+    dangerouslyAllowLocalIP: true,
     remotePatterns: [
-      {
-        protocol: apiOrigin.protocol.replace(":", "") as "http" | "https",
-        hostname: apiOrigin.hostname,
-        ...(apiOrigin.port ? { port: apiOrigin.port } : {}),
-      },
+      { protocol: "http", hostname: "localhost", port: "8000" },
+      { protocol: "http", hostname: "127.0.0.1", port: "8000" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
       { protocol: "https", hostname: "k.kakaocdn.net" },
       { protocol: "https", hostname: "t1.kakaocdn.net" },

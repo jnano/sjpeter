@@ -1,3 +1,5 @@
+import logging
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,10 +8,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events
+from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.core.config import settings
 from app.core.database import create_tables
-import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
@@ -35,6 +41,7 @@ app.include_router(parish.router, prefix="/api")
 app.include_router(gospel.router, prefix="/api")
 app.include_router(content.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
+app.include_router(archive.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -310,6 +317,45 @@ def _migrate_add_columns():
                 used BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT NOW()
             )
+        """))
+
+        # 게시글 임시저장 컬럼 (AI 자동 분류 초안)
+        try:
+            conn.execute(text(
+                "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT TRUE"
+            ))
+        except Exception:
+            pass
+
+        # 공지사항 게시판 신설 (주보 AI 추출 기본 대상)
+        conn.execute(text("""
+            INSERT INTO boards (name, slug, is_active, moderator_only_write,
+                                members_only_write, members_only_read, members_selected, exclude_from_search)
+            VALUES ('공지사항', 'notice', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+            ON CONFLICT (slug) DO NOTHING
+        """))
+
+        # 이벤트 유형 → 게시판 매핑 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS event_board_mappings (
+                id SERIAL PRIMARY KEY,
+                event_type VARCHAR(50) UNIQUE NOT NULL,
+                board_id INTEGER REFERENCES boards(id) ON DELETE SET NULL
+            )
+        """))
+
+        # 기본 매핑: 행사·모임·봉사·순례·피정·강의 → 공지사항, 기타 → 미지정
+        conn.execute(text("""
+            INSERT INTO event_board_mappings (event_type, board_id)
+            SELECT t.event_type, b.id
+            FROM (VALUES ('행사'), ('모임'), ('봉사'), ('순례'), ('피정'), ('강의')) AS t(event_type)
+            CROSS JOIN (SELECT id FROM boards WHERE slug = 'notice') AS b
+            ON CONFLICT (event_type) DO NOTHING
+        """))
+        conn.execute(text("""
+            INSERT INTO event_board_mappings (event_type, board_id)
+            VALUES ('기타', NULL)
+            ON CONFLICT (event_type) DO NOTHING
         """))
 
         conn.commit()

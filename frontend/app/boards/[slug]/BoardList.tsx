@@ -69,40 +69,41 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
 
 function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
   return (
-    <div className="divide-y divide-[var(--color-border)]">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {posts.map((post) => (
         <Link
           key={post.id}
           href={`/boards/${slug}/${post.id}`}
-          className="flex items-center justify-between py-4 hover:text-[var(--color-primary)] transition-colors group"
+          className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden hover:border-[var(--color-primary)] hover:shadow-sm transition-all"
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {post.thumbnail_url && (
+          {post.thumbnail_url && (
+            <div className="relative w-full aspect-video">
               <Image
                 src={`${API}${post.thumbnail_url}`}
-                alt=""
-                width={40}
-                height={40}
-                className="object-cover rounded shrink-0 border border-[var(--color-border)]"
+                alt={post.title}
+                fill
+                className="object-cover group-hover:opacity-95 transition-opacity"
+                sizes="(max-width: 640px) 100vw, 50vw"
               />
-            )}
-            <div className="min-w-0">
-              <p className="font-medium truncate group-hover:text-[var(--color-primary)]">
-                {post.title}
-                {post.comment_count > 0 && (
-                  <span className="ml-1.5 text-sm text-[var(--color-primary)]">
-                    [{post.comment_count}]
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {post.member?.nickname ?? "성당"} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
-              </p>
+            </div>
+          )}
+          <div className="p-4">
+            <p className="font-medium text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-2">
+              {post.title}
+              {post.comment_count > 0 && (
+                <span className="ml-1.5 text-sm text-[var(--color-primary)]">
+                  [{post.comment_count}]
+                </span>
+              )}
+            </p>
+            <div className="flex items-center justify-between mt-3 text-xs text-[var(--color-text-muted)]">
+              <span>{post.member?.nickname ?? "성당"}</span>
+              <div className="flex items-center gap-2">
+                <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
+                <span>조회 {post.view_count}</span>
+              </div>
             </div>
           </div>
-          <span className="ml-4 text-xs text-[var(--color-text-muted)] shrink-0">
-            조회 {post.view_count}
-          </span>
         </Link>
       ))}
     </div>

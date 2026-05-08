@@ -14,7 +14,8 @@ const navGroups = [
       { href: "/saint", label: "성 베드로" },
       { href: "/community", label: "우리 가족" },
       { href: "/history", label: "걸어온 길" },
-      { href: "/pastor", label: "사제의 발자취" },
+      { href: "/pastors", label: "역대 사목자" },
+      { href: "/priests", label: "본당 출신 사제" },
       { href: "/info", label: "찾아오시는 길" },
     ],
   },
@@ -42,6 +43,7 @@ const navGroups = [
     subtitle: "열린 문",
     items: [
       { href: "/boards/notice", label: "공지·알림" },
+      { href: "/calendar", label: "행사 일정" },
       { href: "/boards", label: "자유 글터" },
       { href: "/boards/news", label: "공동체 소식" },
     ],
@@ -93,7 +95,7 @@ export default function Header() {
       {/* 상단 정보 바 */}
       <div className="border-b border-white/10 text-sm bg-[#9B2335]">
         <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
-          <span className="text-white/70">대전교구 세종성베드로성당</span>
+          <span className="text-white/70">대전교구</span>
           <div className="flex items-center gap-4 text-white/70">
             {session ? (
               <div className="flex items-center gap-3">
@@ -107,12 +109,6 @@ export default function Header() {
                   )}
                   {session.user?.name}
                 </Link>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="hover:text-white transition-colors"
-                >
-                  로그아웃
-                </button>
               </div>
             ) : (
               <Link href="/members/login" className="hover:text-white transition-colors">

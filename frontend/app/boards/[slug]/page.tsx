@@ -52,7 +52,7 @@ async function getPosts(slug: string, page: number, token?: string): Promise<Pos
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
     const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
-      next: { revalidate: 300 },
+      cache: "no-store",
       headers,
     });
     if (!res.ok) return { posts: [], total: 0, posts_per_page: 20 };

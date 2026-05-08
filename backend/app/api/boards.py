@@ -2,7 +2,7 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc, or_, func
+from sqlalchemy import desc, or_, func, text
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -13,6 +13,7 @@ from app.models.board import Board, Post, Comment, BoardAllowedMember
 from app.models.attachment import Attachment
 from app.models.member import Member
 from app.models.admin import Admin
+from app.models.event_board_mapping import EventBoardMapping
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_EXTS = IMAGE_EXTS | {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".hwp", ".zip", ".txt"}
@@ -245,6 +246,21 @@ class MyCommentOut(BaseModel):
         from_attributes = True
 
 
+class DraftOut(BaseModel):
+    id: int
+    title: str
+    content: str
+    created_at: datetime
+    board: PostBoardInfo
+
+    class Config:
+        from_attributes = True
+
+
+class DraftMoveBody(BaseModel):
+    board_slug: str
+
+
 # ── 검색 ────────────────────────────────────────────────
 
 EXCERPT_LEN = 120
@@ -279,6 +295,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .options(joinedload(Post.member), joinedload(Post.board))
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
+        .filter(Post.is_published == True)
         .filter(or_(Post.title.ilike(keyword), Post.content.ilike(keyword)))
         .order_by(desc(Post.created_at))
     )
@@ -410,6 +427,173 @@ def _check_selected_access(board: Board, viewer: Optional[Member], db: Session):
         raise HTTPException(status_code=403, detail="접근 권한이 없는 게시판입니다.")
 
 
+# ── 임시저장 게시글 관리 (관리자 전용) ──────────────────────
+
+@router.get("/api/boards/drafts/count")
+def get_draft_count(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    count = db.query(Post).filter(Post.is_published == False).count()
+    return {"count": count}
+
+
+@router.get("/api/boards/drafts", response_model=list[DraftOut])
+def list_drafts(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    return (
+        db.query(Post)
+        .options(joinedload(Post.board))
+        .filter(Post.is_published == False)
+        .order_by(desc(Post.created_at))
+        .all()
+    )
+
+
+@router.post("/api/boards/drafts/{post_id}/publish", response_model=DraftOut)
+def publish_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    post = db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id, Post.is_published == False).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+    post.is_published = True
+    db.commit()
+    return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
+
+
+@router.patch("/api/boards/drafts/{post_id}/move", response_model=DraftOut)
+def move_draft(post_id: int, body: DraftMoveBody, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+    board = db.query(Board).filter(Board.slug == body.board_slug, Board.is_active == True).first()
+    if not board:
+        raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
+    post.board_id = board.id
+    db.commit()
+    return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
+
+
+@router.delete("/api/boards/drafts/{post_id}", status_code=204)
+def delete_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+    db.delete(post)
+    db.commit()
+
+
+class PublishMultiBody(BaseModel):
+    additional_board_slugs: list[str] = []
+    add_calendar: bool = False
+
+
+@router.post("/api/boards/drafts/{post_id}/publish-multi")
+def publish_draft_multi(
+    post_id: int,
+    body: PublishMultiBody,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    post = db.query(Post).options(joinedload(Post.board)).filter(
+        Post.id == post_id, Post.is_published == False
+    ).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+
+    # 원본 게시
+    post.is_published = True
+
+    # 추가 게시판에 복사본 생성
+    for slug in body.additional_board_slugs:
+        board = db.query(Board).filter(Board.slug == slug, Board.is_active == True).first()
+        if not board or board.id == post.board_id:
+            continue
+        copy = Post(
+            board_id=board.id,
+            member_id=post.member_id,
+            title=post.title,
+            content=post.content,
+            is_published=True,
+        )
+        db.add(copy)
+
+    # 행사일정에 등록
+    if body.add_calendar:
+        db.execute(
+            text(
+                "INSERT INTO events (title, description, event_date, location, category, is_public) "
+                "VALUES (:title, :desc, :edate, :loc, :cat, TRUE)"
+            ),
+            {
+                "title": post.title,
+                "desc": post.content or None,
+                "edate": None,
+                "loc": None,
+                "cat": "general",
+            },
+        )
+
+    db.commit()
+    return {"ok": True}
+
+
+# ── 이벤트 유형 → 게시판 매핑 관리 (관리자 전용) ──────────────
+
+class MappingOut(BaseModel):
+    event_type: str
+    board_id: Optional[int] = None
+    board_name: Optional[str] = None
+    board_slug: Optional[str] = None
+    use_calendar: bool = False
+
+
+class MappingUpdate(BaseModel):
+    board_id: Optional[int] = None
+    use_calendar: bool = False
+
+
+def _mapping_to_out(m: EventBoardMapping) -> MappingOut:
+    return MappingOut(
+        event_type=m.event_type,
+        board_id=m.board_id,
+        board_name=m.board.name if m.board else None,
+        board_slug=m.board.slug if m.board else None,
+        use_calendar=m.use_calendar,
+    )
+
+
+@router.get("/api/boards/event-mapping", response_model=list[MappingOut])
+def list_event_mappings(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    mappings = (
+        db.query(EventBoardMapping)
+        .options(joinedload(EventBoardMapping.board))
+        .order_by(EventBoardMapping.id)
+        .all()
+    )
+    return [_mapping_to_out(m) for m in mappings]
+
+
+@router.patch("/api/boards/event-mapping/{event_type}", response_model=MappingOut)
+def update_event_mapping(
+    event_type: str,
+    body: MappingUpdate,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    mapping = db.query(EventBoardMapping).filter(EventBoardMapping.event_type == event_type).first()
+    if not mapping:
+        raise HTTPException(status_code=404, detail="매핑을 찾을 수 없습니다.")
+    if body.use_calendar:
+        mapping.board_id = None
+        mapping.use_calendar = True
+    else:
+        if body.board_id is not None:
+            board = db.query(Board).filter(Board.id == body.board_id, Board.is_active == True).first()
+            if not board:
+                raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
+        mapping.board_id = body.board_id
+        mapping.use_calendar = False
+    db.commit()
+    db.refresh(mapping)
+    return _mapping_to_out(mapping)
+
+
 @router.get("/api/boards/{slug}", response_model=BoardOut)
 def get_board(slug: str, db: Session = Depends(get_db)):
     board = (
@@ -509,11 +693,11 @@ def list_posts(slug: str, page: int = 1, db: Session = Depends(get_db), viewer: 
     _check_selected_access(board, viewer, db)
     per_page = max(1, board.posts_per_page)
     skip = (max(1, page) - 1) * per_page
-    total = db.query(Post).filter(Post.board_id == board.id).count()
+    total = db.query(Post).filter(Post.board_id == board.id, Post.is_published == True).count()
     posts = (
         db.query(Post)
         .options(joinedload(Post.member), joinedload(Post.attachments))
-        .filter(Post.board_id == board.id)
+        .filter(Post.board_id == board.id, Post.is_published == True)
         .order_by(desc(Post.created_at))
         .offset(skip).limit(per_page).all()
     )

@@ -1,15 +1,28 @@
 import json
+import logging
 from datetime import date
-import anthropic
 
-_client: anthropic.Anthropic | None = None
+import boto3
+from botocore.exceptions import ClientError
+
+logger = logging.getLogger(__name__)
+
+_client = None
+
+TEXT_MODEL   = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+VISION_MODEL = "global.anthropic.claude-sonnet-4-6"
 
 
-def _get_client() -> anthropic.Anthropic:
+def _get_client():
     global _client
     if _client is None:
         from app.core.config import settings
-        _client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        _client = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=settings.AWS_REGION,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
     return _client
 
 
@@ -44,21 +57,31 @@ def _build_prompt(published_date: date, text: str) -> str:
 {text}"""
 
 
+def _invoke(model_id: str, messages: list[dict]) -> str:
+    body = json.dumps({
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4096,
+        "system": _SYSTEM,
+        "messages": messages,
+    })
+    try:
+        resp = _get_client().invoke_model(modelId=model_id, body=body)
+        result = json.loads(resp["body"].read())
+        return result["content"][0]["text"]
+    except ClientError as e:
+        logger.error("Bedrock invoke_model 실패: %s", e)
+        raise
+
+
 def analyze_bulletin_text(published_date: date, text: str) -> list[dict]:
     """텍스트 기반 분석."""
-    client = _get_client()
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
-        system=_SYSTEM,
-        messages=[{"role": "user", "content": _build_prompt(published_date, text)}],
-    )
-    return _parse_response(msg.content[0].text)
+    messages = [{"role": "user", "content": _build_prompt(published_date, text)}]
+    raw = _invoke(TEXT_MODEL, messages)
+    return _parse_response(raw)
 
 
 def analyze_bulletin_images(published_date: date, images_b64: list[str]) -> list[dict]:
-    """이미지(스캔본) 기반 분석 — Claude Vision 사용."""
-    client = _get_client()
+    """이미지(스캔본) 기반 분석 — Bedrock Vision 사용."""
     content: list[dict] = [
         {"type": "text", "text": _build_prompt(published_date, "(이미지를 직접 읽으세요)")}
     ]
@@ -67,18 +90,12 @@ def analyze_bulletin_images(published_date: date, images_b64: list[str]) -> list
             "type": "image",
             "source": {"type": "base64", "media_type": "image/jpeg", "data": img},
         })
-    msg = client.messages.create(
-        model="claude-sonnet-4-6",  # Vision은 Sonnet 사용
-        max_tokens=2048,
-        system=_SYSTEM,
-        messages=[{"role": "user", "content": content}],
-    )
-    return _parse_response(msg.content[0].text)
+    raw = _invoke(VISION_MODEL, [{"role": "user", "content": content}])
+    return _parse_response(raw)
 
 
 def _parse_response(raw: str) -> list[dict]:
     try:
-        # 마크다운 코드블록 제거
         text = raw.strip()
         if text.startswith("```"):
             text = text.split("```")[1]

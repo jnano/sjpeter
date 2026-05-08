@@ -11,9 +11,20 @@ interface Board {
   members_only_read: boolean;
 }
 
+const BOARD_ICONS: Record<string, string> = {
+  free:             "💬",
+  news:             "📰",
+  youth_council:    "✝️",
+  pastoral_council: "🕊️",
+  legio_mariae:     "📿",
+  photo:            "📷",
+  liturgy:          "⛪",
+  notice:           "📢",
+};
+
 async function getBoards(): Promise<Board[]> {
   try {
-    const res = await fetch(`${API}/api/boards`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/api/boards`, { cache: "no-store" });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -25,38 +36,49 @@ export default async function BoardsPage() {
   const boards = await getBoards();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-2">게시판</h1>
-      <p className="text-sm text-[var(--color-text-muted)] mb-8">
-        성당 회원들의 이야기를 나누는 공간입니다.
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <h1 className="font-serif text-3xl font-bold text-[var(--color-primary)] mb-2">자유 글터</h1>
+      <p className="text-sm text-[var(--color-text-muted)] mb-10">
+        성당 공동체의 이야기를 나누는 공간입니다.
       </p>
 
       {boards.length === 0 ? (
-        <p className="text-center py-16 text-[var(--color-text-muted)]">
-          등록된 게시판이 없습니다.
-        </p>
+        <p className="text-center py-16 text-[var(--color-text-muted)]">등록된 게시판이 없습니다.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {boards.map((board) => (
             <Link
               key={board.id}
               href={`/boards/${board.slug}`}
-              className="flex items-center justify-between p-5 bg-white border border-[var(--color-border)] rounded-xl hover:border-[var(--color-primary)] hover:shadow-sm transition-all"
+              className="group flex flex-col bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 hover:border-[var(--color-primary)] hover:shadow-md transition-all"
             >
-              <div>
-                <p className="font-semibold text-[var(--color-text)]">{board.name}</p>
-                {board.description && (
-                  <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{board.description}</p>
-                )}
+              <div className="flex items-start justify-between mb-3">
+                <span className="text-3xl">{BOARD_ICONS[board.slug] ?? "📋"}</span>
+                <div className="flex items-center gap-1.5">
+                  {board.members_only_read && (
+                    <span className="text-[11px] px-2 py-0.5 bg-purple-50 text-purple-600 border border-purple-200 rounded-full">
+                      🔒 회원 전용
+                    </span>
+                  )}
+                  {!board.members_only_read && board.members_only_write && (
+                    <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-full">
+                      쓰기 회원 전용
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {board.members_only_read && (
-                  <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">🔒 회원 전용</span>
-                )}
-                {!board.members_only_read && board.members_only_write && (
-                  <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">쓰기 회원 전용</span>
-                )}
-                <span className="text-[var(--color-text-muted)]">›</span>
+
+              <p className="font-semibold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors text-lg">
+                {board.name}
+              </p>
+              {board.description && (
+                <p className="text-sm text-[var(--color-text-muted)] mt-1 line-clamp-2">
+                  {board.description}
+                </p>
+              )}
+
+              <div className="mt-auto pt-4 flex items-center justify-end text-xs text-[var(--color-primary)] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                바로가기 →
               </div>
             </Link>
           ))}

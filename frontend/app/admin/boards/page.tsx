@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
-type AccessMode = "public" | "write-restricted" | "members-only" | "selected-members";
+type AccessMode = "public" | "write-restricted" | "moderator-only" | "members-only" | "selected-members";
 
 interface Moderator {
   id: number;
@@ -30,6 +30,7 @@ interface Board {
   members_only_write: boolean;
   members_only_read: boolean;
   members_selected: boolean;
+  moderator_only_write: boolean;
   posts_per_page: number;
   exclude_from_search: boolean;
   moderator: Moderator | null;
@@ -39,22 +40,25 @@ interface Board {
 function getAccessMode(b: Board): AccessMode {
   if (b.members_selected) return "selected-members";
   if (b.members_only_read) return "members-only";
+  if (b.moderator_only_write) return "moderator-only";
   if (b.members_only_write) return "write-restricted";
   return "public";
 }
 
 function accessModeToFields(mode: AccessMode) {
-  if (mode === "members-only") return { members_only_read: true, members_only_write: true, members_selected: false };
-  if (mode === "write-restricted") return { members_only_read: false, members_only_write: true, members_selected: false };
-  if (mode === "selected-members") return { members_only_read: false, members_only_write: false, members_selected: true };
-  return { members_only_read: false, members_only_write: false, members_selected: false };
+  if (mode === "members-only")   return { members_only_read: true,  members_only_write: true,  members_selected: false, moderator_only_write: false };
+  if (mode === "write-restricted") return { members_only_read: false, members_only_write: true,  members_selected: false, moderator_only_write: false };
+  if (mode === "moderator-only") return { members_only_read: false, members_only_write: false, members_selected: false, moderator_only_write: true  };
+  if (mode === "selected-members") return { members_only_read: false, members_only_write: false, members_selected: true,  moderator_only_write: false };
+  return { members_only_read: false, members_only_write: false, members_selected: false, moderator_only_write: false };
 }
 
 const ACCESS_LABELS: Record<AccessMode, { label: string; badge: string; color: string }> = {
-  "public":           { label: "공개",        badge: "누구나 보기·쓰기",         color: "bg-green-50 text-green-600" },
-  "write-restricted": { label: "쓰기 제한",    badge: "누구나 보기, 회원만 쓰기",   color: "bg-blue-50 text-blue-600" },
-  "members-only":     { label: "회원 전용",    badge: "회원만 보기·쓰기",          color: "bg-purple-50 text-purple-600" },
-  "selected-members": { label: "지정 회원",    badge: "선택된 회원만 보기·쓰기",    color: "bg-amber-50 text-amber-600" },
+  "public":           { label: "공개",          badge: "누구나 보기·쓰기",              color: "bg-green-50 text-green-600" },
+  "write-restricted": { label: "쓰기 제한",      badge: "누구나 보기, 회원만 쓰기",       color: "bg-blue-50 text-blue-600" },
+  "moderator-only":   { label: "관리자만 쓰기",   badge: "누구나 보기, 게시판 관리자만 쓰기", color: "bg-orange-50 text-orange-600" },
+  "members-only":     { label: "회원 전용",      badge: "회원만 보기·쓰기",               color: "bg-purple-50 text-purple-600" },
+  "selected-members": { label: "지정 회원",      badge: "선택된 회원만 보기·쓰기",         color: "bg-amber-50 text-amber-600" },
 };
 
 function getAdminToken() {
@@ -468,7 +472,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
     setExcludeSearch(board.exclude_from_search);
     setPostsPerPage(board.posts_per_page);
     setAllowedMembers(board.allowed_members ?? []);
-  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator, board.exclude_from_search, board.posts_per_page, board.allowed_members]);
+  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.posts_per_page, board.allowed_members]);
 
   async function save() {
     setSaving(true);
@@ -549,7 +553,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase mb-2">접근 설정</p>
         <div className="space-y-1.5">
-          {(["public", "write-restricted", "members-only", "selected-members"] as AccessMode[]).map((mode) => (
+          {(["public", "write-restricted", "moderator-only", "members-only", "selected-members"] as AccessMode[]).map((mode) => (
             <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="radio"

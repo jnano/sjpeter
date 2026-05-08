@@ -46,6 +46,14 @@ def list_notices(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/{notice_id}", response_model=NoticeOut)
+def get_notice(notice_id: int, db: Session = Depends(get_db)):
+    notice = db.query(Notice).filter(Notice.id == notice_id).first()
+    if not notice:
+        raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
+    return notice
+
+
 @router.post("/", response_model=NoticeOut, status_code=201)
 def create_notice(
     body: NoticeIn,

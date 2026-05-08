@@ -4,27 +4,52 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
+const SPECIAL = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/~`\\]/;
+
+function validatePassword(pw: string): string | null {
+  if (pw.length < 8) return "비밀번호는 8자 이상이어야 합니다.";
+  if (!SPECIAL.test(pw)) return "비밀번호에 특수문자를 포함해야 합니다.";
+  return null;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: "", nickname: "", password: "", passwordConfirm: "" });
+  const [form, setForm] = useState({
+    email: "",
+    name: "",
+    nickname: "",
+    phone: "",
+    receiveNotification: false,
+    password: "",
+    passwordConfirm: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+  }
+
+  function formatPhone(raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+  }
+
+  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
+    const pwError = validatePassword(form.password);
+    if (pwError) { setError(pwError); return; }
     if (form.password !== form.passwordConfirm) {
       setError("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
       return;
     }
 
@@ -33,7 +58,14 @@ export default function RegisterPage() {
       const res = await fetch(`${API}/api/members/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, nickname: form.nickname, password: form.password }),
+        body: JSON.stringify({
+          email: form.email,
+          name: form.name.trim(),
+          nickname: form.nickname,
+          phone: form.phone.trim() || null,
+          receive_notification: form.receiveNotification,
+          password: form.password,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -48,8 +80,11 @@ export default function RegisterPage() {
     }
   }
 
+  const inputClass =
+    "w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm";
+
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">회원가입</h1>
@@ -65,58 +100,127 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* 이메일 */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">이메일</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              이메일 <span className="text-red-400">*</span>
+            </label>
             <input
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              className={inputClass}
               placeholder="example@email.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">닉네임</label>
-            <input
-              type="text"
-              name="nickname"
-              value={form.nickname}
-              onChange={handleChange}
-              required
-              minLength={2}
-              maxLength={20}
-              className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-              placeholder="2~20자"
-            />
+          {/* 이름 + 세례명 */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                이름 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                maxLength={50}
+                className={inputClass}
+                placeholder="이름을 입력하세요"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                세례명 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="nickname"
+                value={form.nickname}
+                onChange={handleChange}
+                required
+                minLength={2}
+                maxLength={30}
+                className={inputClass}
+                placeholder="세례명"
+              />
+            </div>
           </div>
 
+          {/* 전화번호 + 알림 동의 */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">비밀번호</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">전화번호</label>
+            <input
+              type="tel"
+              name="phone"
+              value={form.phone}
+              onChange={handlePhoneChange}
+              maxLength={13}
+              className={inputClass}
+              placeholder="010-0000-0000"
+            />
+            <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="receiveNotification"
+                checked={form.receiveNotification}
+                onChange={handleChange}
+                className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)] cursor-pointer"
+              />
+              <span className="text-sm text-[var(--color-text)]">
+                세종 성베드로 성당 채널 알림을 받으시려면 체크하세요
+              </span>
+            </label>
+          </div>
+
+          {/* 비밀번호 */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              비밀번호 <span className="text-red-400">*</span>
+            </label>
             <input
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-              placeholder="8자 이상"
+              className={`${inputClass} ${
+                form.password && validatePassword(form.password)
+                  ? "border-red-300 focus:ring-red-300"
+                  : ""
+              }`}
+              placeholder="8자 이상, 특수문자 포함"
             />
+            {form.password && validatePassword(form.password) && (
+              <p className="mt-1 text-xs text-red-500">{validatePassword(form.password)}</p>
+            )}
           </div>
 
+          {/* 비밀번호 확인 */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">비밀번호 확인</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              비밀번호 확인 <span className="text-red-400">*</span>
+            </label>
             <input
               type="password"
               name="passwordConfirm"
               value={form.passwordConfirm}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              className={`${inputClass} ${
+                form.passwordConfirm && form.passwordConfirm !== form.password
+                  ? "border-red-300 focus:ring-red-300"
+                  : ""
+              }`}
               placeholder="비밀번호를 다시 입력하세요"
             />
+            {form.passwordConfirm && form.passwordConfirm !== form.password && (
+              <p className="mt-1 text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
+            )}
           </div>
 
           <button

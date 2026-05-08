@@ -27,6 +27,12 @@ const DOT_COLOR: Record<string, string> = {
   special: "bg-amber-400",
 };
 
+const STATUS_BADGE: Record<string, string> = {
+  "예정":     "bg-blue-50 text-blue-600 border-blue-200",
+  "기록대기": "bg-amber-50 text-amber-600 border-amber-200",
+  "기록됨":   "bg-emerald-50 text-emerald-600 border-emerald-200",
+};
+
 interface Event {
   id: number;
   title: string;
@@ -36,6 +42,7 @@ interface Event {
   start_time: string | null;
   location: string | null;
   category: string;
+  status: string;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -196,9 +203,14 @@ export default function CalendarPage() {
                   <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
                   {e.location && <p className="text-xs text-[var(--color-text-muted)]">{e.location}</p>}
                 </div>
-                <div className="text-xs text-[var(--color-text-muted)] shrink-0">
-                  {new Date(e.event_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
-                  {e.start_time && ` ${e.start_time}`}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${STATUS_BADGE[e.status] ?? STATUS_BADGE["예정"]}`}>
+                    {e.status}
+                  </span>
+                  <div className="text-xs text-[var(--color-text-muted)]">
+                    {new Date(e.event_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
+                    {e.start_time && ` ${e.start_time}`}
+                  </div>
                 </div>
               </button>
             ))}
@@ -221,9 +233,14 @@ export default function CalendarPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
-              <span className={`text-xs px-2 py-1 rounded border ${CATEGORY_COLOR[selected.category] ?? CATEGORY_COLOR.general}`}>
-                {CATEGORY_LABEL[selected.category] ?? "일반"}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-1 rounded border ${CATEGORY_COLOR[selected.category] ?? CATEGORY_COLOR.general}`}>
+                  {CATEGORY_LABEL[selected.category] ?? "일반"}
+                </span>
+                <span className={`text-xs px-2 py-1 rounded border ${STATUS_BADGE[selected.status] ?? STATUS_BADGE["예정"]}`}>
+                  {selected.status}
+                </span>
+              </div>
               <button onClick={() => setSelected(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]">✕</button>
             </div>
             <h3 className="text-lg font-bold text-[var(--color-primary)] mb-3">{selected.title}</h3>

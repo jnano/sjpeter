@@ -20,7 +20,7 @@ interface Author {
 interface Post {
   id: number;
   title: string;
-  member: Author;
+  member: Author | null;
   view_count: number;
   comment_count: number;
   created_at: string;
@@ -132,7 +132,7 @@ export default async function LiturgyGalleryPage({
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const postList = await getPosts(page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / board.posts_per_page));
-  const canWrite = !board.members_only_write || !!session;
+  const canWrite = !!session;
   const paginationRange = getPaginationRange(page, totalPages);
 
   return (
@@ -193,7 +193,7 @@ export default async function LiturgyGalleryPage({
                   )}
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  {post.member.nickname} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
+                  {post.member?.nickname ?? "성당"} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
                 </p>
               </div>
             </Link>

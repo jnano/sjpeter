@@ -46,6 +46,7 @@ class Post(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=True)  # AI 생성 게시글은 null
     title = Column(String(300), nullable=False)
     content = Column(Text, nullable=False)
+    is_published = Column(Boolean, default=True)  # False: 임시저장 (AI 자동 생성)
     view_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -207,15 +207,18 @@ function PhoneForm({ member, token, onSaved }: {
           {saving ? "저장 중…" : "저장"}
         </button>
       </div>
-      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={notify}
           onChange={(e) => setNotify(e.target.checked)}
-          className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)] cursor-pointer"
+          className="mt-0.5 w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)] cursor-pointer shrink-0"
         />
-        <span className="text-sm text-[var(--color-text)]">
-          세종 성베드로 성당 채널 알림을 받으시려면 체크하세요
+        <span className="text-sm text-[var(--color-text)] leading-relaxed">
+          이메일 알림 수신 동의
+          <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
+            새 주보가 등록될 때 이메일로 알림을 받습니다.
+          </span>
         </span>
       </label>
       {message && (

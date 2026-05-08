@@ -31,7 +31,8 @@ class CommunityGroup(Base):
     name = Column(String(200), nullable=False)
     description = Column(Text)
     activity_time = Column(String(200))
-    link_url = Column(String(500), nullable=True)
+    link_url = Column(String(500), nullable=True)   # deprecated — board_slug 사용
+    board_slug = Column(String(100), nullable=True)  # 연결 게시판 slug
     sort_order = Column(Integer, default=0)
 
 
@@ -44,6 +45,19 @@ class StaticPage(Base):
     subtitle = Column(String(300), nullable=True)
     body = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CouncilMember(Base):
+    """사목평의회 구성원 — 이름, 직책, 카테고리, 사진."""
+    __tablename__ = "council_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    role = Column(String(200), nullable=False)        # 직책 (예: 회장, 재정부회장)
+    category = Column(String(100), nullable=False)    # 회장단 / 분과대표 / 구역장대표
+    photo_url = Column(String(500), nullable=True)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
 
 
 class Meditation(Base):

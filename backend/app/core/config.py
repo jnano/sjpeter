@@ -6,7 +6,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://user:password@localhost/cathedral"
     SECRET_KEY: str = "change-this-in-production"
     UPLOAD_DIR: str = "uploads"
-    ANTHROPIC_API_KEY: str = ""
+
+    # AWS Bedrock (Claude AI 분석)
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "us-east-1"
 
     # SMTP 설정 (비밀번호 찾기 이메일 발송)
     SMTP_HOST: str = "smtp.gmail.com"

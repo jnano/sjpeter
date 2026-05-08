@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -32,7 +32,41 @@ export default function NewBulletinPage() {
   const [gospelFetchMsg, setGospelFetchMsg] = useState("");
   const [error, setError] = useState("");
   const [uploadedId, setUploadedId] = useState<number | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<"analyzing" | "done" | "timeout">("analyzing");
+  const [extractionCount, setExtractionCount] = useState(0);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!uploadedId) return;
+    setAnalysisStatus("analyzing");
+    let attempts = 0;
+    const maxAttempts = 40; // 40 × 3s = 2분
+    const token = localStorage.getItem("admin_token");
+
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch(`${API}/api/bulletins/${uploadedId}/extractions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            setExtractionCount(data.length);
+            setAnalysisStatus("done");
+            clearInterval(pollRef.current!);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+      if (attempts >= maxAttempts) {
+        setAnalysisStatus("timeout");
+        clearInterval(pollRef.current!);
+      }
+    }, 3000);
+
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [uploadedId]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -111,22 +145,6 @@ export default function NewBulletinPage() {
     }
   }
 
-  async function handleAnalyze() {
-    if (!uploadedId) return;
-    const token = localStorage.getItem("admin_token");
-    if (!token) return;
-    setAnalyzing(true);
-    try {
-      const res = await fetch(`${API}/api/bulletins/${uploadedId}/analyze`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("분석 실패");
-      router.push(`/admin/bulletin/extractions?bulletin_id=${uploadedId}`);
-    } catch {
-      setAnalyzing(false);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-warm)]">
@@ -259,23 +277,49 @@ export default function NewBulletinPage() {
           {uploadedId ? (
             <div className="space-y-3 pt-2">
               <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-lg text-center">
-                주보가 등록되었습니다. AI 분석을 시작하시겠습니까?
+                <p className="font-medium">주보가 등록되었습니다.</p>
               </div>
+
+              {/* 분석 진행 상태 */}
+              {analysisStatus === "analyzing" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1.5">
+                    <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+                    <span className="text-amber-800 font-medium text-sm">AI 분석 중…</span>
+                  </div>
+                  <p className="text-xs text-amber-700">스캔 PDF는 Vision 분석을 거쳐 1~2분 소요됩니다.</p>
+                </div>
+              )}
+              {analysisStatus === "done" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-4 text-center">
+                  <p className="text-blue-800 font-medium text-sm">분석 완료 — {extractionCount}건 추출됨</p>
+                  <p className="text-xs text-blue-700 mt-1">임시저장 게시글을 검토한 후 게시해 주세요.</p>
+                </div>
+              )}
+              {analysisStatus === "timeout" && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-center">
+                  <p className="text-slate-600 text-sm">분석이 진행 중입니다. 임시저장에서 결과를 확인해 주세요.</p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push("/admin/dashboard")}
+                  onClick={() => router.push("/admin/bulletin")}
                   className="flex-1 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] py-2.5 rounded-lg text-sm font-medium transition-colors"
                 >
-                  나중에
+                  주보 목록
                 </button>
                 <button
                   type="button"
-                  onClick={handleAnalyze}
-                  disabled={analyzing}
-                  className="flex-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-60 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  onClick={() => router.push("/admin/drafts")}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    analysisStatus === "done"
+                      ? "bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white"
+                      : "border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                  }`}
                 >
-                  {analyzing ? "분석 중…" : "AI 분석 시작"}
+                  임시저장 확인{analysisStatus === "done" ? ` (${extractionCount})` : ""}
                 </button>
               </div>
             </div>

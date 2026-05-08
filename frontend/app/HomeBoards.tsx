@@ -56,7 +56,7 @@ export default function HomeBoards({ notices, bulletins }: Props) {
               {n.is_pinned && (
                 <span style={{ fontSize: "10px", background: "var(--burgundy)", color: "#fff", padding: "2px 7px", borderRadius: "2px", flexShrink: 0 }}>고정</span>
               )}
-              <Link href="/boards/notice" style={{ flex: 1, fontSize: "14px", color: "var(--navy)", textDecoration: "none", fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <Link href={`/boards/notice/${n.id}`} style={{ flex: 1, fontSize: "14px", color: "var(--navy)", textDecoration: "none", fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {n.title}
               </Link>
               <span style={{ fontSize: "11.5px", color: "var(--stone)", whiteSpace: "nowrap", flexShrink: 0 }}>

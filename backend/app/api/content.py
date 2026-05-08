@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from pydantic import BaseModel
@@ -6,8 +8,12 @@ from typing import Optional
 from datetime import date, datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin
-from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation
+from app.core.config import settings
+from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember
 from app.models.admin import Admin
+
+_PHOTO_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+_PHOTO_MAX = 10 * 1024 * 1024
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -133,6 +139,7 @@ class CommunityGroupIn(BaseModel):
     description: Optional[str] = None
     activity_time: Optional[str] = None
     link_url: Optional[str] = None
+    board_slug: Optional[str] = None
     sort_order: int = 0
 
 
@@ -142,6 +149,7 @@ class CommunityGroupOut(BaseModel):
     description: Optional[str]
     activity_time: Optional[str]
     link_url: Optional[str]
+    board_slug: Optional[str]
     sort_order: int
 
     class Config:
@@ -323,4 +331,99 @@ def delete_meditation(item_id: int, db: Session = Depends(get_db), _: Admin = De
     if not item:
         raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
     db.delete(item)
+    db.commit()
+
+
+# ─── Council Members ────────────────────────────────────────
+
+class CouncilMemberIn(BaseModel):
+    name: str
+    role: str
+    category: str
+    photo_url: Optional[str] = None
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class CouncilMemberOut(BaseModel):
+    id: int
+    name: str
+    role: str
+    category: str
+    photo_url: Optional[str]
+    sort_order: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/council", response_model=list[CouncilMemberOut])
+def list_council(db: Session = Depends(get_db)):
+    return (
+        db.query(CouncilMember)
+        .filter(CouncilMember.is_active == True)  # noqa: E712
+        .order_by(CouncilMember.sort_order, CouncilMember.id)
+        .all()
+    )
+
+
+@router.get("/council/admin", response_model=list[CouncilMemberOut])
+def list_council_admin(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    return db.query(CouncilMember).order_by(CouncilMember.sort_order, CouncilMember.id).all()
+
+
+@router.post("/council", response_model=CouncilMemberOut, status_code=201)
+def create_council_member(body: CouncilMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    member = CouncilMember(**body.model_dump())
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+@router.post("/council/{member_id}/photo", response_model=CouncilMemberOut)
+async def upload_council_photo(
+    member_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in _PHOTO_EXTS:
+        raise HTTPException(status_code=400, detail="jpg/png/webp 파일만 업로드 가능합니다.")
+    content = await file.read()
+    if len(content) > _PHOTO_MAX:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
+    filename = f"council_{uuid.uuid4().hex}{ext}"
+    path = os.path.join(settings.UPLOAD_DIR, filename)
+    with open(path, "wb") as f:
+        f.write(content)
+    member.photo_url = f"/uploads/{filename}"
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+@router.put("/council/{member_id}", response_model=CouncilMemberOut)
+def update_council_member(member_id: int, body: CouncilMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
+    for k, v in body.model_dump().items():
+        setattr(member, k, v)
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+@router.delete("/council/{member_id}", status_code=204)
+def delete_council_member(member_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
+    db.delete(member)
     db.commit()

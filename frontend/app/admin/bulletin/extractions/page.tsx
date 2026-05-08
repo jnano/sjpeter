@@ -82,6 +82,28 @@ export default function ExtractionsPage() {
     }
   }
 
+  async function approveAsEvent(ext: Extraction) {
+    if (!ext.event_date) {
+      setError(`"${ext.title}" 항목에 날짜가 없습니다. 캘린더 등록이 불가합니다.`);
+      return;
+    }
+    setError("");
+    setProcessing((p) => ({ ...p, [ext.id]: true }));
+    try {
+      const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-event`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "캘린더 등록 실패");
+      const updated: Extraction = await res.json();
+      setExtractions((prev) => prev.map((e) => (e.id === ext.id ? updated : e)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "캘린더 등록에 실패했습니다.");
+    } finally {
+      setProcessing((p) => ({ ...p, [ext.id]: false }));
+    }
+  }
+
   async function reject(extId: number) {
     setProcessing((p) => ({ ...p, [extId]: true }));
     try {
@@ -151,6 +173,7 @@ export default function ExtractionsPage() {
                   selectedBoardId={selectedBoard[ext.id]}
                   onSelectBoard={(bid) => setSelectedBoard((p) => ({ ...p, [ext.id]: bid }))}
                   onApprove={() => approve(ext)}
+                  onApproveAsEvent={() => approveAsEvent(ext)}
                   onReject={() => reject(ext.id)}
                   processing={!!processing[ext.id]}
                 />
@@ -211,6 +234,7 @@ function ExtractionCard({
   selectedBoardId,
   onSelectBoard,
   onApprove,
+  onApproveAsEvent,
   onReject,
   processing,
 }: {
@@ -219,6 +243,7 @@ function ExtractionCard({
   selectedBoardId?: number;
   onSelectBoard: (id: number) => void;
   onApprove: () => void;
+  onApproveAsEvent: () => void;
   onReject: () => void;
   processing: boolean;
 }) {
@@ -249,32 +274,46 @@ function ExtractionCard({
         </p>
       )}
 
-      {/* 게시판 선택 + 액션 */}
-      <div className="flex gap-2 pt-1">
-        <select
-          value={selectedBoardId ?? ""}
-          onChange={(e) => onSelectBoard(Number(e.target.value))}
-          className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
-        >
-          <option value="">게시판 선택…</option>
-          {boards.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
-        <button
-          onClick={onReject}
-          disabled={processing}
-          className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
-        >
-          거부
-        </button>
-        <button
-          onClick={onApprove}
-          disabled={processing || !selectedBoardId}
-          className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          {processing ? "처리 중…" : "승인"}
-        </button>
+      {/* 액션 영역 */}
+      <div className="pt-1 space-y-2">
+        {/* 게시판 승인 행 */}
+        <div className="flex gap-2">
+          <select
+            value={selectedBoardId ?? ""}
+            onChange={(e) => onSelectBoard(Number(e.target.value))}
+            className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
+          >
+            <option value="">게시판 선택…</option>
+            {boards.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={onApprove}
+            disabled={processing || !selectedBoardId}
+            className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+          >
+            {processing ? "처리 중…" : "게시판 등록"}
+          </button>
+        </div>
+        {/* 캘린더 등록 + 거부 행 */}
+        <div className="flex gap-2">
+          <button
+            onClick={onApproveAsEvent}
+            disabled={processing || !ext.event_date}
+            title={!ext.event_date ? "날짜 정보가 없어 캘린더 등록 불가" : ""}
+            className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            📅 캘린더 등록{!ext.event_date && " (날짜 없음)"}
+          </button>
+          <button
+            onClick={onReject}
+            disabled={processing}
+            className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
+          >
+            거부
+          </button>
+        </div>
       </div>
     </div>
   );

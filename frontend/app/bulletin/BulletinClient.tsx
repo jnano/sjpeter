@@ -1,5 +1,6 @@
 "use client";
 
+import Script from "next/script";
 import type { Bulletin } from "@/lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -16,6 +17,26 @@ const SAMPLE_BULLETINS: Bulletin[] = [
     ai_summary: null,
   },
 ];
+
+const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
+
+function shareToKakao(b: Bulletin) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const kakao = (window as any).Kakao;
+  if (!kakao?.isInitialized()) return;
+  kakao.Share.sendDefault({
+    objectType: "feed",
+    content: {
+      title: b.issue_number ? `세종성베드로성당 주보 제${b.issue_number}호` : "세종성베드로성당 주보",
+      description: [b.liturgical_season, b.gospel_reference].filter(Boolean).join(" · ") || "이번 주 주보를 확인하세요",
+      imageUrl: "https://t1.kakaocdn.net/kakao_js_sdk/1.1/kakao_thumbnail.png",
+      link: { mobileWebUrl: window.location.href, webUrl: window.location.href },
+    },
+    buttons: [
+      { title: "주보 보기", link: { mobileWebUrl: window.location.href, webUrl: window.location.href } },
+    ],
+  });
+}
 
 export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] }) {
   const list = bulletins.length > 0 ? bulletins : SAMPLE_BULLETINS;
@@ -36,6 +57,15 @@ export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] })
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      <Script
+        src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const k = (window as any).Kakao;
+          if (k && !k.isInitialized() && KAKAO_KEY) k.init(KAKAO_KEY);
+        }}
+      />
 
       <div className="grid md:grid-cols-5 gap-8">
         {/* 이번 주 주보 */}
@@ -96,6 +126,18 @@ export default function BulletinClient({ bulletins }: { bulletins: Bulletin[] })
               >
                 ↗ 새 창으로 보기
               </a>
+              {KAKAO_KEY && (
+                <button
+                  onClick={() => shareToKakao(latest)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  style={{ backgroundColor: "#FEE500", color: "#3C1E1E" }}
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
+                    <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.74 1.57 5.16 3.96 6.64l-.99 3.69 4.28-2.82c.88.17 1.8.26 2.75.26 5.52 0 10-3.48 10-7.77C22 6.48 17.52 3 12 3z" />
+                  </svg>
+                  카카오 공유
+                </button>
+              )}
             </div>
           </div>
         </div>
