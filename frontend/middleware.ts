@@ -1,5 +1,12 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
+
+// 미들웨어는 JWT 검증만 필요 — 프로바이더 없는 정적 인스턴스 사용
+const { auth } = NextAuth({
+  providers: [],
+  session: { strategy: "jwt" },
+  pages: { signIn: "/members/login" },
+});
 
 const MEMBER_ONLY = ["/members/me"];
 
