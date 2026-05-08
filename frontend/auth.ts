@@ -6,14 +6,20 @@ import Kakao from "next-auth/providers/kakao";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const INTERNAL_API = "http://localhost:8000";
 
+let _oauthCache: Record<string, string> = {};
+let _oauthCacheAt = 0;
+const OAUTH_TTL = 5 * 60 * 1000;
+
 async function fetchDbOAuth(): Promise<Record<string, string>> {
+  if (Date.now() - _oauthCacheAt < OAUTH_TTL) return _oauthCache;
   try {
-    const res = await fetch(`${INTERNAL_API}/api/internal/config`, {
-      next: { revalidate: 300 },
-    });
-    if (res.ok) return res.json();
+    const res = await fetch(`${INTERNAL_API}/api/internal/config`, { cache: "no-store" });
+    if (res.ok) {
+      _oauthCache = await res.json();
+      _oauthCacheAt = Date.now();
+    }
   } catch {}
-  return {};
+  return _oauthCache;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
