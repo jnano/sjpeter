@@ -44,6 +44,23 @@ interface Event {
   location: string | null;
   category: string;
   status: string;
+  event_kind: string | null;
+}
+
+function KindBadge({ kind }: { kind: string | null }) {
+  if (kind === "행사")
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-medium">
+        행사
+      </span>
+    );
+  if (kind === "모임")
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 border border-green-200 font-medium">
+        모임
+      </span>
+    );
+  return null;
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -54,6 +71,12 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+const KIND_FILTERS = [
+  { value: "all", label: "전체" },
+  { value: "행사", label: "행사 모아보기" },
+  { value: "모임", label: "모임 모아보기" },
+];
+
 export default function CalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -61,6 +84,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selected, setSelected] = useState<Event | null>(null);
   const [loading, setLoading] = useState(false);
+  const [filterKind, setFilterKind] = useState("all");
 
   useEffect(() => {
     setLoading(true);
@@ -80,11 +104,16 @@ export default function CalendarPage() {
     else setMonth(m => m + 1);
   }
 
+  // 필터링된 목록
+  const filtered = filterKind === "all"
+    ? events
+    : events.filter((e) => e.event_kind === filterKind);
+
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = getFirstDayOfWeek(year, month);
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const eventsByDate = events.reduce((acc, e) => {
+  const eventsByDate = filtered.reduce((acc, e) => {
     const d = e.event_date;
     if (!acc[d]) acc[d] = [];
     acc[d].push(e);
@@ -103,8 +132,8 @@ export default function CalendarPage() {
     <>
       <PageHeader
         group="알림과 나눔"
-        title="행사 일정"
-        subtitle="성당 행사와 전례 일정을 확인하세요."
+        title="행사·모임 일정"
+        subtitle="본당 행사와 모임 일정을 확인하세요."
         action={
           <div className="flex items-center gap-2">
             <button onClick={prevMonth} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">‹</button>
@@ -115,8 +144,33 @@ export default function CalendarPage() {
       />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
+      {/* 구분 필터 칩 */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {KIND_FILTERS.map((f) => {
+          const count = f.value === "all" ? events.length
+            : events.filter((e) => e.event_kind === f.value).length;
+          return (
+            <button
+              key={f.value}
+              onClick={() => setFilterKind(f.value)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                filterKind === f.value
+                  ? f.value === "모임"
+                    ? "bg-green-600 text-white border-green-600"
+                    : f.value === "행사"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "border-[var(--color-border)] bg-white hover:bg-gray-50"
+              }`}
+            >
+              {f.label} {count > 0 && <span className="opacity-80">({count})</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {/* 범례 */}
-      <div className="flex flex-wrap gap-3 mb-6 text-xs">
+      <div className="flex flex-wrap gap-3 mb-4 text-xs">
         {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
           <span key={k} className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${DOT_COLOR[k]}`} />
@@ -173,7 +227,11 @@ export default function CalendarPage() {
                       key={e.id}
                       onClick={() => setSelected(e)}
                       className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded truncate border ${
-                        CATEGORY_COLOR[e.category] ?? CATEGORY_COLOR.general
+                        e.event_kind === "모임"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : e.event_kind === "행사"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : CATEGORY_COLOR[e.category] ?? CATEGORY_COLOR.general
                       }`}
                     >
                       {e.title}
@@ -189,14 +247,16 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* 이번 달 행사 목록 */}
-      {events.length > 0 && (
+      {/* 이번 달 목록 */}
+      {filtered.length > 0 && (
         <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--color-border)]">
-            <h2 className="text-sm font-bold text-[var(--color-primary)]">{month}월 행사 목록</h2>
+            <h2 className="text-sm font-bold text-[var(--color-primary)]">
+              {month}월 {filterKind === "all" ? "전체 일정" : filterKind === "행사" ? "행사 일정" : "모임 일정"}
+            </h2>
           </div>
           <div className="divide-y divide-[var(--color-border)]">
-            {events.map((e) => (
+            {filtered.map((e) => (
               <button
                 key={e.id}
                 onClick={() => setSelected(e)}
@@ -204,7 +264,10 @@ export default function CalendarPage() {
               >
                 <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-0.5 ${DOT_COLOR[e.category] ?? DOT_COLOR.general}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
+                  <div className="flex items-center gap-2">
+                    <KindBadge kind={e.event_kind} />
+                    <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
+                  </div>
                   {e.location && <p className="text-xs text-[var(--color-text-muted)]">{e.location}</p>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -222,8 +285,10 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {events.length === 0 && !loading && (
-        <p className="text-center text-sm text-[var(--color-text-muted)] py-8">이번 달 등록된 행사가 없습니다.</p>
+      {filtered.length === 0 && !loading && (
+        <p className="text-center text-sm text-[var(--color-text-muted)] py-8">
+          {events.length === 0 ? "이번 달 등록된 일정이 없습니다." : "해당 구분의 일정이 없습니다."}
+        </p>
       )}
 
       {/* 상세 모달 */}
@@ -237,7 +302,8 @@ export default function CalendarPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <KindBadge kind={selected.event_kind} />
                 <span className={`text-xs px-2 py-1 rounded border ${CATEGORY_COLOR[selected.category] ?? CATEGORY_COLOR.general}`}>
                   {CATEGORY_LABEL[selected.category] ?? "일반"}
                 </span>

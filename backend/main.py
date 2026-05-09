@@ -423,6 +423,11 @@ def _migrate_add_columns():
             ON CONFLICT (key) DO NOTHING
         """))
 
+        # events.event_kind 컬럼 추가 (행사 | 모임 | null)
+        conn.execute(text(
+            "ALTER TABLE events ADD COLUMN IF NOT EXISTS event_kind VARCHAR(10)"
+        ))
+
         conn.commit()
 
 

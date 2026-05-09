@@ -21,6 +21,7 @@ class EventIn(BaseModel):
     location: Optional[str] = None
     category: str = "general"
     is_public: bool = True
+    event_kind: Optional[str] = None  # "행사" | "모임" | null
 
 
 class EventOut(BaseModel):
@@ -35,6 +36,7 @@ class EventOut(BaseModel):
     is_public: bool
     is_ai_generated: bool = False
     status: str = "예정"
+    event_kind: Optional[str] = None
 
 
 class EventStatusIn(BaseModel):
@@ -54,6 +56,7 @@ def _row_to_dict(row) -> dict:
         "is_public": row.is_public,
         "is_ai_generated": row.is_ai_generated if hasattr(row, "is_ai_generated") else False,
         "status": row.status if hasattr(row, "status") else "예정",
+        "event_kind": row.event_kind if hasattr(row, "event_kind") else None,
     }
 
 
@@ -68,7 +71,7 @@ def _auto_transition(db: Session):
 
 @router.get("/", response_model=list[EventOut])
 def list_events(year: int, month: int, db: Session = Depends(get_db)):
-    """해당 연월의 공개 행사 목록 (자동 상태 전환 포함)."""
+    """해당 연월의 공개 행사·모임 목록 (자동 상태 전환 포함)."""
     _auto_transition(db)
     rows = db.execute(text(
         "SELECT * FROM events WHERE is_public = TRUE "
@@ -83,12 +86,13 @@ def list_events(year: int, month: int, db: Session = Depends(get_db)):
 def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     initial_status = "기록대기" if body.event_date < date.today() else "예정"
     row = db.execute(text(
-        "INSERT INTO events (title, description, event_date, end_date, start_time, location, category, is_public, status) "
-        "VALUES (:title, :desc, :edate, :eend, :stime, :loc, :cat, :pub, :status) RETURNING *"
+        "INSERT INTO events (title, description, event_date, end_date, start_time, location, category, is_public, status, event_kind) "
+        "VALUES (:title, :desc, :edate, :eend, :stime, :loc, :cat, :pub, :status, :kind) RETURNING *"
     ), {
         "title": body.title, "desc": body.description, "edate": body.event_date,
         "eend": body.end_date, "stime": body.start_time, "loc": body.location,
         "cat": body.category, "pub": body.is_public, "status": initial_status,
+        "kind": body.event_kind,
     }).fetchone()
     db.commit()
     log_action(db, get_admin_identifier(admin), "create_event", "event", row.id, body.title)
@@ -99,12 +103,13 @@ def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = De
 def update_event(event_id: int, body: EventIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
     row = db.execute(text(
         "UPDATE events SET title=:title, description=:desc, event_date=:edate, end_date=:eend, "
-        "start_time=:stime, location=:loc, category=:cat, is_public=:pub, updated_at=NOW() "
+        "start_time=:stime, location=:loc, category=:cat, is_public=:pub, event_kind=:kind, updated_at=NOW() "
         "WHERE id=:id RETURNING *"
     ), {
         "title": body.title, "desc": body.description, "edate": body.event_date,
         "eend": body.end_date, "stime": body.start_time, "loc": body.location,
         "cat": body.category, "pub": body.is_public, "id": event_id,
+        "kind": body.event_kind,
     }).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="행사를 찾을 수 없습니다.")

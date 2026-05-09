@@ -409,18 +409,21 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
                 db.add(ext)
                 continue
 
-            # ② 행사 + 날짜 → 캘린더 바로 등록
-            if event_type == "행사" and parsed_date:
+            # ② 행사/모임 + 날짜 → 캘린더 바로 등록 (event_kind로 구분)
+            if event_type in ("행사", "모임") and parsed_date:
+                category = "community" if event_type == "모임" else "general"
                 db.execute(
                     _text(
-                        "INSERT INTO events (title, description, event_date, location, category, is_public, is_ai_generated) "
-                        "VALUES (:title, :desc, :edate, :loc, 'general', TRUE, TRUE)"
+                        "INSERT INTO events (title, description, event_date, location, category, is_public, is_ai_generated, event_kind) "
+                        "VALUES (:title, :desc, :edate, :loc, :cat, TRUE, TRUE, :kind)"
                     ),
                     {
                         "title": title,
                         "desc": content_text,
                         "edate": parsed_date,
                         "loc": ev.get("location"),
+                        "cat": category,
+                        "kind": event_type,
                     },
                 )
                 ext = BulletinExtraction(

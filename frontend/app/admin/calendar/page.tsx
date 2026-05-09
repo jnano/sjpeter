@@ -23,6 +23,22 @@ function AiBadge() {
   );
 }
 
+function KindBadge({ kind }: { kind: string | null }) {
+  if (kind === "행사")
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-medium shrink-0">
+        행사
+      </span>
+    );
+  if (kind === "모임")
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 border border-green-200 font-medium shrink-0">
+        모임
+      </span>
+    );
+  return null;
+}
+
 interface Event {
   id: number;
   title: string;
@@ -34,6 +50,7 @@ interface Event {
   category: string;
   is_public: boolean;
   is_ai_generated: boolean;
+  event_kind: string | null;
 }
 
 type EventFormData = Omit<Event, "id" | "is_ai_generated">;
@@ -47,18 +64,17 @@ const EMPTY_FORM: EventFormData = {
   location: null,
   category: "general",
   is_public: true,
+  event_kind: null,
 };
 
 function EventForm({
   initial,
   onSave,
   onCancel,
-  saving,
 }: {
   initial: EventFormData;
   onSave: (data: EventFormData) => Promise<void>;
   onCancel: () => void;
-  saving?: boolean;
 }) {
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
@@ -88,16 +104,42 @@ function EventForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">행사명 *</label>
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">행사·모임명 *</label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               required
               autoFocus
-              placeholder="예: 부활절 미사"
+              placeholder="예: 부활절 미사 / 사목회의"
               className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">구분</label>
+            <select
+              value={form.event_kind ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, event_kind: e.target.value || null }))}
+              className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
+            >
+              <option value="">없음</option>
+              <option value="행사">행사</option>
+              <option value="모임">모임</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">분류</label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -143,19 +185,6 @@ function EventForm({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">분류</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-
           <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
@@ -164,7 +193,7 @@ function EventForm({
               onChange={(e) => setForm((f) => ({ ...f, is_public: e.target.checked }))}
               className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
             />
-            <label htmlFor="is_public" className="text-sm cursor-pointer">공개 행사</label>
+            <label htmlFor="is_public" className="text-sm cursor-pointer">공개</label>
           </div>
 
           <div className="md:col-span-2">
@@ -173,7 +202,7 @@ function EventForm({
               value={form.description ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value || null }))}
               rows={2}
-              placeholder="행사 설명 (선택)"
+              placeholder="설명 (선택)"
               className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
             />
           </div>
@@ -209,6 +238,12 @@ function authHeaders() {
   return { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" };
 }
 
+const KIND_FILTERS = [
+  { value: "all", label: "전체" },
+  { value: "행사", label: "행사만" },
+  { value: "모임", label: "모임만" },
+];
+
 export default function AdminCalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -217,6 +252,7 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [filterKind, setFilterKind] = useState("all");
 
   // 다중 선택
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -249,9 +285,18 @@ export default function AdminCalendarPage() {
     else setMonth((m) => m + 1);
   }
 
+  // 필터링된 목록
+  const filtered = filterKind === "all"
+    ? events
+    : filterKind === "행사"
+    ? events.filter((e) => e.event_kind === "행사")
+    : filterKind === "모임"
+    ? events.filter((e) => e.event_kind === "모임")
+    : events;
+
   // 전체 선택 indeterminate
-  const allSelected = events.length > 0 && events.every((e) => selected.has(e.id));
-  const someSelected = events.some((e) => selected.has(e.id)) && !allSelected;
+  const allSelected = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
+  const someSelected = filtered.some((e) => selected.has(e.id)) && !allSelected;
 
   useEffect(() => {
     if (allCheckRef.current) allCheckRef.current.indeterminate = someSelected;
@@ -260,8 +305,8 @@ export default function AdminCalendarPage() {
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allSelected) events.forEach((e) => next.delete(e.id));
-      else events.forEach((e) => next.add(e.id));
+      if (allSelected) filtered.forEach((e) => next.delete(e.id));
+      else filtered.forEach((e) => next.add(e.id));
       return next;
     });
   }
@@ -276,7 +321,7 @@ export default function AdminCalendarPage() {
 
   async function handleBulkDelete() {
     const ids = Array.from(selected);
-    if (!confirm(`선택한 행사 ${ids.length}건을 삭제하시겠습니까?`)) return;
+    if (!confirm(`선택한 항목 ${ids.length}건을 삭제하시겠습니까?`)) return;
     setBulkDeleting(true);
     try {
       await Promise.all(
@@ -319,7 +364,7 @@ export default function AdminCalendarPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("이 행사를 삭제하시겠습니까?")) return;
+    if (!confirm("이 항목을 삭제하시겠습니까?")) return;
     const res = await fetch(`${API}/api/events/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
@@ -330,23 +375,29 @@ export default function AdminCalendarPage() {
     }
   }
 
+  // 구분별 카운트
+  const countByKind = {
+    행사: events.filter((e) => e.event_kind === "행사").length,
+    모임: events.filter((e) => e.event_kind === "모임").length,
+  };
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-primary)]">행사 캘린더 관리</h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">행사를 등록하고 관리합니다.</p>
+          <h1 className="text-2xl font-bold text-[var(--color-primary)]">본당 행사·모임 일정</h1>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">행사와 모임을 등록하고 관리합니다.</p>
         </div>
         <button
           onClick={() => { setShowCreate((v) => !v); setEditId(null); }}
           className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-lg text-sm font-medium transition-colors"
         >
-          {showCreate ? "취소" : "+ 행사 등록"}
+          {showCreate ? "취소" : "+ 등록"}
         </button>
       </div>
 
-      {/* 새 행사 등록 폼 */}
+      {/* 새 항목 등록 폼 */}
       {showCreate && (
         <div className="mb-5">
           <EventForm
@@ -358,7 +409,7 @@ export default function AdminCalendarPage() {
       )}
 
       {/* 월 이동 */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4">
         <button onClick={prevMonth} className="px-3 py-1.5 border border-[var(--color-border)] rounded-lg hover:bg-gray-50 text-sm">‹</button>
         <span className="font-semibold">{year}년 {month}월</span>
         <button onClick={nextMonth} className="px-3 py-1.5 border border-[var(--color-border)] rounded-lg hover:bg-gray-50 text-sm">›</button>
@@ -368,12 +419,40 @@ export default function AdminCalendarPage() {
           rel="noopener noreferrer"
           className="ml-auto text-sm border border-[var(--color-border)] hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
         >
-          사용자 페이지 보기 →
+          사용자 페이지 →
         </a>
       </div>
 
-      {/* 선택 컨트롤 바 */}
+      {/* 구분 필터 칩 */}
       {events.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {KIND_FILTERS.map((f) => {
+            const count = f.value === "all" ? events.length
+              : f.value === "행사" ? countByKind.행사
+              : countByKind.모임;
+            return (
+              <button
+                key={f.value}
+                onClick={() => { setFilterKind(f.value); setSelected(new Set()); }}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  filterKind === f.value
+                    ? f.value === "모임"
+                      ? "bg-green-600 text-white border-green-600"
+                      : f.value === "행사"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                }`}
+              >
+                {f.label} {count}건
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 선택 컨트롤 바 */}
+      {filtered.length > 0 && (
         <div className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-4 py-2.5 mb-3">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -384,7 +463,7 @@ export default function AdminCalendarPage() {
               className="w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer"
             />
             <span className="text-sm text-[var(--color-text-muted)]">
-              {selected.size > 0 ? `${selected.size}건 선택됨` : `${events.length}건`}
+              {selected.size > 0 ? `${selected.size}건 선택됨` : `${filtered.length}건`}
             </span>
           </label>
           {selected.size > 0 && (
@@ -399,14 +478,16 @@ export default function AdminCalendarPage() {
         </div>
       )}
 
-      {/* 행사 목록 */}
+      {/* 목록 */}
       {loading ? (
         <p className="text-sm text-[var(--color-text-muted)]">불러오는 중...</p>
-      ) : events.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)] text-center py-12">이번 달 등록된 행사가 없습니다.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-[var(--color-text-muted)] text-center py-12">
+          {events.length === 0 ? "이번 달 등록된 항목이 없습니다." : "해당 구분의 항목이 없습니다."}
+        </p>
       ) : (
         <div className="space-y-2">
-          {events.map((ev) => (
+          {filtered.map((ev) => (
             <div key={ev.id}>
               <div
                 className={`p-4 bg-[var(--color-surface)] border rounded-xl transition-colors ${
@@ -418,7 +499,6 @@ export default function AdminCalendarPage() {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* 체크박스 */}
                   <input
                     type="checkbox"
                     checked={selected.has(ev.id)}
@@ -426,11 +506,11 @@ export default function AdminCalendarPage() {
                     className="mt-1 w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer shrink-0"
                   />
 
-                  {/* 내용 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <KindBadge kind={ev.event_kind} />
                       <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded shrink-0">
-                        {CATEGORY_LABEL[ev.category]}
+                        {CATEGORY_LABEL[ev.category] ?? ev.category}
                       </span>
                       {ev.is_ai_generated && <AiBadge />}
                       {!ev.is_public && (
@@ -449,7 +529,6 @@ export default function AdminCalendarPage() {
                     )}
                   </div>
 
-                  {/* 버튼 */}
                   <div className="flex gap-2 shrink-0">
                     <button
                       onClick={() => { setEditId(editId === ev.id ? null : ev.id); setShowCreate(false); }}
@@ -484,6 +563,7 @@ export default function AdminCalendarPage() {
                       location: ev.location,
                       category: ev.category,
                       is_public: ev.is_public,
+                      event_kind: ev.event_kind,
                     }}
                     onSave={(form) => handleEdit(ev.id, form)}
                     onCancel={() => setEditId(null)}
