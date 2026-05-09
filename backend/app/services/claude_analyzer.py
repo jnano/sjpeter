@@ -53,6 +53,7 @@ event_type 분류 기준:
     "content": "원문 그대로의 상세 내용",
     "group_name": "담당 모임명 (없으면 null)",
     "event_date": "YYYY-MM-DD (불명확하면 null)",
+    "end_date": "YYYY-MM-DD (기간 종료일; 하루짜리이거나 불명확하면 null)",
     "location": "장소 (없으면 null)",
     "event_type": "공지|행사|모임"
   }}
