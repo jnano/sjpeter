@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -27,7 +27,6 @@ function getToken() {
 
 const EMPTY_FORM = { title: "", content: "", is_pinned: false };
 
-// 공지 작성 / 수정 폼 (재사용)
 function NoticeForm({
   initial,
   onSave,
@@ -66,8 +65,7 @@ function NoticeForm({
           <input
             value={form.title}
             onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-            required
-            autoFocus
+            required autoFocus
             className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
             placeholder="공지 제목"
           />
@@ -92,18 +90,12 @@ function NoticeForm({
           상단 고정
         </label>
         <div className="flex gap-2 justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm hover:bg-white transition-colors"
-          >
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm hover:bg-white transition-colors">
             취소
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-          >
+          <button type="submit" disabled={loading}
+            className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
             {loading ? "저장 중…" : "저장"}
           </button>
         </div>
@@ -112,16 +104,89 @@ function NoticeForm({
   );
 }
 
+function monthKey(created_at: string) {
+  return created_at.slice(0, 7); // "2026-05"
+}
+
+function monthLabel(key: string) {
+  const [y, m] = key.split("-");
+  return `${y}년 ${parseInt(m)}월`;
+}
+
 export default function AdminNoticesPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [editId, setEditId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  // 월별 필터
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
+
+  // 다중 선택
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const allCheckRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchNotices(); }, []);
 
   async function fetchNotices() {
     const res = await fetch(`${API}/api/notices/`);
     if (res.ok) setNotices(await res.json());
+  }
+
+  // 월 목록 (내림차순)
+  const months = Array.from(new Set(notices.map((n) => monthKey(n.created_at))))
+    .sort()
+    .reverse();
+
+  // 현재 월 필터 적용
+  const filtered = selectedMonth === "all"
+    ? notices
+    : notices.filter((n) => monthKey(n.created_at) === selectedMonth);
+
+  // 전체 선택 체크박스 indeterminate 처리
+  const allSelected = filtered.length > 0 && filtered.every((n) => selected.has(n.id));
+  const someSelected = filtered.some((n) => selected.has(n.id)) && !allSelected;
+
+  useEffect(() => {
+    if (allCheckRef.current) allCheckRef.current.indeterminate = someSelected;
+  }, [someSelected]);
+
+  function toggleAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) filtered.forEach((n) => next.delete(n.id));
+      else filtered.forEach((n) => next.add(n.id));
+      return next;
+    });
+  }
+
+  function toggleOne(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  const selectedIds = Array.from(selected);
+
+  async function handleBulkDelete() {
+    if (!confirm(`선택한 공지 ${selectedIds.length}건을 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API}/api/notices/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${getToken()}` },
+          })
+        )
+      );
+      setNotices((prev) => prev.filter((n) => !selected.has(n.id)));
+      setSelected(new Set());
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function handleCreate(form: typeof EMPTY_FORM) {
@@ -154,12 +219,16 @@ export default function AdminNoticesPage() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
-    if (res.ok) setNotices((prev) => prev.filter((n) => n.id !== id));
+    if (res.ok) {
+      setNotices((prev) => prev.filter((n) => n.id !== id));
+      setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    }
   }
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">공지 관리</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">공지사항을 작성하고 관리합니다.</p>
@@ -172,32 +241,100 @@ export default function AdminNoticesPage() {
         </button>
       </div>
 
-      {/* 새 공지 작성 폼 (상단) */}
+      {/* 새 공지 작성 폼 */}
       {showCreate && (
-        <div className="mb-4">
-          <NoticeForm
-            initial={EMPTY_FORM}
-            onSave={handleCreate}
-            onCancel={() => setShowCreate(false)}
-          />
+        <div className="mb-5">
+          <NoticeForm initial={EMPTY_FORM} onSave={handleCreate} onCancel={() => setShowCreate(false)} />
         </div>
       )}
 
+      {notices.length > 0 && (
+        <>
+          {/* 월별 필터 칩 */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              onClick={() => setSelectedMonth("all")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                selectedMonth === "all"
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+              }`}
+            >
+              전체 {notices.length}건
+            </button>
+            {months.map((m) => {
+              const count = notices.filter((n) => monthKey(n.created_at) === m).length;
+              return (
+                <button
+                  key={m}
+                  onClick={() => { setSelectedMonth(m); setSelected(new Set()); }}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    selectedMonth === m
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                  }`}
+                >
+                  {monthLabel(m)} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 선택 컨트롤 바 */}
+          <div className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-4 py-2.5 mb-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                ref={allCheckRef}
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                className="w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer"
+              />
+              <span className="text-sm text-[var(--color-text-muted)]">
+                {selected.size > 0 ? `${selected.size}건 선택됨` : `${filtered.length}건`}
+              </span>
+            </label>
+            {selected.size > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="text-xs border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {bulkDeleting ? "삭제 중…" : `선택 삭제 (${selected.size})`}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* 공지 목록 */}
       <div className="space-y-2">
-        {notices.length === 0 && (
-          <p className="text-center py-12 text-[var(--color-text-muted)]">등록된 공지가 없습니다.</p>
+        {filtered.length === 0 && (
+          <p className="text-center py-12 text-[var(--color-text-muted)]">
+            {notices.length === 0 ? "등록된 공지가 없습니다." : "해당 월의 공지가 없습니다."}
+          </p>
         )}
-        {notices.map((n) => (
+        {filtered.map((n) => (
           <div key={n.id}>
-            {/* 공지 카드 */}
             <div
               className={`p-4 bg-[var(--color-surface)] border rounded-xl transition-colors ${
                 editId === n.id
                   ? "border-[var(--color-primary)] rounded-b-none border-b-0"
+                  : selected.has(n.id)
+                  ? "border-[var(--color-primary)] bg-blue-50/20"
                   : "border-[var(--color-border)]"
               }`}
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                {/* 체크박스 */}
+                <input
+                  type="checkbox"
+                  checked={selected.has(n.id)}
+                  onChange={() => toggleOne(n.id)}
+                  className="mt-1 w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer shrink-0"
+                />
+
+                {/* 내용 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     {n.is_pinned && (
@@ -215,6 +352,8 @@ export default function AdminNoticesPage() {
                     {new Date(n.created_at).toLocaleDateString("ko-KR")}
                   </p>
                 </div>
+
+                {/* 버튼 */}
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => setEditId(editId === n.id ? null : n.id)}
@@ -236,7 +375,7 @@ export default function AdminNoticesPage() {
               </div>
             </div>
 
-            {/* 인라인 수정 폼 — 카드 바로 아래 */}
+            {/* 인라인 수정 폼 */}
             {editId === n.id && (
               <div className="border border-t-0 border-[var(--color-primary)] rounded-b-xl overflow-hidden">
                 <NoticeForm
