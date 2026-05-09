@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 
@@ -87,6 +88,9 @@ export default async function EventsGalleryPage({
   const { page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr) || 1);
 
+  const cookieStore = await cookies();
+  const isAdmin = !!cookieStore.get("admin_authed");
+
   const [board, session] = await Promise.all([getBoard(), auth()]);
 
   const subtitle = board?.description || "공동체가 함께한 행사와 나눔의 기록입니다.";
@@ -132,7 +136,6 @@ export default async function EventsGalleryPage({
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const postList = await getPosts(page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / board.posts_per_page));
-  const canWrite = !!session;
   const paginationRange = getPaginationRange(page, totalPages);
 
   return (
@@ -141,9 +144,9 @@ export default async function EventsGalleryPage({
         group="사진 기록"
         title="함께한 시간"
         subtitle={subtitle}
-        action={canWrite ? (
+        action={isAdmin ? (
           <Link
-            href={`/boards/${BOARD_SLUG}/write`}
+            href="/admin/gallery"
             className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors border border-white/30"
           >
             사진 올리기
@@ -156,7 +159,7 @@ export default async function EventsGalleryPage({
         <div className="text-center py-20 text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl">
           <div className="text-5xl mb-4">📷</div>
           <p className="font-serif text-lg text-[var(--color-primary)] mb-2">아직 사진이 없습니다</p>
-          {canWrite && (
+          {isAdmin && (
             <p className="text-sm">첫 번째 사진을 올려보세요.</p>
           )}
         </div>
