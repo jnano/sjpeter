@@ -13,7 +13,10 @@ const OAUTH_TTL = 5 * 60 * 1000;
 async function fetchDbOAuth(): Promise<Record<string, string>> {
   if (Date.now() - _oauthCacheAt < OAUTH_TTL) return _oauthCache;
   try {
-    const res = await fetch(`${INTERNAL_API}/api/internal/config`, { cache: "no-store" });
+    const res = await fetch(`${INTERNAL_API}/api/internal/config`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(2000),
+    });
     if (res.ok) {
       _oauthCache = await res.json();
       _oauthCacheAt = Date.now();
