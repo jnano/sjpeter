@@ -15,7 +15,18 @@ export default function MarkdownContent({ content }: Props) {
       prose-pre:bg-gray-100 prose-pre:rounded-lg
       prose-img:rounded-lg prose-img:border prose-img:border-[var(--color-border)]
       prose-hr:border-[var(--color-border)]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          img({ src, alt }) {
+            if (!src) return null;
+            // eslint-disable-next-line @next/next/no-img-element
+            return <img src={src} alt={alt ?? ""} className="rounded-lg border border-[var(--color-border)]" />;
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
