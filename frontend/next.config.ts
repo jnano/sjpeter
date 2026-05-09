@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/boards/photo", destination: "/gallery/events", permanent: true },
-      { source: "/boards/photo/:postId", destination: "/gallery/events/:postId", permanent: true },
+      { source: "/boards/photo/:postId(\\d+)", destination: "/gallery/events/:postId", permanent: true },
     ];
   },
   images: {
