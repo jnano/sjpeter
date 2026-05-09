@@ -23,6 +23,8 @@ const GROUP_ICON: Record<string, string> = {
   "OAuth": "🔐",
   "보안": "🛡️",
 };
+// OAuth·보안 항목은 서버 환경변수(.env.local)에도 설정해야 반영됨
+const GROUP_RESTART_NOTICE = new Set(["OAuth", "보안"]);
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -129,9 +131,16 @@ export default function SettingsPage() {
       {grouped.map(({ group, items }) => (
         <div key={group} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
           {/* 그룹 헤더 */}
-          <div className="px-6 py-3 bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] flex items-center gap-2">
-            <span>{GROUP_ICON[group] ?? "⚙️"}</span>
-            <span className="font-semibold text-sm text-[var(--color-text)]">{group}</span>
+          <div className="px-6 py-3 bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span>{GROUP_ICON[group] ?? "⚙️"}</span>
+              <span className="font-semibold text-sm text-[var(--color-text)]">{group}</span>
+            </div>
+            {GROUP_RESTART_NOTICE.has(group) && (
+              <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                저장 후 서버 재시작 필요
+              </span>
+            )}
           </div>
 
           {/* 설정 항목들 */}
