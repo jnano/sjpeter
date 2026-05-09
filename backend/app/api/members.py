@@ -16,6 +16,7 @@ from slowapi.util import get_remote_address
 from app.core.database import get_db
 from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin
 from app.core.config import settings
+from app.core.site_settings import get_setting
 from app.core.admin_log import log_action, get_admin_identifier
 from app.models.member import Member
 from app.models.admin import Admin
@@ -127,20 +128,24 @@ class ResetPasswordRequest(BaseModel):
 
 def _send_email(to_email: str, subject: str, body: str) -> None:
     """이메일 발송. SMTP 미설정 시 콘솔 출력."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    smtp_user = get_setting("SMTP_USER")
+    smtp_password = get_setting("SMTP_PASSWORD")
+    if not smtp_user or not smtp_password:
         print(f"[메일 발송] {to_email}\n제목: {subject}\n{body}")
         return
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
+        msg["From"] = get_setting("SMTP_FROM") or smtp_user
         msg["To"] = to_email
         msg.attach(MIMEText(body, "plain", "utf-8"))
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+        smtp_host = get_setting("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(get_setting("SMTP_PORT", "587"))
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.ehlo()
             server.starttls()
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(settings.SMTP_USER, [to_email], msg.as_string())
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, [to_email], msg.as_string())
     except Exception as e:
         print(f"[SMTP 오류] {e}")
         raise HTTPException(status_code=500, detail="이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.")
@@ -390,7 +395,7 @@ def _issue_and_send_verification(member: Member, db: Session) -> None:
         "INSERT INTO email_verification_tokens (member_id, token, expires_at) VALUES (:mid, :token, :exp)"
     ), {"mid": member.id, "token": token, "exp": expires_at})
     db.commit()
-    verify_url = f"{settings.SITE_URL}/members/verify-email?token={token}"
+    verify_url = f"{get_setting("SITE_URL", settings.SITE_URL)}/members/verify-email?token={token}"
     _send_verification_email(member.email, verify_url, member.nickname)
 
 
@@ -452,7 +457,7 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
     ), {"mid": member.id, "token": token, "exp": expires_at})
     db.commit()
 
-    reset_url = f"{settings.SITE_URL}/members/reset-password?token={token}"
+    reset_url = f"{get_setting("SITE_URL", settings.SITE_URL)}/members/reset-password?token={token}"
     _send_reset_email(member.email, reset_url, member.nickname)
     return {"message": "이메일 주소로 재설정 링크를 보냈습니다."}
 

@@ -3,7 +3,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from app.core.config import settings
+from app.core.site_settings import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +13,8 @@ def _build_bulletin_html(info: dict) -> str:
     season = info.get("liturgical_season") or ""
     gospel = info.get("gospel_reference") or ""
     pub_date = info.get("published_date") or ""
-    url = f"{settings.SITE_URL}/bulletin"
-    unsubscribe_url = f"{settings.SITE_URL}/members/me"
+    url = f"{get_setting('SITE_URL', 'http://localhost:3000')}/bulletin"
+    unsubscribe_url = f"{get_setting('SITE_URL', 'http://localhost:3000')}/members/me"
 
     title_parts = [p for p in [issue, season] if p]
     title_line = " · ".join(title_parts) if title_parts else "주보"
@@ -119,7 +119,9 @@ def _build_bulletin_html(info: dict) -> str:
 
 def send_bulletin_notification(emails: list[str], bulletin_info: dict) -> int:
     """주보 알림 이메일 일괄 발송. SMTP 미설정 시 조용히 건너뜀. 성공 건수 반환."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    smtp_user = get_setting("SMTP_USER")
+    smtp_password = get_setting("SMTP_PASSWORD")
+    if not smtp_user or not smtp_password:
         logger.warning("SMTP 설정 없음 — 이메일 발송 건너뜀")
         return 0
     if not emails:
@@ -130,14 +132,16 @@ def send_bulletin_notification(emails: list[str], bulletin_info: dict) -> int:
     subject_suffix = f"{issue}{season}".strip() or "이번 주 주보"
     subject = f"[세종 성베드로 성당] {subject_suffix} 등록 안내"
     html = _build_bulletin_html(bulletin_info)
-    sender = settings.SMTP_FROM or settings.SMTP_USER
+    sender = get_setting("SMTP_FROM") or smtp_user
 
     sent = 0
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as smtp:
+        smtp_host = get_setting("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(get_setting("SMTP_PORT", "587"))
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as smtp:
             smtp.ehlo()
             smtp.starttls()
-            smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            smtp.login(smtp_user, smtp_password)
             for email in emails:
                 msg = MIMEMultipart("alternative")
                 msg["Subject"] = subject
