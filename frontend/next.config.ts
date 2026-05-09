@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "127.0.0.1", port: "8000" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
       { protocol: "https", hostname: "k.kakaocdn.net" },
+      { protocol: "http", hostname: "k.kakaocdn.net" },
       { protocol: "https", hostname: "t1.kakaocdn.net" },
     ],
   },
