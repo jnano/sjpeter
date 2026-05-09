@@ -143,7 +143,7 @@ export default async function EventsGalleryPage({
         subtitle={subtitle}
         action={canWrite ? (
           <Link
-            href={`/boards/${BOARD_SLUG}/write`}
+            href="/gallery/events/write"
             className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors border border-white/30"
           >
             사진 올리기
