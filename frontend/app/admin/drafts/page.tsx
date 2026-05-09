@@ -386,6 +386,9 @@ export default function DraftsPage() {
                         <span className="text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded">
                           임시저장
                         </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 font-medium">
+                          AI
+                        </span>
                         <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] px-2 py-0.5 rounded">
                           {draft.board.name}
                         </span>

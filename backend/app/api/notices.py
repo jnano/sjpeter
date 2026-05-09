@@ -24,6 +24,7 @@ class NoticeOut(BaseModel):
     title: str
     content: Optional[str]
     is_pinned: bool
+    is_ai_generated: bool = False
     created_at: datetime
 
     class Config:

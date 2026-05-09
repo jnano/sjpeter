@@ -33,6 +33,7 @@ class EventOut(BaseModel):
     location: Optional[str] = None
     category: str
     is_public: bool
+    is_ai_generated: bool = False
     status: str = "예정"
 
 
@@ -51,6 +52,7 @@ def _row_to_dict(row) -> dict:
         "location": row.location,
         "category": row.category,
         "is_public": row.is_public,
+        "is_ai_generated": row.is_ai_generated if hasattr(row, "is_ai_generated") else False,
         "status": row.status if hasattr(row, "status") else "예정",
     }
 

@@ -11,6 +11,14 @@ const CATEGORIES = [
   { value: "general", label: "일반" },
 ];
 
+function AiBadge() {
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 font-medium shrink-0">
+      AI
+    </span>
+  );
+}
+
 interface Event {
   id: number;
   title: string;
@@ -21,11 +29,12 @@ interface Event {
   location: string | null;
   category: string;
   is_public: boolean;
+  is_ai_generated: boolean;
 }
 
 const EMPTY: Omit<Event, "id"> = {
   title: "", description: null, event_date: "", end_date: null,
-  start_time: null, location: null, category: "general", is_public: true,
+  start_time: null, location: null, category: "general", is_public: true, is_ai_generated: false,
 };
 
 export default function AdminCalendarPage() {
@@ -273,6 +282,7 @@ export default function AdminCalendarPage() {
                     <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded shrink-0">
                       {CATEGORY_LABEL[e.category]}
                     </span>
+                    {e.is_ai_generated && <AiBadge />}
                     {!e.is_public && (
                       <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-600 rounded shrink-0">비공개</span>
                     )}

@@ -390,8 +390,8 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
             if event_type == "공지":
                 db.execute(
                     _text(
-                        "INSERT INTO notices (parish_id, title, content, is_pinned, created_at) "
-                        "VALUES (:pid, :title, :content, FALSE, NOW())"
+                        "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
+                        "VALUES (:pid, :title, :content, FALSE, TRUE, NOW())"
                     ),
                     {"pid": parish_id, "title": title, "content": content_text},
                 )
@@ -413,8 +413,8 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
             if event_type == "행사" and parsed_date:
                 db.execute(
                     _text(
-                        "INSERT INTO events (title, description, event_date, location, category, is_public) "
-                        "VALUES (:title, :desc, :edate, :loc, 'general', TRUE)"
+                        "INSERT INTO events (title, description, event_date, location, category, is_public, is_ai_generated) "
+                        "VALUES (:title, :desc, :edate, :loc, 'general', TRUE, TRUE)"
                     ),
                     {
                         "title": title,

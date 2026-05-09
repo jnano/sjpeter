@@ -3,11 +3,20 @@ import { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
+function AiBadge() {
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 font-medium shrink-0">
+      AI
+    </span>
+  );
+}
+
 interface Notice {
   id: number;
   title: string;
   content: string | null;
   is_pinned: boolean;
+  is_ai_generated: boolean;
   created_at: string;
 }
 
@@ -147,6 +156,7 @@ export default function AdminNoticesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   {n.is_pinned && <span className="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full shrink-0">고정</span>}
+                  {n.is_ai_generated && <AiBadge />}
                   <p className="font-medium truncate">{n.title}</p>
                 </div>
                 {n.content && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{n.content}</p>}

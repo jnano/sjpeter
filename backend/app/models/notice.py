@@ -12,6 +12,7 @@ class Notice(Base):
     title = Column(String(300), nullable=False)
     content = Column(Text)
     is_pinned = Column(Boolean, default=False)
+    is_ai_generated = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     parish = relationship("Parish", backref="notices")

@@ -1,6 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 
+function AiBadge() {
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 font-medium">
+      AI
+    </span>
+  );
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
@@ -97,7 +105,10 @@ function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
               )}
             </p>
             <div className="flex items-center justify-between mt-3 text-xs text-[var(--color-text-muted)]">
-              <span>{post.member?.nickname ?? "성당"}</span>
+              <span className="flex items-center gap-1.5">
+                {!post.member && <AiBadge />}
+                {post.member?.nickname ?? "성당"}
+              </span>
               <div className="flex items-center gap-2">
                 <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
                 <span>조회 {post.view_count}</span>

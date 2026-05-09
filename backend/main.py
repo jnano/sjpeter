@@ -330,6 +330,15 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # AI 생성 표시 컬럼
+        for tbl in ["notices", "events"]:
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN DEFAULT FALSE"
+                ))
+            except Exception:
+                pass
+
         # 공지사항 게시판 신설 (주보 AI 추출 기본 대상)
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,
