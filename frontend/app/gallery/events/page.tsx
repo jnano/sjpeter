@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 
@@ -88,9 +87,6 @@ export default async function EventsGalleryPage({
   const { page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr) || 1);
 
-  const cookieStore = await cookies();
-  const isAdmin = !!cookieStore.get("admin_authed");
-
   const [board, session] = await Promise.all([getBoard(), auth()]);
 
   const subtitle = board?.description || "공동체가 함께한 행사와 나눔의 기록입니다.";
@@ -122,7 +118,7 @@ export default async function EventsGalleryPage({
             <p className="font-semibold text-[var(--color-text)]">회원 전용 갤러리입니다.</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">로그인 후 이용하실 수 있습니다.</p>
             <Link
-              href={`/members/login?callbackUrl=/gallery/events`}
+              href="/members/login?callbackUrl=/gallery/events"
               className="px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
             >
               로그인
@@ -136,6 +132,7 @@ export default async function EventsGalleryPage({
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const postList = await getPosts(page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / board.posts_per_page));
+  const canWrite = !!session;
   const paginationRange = getPaginationRange(page, totalPages);
 
   return (
@@ -144,9 +141,9 @@ export default async function EventsGalleryPage({
         group="사진 기록"
         title="함께한 시간"
         subtitle={subtitle}
-        action={isAdmin ? (
+        action={canWrite ? (
           <Link
-            href="/admin/gallery"
+            href={`/boards/${BOARD_SLUG}/write`}
             className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors border border-white/30"
           >
             사진 올리기
@@ -159,7 +156,7 @@ export default async function EventsGalleryPage({
         <div className="text-center py-20 text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl">
           <div className="text-5xl mb-4">📷</div>
           <p className="font-serif text-lg text-[var(--color-primary)] mb-2">아직 사진이 없습니다</p>
-          {isAdmin && (
+          {canWrite && (
             <p className="text-sm">첫 번째 사진을 올려보세요.</p>
           )}
         </div>
@@ -168,7 +165,7 @@ export default async function EventsGalleryPage({
           {postList.posts.map((post) => (
             <Link
               key={post.id}
-              href={`/boards/${BOARD_SLUG}/${post.id}`}
+              href={`/gallery/events/${post.id}`}
               className="group rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all"
             >
               {post.thumbnail_url ? (
