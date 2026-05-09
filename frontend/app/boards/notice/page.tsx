@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "공지·알림",
@@ -35,13 +36,9 @@ export default async function NoticePage() {
   const regular = notices.filter((n) => !n.is_pinned);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)]">공지·알림</h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
-          성당 주요 공지사항을 안내합니다.
-        </p>
-      </div>
+    <>
+      <PageHeader group="알림과 나눔" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
+      <div className="max-w-3xl mx-auto px-4 py-8">
 
       {notices.length === 0 ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
@@ -87,5 +84,6 @@ export default async function NoticePage() {
         </div>
       )}
     </div>
+    </>
   );
 }

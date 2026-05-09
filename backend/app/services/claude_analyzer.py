@@ -14,42 +14,47 @@ VISION_MODEL = "global.anthropic.claude-sonnet-4-6"
 
 
 def _get_client():
-    global _client
-    if _client is None:
-        from app.core.config import settings
-        _client = boto3.client(
-            service_name="bedrock-runtime",
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        )
-    return _client
+    from app.core.site_settings import get_setting
+    from app.core.config import settings
+    return boto3.client(
+        service_name="bedrock-runtime",
+        region_name=get_setting("AWS_REGION", settings.AWS_REGION),
+        aws_access_key_id=get_setting("AWS_ACCESS_KEY_ID", settings.AWS_ACCESS_KEY_ID),
+        aws_secret_access_key=get_setting("AWS_SECRET_ACCESS_KEY", settings.AWS_SECRET_ACCESS_KEY),
+    )
 
 
 _SYSTEM = (
-    "당신은 천주교 성당 주보에서 모임·행사 공지를 추출하는 전문가입니다. "
-    "주보에서 모임, 행사, 순례, 피정, 봉사, 강의 등의 공지를 찾아 JSON으로만 응답하세요. "
+    "당신은 천주교 성당 주보에서 공지·행사·모임을 추출하는 전문가입니다. "
+    "주보에서 공지, 행사, 모임 항목을 모두 찾아 JSON으로만 응답하세요. "
     "설명 없이 JSON만 반환하세요."
 )
 
 
 def _build_prompt(published_date: date, text: str) -> str:
     date_str = published_date.isoformat()
-    return f"""발행일 {date_str} 주보입니다. 모임·행사 공지를 모두 추출해 주세요.
+    year = published_date.year
+    return f"""발행일 {date_str} 주보입니다. 공지·행사·모임 항목을 모두 추출해 주세요.
 
 날짜 규칙:
-- "5월 18일"처럼 연도 없이 표기된 경우, 발행일({date_str})을 기준으로 연도를 추론하세요.
-- 발행일보다 이전 날짜이면 다음 해로 처리하세요.
+- 이 주보의 기준 연도는 {year}년입니다. PDF 첫 페이지 상단(예: "제623호 2026년 5월 11일")에서도 확인할 수 있습니다.
+- "5월 18일"처럼 연도 없이 표기된 날짜는 반드시 {year}년으로 처리하세요.
+- 단, 발행일({date_str})보다 훨씬 이전이라 다음 해가 분명한 경우에만 {year + 1}년으로 처리하세요.
+
+event_type 분류 기준:
+- "공지": 날짜 없이 알리는 안내·인사·모집·결과 등 공동체 공지 사항
+- "행사": 특정 날짜가 명확한 이벤트 (피정, 순례, 강의, 봉사, 특별 미사 등)
+- "모임": 정기적인 소그룹·단체 활동, 구역 모임, 반 모임 등
 
 다음 JSON 형식으로만 응답하세요:
 {{"events": [
   {{
-    "title": "행사 제목",
+    "title": "제목",
     "content": "원문 그대로의 상세 내용",
     "group_name": "담당 모임명 (없으면 null)",
     "event_date": "YYYY-MM-DD (불명확하면 null)",
     "location": "장소 (없으면 null)",
-    "event_type": "순례|피정|모임|행사|강의|봉사|기타"
+    "event_type": "공지|행사|모임"
   }}
 ]}}
 

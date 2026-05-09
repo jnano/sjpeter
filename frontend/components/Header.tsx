@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const navGroups = [
   {
@@ -69,6 +69,13 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [breadcrumb, setBreadcrumb] = useState<Breadcrumb | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isAdminAuthed, setIsAdminAuthed] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsAdminAuthed(document.cookie.split(";").some((c) => c.trim().startsWith("admin_authed=")));
+  }, []);
 
   useEffect(() => {
     const onHide = (e: Event) => setBreadcrumb((e as CustomEvent<Breadcrumb>).detail);
@@ -94,12 +101,18 @@ export default function Header() {
     <header className="bg-[var(--color-primary)] text-white shadow-lg sticky top-0 z-50">
       {/* 상단 정보 바 */}
       <div className="border-b border-white/10 text-sm bg-[#9B2335]">
-        <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
-          <span className="text-white/70">대전교구</span>
+        <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-end items-center">
           <div className="flex items-center gap-4 text-white/70">
             {session ? (
-              <div className="flex items-center gap-3">
-                <Link href="/members/me" className="flex items-center gap-1.5 hover:text-white transition-colors">
+              <div
+                className="relative"
+                ref={userMenuRef}
+                onMouseEnter={() => setUserMenuOpen(true)}
+                onMouseLeave={() => setUserMenuOpen(false)}
+              >
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-1.5 hover:text-white transition-colors">
                   {session.user?.image ? (
                     <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
                   ) : (
@@ -107,8 +120,58 @@ export default function Header() {
                       {session.user?.name?.[0]}
                     </span>
                   )}
-                  {session.user?.name}
-                </Link>
+                  <span>{session.user?.name}</span>
+                  <span className="text-white/40 text-[10px]">▾</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full w-40 bg-white text-[var(--color-text)] shadow-xl border border-[var(--color-border)] rounded-lg z-50 overflow-hidden">
+                    <div className="py-1">
+                      <Link
+                        href="/members/me"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm hover:bg-gray-50 hover:text-[var(--color-primary)] transition-colors"
+                      >
+                        마이페이지
+                      </Link>
+                      <Link
+                        href="/admin"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm hover:bg-gray-50 hover:text-[var(--color-primary)] transition-colors"
+                      >
+                        관리페이지
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-[var(--color-border)]">
+                      <button
+                        onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: "/" }); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-gray-50 transition-colors"
+                      >
+                        로그아웃
+                      </button>
+                    </div>
+                    {isAdminAuthed && (
+                      <div className="border-t border-[var(--color-border)]">
+                        <button
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            document.cookie = "admin_authed=; Max-Age=0; path=/";
+                            router.push("/admin");
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-text)] hover:bg-gray-50 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                          </svg>
+                          <span>Admin logout</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <Link href="/members/login" className="hover:text-white transition-colors">

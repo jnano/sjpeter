@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
+import PageHeader from "@/components/PageHeader";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -136,31 +137,26 @@ export default async function BoardPage({
     : !board.members_only_write || !!session;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      {/* 헤더: 제목 + 컨트롤 */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-[var(--color-primary)] truncate">{board.name}</h1>
-            {board.description && (
-              <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{board.description}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
+    <>
+      <PageHeader
+        group="알림과 나눔"
+        title={board.name}
+        subtitle={board.description || ""}
+        action={
+          <div className="flex items-center gap-2">
             <ViewToggle slug={slug} view={currentView} />
             {canWrite && (
               <Link
                 href={`/boards/${slug}/write`}
-                className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
+                className="px-4 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors border border-white/30"
               >
                 글쓰기
               </Link>
             )}
           </div>
-        </div>
-      </div>
-
+        }
+      />
+      <div className="max-w-3xl mx-auto px-4 py-8">
       <BoardList
         posts={postList.posts}
         slug={slug}
@@ -170,5 +166,6 @@ export default async function BoardPage({
       />
 
     </div>
+    </>
   );
 }

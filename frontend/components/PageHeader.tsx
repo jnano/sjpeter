@@ -35,20 +35,20 @@ export default function PageHeader({ group, title, subtitle, action }: Props) {
   }, [group, title]);
 
   return (
-    <div className="bg-[var(--color-primary)] w-full border-b-4 border-[var(--color-accent)]">
+    <div className="bg-[var(--color-primary)] w-full border-b-4 border-[var(--color-accent)] overflow-hidden">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <p
           ref={ref}
-          className="text-xs text-white/50 uppercase mb-4"
+          className="text-xs text-white/50 uppercase mb-4 truncate"
           style={{ letterSpacing: "0.02em", transform: "scaleX(0.92) scaleY(0.92)", transformOrigin: "left" }}
         >
           {group}
           <span className="mx-2 text-white/30">›</span>
           {title}
         </p>
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="font-sans text-[1.594rem] font-bold text-white mb-2">{title}</h1>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-sans text-[1.4rem] sm:text-[1.594rem] font-bold text-white mb-1 break-words">{title}</h1>
             <p className="text-sm text-white/70">{subtitle}</p>
           </div>
           {action && <div className="shrink-0">{action}</div>}

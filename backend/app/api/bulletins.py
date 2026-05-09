@@ -53,6 +53,14 @@ def get_latest(db: Session = Depends(get_db)):
     return bulletin
 
 
+@router.get("/single/{bulletin_id}", response_model=BulletinOut)
+def get_bulletin(bulletin_id: int, db: Session = Depends(get_db)):
+    bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
+    if not bulletin:
+        raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
+    return bulletin
+
+
 @router.get("/", response_model=list[BulletinOut])
 def list_bulletins(skip: int = 0, limit: int = 40, db: Session = Depends(get_db)):
     return (
@@ -314,25 +322,18 @@ _EVENT_CATEGORY: dict[str, str] = {
     "기타": "general",
 }
 
-# event_type → board slug (None: pending extraction으로 남김)
-EVENT_BOARD_MAP: dict[str, str | None] = {
-    "행사": "free",
-    "모임": "free",
-    "봉사": "free",
-    "순례": "free",
-    "피정": "free",
-    "강의": "free",
-    "기타": None,
-}
-
 
 def _auto_process_bulletin(bulletin_id: int) -> None:
-    """주보 업로드 직후 백그라운드에서 AI 분석 → 게시판 임시저장 또는 pending 처리."""
+    """주보 업로드 직후 백그라운드에서 AI 분석 → 자동 라우팅.
+
+    공지  → notices 바로 등록 (관리자 검토 불필요)
+    행사 + 날짜 → events 캘린더 바로 등록
+    나머지 (모임, 날짜 없는 행사) → 'ai-extract' 게시판 임시저장
+    """
     from app.core.database import SessionLocal
     from app.services.pdf_extractor import extract_text, is_text_sparse, pdf_to_images_b64
     from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images
-    from app.models.event_board_mapping import EventBoardMapping
-    from sqlalchemy.orm import joinedload as _joinedload
+    from sqlalchemy import text as _text
 
     db = SessionLocal()
     try:
@@ -353,17 +354,20 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
             logger.info("[bulletin %d] 텍스트 분석 경로 (%d자)", bulletin_id, len(text_content))
             events = analyze_bulletin_text(bulletin.published_date, text_content)
 
-        logger.info("[bulletin %d] 추출된 행사 %d건", bulletin_id, len(events) if events else 0)
+        logger.info("[bulletin %d] 추출된 항목 %d건", bulletin_id, len(events) if events else 0)
         if not events:
             return
 
-        # DB에서 전체 매핑 캐시 (반복 쿼리 방지)
-        mappings = {
-            m.event_type: m
-            for m in db.query(EventBoardMapping)
-            .options(_joinedload(EventBoardMapping.board))
-            .all()
-        }
+        parish_row = db.execute(_text("SELECT id FROM parishes LIMIT 1")).fetchone()
+        parish_id = parish_row[0] if parish_row else 1
+
+        ai_board = db.query(Board).filter(Board.slug == "ai-extract", Board.is_active == True).first()
+
+        issue_label = (
+            f"제{bulletin.issue_number}호"
+            if bulletin.issue_number
+            else bulletin.published_date.strftime("%Y.%m.%d")
+        )
 
         for ev in events:
             fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"))
@@ -378,29 +382,23 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
             if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date):
                 continue
 
-            event_type = ev.get("event_type") or "기타"
-            mapping = mappings.get(event_type)
+            event_type = ev.get("event_type") or "모임"
+            title = ev.get("title", "")
+            content_text = ev.get("content")
 
-            # 행사일정 캘린더로 라우팅
-            if mapping and mapping.use_calendar:
-                from sqlalchemy import text as _text
+            # ① 공지 → notices 바로 등록
+            if event_type == "공지":
                 db.execute(
                     _text(
-                        "INSERT INTO events (title, description, event_date, location, category, is_public) "
-                        "VALUES (:title, :desc, :edate, :loc, :cat, TRUE)"
+                        "INSERT INTO notices (parish_id, title, content, is_pinned, created_at) "
+                        "VALUES (:pid, :title, :content, FALSE, NOW())"
                     ),
-                    {
-                        "title": ev.get("title", ""),
-                        "desc": ev.get("content"),
-                        "edate": parsed_date,
-                        "loc": ev.get("location"),
-                        "cat": _EVENT_CATEGORY.get(event_type, "general"),
-                    },
+                    {"pid": parish_id, "title": title, "content": content_text},
                 )
                 ext = BulletinExtraction(
                     bulletin_id=bulletin_id,
-                    title=ev.get("title", ""),
-                    content=ev.get("content"),
+                    title=title,
+                    content=content_text,
                     group_name=ev.get("group_name"),
                     event_date=parsed_date,
                     location=ev.get("location"),
@@ -411,15 +409,41 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
                 db.add(ext)
                 continue
 
-            board = mapping.board if mapping else None
+            # ② 행사 + 날짜 → 캘린더 바로 등록
+            if event_type == "행사" and parsed_date:
+                db.execute(
+                    _text(
+                        "INSERT INTO events (title, description, event_date, location, category, is_public) "
+                        "VALUES (:title, :desc, :edate, :loc, 'general', TRUE)"
+                    ),
+                    {
+                        "title": title,
+                        "desc": content_text,
+                        "edate": parsed_date,
+                        "loc": ev.get("location"),
+                    },
+                )
+                ext = BulletinExtraction(
+                    bulletin_id=bulletin_id,
+                    title=title,
+                    content=content_text,
+                    group_name=ev.get("group_name"),
+                    event_date=parsed_date,
+                    location=ev.get("location"),
+                    event_type=event_type,
+                    fingerprint=fp,
+                    status="auto_drafted",
+                )
+                db.add(ext)
+                continue
 
-            # 게시판으로 라우팅
-            if board and board.is_active:
+            # ③ 나머지 → AI 추출 게시판 임시저장 (제호 라벨로 검색·모아보기 지원)
+            if ai_board:
                 post = Post(
-                    board_id=board.id,
+                    board_id=ai_board.id,
                     member_id=None,
-                    title=ev.get("title", ""),
-                    content=ev.get("content") or "",
+                    title=f"[{issue_label}] {title}",
+                    content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
                     is_published=False,
                 )
                 db.add(post)
@@ -427,32 +451,29 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
 
                 ext = BulletinExtraction(
                     bulletin_id=bulletin_id,
-                    title=ev.get("title", ""),
-                    content=ev.get("content"),
+                    title=title,
+                    content=content_text,
                     group_name=ev.get("group_name"),
                     event_date=parsed_date,
                     location=ev.get("location"),
                     event_type=event_type,
                     fingerprint=fp,
                     status="auto_drafted",
-                    target_board_id=board.id,
+                    target_board_id=ai_board.id,
                     created_post_id=post.id,
                 )
-                db.add(ext)
-                continue
-
-            # 매핑 없거나 게시판 미지정 → pending
-            ext = BulletinExtraction(
-                bulletin_id=bulletin_id,
-                title=ev.get("title", ""),
-                content=ev.get("content"),
-                group_name=ev.get("group_name"),
-                event_date=parsed_date,
-                location=ev.get("location"),
-                event_type=event_type,
-                fingerprint=fp,
-                status="pending",
-            )
+            else:
+                ext = BulletinExtraction(
+                    bulletin_id=bulletin_id,
+                    title=title,
+                    content=content_text,
+                    group_name=ev.get("group_name"),
+                    event_date=parsed_date,
+                    location=ev.get("location"),
+                    event_type=event_type,
+                    fingerprint=fp,
+                    status="pending",
+                )
             db.add(ext)
 
         db.commit()

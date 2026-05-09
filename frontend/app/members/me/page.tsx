@@ -3,6 +3,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/PageHeader";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 const SPECIAL = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/~`\\]/;
@@ -424,8 +425,9 @@ export default function MypagePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-8">마이페이지</h1>
+    <>
+      <PageHeader group="회원" title="마이페이지" subtitle="내 정보와 활동을 관리합니다." />
+      <div className="max-w-3xl mx-auto px-4 py-8">
 
       {member && (
         <>
@@ -685,5 +687,6 @@ export default function MypagePage() {
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -99,17 +100,20 @@ export default function CalendarPage() {
   const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)] font-serif">행사 일정</h1>
-        <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">‹</button>
-          <span className="text-lg font-semibold text-[var(--color-text)] min-w-[120px] text-center">
-            {year}년 {month}월
-          </span>
-          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">›</button>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        group="알림과 나눔"
+        title="행사 일정"
+        subtitle="성당 행사와 전례 일정을 확인하세요."
+        action={
+          <div className="flex items-center gap-2">
+            <button onClick={prevMonth} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">‹</button>
+            <span className="text-sm font-semibold text-white min-w-[90px] text-center">{year}년 {month}월</span>
+            <button onClick={nextMonth} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">›</button>
+          </div>
+        }
+      />
+      <div className="max-w-4xl mx-auto px-4 py-8">
 
       {/* 범례 */}
       <div className="flex flex-wrap gap-3 mb-6 text-xs">
@@ -261,5 +265,6 @@ export default function CalendarPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

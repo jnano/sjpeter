@@ -19,6 +19,7 @@ export default function DraftsPage() {
   const [moveTarget, setMoveTarget] = useState<Record<number, string>>({});
   const [processing, setProcessing] = useState<Record<number, boolean>>({});
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // 복수 목적지 게시 상태
   const [publishingId, setPublishingId] = useState<number | null>(null);
@@ -208,6 +209,23 @@ export default function DraftsPage() {
 
   const selectedIds = Array.from(selected);
 
+  // 제호 필터 — 제목에서 [제XXX호] 추출
+  const issuePattern = /\[제(\d+호[^\]]*)\]/;
+  const issueLabels = Array.from(
+    new Set(
+      drafts
+        .map((d) => d.title.match(issuePattern)?.[0])
+        .filter(Boolean) as string[]
+    )
+  ).sort();
+
+  const filteredDrafts = searchQuery
+    ? drafts.filter((d) =>
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (d.content ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : drafts;
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       {/* 헤더 */}
@@ -227,6 +245,49 @@ export default function DraftsPage() {
         </button>
       </div>
 
+      {/* 검색 + 제호 빠른 필터 */}
+      {drafts.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="제목 또는 내용 검색 (예: 제623호, 레지오)"
+            className="w-full border border-[var(--color-border)] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-[var(--color-surface)]"
+          />
+          {issueLabels.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSearchQuery("")}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                  searchQuery === ""
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                }`}
+              >
+                전체 {drafts.length}건
+              </button>
+              {issueLabels.map((label) => {
+                const count = drafts.filter((d) => d.title.includes(label)).length;
+                return (
+                  <button
+                    key={label}
+                    onClick={() => setSearchQuery(searchQuery === label ? "" : label)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                      searchQuery === label
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                    }`}
+                  >
+                    {label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {drafts.length === 0 ? (
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-16 text-center">
           <p className="text-4xl mb-4">✅</p>
@@ -235,6 +296,13 @@ export default function DraftsPage() {
             방금 주보를 업로드하셨다면 AI 분석이 진행 중일 수 있습니다.
             <br />분석 완료까지 약 1~2분 소요됩니다. 잠시 후 새로고침하세요.
           </p>
+        </div>
+      ) : filteredDrafts.length === 0 ? (
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-10 text-center">
+          <p className="text-[var(--color-text-muted)]">"{searchQuery}" 에 해당하는 게시글이 없습니다.</p>
+          <button onClick={() => setSearchQuery("")} className="text-xs text-[var(--color-primary)] mt-2 hover:underline">
+            필터 초기화
+          </button>
         </div>
       ) : (
         <>
@@ -249,7 +317,11 @@ export default function DraftsPage() {
                 className="w-4 h-4 rounded accent-[var(--color-primary)] cursor-pointer"
               />
               <span className="text-sm text-[var(--color-text-muted)]">
-                {selected.size > 0 ? `${selected.size}개 선택됨` : `전체 ${drafts.length}개`}
+                {selected.size > 0
+                  ? `${selected.size}개 선택됨`
+                  : searchQuery
+                  ? `필터 ${filteredDrafts.length}개 / 전체 ${drafts.length}개`
+                  : `전체 ${drafts.length}개`}
               </span>
             </label>
 
@@ -273,11 +345,11 @@ export default function DraftsPage() {
                 </>
               ) : (
                 <button
-                  onClick={() => handleBulkPublish(drafts.map((d) => d.id))}
+                  onClick={() => handleBulkPublish(filteredDrafts.map((d) => d.id))}
                   disabled={bulkProcessing}
                   className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                  전체 게시 ({drafts.length})
+                  {searchQuery ? `필터 결과 전체 게시 (${filteredDrafts.length})` : `전체 게시 (${drafts.length})`}
                 </button>
               )}
             </div>
@@ -285,7 +357,7 @@ export default function DraftsPage() {
 
           {/* 목록 */}
           <div className="space-y-2">
-            {drafts.map((draft) => {
+            {filteredDrafts.map((draft) => {
               const isPicking = publishingId === draft.id;
               const currentExtra = extraBoards[draft.id] ?? new Set<string>();
               const otherBoards = boards.filter((b) => b.slug !== draft.board.slug);

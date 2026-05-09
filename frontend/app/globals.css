@@ -43,6 +43,7 @@
 
 html {
   font-size: 14.5px; /* 60대 이상 접근성 — 기본 font-size 키움 */
+  overflow-x: hidden; /* 뷰포트 가로 스크롤 원천 차단 — body가 아닌 html에만 설정해야 sticky 헤더가 유지됨 */
 }
 
 body {
@@ -70,6 +71,7 @@ h1, h2, h3, h4, h5, h6 {
 /* 스크롤바 */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-surface-warm);
@@ -77,4 +79,13 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-dark);
   border-radius: 3px;
+}
+
+/* 가로 스크롤바 숨김 유틸 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

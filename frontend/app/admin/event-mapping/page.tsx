@@ -112,6 +112,8 @@ export default function EventMappingPage() {
       </div>
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+        <div className="min-w-[400px]">
         <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[1fr_2fr_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
           <span>행사 유형</span>
           <span>대상 게시판</span>
@@ -154,6 +156,8 @@ export default function EventMappingPage() {
               </span>
             </div>
           ))}
+        </div>
+        </div>
         </div>
       </div>
 

@@ -86,17 +86,19 @@ export default function BulletinListPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+          <div className="overflow-x-auto">
+          <div className="min-w-[480px] divide-y divide-[var(--color-border)]">
+            <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
               <span>주보</span>
               <span>발행일</span>
               <span>PDF</span>
+              <span>AI 결과</span>
               <span>관리</span>
             </div>
             {bulletins.map((b) => (
               <div
                 key={b.id}
-                className="px-6 py-4 grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center hover:bg-[var(--color-surface-warm)] transition-colors"
+                className="px-6 py-4 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center hover:bg-[var(--color-surface-warm)] transition-colors"
               >
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -133,6 +135,13 @@ export default function BulletinListPage() {
                   )}
                 </span>
 
+                <Link
+                  href={`/admin/bulletin/${b.id}/result`}
+                  className="text-sm text-[var(--color-accent)] hover:underline whitespace-nowrap transition-colors"
+                >
+                  🤖 결과 보기
+                </Link>
+
                 <button
                   onClick={() => handleDelete(b.id)}
                   disabled={deleting === b.id}
@@ -142,6 +151,7 @@ export default function BulletinListPage() {
                 </button>
               </div>
             ))}
+          </div>
           </div>
         )}
       </div>

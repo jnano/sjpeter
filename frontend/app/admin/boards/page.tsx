@@ -278,7 +278,7 @@ export default function AdminBoardsPage() {
           <h2 className="font-semibold">새 게시판</h2>
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">게시판 이름</label>
               <input
@@ -313,7 +313,7 @@ export default function AdminBoardsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">접근 설정</label>
               <div className="space-y-1.5">
@@ -525,9 +525,9 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   }
 
   return (
-    <div className="border-t border-gray-100 bg-gray-50 p-4 grid grid-cols-2 gap-6">
+    <div className="border-t border-gray-100 bg-gray-50 p-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
       {/* 이름·설명 */}
-      <div className="col-span-2 grid grid-cols-2 gap-4">
+      <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">게시판 이름</label>
           <input

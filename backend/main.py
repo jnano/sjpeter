@@ -338,6 +338,14 @@ def _migrate_add_columns():
             ON CONFLICT (slug) DO NOTHING
         """))
 
+        # AI 추출 게시판 (주보 AI 분석 결과 임시 보관, 검색 제외)
+        conn.execute(text("""
+            INSERT INTO boards (name, slug, is_active, moderator_only_write,
+                                members_only_write, members_only_read, members_selected, exclude_from_search)
+            VALUES ('AI 추출', 'ai-extract', TRUE, TRUE, TRUE, TRUE, FALSE, TRUE)
+            ON CONFLICT (slug) DO NOTHING
+        """))
+
         # 이벤트 유형 → 게시판 매핑 테이블
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS event_board_mappings (
@@ -358,6 +366,13 @@ def _migrate_add_columns():
         conn.execute(text("""
             INSERT INTO event_board_mappings (event_type, board_id)
             VALUES ('기타', NULL)
+            ON CONFLICT (event_type) DO NOTHING
+        """))
+
+        # 새 3-분류 타입 씨드 (공지/행사/모임 — auto_process 라우팅용)
+        conn.execute(text("""
+            INSERT INTO event_board_mappings (event_type, board_id)
+            VALUES ('공지', NULL), ('모임', NULL)
             ON CONFLICT (event_type) DO NOTHING
         """))
 

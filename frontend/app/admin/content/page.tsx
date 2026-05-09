@@ -119,7 +119,7 @@ function HistoryTab() {
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 연혁 추가</h3>
         <form onSubmit={create} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">연도</label>
               <input type="number" value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
@@ -159,7 +159,7 @@ function HistoryTab() {
           {items.map((item) =>
             editId === item.id ? (
               <div key={item.id} className="p-4 bg-blue-50 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input type="number" value={editForm.year} onChange={(e) => setEditForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
                   <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
                 </div>
@@ -394,7 +394,7 @@ function CommunityTab() {
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 단체/분과 추가</h3>
         <form onSubmit={create} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">단체명</label>
               <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="예: 성가대" required />
@@ -428,7 +428,7 @@ function CommunityTab() {
           {items.map((g) =>
             editId === g.id ? (
               <div key={g.id} className="p-4 bg-blue-50 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="단체명" />
                   <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
                 </div>
@@ -656,7 +656,7 @@ function CouncilTab() {
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">구성원 추가</h3>
         <form onSubmit={create} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">이름</label>
               <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="홍길동" required />
@@ -666,7 +666,7 @@ function CouncilTab() {
               <input value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} className={inputCls} placeholder="사목회장" required />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">카테고리</label>
               <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} className={inputCls}>
@@ -701,11 +701,11 @@ function CouncilTab() {
                 <div key={m.id} className="px-6 py-3">
                   {editId === m.id ? (
                     <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="이름" />
                         <input value={editForm.role} onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))} className={inputCls} placeholder="직책" />
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <select value={editForm.category} onChange={(e) => setEditForm((p) => ({ ...p, category: e.target.value }))} className={inputCls}>
                           {COUNCIL_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                         </select>
@@ -883,7 +883,7 @@ function MeditationTab() {
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 묵상 작성</h3>
         <form onSubmit={create} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">발행일 <span className="text-red-400">*</span></label>
               <input
@@ -960,7 +960,7 @@ function MeditationTab() {
             <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
               {editId === item.id ? (
                 <div className="p-4 bg-blue-50 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">발행일</label>
                       <input type="date" value={editForm.published_date} onChange={(e) => setEditForm((p) => ({ ...p, published_date: e.target.value }))} className={inputCls} />

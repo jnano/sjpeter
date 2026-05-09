@@ -385,13 +385,24 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
 def list_boards(include_inactive: bool = False, db: Session = Depends(get_db)):
     query = db.query(Board).options(joinedload(Board.moderator))
     if not include_inactive:
-        query = query.filter(Board.is_active == True)
+        # 공개 목록: 비활성·내부 전용 게시판(exclude_from_search) 제외
+        query = query.filter(Board.is_active == True, Board.exclude_from_search == False)
     boards = query.all()
+
+    # 게시글 수를 단일 쿼리로 집계 (N+1 방지)
+    board_ids = [b.id for b in boards]
+    counts_q = (
+        db.query(Post.board_id, func.count(Post.id))
+        .filter(Post.board_id.in_(board_ids), Post.is_published == True)
+        .group_by(Post.board_id)
+        .all()
+    )
+    count_map = {board_id: cnt for board_id, cnt in counts_q}
+
     result = []
     for b in boards:
-        count = db.query(Post).filter(Post.board_id == b.id).count()
         out = BoardOut.model_validate(b)
-        out.post_count = count
+        out.post_count = count_map.get(b.id, 0)
         result.append(out)
     return result
 
