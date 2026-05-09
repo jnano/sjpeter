@@ -37,7 +37,7 @@ export default async function NoticePage() {
 
   return (
     <>
-      <PageHeader group="알림과 나눔" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
+      <PageHeader group="알림과 게시판" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
       <div className="max-w-3xl mx-auto px-4 py-8">
 
       {notices.length === 0 ? (

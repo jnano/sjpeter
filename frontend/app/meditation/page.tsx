@@ -3,8 +3,8 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
-  title: "작은 묵상",
-  description: "세종성베드로성당 작은 묵상",
+  title: "묵상 글",
+  description: "세종성베드로성당 묵상 글",
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -43,7 +43,7 @@ export default async function MeditationPage() {
     <>
       <PageHeader
         group="말씀과 기도"
-        title="작은 묵상"
+        title="묵상 글"
         subtitle="말씀 앞에 잠시 멈추는 시간"
       />
       <div className="max-w-3xl mx-auto px-4 py-8">

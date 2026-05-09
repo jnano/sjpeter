@@ -72,7 +72,7 @@ export default async function InfoPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="찾아오시는 길" subtitle="세종성베드로성당을 찾아오시는 방법" />
+      <PageHeader group="성당 소개" title="찾아오시는 길" subtitle="세종성베드로성당을 찾아오시는 방법" />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="mb-6">

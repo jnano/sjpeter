@@ -1,0 +1,996 @@
+"use client";
+import { useState } from "react";
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
+//  tag: "기능" | "수정" | "디자인" | "인프라"
+// ─────────────────────────────────────────────────────────────────────────────
+export const CURRENT_VERSION = "1.5.0";
+export const LAST_UPDATED = "2026-05-08";
+
+type Tag = "기능" | "수정" | "디자인" | "인프라";
+
+const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.0", date: "2026-05-08", tag: "기능",
+    items: [
+      "본당 출신 사제 공개 페이지·관리 페이지 추가 (/priests, /admin/priests)",
+      "역대 사목자 관리 페이지 추가 (/admin/pastors)",
+      "갤러리 liturgy 게시판 DB 등록",
+      "주보 페이지 카카오 공유 버튼 추가",
+      "기술문서·도움말 페이지 추가 (/admin/docs — 현재 페이지)",
+    ],
+  },
+  {
+    version: "1.4.1", date: "2026-05-06", tag: "수정",
+    items: [
+      "모바일 iOS Safari 가로 스크롤 버그 수정 (SVG isolation 처리)",
+      "관리자 페이지 콘텐츠 중앙 정렬 일괄 적용 (mx-auto)",
+      "갤러리 '사진 올리기' 버튼 비로그인 시 완전 숨김",
+    ],
+  },
+  {
+    version: "1.4.0", date: "2026-05-01", tag: "기능",
+    items: [
+      "관리자 위임 기능 — is_admin 회원에게 관리 권한 부여·회수 (최고관리자만)",
+      "활동 로그 페이지 (/admin/logs) — 관리자 행동 자동 기록 조회",
+      "갤러리 관리 페이지 (/admin/gallery) — 다중 사진 업로드",
+      "공개 갤러리 페이지 (/gallery/liturgy, /gallery/events)",
+    ],
+  },
+  {
+    version: "1.3.0", date: "2026-04-15", tag: "기능",
+    items: [
+      "주보 AI 분석 기능 — Claude claude-haiku-4-5로 행사·공지 자동 추출",
+      "행사 캘린더 관리 페이지 (/admin/calendar)",
+      "주보 추출 승인(게시글·캘린더)·거부 워크플로우",
+    ],
+  },
+  {
+    version: "1.2.0", date: "2026-04-01", tag: "기능",
+    items: [
+      "회원 가입·로그인·이메일 인증 시스템",
+      "게시판 CRUD, 댓글, 첨부파일 업로드 (10 MB 제한)",
+      "비밀번호 찾기·재설정 (이메일 링크)",
+      "프로필 아바타 업로드",
+    ],
+  },
+  {
+    version: "1.1.0", date: "2026-03-15", tag: "기능",
+    items: [
+      "공지 관리 — 상단 고정 포함",
+      "본당 정보 편집 — 미사 시간·주임 신부 소개·사진",
+      "사목 방향·단체·성당 역사 콘텐츠 관리",
+      "사목평의회 위원 관리 (사진 포함)",
+      "묵상 글 관리 — 날짜별 발행",
+    ],
+  },
+  {
+    version: "1.0.0", date: "2026-03-01", tag: "인프라",
+    items: [
+      "최초 배포 — Cafe24 VPS + Nginx + Uvicorn",
+      "주보 PDF 업로드·목록 페이지",
+      "최고관리자 로그인 (/admin)",
+      "홈페이지 기본 구조 (Next.js 15 + FastAPI)",
+    ],
+  },
+];
+
+// ─── 보조 컴포넌트 ─────────────────────────────────────────────────────────
+
+function MethodBadge({ method }: { method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }) {
+  const c = {
+    GET: "bg-blue-100 text-blue-700",
+    POST: "bg-green-100 text-green-700",
+    PUT: "bg-yellow-100 text-yellow-700",
+    PATCH: "bg-orange-100 text-orange-700",
+    DELETE: "bg-red-100 text-red-700",
+  }[method];
+  return (
+    <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-mono font-bold ${c}`}>
+      {method}
+    </span>
+  );
+}
+
+function Tip({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="my-3 border-l-4 border-blue-400 bg-blue-50 px-4 py-2.5 text-sm text-blue-800 rounded-r-lg">
+      {children}
+    </div>
+  );
+}
+
+function Warn({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="my-3 border-l-4 border-amber-400 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 rounded-r-lg">
+      {children}
+    </div>
+  );
+}
+
+function Steps({ items }: { items: string[] }) {
+  return (
+    <ol className="my-3 space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex gap-3 text-sm">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">
+            {i + 1}
+          </span>
+          <span className="leading-relaxed">{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Accordion({
+  icon, title, badge, children,
+}: {
+  icon: string; title: string; badge?: string; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-[var(--color-surface-warm)] transition-colors"
+      >
+        <span className="text-xl">{icon}</span>
+        <span className="flex-1 font-semibold text-[var(--color-primary)]">{title}</span>
+        {badge && (
+          <span className="mr-2 rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] px-2.5 py-0.5 text-xs text-[var(--color-text-muted)]">
+            {badge}
+          </span>
+        )}
+        <span className="text-[var(--color-text-muted)] text-sm">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="border-t border-[var(--color-border)] bg-white px-5 py-4 text-[var(--color-text)] text-sm leading-relaxed">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApiRow({ method, path, desc, auth }: {
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  path: string;
+  desc: string;
+  auth?: "관리자" | "회원" | "최고관리자";
+}) {
+  const authColor = auth === "최고관리자"
+    ? "bg-yellow-100 text-yellow-700"
+    : auth === "관리자"
+    ? "bg-purple-100 text-purple-700"
+    : auth === "회원"
+    ? "bg-green-100 text-green-700"
+    : "";
+  return (
+    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-warm)]">
+      <td className="px-3 py-2.5 w-20"><MethodBadge method={method} /></td>
+      <td className="px-3 py-2.5 font-mono text-xs text-[var(--color-primary)]">{path}</td>
+      <td className="px-3 py-2.5 text-xs text-[var(--color-text)]">{desc}</td>
+      <td className="px-3 py-2.5 w-20">
+        {auth && (
+          <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${authColor}`}>{auth}</span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function ApiTable({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]">
+            <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--color-text-muted)]">메서드</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--color-text-muted)]">경로</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--color-text-muted)]">설명</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--color-text-muted)]">권한</th>
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── 탭 콘텐츠 ─────────────────────────────────────────────────────────────
+
+function GuideTab() {
+  return (
+    <div className="space-y-3">
+
+      <Accordion icon="🔐" title="관리자 인증" badge="2가지 유형">
+        <p className="mb-3 text-[var(--color-text-muted)]">이 시스템에는 <strong>두 종류의 관리자</strong>가 있습니다.</p>
+        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+            <p className="font-semibold text-yellow-800 mb-1">⭐ 최고관리자 (Super Admin)</p>
+            <ul className="text-xs text-yellow-700 space-y-1">
+              <li>• ID/PW로 <code>/admin</code> 직접 로그인</li>
+              <li>• 회원 관리자 권한 부여·회수 가능</li>
+              <li>• localStorage: <code>admin_is_super = "true"</code></li>
+              <li>• 게시글 작성 시 author = null (성당 명의)</li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
+            <p className="font-semibold text-purple-800 mb-1">👤 위임 관리자 (Delegated Admin)</p>
+            <ul className="text-xs text-purple-700 space-y-1">
+              <li>• 회원 로그인 → 관리자 페이지 접근</li>
+              <li>• 최고관리자가 회원에게 권한 부여</li>
+              <li>• 회원 권한 부여·회수 불가</li>
+              <li>• 게시글 작성 시 author = 해당 회원</li>
+            </ul>
+          </div>
+        </div>
+        <Tip>로그아웃은 최고관리자에게만 표시됩니다. 위임 관리자는 브라우저 탭을 닫거나 <code>localStorage</code>를 직접 삭제하세요.</Tip>
+        <p className="text-xs text-[var(--color-text-muted)]">세션 저장 키: <code>admin_token</code>, <code>admin_display_name</code>, <code>admin_role</code>, <code>admin_is_super</code></p>
+      </Accordion>
+
+      <Accordion icon="📤" title="주보 관리" badge="/admin/bulletin">
+        <p className="mb-2 font-medium">주보 업로드</p>
+        <Steps items={[
+          "/admin/bulletin/new 페이지로 이동",
+          "발행일, 호수, 전례시기, 복음 구절 입력",
+          "PDF 파일 선택 후 업로드",
+          "업로드 완료 후 대시보드에서 확인",
+        ]} />
+        <p className="mb-2 font-medium mt-4">AI 행사 추출</p>
+        <Steps items={[
+          "주보 목록에서 '분석' 버튼 클릭",
+          "Claude Haiku가 PDF 텍스트를 분석하여 행사·공지 추출",
+          "/admin/bulletin/extractions 에서 추출 결과 확인",
+          "각 항목을 '게시글로 등록' 또는 '캘린더 행사로 등록' 또는 '무시'",
+        ]} />
+        <Tip>최신 업로드된 주보가 홈페이지와 /bulletin 페이지에 자동으로 표시됩니다.</Tip>
+      </Accordion>
+
+      <Accordion icon="📢" title="공지 관리" badge="/admin/notices">
+        <Steps items={[
+          "+ 공지 작성 버튼 클릭",
+          "제목·내용 입력, 상단 고정 여부 선택",
+          "저장하면 /boards/notice 게시판에 즉시 표시",
+          "수정/삭제는 목록의 각 행 버튼으로 처리",
+        ]} />
+        <Tip>상단 고정(is_pinned)된 공지는 목록 최상단에 고정 표시됩니다.</Tip>
+      </Accordion>
+
+      <Accordion icon="💬" title="게시판·게시글 관리" badge="/admin/boards">
+        <p className="mb-2 font-medium">게시판 생성</p>
+        <Steps items={[
+          "게시판 이름·slug(영문 소문자) 입력. slug는 URL에 사용됨 (예: free → /boards/free)",
+          "members_only_read: 로그인 회원만 읽기 가능",
+          "members_only_write: 로그인 회원만 쓰기 가능",
+          "posts_per_page: 페이지당 게시글 수 설정",
+        ]} />
+        <p className="mb-2 font-medium mt-4">게시글·댓글 삭제</p>
+        <p>관리자는 모든 게시판의 게시글·댓글을 삭제할 수 있습니다. 게시글 상세 페이지에서 삭제 버튼이 표시됩니다.</p>
+        <Warn>게시글 삭제 시 첨부파일과 댓글이 함께 삭제됩니다. 복구 불가합니다.</Warn>
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">기본 게시판 slug: <code>notice</code>, <code>free</code>, <code>news</code>, <code>liturgy</code>, <code>photo</code></p>
+      </Accordion>
+
+      <Accordion icon="👥" title="회원 관리" badge="/admin/members">
+        <div className="grid sm:grid-cols-2 gap-3 mb-3">
+          {[
+            { label: "활성화", desc: "이메일 미인증 또는 비활성 회원을 수동으로 로그인 가능 상태로 전환" },
+            { label: "비활성화", desc: "로그인을 차단하되 데이터는 보존. 언제든 재활성화 가능" },
+            { label: "초기 비밀번호 재설정", desc: "임시 비밀번호 0629 로 초기화. 회원에게 별도 안내 필요" },
+            { label: "삭제", desc: "회원 계정·게시글·댓글 완전 삭제. 복구 불가" },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg border border-[var(--color-border)] p-3">
+              <p className="font-medium text-xs mb-1">{item.label}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+        <Warn>관리자 권한 부여·회수는 최고관리자만 가능합니다. 위임 관리자에게는 해당 버튼이 표시되지 않습니다.</Warn>
+      </Accordion>
+
+      <Accordion icon="⛪" title="본당 정보" badge="/admin/parish">
+        <Steps items={[
+          "미사 시간 텍스트 수정 (평일·토요일·주일·공휴일 등)",
+          "주임 신부 이름·소개글 수정",
+          "신부님 사진 업로드 후 목록에서 '대표 선택' 클릭",
+          "저장하면 홈페이지·/about 페이지에 즉시 반영",
+        ]} />
+        <Tip>사진은 여러 장 업로드 후 하나를 대표로 선택할 수 있습니다. 대표 사진만 공개 페이지에 표시됩니다.</Tip>
+      </Accordion>
+
+      <Accordion icon="📄" title="페이지 콘텐츠 관리" badge="/admin/content">
+        <p className="text-xs text-[var(--color-text-muted)] mb-3">탭 선택으로 각 콘텐츠 영역을 관리합니다.</p>
+        {[
+          { label: "성당 역사", desc: "연도·제목·설명 항목으로 /history 페이지 구성" },
+          { label: "사목 방향", desc: "연도별 사목 목표·슬로건. /vision 페이지에 최신 항목 표시" },
+          { label: "단체 목록", desc: "/groups 페이지의 본당 단체·분과 정보" },
+          { label: "정적 페이지", desc: "성 베드로 (/saint), 사목평의회 (/council), 묵상 (/meditation), 기도문 (/prayer) 본문 편집" },
+          { label: "묵상 글", desc: "날짜별 묵상. 발행일 기준으로 /meditation/archive 에 목록 표시" },
+          { label: "사목평의회 위원", desc: "사진 포함 위원 목록. /council 페이지에 표시" },
+        ].map((item) => (
+          <div key={item.label} className="flex gap-2 py-2 border-b border-[var(--color-border)] last:border-0">
+            <span className="font-medium text-xs w-28 shrink-0">{item.label}</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{item.desc}</span>
+          </div>
+        ))}
+      </Accordion>
+
+      <Accordion icon="🖼️" title="갤러리 관리" badge="/admin/gallery">
+        <Steps items={[
+          "상단에서 게시판 선택: 전례 사진(liturgy) 또는 행사 사진(photo)",
+          "제목 입력 + 사진 파일 다중 선택",
+          "업로드 버튼 클릭 → 게시글 생성 후 이미지 자동 첨부",
+          "삭제: 갤러리 카드에 마우스를 올리면 나타나는 ✕ 버튼 클릭",
+        ]} />
+        <Tip>업로드된 사진은 /gallery/liturgy 또는 /gallery/events 공개 페이지에 즉시 표시됩니다. 로그인 회원만 갤러리에 직접 사진을 올릴 수 있습니다 (관리자 외).</Tip>
+      </Accordion>
+
+      <Accordion icon="📅" title="행사 캘린더" badge="/admin/calendar">
+        <Steps items={[
+          "+ 행사 등록 버튼 클릭",
+          "행사명, 날짜(시작·종료), 유형, 설명 입력",
+          "저장하면 /calendar 페이지 해당 월에 표시",
+          "행사 완료 후 상태를 '기록대기' → '기록됨'으로 변경 가능",
+        ]} />
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">행사 상태: <span className="text-blue-600">예정</span> → <span className="text-orange-600">기록대기</span> → <span className="text-green-600">기록됨</span></p>
+        <Tip>주보 AI 분석 결과를 '캘린더 행사로 등록' 승인하면 자동으로 이 목록에 추가됩니다.</Tip>
+      </Accordion>
+
+      <Accordion icon="📚" title="아카이브 관리" badge="/admin/pastors · /admin/priests">
+        <p className="mb-2 font-medium">역대 사목자 (/admin/pastors)</p>
+        <p className="text-xs text-[var(--color-text-muted)] mb-3">이름, 직함(주임신부·보좌신부 등), 부임일, 이임일(현직이면 비워둠), 소개글, 사진</p>
+        <p className="mb-2 font-medium">본당 출신 사제 (/admin/priests)</p>
+        <p className="text-xs text-[var(--color-text-muted)] mb-3">이름, 직책/현황(예: 대전교구 ○○본당 주임), 사제서품일(필수), 세례일(선택), 소개글, 사진</p>
+        <Tip>사진은 등록 후 목록에서 '사진' 버튼으로 별도 업로드합니다.</Tip>
+      </Accordion>
+
+      <Accordion icon="📋" title="활동 로그" badge="/admin/logs">
+        <p className="text-[var(--color-text-muted)] mb-2">관리자가 수행한 모든 주요 행동이 자동으로 기록됩니다.</p>
+        <p className="font-medium mb-2">기록되는 항목</p>
+        <div className="grid grid-cols-2 gap-1 text-xs text-[var(--color-text-muted)]">
+          {["관리자 로그인", "주보 업로드·삭제", "공지 생성·수정·삭제", "회원 활성화·비활성화", "관리자 권한 부여·회수", "게시글·댓글 삭제", "본당 정보 수정", "행사 등록·수정·삭제"].map((i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-[var(--color-primary)] shrink-0" />
+              {i}
+            </div>
+          ))}
+        </div>
+        <Tip>로그는 삭제되지 않으며 페이지네이션으로 전체 이력을 조회할 수 있습니다.</Tip>
+      </Accordion>
+
+    </div>
+  );
+}
+
+function TechTab() {
+  return (
+    <div className="space-y-6">
+      {/* 기술 스택 카드 */}
+      <div>
+        <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">기술 스택</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            {
+              label: "Frontend", icon: "🖥️",
+              items: ["Next.js 15 (App Router)", "TypeScript", "Tailwind CSS 3", "NextAuth.js 5", "Kakao Maps/Share JS SDK"],
+            },
+            {
+              label: "Backend", icon: "⚙️",
+              items: ["FastAPI 0.110+", "SQLAlchemy 2 (ORM)", "Alembic (마이그레이션)", "Pydantic v2", "python-jose (JWT)", "bcrypt"],
+            },
+            {
+              label: "Database", icon: "🗄️",
+              items: ["PostgreSQL 15", "psycopg2-binary"],
+            },
+            {
+              label: "AI", icon: "🤖",
+              items: ["Claude claude-haiku-4-5 (Anthropic)", "주보 PDF 텍스트·이미지 분석", "행사·공지 자동 추출"],
+            },
+            {
+              label: "인프라", icon: "🚀",
+              items: ["Cafe24 VPS (Linux)", "Nginx (리버스 프록시)", "Uvicorn (ASGI)", "로컬 /uploads/ 파일 저장"],
+            },
+            {
+              label: "인증", icon: "🔑",
+              items: ["관리자: FastAPI JWT (localStorage)", "회원: NextAuth HTTP-only cookie", "이메일 인증 토큰", "소셜 로그인 준비"],
+            },
+          ].map((stack) => (
+            <div key={stack.label} className="rounded-xl border border-[var(--color-border)] p-4 bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <span>{stack.icon}</span>
+                <span className="font-semibold text-sm text-[var(--color-primary)]">{stack.label}</span>
+              </div>
+              <ul className="space-y-1">
+                {stack.items.map((item) => (
+                  <li key={item} className="text-xs text-[var(--color-text-muted)] flex items-start gap-1.5">
+                    <span className="mt-1 w-1 h-1 rounded-full bg-[var(--color-border-dark)] shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 환경 변수 */}
+      <div>
+        <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">환경 변수</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">Frontend (.env.local)</p>
+            <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
+              {[
+                { key: "NEXT_PUBLIC_API_URL", desc: "백엔드 API 기본 URL (예: http://localhost:8000)" },
+                { key: "NEXT_PUBLIC_KAKAO_MAP_KEY", desc: "카카오 JS API 키 — 지도 + 공유 버튼 공용" },
+                { key: "NEXTAUTH_SECRET", desc: "NextAuth 세션 JWT 서명 키 (랜덤 32자 이상)" },
+                { key: "NEXTAUTH_URL", desc: "배포 공개 URL (예: https://sjpeter.org)" },
+              ].map((env, i) => (
+                <div key={env.key} className={`px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
+                  <code className="font-mono font-bold text-[var(--color-primary)]">{env.key}</code>
+                  <p className="text-[var(--color-text-muted)] mt-0.5">{env.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">Backend (.env)</p>
+            <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
+              {[
+                { key: "DATABASE_URL", desc: "PostgreSQL 연결 문자열 (postgresql+psycopg2://...)" },
+                { key: "SECRET_KEY", desc: "JWT 서명 키 (관리자·회원 토큰 공용)" },
+                { key: "ANTHROPIC_API_KEY", desc: "Claude API 키 — 주보 AI 분석에 사용" },
+                { key: "UPLOAD_DIR", desc: "업로드 파일 저장 경로 (기본: ./uploads)" },
+                { key: "ADMIN_ID / ADMIN_PASSWORD", desc: "최고관리자 ID·비밀번호 (해시 저장)" },
+              ].map((env, i) => (
+                <div key={env.key} className={`px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
+                  <code className="font-mono font-bold text-[var(--color-primary)]">{env.key}</code>
+                  <p className="text-[var(--color-text-muted)] mt-0.5">{env.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 디렉토리 구조 */}
+      <div>
+        <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">주요 디렉토리 구조</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-[var(--color-border)] bg-gray-950 text-green-300 p-4 font-mono text-xs leading-6">
+            <p className="text-gray-500 mb-2"># Frontend</p>
+            <p>frontend/</p>
+            <p>├── app/</p>
+            <p>│&nbsp;&nbsp; ├── admin/        # 관리자 패널</p>
+            <p>│&nbsp;&nbsp; ├── boards/       # 게시판·게시글</p>
+            <p>│&nbsp;&nbsp; ├── gallery/      # 갤러리</p>
+            <p>│&nbsp;&nbsp; ├── members/      # 회원 인증</p>
+            <p>│&nbsp;&nbsp; └── ...           # 공개 페이지</p>
+            <p>├── components/       # 공용 컴포넌트</p>
+            <p>├── lib/              # API 타입·유틸</p>
+            <p>└── auth.ts           # NextAuth 설정</p>
+          </div>
+          <div className="rounded-xl border border-[var(--color-border)] bg-gray-950 text-green-300 p-4 font-mono text-xs leading-6">
+            <p className="text-gray-500 mb-2"># Backend</p>
+            <p>backend/</p>
+            <p>├── app/</p>
+            <p>│&nbsp;&nbsp; ├── api/          # 라우터 모듈</p>
+            <p>│&nbsp;&nbsp; ├── models/       # SQLAlchemy 모델</p>
+            <p>│&nbsp;&nbsp; └── deps.py       # 의존성 (auth 등)</p>
+            <p>├── alembic/          # DB 마이그레이션</p>
+            <p>├── uploads/          # 업로드 파일</p>
+            <p>└── main.py           # FastAPI 앱 진입점</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApiTab() {
+  return (
+    <div className="space-y-6 text-sm">
+      <p className="text-[var(--color-text-muted)] text-xs">기본 URL: <code className="font-mono">{"{NEXT_PUBLIC_API_URL}"}/api</code> — 권한 없는 항목은 <code>Authorization: Bearer {"{token}"}</code> 헤더 필요</p>
+
+      <div>
+        <h3 className="font-semibold text-[var(--color-primary)] mb-2">인증 (Auth)</h3>
+        <ApiTable>
+          <ApiRow method="POST" path="/auth/admin-login" desc="최고관리자 또는 위임 관리자 로그인 (identifier, password)" />
+          <ApiRow method="POST" path="/auth/admin-session" desc="회원 JWT → 관리자 토큰 교환 (위임 관리자용)" auth="회원" />
+          <ApiRow method="GET"  path="/auth/admin-me" desc="현재 관리자 정보 조회" auth="관리자" />
+          <ApiRow method="POST" path="/members/login" desc="회원 로그인 (email, password)" />
+          <ApiRow method="POST" path="/members/register" desc="회원 가입" />
+        </ApiTable>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-[var(--color-primary)] mb-2">주보 (Bulletins)</h3>
+        <ApiTable>
+          <ApiRow method="GET"  path="/bulletins/" desc="주보 목록 (skip, limit)" />
+          <ApiRow method="GET"  path="/bulletins/latest" desc="최신 주보 1건" />
+          <ApiRow method="POST" path="/bulletins/" desc="주보 업로드 (multipart: date, issue_number, season, gospel_ref, file)" auth="관리자" />
+          <ApiRow method="DELETE" path="/bulletins/{id}" desc="주보 삭제" auth="관리자" />
+          <ApiRow method="POST" path="/bulletins/{id}/analyze" desc="AI 분석 트리거" auth="관리자" />
+          <ApiRow method="GET"  path="/bulletins/extractions/pending" desc="미처리 추출 목록" auth="관리자" />
+          <ApiRow method="POST" path="/bulletins/extractions/{id}/approve" desc="추출 → 게시글 등록" auth="관리자" />
+          <ApiRow method="POST" path="/bulletins/extractions/{id}/approve-as-event" desc="추출 → 캘린더 행사 등록" auth="관리자" />
+          <ApiRow method="POST" path="/bulletins/extractions/{id}/reject" desc="추출 거부" auth="관리자" />
+        </ApiTable>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-[var(--color-primary)] mb-2">회원 (Members)</h3>
+        <ApiTable>
+          <ApiRow method="GET"  path="/members/me" desc="내 프로필" auth="회원" />
+          <ApiRow method="PUT"  path="/members/me" desc="프로필 수정 (name, nickname, phone, password)" auth="회원" />
+          <ApiRow method="DELETE" path="/members/me" desc="계정 삭제" auth="회원" />
+          <ApiRow method="POST" path="/members/me/avatar" desc="아바타 업로드" auth="회원" />
+          <ApiRow method="GET"  path="/members/admin/stats" desc="대시보드 통계" auth="관리자" />
+          <ApiRow method="GET"  path="/members/admin/list" desc="회원 목록 (page, q, is_active)" auth="관리자" />
+          <ApiRow method="PUT"  path="/members/admin/{id}/activate" desc="회원 활성화" auth="관리자" />
+          <ApiRow method="PUT"  path="/members/admin/{id}/deactivate" desc="회원 비활성화" auth="관리자" />
+          <ApiRow method="PATCH" path="/members/admin/{id}/reset-password" desc="비밀번호 0629 초기화" auth="관리자" />
+          <ApiRow method="PATCH" path="/members/admin/{id}/grant-admin" desc="관리자 권한 부여" auth="최고관리자" />
+          <ApiRow method="PATCH" path="/members/admin/{id}/revoke-admin" desc="관리자 권한 회수" auth="최고관리자" />
+          <ApiRow method="DELETE" path="/members/admin/{id}" desc="회원 삭제" auth="관리자" />
+          <ApiRow method="GET"  path="/members/admin/logs" desc="활동 로그 (page, size)" auth="관리자" />
+        </ApiTable>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-[var(--color-primary)] mb-2">게시판·게시글 (Boards)</h3>
+        <ApiTable>
+          <ApiRow method="GET"  path="/boards" desc="게시판 목록" />
+          <ApiRow method="POST" path="/boards" desc="게시판 생성" auth="관리자" />
+          <ApiRow method="PUT"  path="/boards/{slug}" desc="게시판 수정" auth="관리자" />
+          <ApiRow method="DELETE" path="/boards/{slug}" desc="게시판 삭제" auth="관리자" />
+          <ApiRow method="GET"  path="/boards/{slug}/posts" desc="게시글 목록 (page)" />
+          <ApiRow method="POST" path="/boards/{slug}/posts" desc="게시글 작성" auth="회원" />
+          <ApiRow method="GET"  path="/boards/{slug}/posts/{id}" desc="게시글 상세 (조회수 증가)" />
+          <ApiRow method="PUT"  path="/boards/{slug}/posts/{id}" desc="게시글 수정" auth="회원" />
+          <ApiRow method="DELETE" path="/boards/{slug}/posts/{id}" desc="게시글 삭제 (작성자 또는 관리자)" auth="회원" />
+          <ApiRow method="POST" path="/boards/{slug}/posts/{id}/comments" desc="댓글 작성" auth="회원" />
+          <ApiRow method="DELETE" path="/boards/{slug}/posts/{id}/comments/{cid}" desc="댓글 삭제" auth="회원" />
+          <ApiRow method="POST" path="/boards/{slug}/posts/{id}/attachments" desc="첨부파일 업로드 (10 MB 제한)" auth="회원" />
+        </ApiTable>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-[var(--color-primary)] mb-2">공지·본당·콘텐츠·이벤트·아카이브</h3>
+        <ApiTable>
+          <ApiRow method="GET"  path="/notices/" desc="공지 목록 (상단 고정 우선)" />
+          <ApiRow method="POST" path="/notices/" desc="공지 생성" auth="관리자" />
+          <ApiRow method="PUT"  path="/notices/{id}" desc="공지 수정" auth="관리자" />
+          <ApiRow method="DELETE" path="/notices/{id}" desc="공지 삭제" auth="관리자" />
+          <ApiRow method="GET"  path="/parish/" desc="본당 정보 (미사 시간·신부님)" />
+          <ApiRow method="PUT"  path="/parish/" desc="본당 정보 수정" auth="관리자" />
+          <ApiRow method="POST" path="/parish/photos/upload" desc="신부님 사진 업로드" auth="관리자" />
+          <ApiRow method="GET"  path="/events" desc="월별 행사 목록 (year, month)" />
+          <ApiRow method="POST" path="/events" desc="행사 등록" auth="관리자" />
+          <ApiRow method="PATCH" path="/events/{id}/status" desc="행사 상태 변경" auth="관리자" />
+          <ApiRow method="GET"  path="/archive/pastors" desc="역대 사목자 목록" />
+          <ApiRow method="POST" path="/archive/pastors" desc="사목자 등록" auth="관리자" />
+          <ApiRow method="POST" path="/archive/pastors/{id}/photo" desc="사목자 사진 업로드" auth="관리자" />
+          <ApiRow method="GET"  path="/archive/priests" desc="본당 출신 사제 목록" />
+          <ApiRow method="POST" path="/archive/priests" desc="사제 등록" auth="관리자" />
+          <ApiRow method="POST" path="/archive/priests/{id}/photo" desc="사제 사진 업로드" auth="관리자" />
+          <ApiRow method="GET"  path="/gospel/today" desc="오늘의 복음 (캐시 24h)" />
+          <ApiRow method="GET"  path="/search" desc="전체 검색 (q)" />
+          <ApiRow method="GET"  path="/health" desc="헬스체크" />
+        </ApiTable>
+      </div>
+    </div>
+  );
+}
+
+function ChangelogTab() {
+  const tagColor: Record<Tag, string> = {
+    기능: "bg-blue-100 text-blue-700",
+    수정: "bg-red-100 text-red-700",
+    디자인: "bg-purple-100 text-purple-700",
+    인프라: "bg-gray-100 text-gray-700",
+  };
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-[var(--color-text-muted)] mb-4">
+        새 버전 배포 시 <code className="font-mono">frontend/app/admin/docs/page.tsx</code> 상단의 <code className="font-mono">CHANGELOG</code> 배열에 항목을 추가하세요.
+      </p>
+      {CHANGELOG.map((v, i) => (
+        <div key={v.version} className="flex gap-4">
+          {/* 타임라인 선 */}
+          <div className="flex flex-col items-center">
+            <div className={`w-3 h-3 rounded-full border-2 mt-1 ${i === 0 ? "bg-[var(--color-primary)] border-[var(--color-primary)]" : "bg-white border-[var(--color-border-dark)]"}`} />
+            {i < CHANGELOG.length - 1 && <div className="w-px flex-1 bg-[var(--color-border)] mt-1" />}
+          </div>
+          {/* 내용 */}
+          <div className="pb-6 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className={`text-base font-bold ${i === 0 ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"}`}>
+                v{v.version}
+              </span>
+              {i === 0 && (
+                <span className="rounded-full bg-[var(--color-primary)] text-white text-[11px] px-2 py-0.5 font-semibold">
+                  최신
+                </span>
+              )}
+              <span className={`rounded px-2 py-0.5 text-xs font-medium ${tagColor[v.tag]}`}>{v.tag}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">{v.date}</span>
+            </div>
+            <ul className="space-y-1">
+              {v.items.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)] shrink-0" />
+                  <span className="text-[var(--color-text)]">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PhilosophyTab() {
+  return (
+    <div className="space-y-10 text-sm max-w-2xl mx-auto py-4">
+
+      {/* 도입 */}
+      <div className="text-center space-y-3">
+        <p className="font-serif text-2xl font-bold text-[var(--color-primary)] tracking-wide">세파스는</p>
+        <p className="text-[var(--color-text-muted)] leading-relaxed">
+          기술로 만든 소프트웨어이지만, 그 목적은 기술에 있지 않습니다.<br />
+          세파스가 존재하는 이유는 단 하나입니다.
+        </p>
+        <p className="font-serif text-lg text-[var(--color-primary)] italic">
+          &ldquo;우리 성당이 무엇을 소중히 여기는가&rdquo;를 기록하는 것.
+        </p>
+      </div>
+
+      <hr className="border-[var(--color-border)]" />
+
+      {/* 철학 1 */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">1</span>
+          <p className="font-serif font-bold text-base text-[var(--color-primary)] leading-snug">
+            홈페이지는 &ldquo;디지털 안내판&rdquo;이지 &ldquo;포털&rdquo;이 아니다
+          </p>
+        </div>
+        <div className="pl-9 space-y-2 text-[var(--color-text)] leading-relaxed">
+          <p>
+            화려한 기능이 많을수록 좋은 홈페이지가 아닙니다.
+            방문자가 <strong>10초 안에 필요한 정보를 찾을 수 있는 것</strong>이 좋은 홈페이지입니다.
+          </p>
+          <p>
+            미사 시간, 이번 주 주보, 오늘의 복음. 신자가 성당 홈페이지에 들어오는 이유는
+            대부분 이 세 가지 중 하나입니다. 세파스는 이 단순한 진실을 중심에 놓고 설계되었습니다.
+          </p>
+          <p className="text-[var(--color-text-muted)]">
+            외형은 정보 전달. 내면은 역사 기록과 보존. 이 두 가지가 하나의 동작으로 이루어지도록
+            구조를 설계했습니다.
+          </p>
+        </div>
+      </div>
+
+      {/* 철학 2 */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">2</span>
+          <p className="font-serif font-bold text-base text-[var(--color-primary)] leading-snug">
+            오늘을 기록하면 역사가 된다
+          </p>
+        </div>
+        <div className="pl-9 space-y-2 text-[var(--color-text)] leading-relaxed">
+          <p>
+            &ldquo;역사를 기록해야겠다&rdquo;고 마음먹고 앉아서 하는 일은 지속되지 않습니다.
+            대부분의 기록은 의도가 아니라 <strong>습관에서 태어납니다.</strong>
+          </p>
+          <p>
+            세파스에서 관리자는 별도의 &ldquo;역사 기록&rdquo; 작업을 하지 않습니다.
+            이번 주 주보를 올리고, 행사를 등록하고, 사진을 올리는 것.
+            <strong>평소 하던 일을 그대로 하면, 역사가 쌓입니다.</strong>
+          </p>
+          <p className="text-[var(--color-text-muted)]">
+            입력은 한 번. 역할은 두 가지 — 지금 이 순간의 정보 전달, 그리고 시간이 지난 뒤의 아카이브.
+            10년 후 이 성당의 누군가가 오늘을 찾아볼 수 있도록.
+          </p>
+        </div>
+      </div>
+
+      {/* 철학 3 */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">3</span>
+          <p className="font-serif font-bold text-base text-[var(--color-primary)] leading-snug">
+            모든 기록은 주보와 연결된다
+          </p>
+        </div>
+        <div className="pl-9 space-y-2 text-[var(--color-text)] leading-relaxed">
+          <p>
+            주보는 단순한 인쇄물이 아닙니다.
+            매주 한 번, 공동체가 함께 나눈 말씀과 삶의 기록입니다.
+            세파스는 <strong>주보를 공동체 역사의 축(軸)</strong>으로 설정합니다.
+          </p>
+          <p>
+            주보 한 장을 올리면, AI가 그 안에 담긴 행사와 공지를 읽어내고,
+            캘린더에 등록되고, 게시판에 공지됩니다.
+            <strong>&ldquo;주보 하나 올리면, 나머지는 시스템이 한다.&rdquo;</strong>
+          </p>
+          <p className="text-[var(--color-text-muted)]">
+            사목지표, 행사 기록, 공지, 사진 — 이 모든 것이 주보를 중심으로 연결될 때,
+            하나하나는 파편이 아니라 하나의 이야기가 됩니다.
+          </p>
+        </div>
+      </div>
+
+      {/* 철학 4 */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">4</span>
+          <p className="font-serif font-bold text-base text-[var(--color-primary)] leading-snug">
+            우리 성당이 무엇을 소중히 여기는가
+          </p>
+        </div>
+        <div className="pl-9 space-y-2 text-[var(--color-text)] leading-relaxed">
+          <p>
+            모든 기획의 끝에는 이 질문이 있습니다.
+            홈페이지의 구조, 기능의 우선순위, 데이터의 형태 —
+            세파스의 모든 설계는 이 질문으로 수렴합니다.
+          </p>
+          <p>
+            미사를 드리고, 말씀을 나누고, 함께 밥을 먹고, 아픈 이를 돕고,
+            세상을 떠난 이를 기억하는 것.
+            세파스가 기록하는 것은 결국 <strong>그 공동체가 살아낸 방식</strong>입니다.
+          </p>
+          <p className="text-[var(--color-text-muted)]">
+            오늘 올린 주보, 오늘 등록한 사진, 오늘 남긴 공지 하나가
+            언젠가 누군가에게 &ldquo;우리가 어떻게 살았는가&rdquo;를 말해줄 것입니다.
+          </p>
+        </div>
+      </div>
+
+      <hr className="border-[var(--color-border)]" />
+
+      {/* 마무리 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-6 py-6 text-center space-y-3">
+        <p className="text-[var(--color-text)] leading-relaxed">
+          세파스는 소프트웨어입니다. 하지만 그 안에 담기는 것은
+        </p>
+        <p className="font-serif text-lg font-bold text-[var(--color-primary)]">
+          세종 성베드로 성당 공동체의 시간과 기억입니다.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          &ldquo;너는 베드로이다. 내가 이 반석 위에 내 교회를 세울 것이다.&rdquo; — 마태오 16,18
+        </p>
+      </div>
+
+    </div>
+  );
+}
+
+function OwnershipTab() {
+  return (
+    <div className="space-y-6 text-sm">
+
+      {/* 소프트웨어 이름 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-6 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">소프트웨어 이름</p>
+        <p className="font-serif text-4xl font-bold tracking-widest text-[var(--color-primary)] mb-1">Cephas</p>
+        <p className="text-lg text-[var(--color-text-muted)] mb-4">세파스</p>
+        <div className="mx-auto max-w-lg border-t border-[var(--color-border)] pt-4 space-y-1.5 text-xs text-[var(--color-text-muted)] leading-relaxed">
+          <p>
+            아람어 <span className="font-semibold text-[var(--color-text)]">כֵּיפָא (Kēpā)</span>에서 온 말로
+            <span className="font-semibold text-[var(--color-text)]"> &ldquo;반석&rdquo;</span>을 뜻합니다.
+            요한복음 1,42에서 예수님이 시몬에게 직접 붙여주신 이름으로,
+            그리스어 Petros(페트로스), 한국어 베드로에 해당합니다.
+          </p>
+          <p className="italic text-[var(--color-text-muted)]">
+            &ldquo;너는 베드로이다. 내가 이 반석 위에 내 교회를 세울 것이다.&rdquo; — 마태오 16,18
+          </p>
+        </div>
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-1.5 text-xs text-[var(--color-text-muted)]">
+          <span className="font-mono font-semibold text-[var(--color-primary)]">v{CURRENT_VERSION}</span>
+          <span>·</span>
+          <span>세종 성베드로 성당 본당 홈페이지 소프트웨어</span>
+        </div>
+      </div>
+
+      {/* 소프트웨어 소유권 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+          <h2 className="font-bold text-[var(--color-primary)]">소프트웨어 소유권</h2>
+        </div>
+        <div className="px-6 py-5 space-y-4 leading-relaxed text-[var(--color-text)]">
+          <p>
+            본 웹사이트를 구성하는 <strong>소프트웨어 전체</strong>—프론트엔드(Next.js), 백엔드(FastAPI),
+            데이터베이스 스키마 설계, API 구조, UI/UX 설계 및 구현 코드—에 대한
+            저작권 및 지식재산권은 <strong>강태훈(hunskang@gmail.com)</strong>에게 있습니다.
+          </p>
+          <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+            {[
+              { label: "프론트엔드 구현", value: "Next.js 15 App Router 기반 UI/UX 설계 및 컴포넌트 구현" },
+              { label: "백엔드 구현", value: "FastAPI 기반 REST API 설계, 비즈니스 로직, 인증 체계" },
+              { label: "데이터베이스 설계", value: "PostgreSQL 스키마 설계, 테이블 관계 정의, 마이그레이션 관리" },
+              { label: "AI 연동 설계", value: "Claude API를 활용한 주보 분석 파이프라인 설계 및 구현" },
+              { label: "시스템 아키텍처", value: "서비스 구조, 배포 환경, 보안 정책 설계" },
+            ].map((row, i) => (
+              <div key={row.label} className={`flex gap-4 px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
+                <span className="w-36 shrink-0 font-semibold text-[var(--color-primary)]">{row.label}</span>
+                <span className="text-[var(--color-text-muted)]">{row.value}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            소프트웨어의 복제·수정·재배포·상업적 이용은 소유자의 명시적 동의 없이 허용되지 않습니다.
+          </p>
+        </div>
+      </div>
+
+      {/* 데이터 소유권 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+          <h2 className="font-bold text-[var(--color-primary)]">데이터 · 콘텐츠 소유권</h2>
+        </div>
+        <div className="px-6 py-5 space-y-4 leading-relaxed text-[var(--color-text)]">
+          <p>
+            본 소프트웨어를 통해 생산·등록·관리되는 모든 <strong>파일 및 데이터</strong>의
+            소유권은 <strong>세종 성베드로 성당</strong>에 있습니다.
+          </p>
+          <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+            {[
+              { label: "주보 PDF", value: "업로드된 주보 원본 파일 및 메타데이터" },
+              { label: "사진·이미지", value: "갤러리, 사목자·사제 프로필, 신부님 사진 등 모든 업로드 이미지" },
+              { label: "게시글·댓글", value: "회원이 작성한 게시글, 댓글 등 커뮤니티 콘텐츠" },
+              { label: "본당 정보", value: "미사 시간, 사목 방향, 성당 역사, 단체 정보 등 본당 기본 정보" },
+              { label: "공지·알림", value: "관리자가 작성한 공지사항 및 알림" },
+              { label: "행사 기록", value: "캘린더에 등록된 행사 및 AI 추출 결과로 승인된 콘텐츠" },
+              { label: "회원 정보", value: "본당 신자 가입 정보 및 활동 이력 (개인정보보호법 적용)" },
+            ].map((row, i) => (
+              <div key={row.label} className={`flex gap-4 px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
+                <span className="w-36 shrink-0 font-semibold text-[var(--color-primary)]">{row.label}</span>
+                <span className="text-[var(--color-text-muted)]">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 역할 구분 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+          <h2 className="font-bold text-[var(--color-primary)]">역할 및 책임 구분</h2>
+        </div>
+        <div className="px-6 py-5">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">소프트웨어 개발자 (강태훈)</p>
+              <ul className="space-y-2">
+                {[
+                  "시스템 유지·보수 및 기능 개선",
+                  "보안 취약점 패치 및 업데이트",
+                  "서버 인프라 설정 및 배포",
+                  "기술 문서 작성 및 관리",
+                  "데이터 마이그레이션 지원",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
+                    <span className="mt-1 text-[var(--color-primary)]">▸</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">데이터 관리 주체 (세종 성베드로 성당)</p>
+              <ul className="space-y-2">
+                {[
+                  "콘텐츠 등록·수정·삭제 및 관리",
+                  "회원 가입 승인 및 권한 관리",
+                  "개인정보 처리 및 보호 책임",
+                  "데이터 백업 정책 수립 및 이행",
+                  "서비스 운영 방침 결정",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
+                    <span className="mt-1 text-[var(--color-primary)]">▸</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 고지 */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-4">
+        <p className="text-xs font-semibold text-amber-700 mb-1">개인정보 처리 고지</p>
+        <p className="text-xs text-amber-800 leading-relaxed">
+          본 시스템은 회원 가입 시 이름·이메일·연락처 등 개인정보를 수집합니다.
+          수집된 개인정보는 본당 서비스 제공 목적으로만 사용되며,
+          「개인정보 보호법」에 따라 세종 성베드로 성당이 처리 책임을 집니다.
+          개인정보 관련 문의: 본당 사무실 또는 관리자 이메일로 연락하시기 바랍니다.
+        </p>
+      </div>
+
+      {/* 소유권 요약 (하단) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)]">
+        <div className="flex flex-wrap gap-4">
+          <span>
+            <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span>
+            &nbsp;© 강태훈 (hunskang@gmail.com)
+          </span>
+          <span>
+            <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span>
+            &nbsp;© 세종 성베드로 성당
+          </span>
+        </div>
+        <span>최초 작성: 2026-05-08</span>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── 메인 페이지 ─────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "philosophy", label: "세파스는",   icon: "✝"  },
+  { id: "guide",      label: "기능 가이드", icon: "📖" },
+  { id: "tech",       label: "기술 스택",   icon: "⚙️" },
+  { id: "api",        label: "API",         icon: "🔌" },
+  { id: "changelog",  label: "변경 이력",   icon: "📝" },
+  { id: "ownership",  label: "소유권",      icon: "©️"  },
+] as const;
+
+type TabId = typeof TABS[number]["id"];
+
+export default function AdminDocsPage() {
+  const [tab, setTab] = useState<TabId>("philosophy");
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* 헤더 */}
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-primary)]">기술문서 · 도움말</h1>
+          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">세종성베드로성당 홈페이지 관리 가이드</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 text-sm font-bold text-[var(--color-primary)]">
+            v{CURRENT_VERSION}
+          </span>
+          <span className="text-xs text-[var(--color-text-muted)]">마지막 업데이트: {LAST_UPDATED}</span>
+        </div>
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="flex gap-1 mb-6 border-b border-[var(--color-border)]">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab === t.id
+                ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            }`}
+          >
+            <span className="mr-1.5">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 탭 콘텐츠 */}
+      {tab === "philosophy" && <PhilosophyTab />}
+      {tab === "guide"      && <GuideTab />}
+      {tab === "tech"       && <TechTab />}
+      {tab === "api"        && <ApiTab />}
+      {tab === "changelog"  && <ChangelogTab />}
+      {tab === "ownership"  && <OwnershipTab />}
+    </div>
+  );
+}

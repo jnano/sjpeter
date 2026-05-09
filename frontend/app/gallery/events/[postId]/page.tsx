@@ -77,7 +77,7 @@ export default async function EventPostPage({
 
   return (
     <>
-      <PageHeader group="사진 기록" title="함께한 시간" subtitle="공동체가 함께한 행사와 나눔의 기록입니다." />
+      <PageHeader group="사진 갤러리" title="행사 사진" subtitle="공동체가 함께한 행사와 나눔의 기록입니다." />
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Link
           href="/gallery/events"

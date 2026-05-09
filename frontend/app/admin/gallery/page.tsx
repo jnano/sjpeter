@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 const BOARDS = [
-  { slug: "liturgy", label: "전례의 순간 (미사·전례 사진)" },
-  { slug: "photo",   label: "함께한 시간 (행사·공동체 사진)" },
+  { slug: "liturgy", label: "전례 사진 (미사·전례)" },
+  { slug: "photo",   label: "행사 사진 (행사·공동체)" },
 ];
 
 interface GalleryPost {

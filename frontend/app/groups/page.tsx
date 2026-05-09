@@ -34,7 +34,7 @@ export default async function GroupsPage() {
 
   return (
     <>
-      <PageHeader group="본당 가족" title="분과와 단체" subtitle="함께 믿음을 키워가는 분과와 단체들" />
+      <PageHeader group="본당 공동체" title="분과와 단체" subtitle="함께 믿음을 키워가는 분과와 단체들" />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       {groups.length === 0 ? (

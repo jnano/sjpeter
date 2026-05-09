@@ -159,7 +159,7 @@ function SpeechBubble({ who, text, isNarration }: { who: string; text: string; i
 export default function SaintPage() {
   return (
     <>
-      <PageHeader group="우리 성당" title="성 베드로" subtitle="세종성베드로성당의 주보성인 — 만화로 보는 일대기" />
+      <PageHeader group="성당 소개" title="성 베드로" subtitle="세종성베드로성당의 주보성인 — 만화로 보는 일대기" />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
 

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
-  title: "기도문 모음",
-  description: "세종성베드로성당 기도문 모음",
+  title: "기도문",
+  description: "세종성베드로성당 기도문",
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -28,7 +28,7 @@ async function getPage(): Promise<StaticPage | null> {
 export default async function PrayerPage() {
   const page = await getPage();
 
-  const title = page?.title ?? "기도문 모음";
+  const title = page?.title ?? "기도문";
   const subtitle = page?.subtitle ?? "함께 바치는 기도";
   const body = page?.body;
 

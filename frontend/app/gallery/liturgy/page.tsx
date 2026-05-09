@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
-  title: "전례의 순간",
+  title: "전례 사진",
   description: "세종성베드로성당 전례 사진 모음",
 };
 
@@ -94,7 +94,7 @@ export default async function LiturgyGalleryPage({
   if (!board) {
     return (
       <>
-        <PageHeader group="사진 기록" title="전례의 순간" subtitle="미사와 성사의 거룩한 순간을 담았습니다." />
+        <PageHeader group="사진 갤러리" title="전례 사진" subtitle="미사와 성사의 거룩한 순간을 담았습니다." />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-16 text-center">
             <div className="text-6xl mb-5">📸</div>
@@ -111,7 +111,7 @@ export default async function LiturgyGalleryPage({
   if (board.members_only_read && !session) {
     return (
       <>
-        <PageHeader group="사진 기록" title="전례의 순간" subtitle={subtitle} />
+        <PageHeader group="사진 갤러리" title="전례 사진" subtitle={subtitle} />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl">
             <p className="text-4xl mb-4">🔒</p>
@@ -138,8 +138,8 @@ export default async function LiturgyGalleryPage({
   return (
     <>
       <PageHeader
-        group="사진 기록"
-        title="전례의 순간"
+        group="사진 갤러리"
+        title="전례 사진"
         subtitle={subtitle}
         action={canWrite ? (
           <Link

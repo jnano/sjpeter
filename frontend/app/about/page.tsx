@@ -94,7 +94,7 @@ export default async function AboutPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
+      <PageHeader group="성당 소개" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
       <div className="max-w-5xl mx-auto px-4 py-8">
 
       <div className="relative w-full h-72 md:h-96 rounded-xl overflow-hidden mb-8">

@@ -31,6 +31,8 @@ const STATUS_BADGE: Record<string, string> = {
   "기록됨": "bg-emerald-50 text-emerald-600 border-emerald-200",
 };
 
+type ViewMode = "month" | "week" | "day" | "list";
+
 interface Event {
   id: number;
   title: string;
@@ -52,12 +54,46 @@ function KindBadge({ kind }: { kind: string | null }) {
   return null;
 }
 
-function toDateStr(year: number, month: number, day: number) {
+// ── 날짜 헬퍼 ────────────────────────────
+
+function dateToStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function cellToStr(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function startOfWeek(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  r.setDate(r.getDate() - r.getDay());
+  return r;
 }
 
 function isMultiDay(e: Event) {
   return !!e.end_date && e.end_date > e.event_date;
+}
+
+function eventOverlapsDate(e: Event, dateStr: string) {
+  const start = e.event_date;
+  const end = e.end_date ?? e.event_date;
+  return dateStr >= start && dateStr <= end;
+}
+
+function compareEvents(a: Event, b: Event): number {
+  const d = a.event_date.localeCompare(b.event_date);
+  if (d !== 0) return d;
+  return (a.start_time ?? "").localeCompare(b.start_time ?? "");
 }
 
 function barStyle(e: Event): string {
@@ -72,12 +108,12 @@ function chipStyle(e: Event): string {
   return CHIP_COLOR[e.category] ?? CHIP_COLOR.general;
 }
 
-// ── 멀티데이 스패닝 계산 ─────────────────────────────
+// ── 멀티데이 스패닝 ─────────────────────
 
 interface Span {
   event: Event;
-  colStart: number; // 1-indexed CSS grid
-  colEnd: number;   // exclusive
+  colStart: number;
+  colEnd: number;
   isStart: boolean;
   isEnd: boolean;
   lane: number;
@@ -85,7 +121,6 @@ interface Span {
 
 function computeSpans(events: Event[], weekDates: (string | null)[]): Span[] {
   const raw: Omit<Span, "lane">[] = [];
-
   for (const ev of events) {
     if (!isMultiDay(ev)) continue;
     let firstCol = -1, lastCol = -1;
@@ -105,11 +140,7 @@ function computeSpans(events: Event[], weekDates: (string | null)[]): Span[] {
       isEnd: weekDates[lastCol] === ev.end_date,
     });
   }
-
-  // 시작 열 순서, 같으면 긴 것 먼저
   raw.sort((a, b) => a.colStart - b.colStart || (b.colEnd - b.colStart) - (a.colEnd - a.colStart));
-
-  // 레인(행) 배정 — greedy
   const laneEnds: number[] = [];
   return raw.map(span => {
     let lane = laneEnds.findIndex(end => end <= span.colStart);
@@ -119,9 +150,9 @@ function computeSpans(events: Event[], weekDates: (string | null)[]): Span[] {
   });
 }
 
-// ── 주(Week) 행 컴포넌트 ────────────────────────────
-
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+// ── 월간 뷰 — 한 주 행 ──────────────────
 
 function WeekRow({
   weekCells, year, month, events, todayStr, onSelect,
@@ -131,7 +162,7 @@ function WeekRow({
   events: Event[]; todayStr: string;
   onSelect: (e: Event) => void;
 }) {
-  const weekDates = weekCells.map(d => d ? toDateStr(year, month, d) : null);
+  const weekDates = weekCells.map(d => d ? cellToStr(year, month, d) : null);
   const spans = computeSpans(events, weekDates);
   const laneCount = spans.reduce((max, s) => Math.max(max, s.lane + 1), 0);
 
@@ -151,7 +182,6 @@ function WeekRow({
       className="grid grid-cols-7 border-b border-[var(--color-border)] last:border-b-0"
       style={{ gridTemplateRows: gridRows }}
     >
-      {/* 날짜 숫자 행 */}
       {weekCells.map((day, i) => {
         const d = weekDates[i];
         const isToday = d === todayStr;
@@ -175,7 +205,6 @@ function WeekRow({
         );
       })}
 
-      {/* 멀티데이 스패닝 바 */}
       {spans.map(span => (
         <button
           key={`s${span.event.id}-${span.lane}`}
@@ -196,7 +225,6 @@ function WeekRow({
         </button>
       ))}
 
-      {/* 단일 날짜 이벤트 셀 */}
       {weekCells.map((day, i) => {
         const d = weekDates[i];
         const dayEvs = d ? singleByDate[d] ?? [] : [];
@@ -225,42 +253,15 @@ function WeekRow({
   );
 }
 
-// ── 메인 페이지 ──────────────────────────────────────
+// ── 월간 뷰 ─────────────────────────────
 
-const KIND_FILTERS = [
-  { value: "all", label: "전체" },
-  { value: "행사", label: "행사 모아보기" },
-  { value: "모임", label: "모임 모아보기" },
-];
-
-export default function CalendarPage() {
-  const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [selected, setSelected] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [filterKind, setFilterKind] = useState("all");
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API}/api/events/?year=${year}&month=${month}`)
-      .then(r => r.json())
-      .then(data => setEvents(Array.isArray(data) ? data : []))
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, [year, month]);
-
-  function prevMonth() {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1);
-  }
-
-  const filtered = filterKind === "all" ? events : events.filter(e => e.event_kind === filterKind);
-
-  // 캘린더 그리드 셀 생성
+function MonthView({
+  year, month, events, todayStr, onSelect,
+}: {
+  year: number; month: number;
+  events: Event[]; todayStr: string;
+  onSelect: (e: Event) => void;
+}) {
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDow = new Date(year, month - 1, 1).getDay();
   const cells: (number | null)[] = [
@@ -272,28 +273,473 @@ export default function CalendarPage() {
   const weeks: (number | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-  const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+      <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
+        {WEEKDAYS.map((d, i) => (
+          <div
+            key={d}
+            className={`py-2 text-center text-xs font-medium ${i < 6 ? "border-r border-[var(--color-border)]" : ""} ${
+              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
+            }`}
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+      {weeks.map((weekCells, wi) => (
+        <WeekRow
+          key={wi}
+          weekCells={weekCells}
+          year={year}
+          month={month}
+          events={events}
+          todayStr={todayStr}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── 주간 뷰 ─────────────────────────────
+
+function WeekView({
+  weekStart, events, todayStr, onSelect,
+}: {
+  weekStart: Date; events: Event[]; todayStr: string;
+  onSelect: (e: Event) => void;
+}) {
+  const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const dateStrs = dates.map(dateToStr);
+  const spans = computeSpans(events, dateStrs);
+  const laneCount = spans.reduce((m, s) => Math.max(m, s.lane + 1), 0);
+
+  const singleByDate: Record<string, Event[]> = {};
+  for (const ds of dateStrs) {
+    singleByDate[ds] = events.filter(e => e.event_date === ds && !isMultiDay(e))
+      .sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+  }
+
+  const gridRows = laneCount > 0
+    ? `repeat(${laneCount}, 24px) minmax(180px, auto)`
+    : "minmax(180px, auto)";
+  const singleRow = laneCount + 1;
+
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+      {/* 헤더 */}
+      <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
+        {dates.map((d, i) => {
+          const ds = dateStrs[i];
+          const isToday = ds === todayStr;
+          return (
+            <div key={i} className={`py-2.5 text-center ${i < 6 ? "border-r border-[var(--color-border)]" : ""}`}>
+              <div className={`text-[11px] font-medium mb-0.5 ${i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"}`}>
+                {WEEKDAYS[i]}
+              </div>
+              <span className={`text-sm font-semibold w-7 h-7 rounded-full inline-flex items-center justify-center ${
+                isToday ? "bg-[var(--color-primary)] text-white"
+                : i === 0 ? "text-red-500"
+                : i === 6 ? "text-blue-500"
+                : "text-[var(--color-text)]"
+              }`}>
+                {d.getDate()}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 본문: 멀티데이 스패닝 + 단일 이벤트 */}
+      <div className="grid grid-cols-7" style={{ gridTemplateRows: gridRows }}>
+        {spans.map(span => (
+          <button
+            key={`s${span.event.id}-${span.lane}`}
+            style={{
+              gridColumnStart: span.colStart,
+              gridColumnEnd: span.colEnd,
+              gridRow: span.lane + 1,
+              marginLeft: span.isStart ? 4 : 0,
+              marginRight: span.isEnd ? 4 : 0,
+            }}
+            onClick={() => onSelect(span.event)}
+            className={`my-1 h-5 px-2 text-[11px] leading-5 font-medium truncate text-left
+              ${span.isStart ? "rounded-l-md" : "rounded-l-none"}
+              ${span.isEnd ? "rounded-r-md" : "rounded-r-none"}
+              ${barStyle(span.event)}`}
+          >
+            {span.event.title}
+          </button>
+        ))}
+
+        {dateStrs.map((ds, i) => {
+          const dayEvs = singleByDate[ds] ?? [];
+          return (
+            <div
+              key={`c${i}`}
+              style={{ gridRow: singleRow, gridColumn: i + 1 }}
+              className={`p-1.5 space-y-1 ${i < 6 ? "border-r border-[var(--color-border)]" : ""}`}
+            >
+              {dayEvs.map(e => (
+                <button
+                  key={e.id}
+                  onClick={() => onSelect(e)}
+                  className={`w-full text-left text-[11px] px-1.5 py-1 rounded border block ${chipStyle(e)}`}
+                >
+                  <div className="truncate font-medium leading-tight">{e.title}</div>
+                  {e.start_time && (
+                    <div className="text-[10px] opacity-75 mt-0.5">{e.start_time}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── 일간 뷰 ─────────────────────────────
+
+function DayView({
+  date, events, todayStr, onSelect,
+}: {
+  date: Date; events: Event[]; todayStr: string;
+  onSelect: (e: Event) => void;
+}) {
+  const dateStr = dateToStr(date);
+  const isToday = dateStr === todayStr;
+  const dow = date.getDay();
+  const dayEvents = events
+    .filter(e => eventOverlapsDate(e, dateStr))
+    .sort((a, b) => {
+      // 멀티데이 시작일 먼저, 그 다음 시간순
+      const aMulti = isMultiDay(a) ? 0 : 1;
+      const bMulti = isMultiDay(b) ? 0 : 1;
+      if (aMulti !== bMulti) return aMulti - bMulti;
+      return (a.start_time ?? "").localeCompare(b.start_time ?? "");
+    });
+
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--color-border)] flex items-center gap-3">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
+          isToday ? "bg-[var(--color-primary)] text-white"
+          : dow === 0 ? "bg-red-50 text-red-600"
+          : dow === 6 ? "bg-blue-50 text-blue-600"
+          : "bg-gray-100 text-[var(--color-text)]"
+        }`}>
+          {date.getDate()}
+        </div>
+        <div>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {date.getFullYear()}년 {date.getMonth() + 1}월
+          </p>
+          <p className={`text-base font-bold ${dow === 0 ? "text-red-500" : dow === 6 ? "text-blue-500" : "text-[var(--color-text)]"}`}>
+            {WEEKDAYS[dow]}요일 {isToday && <span className="ml-1 text-xs text-[var(--color-primary)]">(오늘)</span>}
+          </p>
+        </div>
+      </div>
+
+      {dayEvents.length === 0 ? (
+        <p className="text-center text-sm text-[var(--color-text-muted)] py-12">등록된 일정이 없습니다.</p>
+      ) : (
+        <div className="divide-y divide-[var(--color-border)]">
+          {dayEvents.map(e => {
+            const multi = isMultiDay(e);
+            const isStartDay = e.event_date === dateStr;
+            const isEndDay = e.end_date === dateStr;
+            return (
+              <button
+                key={e.id}
+                onClick={() => onSelect(e)}
+                className="w-full px-5 py-3.5 hover:bg-gray-50 text-left transition-colors flex items-center gap-3"
+              >
+                <div className={`w-1 self-stretch rounded-full ${barStyle(e).split(" ")[0]}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <KindBadge kind={e.event_kind} />
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${CHIP_COLOR[e.category] ?? CHIP_COLOR.general}`}>
+                      {CATEGORY_LABEL[e.category] ?? "일반"}
+                    </span>
+                    {multi && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                        {isStartDay ? "시작" : isEndDay ? "종료" : "진행 중"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
+                  {(e.start_time || e.location) && (
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      {e.start_time && <span>🕐 {e.start_time}</span>}
+                      {e.start_time && e.location && <span className="mx-1.5">·</span>}
+                      {e.location && <span>📍 {e.location}</span>}
+                    </p>
+                  )}
+                  {multi && (
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      {new Date(e.event_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
+                      {" ~ "}
+                      {new Date(e.end_date!).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
+                    </p>
+                  )}
+                </div>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${STATUS_BADGE[e.status] ?? STATUS_BADGE["예정"]}`}>
+                  {e.status}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 목록 뷰 ─────────────────────────────
+
+function ListView({
+  events, onSelect,
+}: {
+  events: Event[]; onSelect: (e: Event) => void;
+}) {
+  const sorted = [...events].sort(compareEvents);
+  // 날짜별 그룹
+  const groups = new Map<string, Event[]>();
+  for (const e of sorted) {
+    const arr = groups.get(e.event_date) ?? [];
+    arr.push(e);
+    groups.set(e.event_date, arr);
+  }
+
+  if (sorted.length === 0) {
+    return (
+      <div className="bg-white border border-[var(--color-border)] rounded-xl p-12 text-center">
+        <p className="text-sm text-[var(--color-text-muted)]">등록된 일정이 없습니다.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden divide-y divide-[var(--color-border)]">
+      {Array.from(groups.entries()).map(([dateStr, evs]) => {
+        const d = new Date(dateStr);
+        const dow = d.getDay();
+        return (
+          <div key={dateStr} className="flex">
+            <div className="w-20 sm:w-24 shrink-0 bg-gray-50/60 px-3 py-3 border-r border-[var(--color-border)]">
+              <p className={`text-[11px] font-medium ${dow === 0 ? "text-red-500" : dow === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"}`}>
+                {d.getMonth() + 1}월 {d.getDate()}일
+              </p>
+              <p className={`text-xs mt-0.5 ${dow === 0 ? "text-red-500" : dow === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"}`}>
+                {WEEKDAYS[dow]}요일
+              </p>
+            </div>
+            <div className="flex-1 divide-y divide-[var(--color-border)]/60">
+              {evs.map(e => (
+                <button
+                  key={e.id}
+                  onClick={() => onSelect(e)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <KindBadge kind={e.event_kind} />
+                      <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {e.start_time && <span>🕐 {e.start_time}</span>}
+                      {e.start_time && e.location && <span className="mx-1.5">·</span>}
+                      {e.location && <span>📍 {e.location}</span>}
+                      {e.end_date && e.end_date !== e.event_date && (
+                        <span className="ml-1.5">~ {new Date(e.end_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${STATUS_BADGE[e.status] ?? STATUS_BADGE["예정"]}`}>
+                    {e.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── 메인 페이지 ──────────────────────────
+
+const KIND_FILTERS = [
+  { value: "all", label: "전체" },
+  { value: "행사", label: "행사 모아보기" },
+  { value: "모임", label: "모임 모아보기" },
+];
+
+const VIEW_TABS: { value: ViewMode; label: string }[] = [
+  { value: "month", label: "월" },
+  { value: "week", label: "주" },
+  { value: "day", label: "일" },
+  { value: "list", label: "목록" },
+];
+
+export default function CalendarPage() {
+  const today = new Date();
+  const todayStr = dateToStr(today);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [cursor, setCursor] = useState<Date>(today);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selected, setSelected] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [filterKind, setFilterKind] = useState("all");
+
+  // viewMode/cursor 변경 시 필요한 월 fetch
+  useEffect(() => {
+    setLoading(true);
+
+    const monthsKeys = new Set<string>();
+    if (viewMode === "week") {
+      const ws = startOfWeek(cursor);
+      const we = addDays(ws, 6);
+      monthsKeys.add(`${ws.getFullYear()}-${ws.getMonth() + 1}`);
+      monthsKeys.add(`${we.getFullYear()}-${we.getMonth() + 1}`);
+    } else {
+      monthsKeys.add(`${cursor.getFullYear()}-${cursor.getMonth() + 1}`);
+    }
+
+    Promise.all(
+      Array.from(monthsKeys).map(key => {
+        const [y, m] = key.split("-").map(Number);
+        return fetch(`${API}/api/events/?year=${y}&month=${m}`)
+          .then(r => r.ok ? r.json() : [])
+          .catch(() => []);
+      })
+    )
+      .then(results => {
+        const merged: Event[] = [];
+        const seen = new Set<number>();
+        for (const arr of results) {
+          if (!Array.isArray(arr)) continue;
+          for (const e of arr) {
+            if (!seen.has(e.id)) { seen.add(e.id); merged.push(e); }
+          }
+        }
+        setEvents(merged);
+      })
+      .finally(() => setLoading(false));
+  }, [viewMode, cursor]);
+
+  function navigate(dir: number) {
+    setCursor(c => {
+      if (viewMode === "month" || viewMode === "list") {
+        const r = new Date(c);
+        r.setDate(1);
+        r.setMonth(r.getMonth() + dir);
+        return r;
+      }
+      if (viewMode === "week") return addDays(c, dir * 7);
+      return addDays(c, dir);
+    });
+  }
+
+  function navigationLabel(): string {
+    if (viewMode === "month" || viewMode === "list") {
+      return `${cursor.getFullYear()}년 ${cursor.getMonth() + 1}월`;
+    }
+    if (viewMode === "week") {
+      const ws = startOfWeek(cursor);
+      const we = addDays(ws, 6);
+      const sameMonth = ws.getMonth() === we.getMonth();
+      return sameMonth
+        ? `${ws.getMonth() + 1}월 ${ws.getDate()}일 ~ ${we.getDate()}일`
+        : `${ws.getMonth() + 1}/${ws.getDate()} ~ ${we.getMonth() + 1}/${we.getDate()}`;
+    }
+    return `${cursor.getMonth() + 1}월 ${cursor.getDate()}일 (${WEEKDAYS[cursor.getDay()]})`;
+  }
+
+  // 필터링 — 뷰별 적절한 범위로 한정
+  const filtered = (() => {
+    let pool = events;
+    if (filterKind !== "all") pool = pool.filter(e => e.event_kind === filterKind);
+
+    if (viewMode === "week") {
+      const ws = dateToStr(startOfWeek(cursor));
+      const we = dateToStr(addDays(startOfWeek(cursor), 6));
+      return pool.filter(e => {
+        const start = e.event_date;
+        const end = e.end_date ?? e.event_date;
+        return !(end < ws || start > we);
+      });
+    }
+    if (viewMode === "day") {
+      const ds = dateToStr(cursor);
+      return pool.filter(e => eventOverlapsDate(e, ds));
+    }
+    // month/list — 그 달 + 멀티데이로 그 달과 겹치는 것
+    const y = cursor.getFullYear();
+    const m = cursor.getMonth() + 1;
+    const first = `${y}-${String(m).padStart(2, "0")}-01`;
+    const last = `${y}-${String(m).padStart(2, "0")}-${new Date(y, m, 0).getDate()}`;
+    return pool.filter(e => {
+      const start = e.event_date;
+      const end = e.end_date ?? e.event_date;
+      return !(end < first || start > last);
+    });
+  })();
 
   return (
     <>
       <PageHeader
-        group="알림과 나눔"
+        group="알림과 게시판"
         title="행사·모임 일정"
         subtitle="본당 행사와 모임 일정을 확인하세요."
         action={
           <div className="flex items-center gap-2">
-            <button onClick={prevMonth} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">‹</button>
-            <span className="text-sm font-semibold text-white min-w-[90px] text-center">{year}년 {month}월</span>
-            <button onClick={nextMonth} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">›</button>
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">‹</button>
+            <span className="text-sm font-semibold text-white min-w-[130px] text-center">{navigationLabel()}</span>
+            <button onClick={() => navigate(1)} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">›</button>
           </div>
         }
       />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* 보기 모드 토글 + 오늘 */}
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
+            {VIEW_TABS.map(t => (
+              <button
+                key={t.value}
+                onClick={() => setViewMode(t.value)}
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  viewMode === t.value
+                    ? "bg-white text-[var(--color-primary)] font-semibold shadow-sm"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setCursor(new Date())}
+            className="text-xs px-3 py-1.5 border border-[var(--color-border)] rounded-md hover:bg-gray-50 bg-white"
+          >
+            오늘
+          </button>
+        </div>
+
         {/* 구분 필터 칩 */}
         <div className="flex flex-wrap gap-2 mb-5">
           {KIND_FILTERS.map(f => {
-            const count = f.value === "all" ? events.length : events.filter(e => e.event_kind === f.value).length;
+            const count = f.value === "all"
+              ? filtered.length
+              : filtered.filter(e => e.event_kind === f.value).length;
+            const total = f.value === "all"
+              ? events.length
+              : events.filter(e => e.event_kind === f.value).length;
             return (
               <button
                 key={f.value}
@@ -306,86 +752,40 @@ export default function CalendarPage() {
                     : "border-[var(--color-border)] bg-white hover:bg-gray-50"
                 }`}
               >
-                {f.label}{count > 0 && <span className="ml-1 opacity-75">({count})</span>}
+                {f.label}
+                {total > 0 && <span className="ml-1 opacity-75">({total})</span>}
               </button>
             );
           })}
         </div>
 
-        {/* 캘린더 */}
-        <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden mb-6">
-          {/* 요일 헤더 */}
-          <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
-            {WEEKDAYS.map((d, i) => (
-              <div
-                key={d}
-                className={`py-2 text-center text-xs font-medium ${i < 6 ? "border-r border-[var(--color-border)]" : ""} ${
-                  i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* 주 단위 행 */}
-          {weeks.map((weekCells, wi) => (
-            <WeekRow
-              key={wi}
-              weekCells={weekCells}
-              year={year}
-              month={month}
-              events={filtered}
-              todayStr={todayStr}
-              onSelect={setSelected}
-            />
-          ))}
-        </div>
-
-        {/* 이번 달 목록 */}
-        {filtered.length > 0 && (
-          <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-[var(--color-border)]">
-              <h2 className="text-sm font-bold text-[var(--color-primary)]">
-                {month}월 {filterKind === "행사" ? "행사" : filterKind === "모임" ? "모임" : "전체"} 일정
-              </h2>
-            </div>
-            <div className="divide-y divide-[var(--color-border)]">
-              {filtered.map(e => (
-                <button
-                  key={e.id}
-                  onClick={() => setSelected(e)}
-                  className="w-full flex items-center gap-4 px-5 py-3 hover:bg-gray-50 text-left transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <KindBadge kind={e.event_kind} />
-                      <p className="text-sm font-medium text-[var(--color-text)] truncate">{e.title}</p>
-                    </div>
-                    {e.location && <p className="text-xs text-[var(--color-text-muted)]">📍 {e.location}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${STATUS_BADGE[e.status] ?? STATUS_BADGE["예정"]}`}>
-                      {e.status}
-                    </span>
-                    <div className="text-xs text-[var(--color-text-muted)] text-right">
-                      <div>{new Date(e.event_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</div>
-                      {e.end_date && e.end_date !== e.event_date && (
-                        <div>~ {new Date(e.end_date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</div>
-                      )}
-                      {e.start_time && <div>{e.start_time}</div>}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {filtered.length === 0 && !loading && (
-          <p className="text-center text-sm text-[var(--color-text-muted)] py-8">
-            {events.length === 0 ? "이번 달 등록된 일정이 없습니다." : "해당 구분의 일정이 없습니다."}
-          </p>
+        {/* 본문 */}
+        {loading ? (
+          <p className="text-center text-sm text-[var(--color-text-muted)] py-12">불러오는 중…</p>
+        ) : viewMode === "month" ? (
+          <MonthView
+            year={cursor.getFullYear()}
+            month={cursor.getMonth() + 1}
+            events={filtered}
+            todayStr={todayStr}
+            onSelect={setSelected}
+          />
+        ) : viewMode === "week" ? (
+          <WeekView
+            weekStart={startOfWeek(cursor)}
+            events={filtered}
+            todayStr={todayStr}
+            onSelect={setSelected}
+          />
+        ) : viewMode === "day" ? (
+          <DayView
+            date={cursor}
+            events={filtered}
+            todayStr={todayStr}
+            onSelect={setSelected}
+          />
+        ) : (
+          <ListView events={filtered} onSelect={setSelected} />
         )}
 
         {/* 상세 모달 */}

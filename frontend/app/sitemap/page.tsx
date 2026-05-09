@@ -8,56 +8,59 @@ export const metadata: Metadata = {
 
 const sections = [
   {
-    group: "우리 성당",
-    subtitle: "반석 위에",
+    group: "성당 소개",
+    subtitle: "본당과 사목자",
     icon: "⛪",
     pages: [
-      { href: "/about",     title: "성당 소개",       desc: "세종시 첫 본당, 교회 공동체의 이야기" },
-      { href: "/saint",     title: "성 베드로",        desc: "우리 성당의 이름, 주보성인 사도 베드로" },
-      { href: "/community", title: "우리 가족",        desc: "본당 신자 공동체와 모임 소개" },
-      { href: "/history",   title: "걸어온 길",        desc: "창립부터 현재까지의 연표" },
-      { href: "/pastor",    title: "사제의 발자취",     desc: "주임 신부님과 함께하는 본당 공동체" },
-      { href: "/info",      title: "찾아오시는 길",     desc: "주소, 미사 시간, 오시는 방법" },
+      { href: "/about",    title: "성당 안내",          desc: "세종시 첫 본당, 교회 공동체 소개" },
+      { href: "/pastor",   title: "주임신부",           desc: "현재 주임 신부님 소개" },
+      { href: "/saint",    title: "수호성인 성 베드로", desc: "본당 주보성인 사도 베드로" },
+      { href: "/history",  title: "본당 연혁",          desc: "창립부터 현재까지의 연표" },
+      { href: "/pastors",  title: "역대 사목자",        desc: "본당을 거쳐간 신부님들" },
+      { href: "/priests",  title: "본당 출신 사제",     desc: "본당에서 성소를 받은 사제들" },
+      { href: "/info",     title: "찾아오시는 길",      desc: "주소, 미사 시간, 오시는 방법" },
     ],
   },
   {
-    group: "본당 가족",
-    subtitle: "어부의 뜰",
-    icon: "🐟",
+    group: "본당 공동체",
+    subtitle: "조직과 활동",
+    icon: "🤝",
     pages: [
-      { href: "/council", title: "사목평의회",      desc: "본당 사목을 함께 이끌어 가는 의결 기구" },
-      { href: "/groups",  title: "분과와 단체",      desc: "함께 믿음을 키워가는 분과와 단체들" },
-      { href: "/vision",  title: "이 해의 사목 방향", desc: "매년 신부님이 제시하는 한 해의 씨앗" },
+      { href: "/community", title: "공동체 안내",       desc: "본당 공동체 전체 구성 안내" },
+      { href: "/council",   title: "사목평의회",        desc: "본당 사목을 함께 이끄는 의결 기구" },
+      { href: "/groups",    title: "분과와 단체",       desc: "함께 믿음을 키우는 분과와 단체" },
+      { href: "/vision",    title: "올해의 사목 방향",  desc: "매년 신부님이 제시하는 사목 방향" },
     ],
   },
   {
     group: "말씀과 기도",
-    subtitle: "말씀의 그물",
+    subtitle: "전례와 영성",
     icon: "✝",
     pages: [
       { href: "/word",       title: "오늘의 복음",   desc: "오늘 선포되는 하느님의 말씀" },
-      { href: "/bulletin",   title: "주보 아카이브", desc: "지난 주보를 한 자리에서 만납니다" },
-      { href: "/meditation", title: "작은 묵상",     desc: "말씀 안에서 머무는 시간" },
-      { href: "/prayer",     title: "기도문 모음",   desc: "함께 바치는 기도" },
+      { href: "/bulletin",   title: "주보 아카이브", desc: "지난 주보 모아보기" },
+      { href: "/meditation", title: "묵상 글",       desc: "말씀 안에서 머무는 시간" },
+      { href: "/prayer",     title: "기도문",        desc: "함께 바치는 기도" },
     ],
   },
   {
-    group: "알림과 나눔",
-    subtitle: "열린 문",
+    group: "알림과 게시판",
+    subtitle: "공지와 소통",
     icon: "📢",
     pages: [
-      { href: "/boards/notice", title: "공지·알림",  desc: "본당 공지사항과 주요 안내" },
-      { href: "/boards/free",   title: "자유 글터",  desc: "자유롭게 이야기 나누는 공간" },
+      { href: "/boards/notice", title: "공지·알림",   desc: "본당 공지사항과 주요 안내" },
+      { href: "/calendar",      title: "행사 일정",   desc: "본당 행사·모임 일정" },
+      { href: "/boards",        title: "자유 게시판", desc: "자유롭게 이야기 나누는 공간" },
       { href: "/boards/news",   title: "공동체 소식", desc: "공동체 소식과 나눔" },
     ],
   },
   {
-    group: "사진 기록",
-    subtitle: "갈릴래아의 기억",
+    group: "사진 갤러리",
+    subtitle: "전례·행사 사진",
     icon: "📷",
     pages: [
-      { href: "/gallery/liturgy", title: "전례의 순간", desc: "미사와 성사의 거룩한 순간들" },
-      { href: "/gallery/events",  title: "함께한 시간",  desc: "공동체 행사와 나눔의 기록" },
+      { href: "/gallery/liturgy", title: "전례 사진", desc: "미사와 성사의 거룩한 순간들" },
+      { href: "/gallery/events",  title: "행사 사진", desc: "공동체 행사와 나눔의 기록" },
     ],
   },
 ];
@@ -90,7 +93,7 @@ export default function SitemapPage() {
                 <h2 className="font-serif font-bold text-white text-lg leading-tight">
                   {section.group}
                 </h2>
-                <p className="text-white/60 text-xs italic">{section.subtitle}</p>
+                <p className="text-white/60 text-xs">{section.subtitle}</p>
               </div>
             </div>
 

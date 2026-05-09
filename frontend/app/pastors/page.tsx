@@ -41,7 +41,7 @@ export default async function PastorsPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="역대 사목자" subtitle="세종성베드로성당을 이끌어 오신 사목자들" />
+      <PageHeader group="성당 소개" title="역대 사목자" subtitle="세종성베드로성당을 이끌어 오신 사목자들" />
       <div className="max-w-4xl mx-auto px-4 py-10">
         {pastors.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">

@@ -38,7 +38,7 @@ export default async function BoardsPage() {
 
   return (
     <>
-      <PageHeader group="알림과 나눔" title="자유 글터" subtitle="성당 공동체의 이야기를 나누는 공간입니다." />
+      <PageHeader group="알림과 게시판" title="자유 게시판" subtitle="성당 공동체의 이야기를 나누는 공간입니다." />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       {boards.length === 0 ? (

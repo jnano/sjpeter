@@ -477,8 +477,8 @@ function CommunityTab() {
 const PAGE_LABELS: Record<string, string> = {
   saint: "성 베드로",
   council: "사목평의회",
-  meditation: "작은 묵상",
-  prayer: "기도문 모음",
+  meditation: "묵상 글",
+  prayer: "기도문",
 };
 
 function PagesTab() {
@@ -1029,7 +1029,7 @@ function MeditationTab() {
 // ─── Main Page ────────────────────────────────────────────
 
 const TABS = [
-  { key: "meditation", label: "작은 묵상" },
+  { key: "meditation", label: "묵상 글" },
   { key: "council", label: "사목평의회" },
   { key: "history", label: "연혁" },
   { key: "vision", label: "사목지표" },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
-  title: "신부님",
+  title: "주임신부",
   description: "세종성베드로성당 주임신부님 소개",
 };
 
@@ -55,7 +55,7 @@ export default async function PastorPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="사제의 발자취" subtitle="주임 신부님과 함께하는 본당 공동체" />
+      <PageHeader group="성당 소개" title="주임신부" subtitle="주임 신부님과 함께하는 본당 공동체" />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">

@@ -45,7 +45,7 @@ export default async function CommunityPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="우리 가족" subtitle="세종성베드로성당을 이루는 사람들과 모임을 소개합니다" />
+      <PageHeader group="본당 공동체" title="공동체 안내" subtitle="세종성베드로성당을 이루는 사람들과 모임을 소개합니다" />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       <div className="grid sm:grid-cols-2 gap-4">

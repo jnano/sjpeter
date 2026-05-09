@@ -42,7 +42,7 @@ export default async function VisionPage() {
 
   return (
     <>
-      <PageHeader group="본당 가족" title="이 해의 사목 방향" subtitle="매년 신부님이 제시하는 한 해의 씨앗" />
+      <PageHeader group="본당 공동체" title="올해의 사목 방향" subtitle="매년 신부님이 제시하는 한 해의 씨앗" />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
       {current && (

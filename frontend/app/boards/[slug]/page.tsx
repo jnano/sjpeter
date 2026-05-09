@@ -139,7 +139,7 @@ export default async function BoardPage({
   return (
     <>
       <PageHeader
-        group="알림과 나눔"
+        group="알림과 게시판"
         title={board.name}
         subtitle={board.description || ""}
         action={

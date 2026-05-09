@@ -37,7 +37,7 @@ export default async function PriestsPage() {
 
   return (
     <>
-      <PageHeader group="우리 성당" title="본당 출신 사제" subtitle="세종성베드로성당에서 성소의 씨앗이 자라난 분들" />
+      <PageHeader group="성당 소개" title="본당 출신 사제" subtitle="세종성베드로성당에서 성소의 씨앗이 자라난 분들" />
       <div className="max-w-4xl mx-auto px-4 py-10">
         {priests.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
