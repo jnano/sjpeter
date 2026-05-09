@@ -391,9 +391,12 @@ def list_boards(include_inactive: bool = False, db: Session = Depends(get_db)):
 
     # 게시글 수를 단일 쿼리로 집계 (N+1 방지)
     board_ids = [b.id for b in boards]
+    count_filter = [Post.board_id.in_(board_ids)]
+    if not include_inactive:
+        count_filter.append(Post.is_published == True)
     counts_q = (
         db.query(Post.board_id, func.count(Post.id))
-        .filter(Post.board_id.in_(board_ids), Post.is_published == True)
+        .filter(*count_filter)
         .group_by(Post.board_id)
         .all()
     )

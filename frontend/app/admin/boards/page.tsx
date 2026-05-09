@@ -33,6 +33,7 @@ interface Board {
   moderator_only_write: boolean;
   posts_per_page: number;
   exclude_from_search: boolean;
+  post_count: number;
   moderator: Moderator | null;
   allowed_members: AllowedMember[];
 }
@@ -403,6 +404,9 @@ export default function AdminBoardsPage() {
                         관리자: {board.moderator.nickname}
                       </span>
                     )}
+                    <span className="text-xs px-2 py-0.5 bg-gray-50 text-gray-500 border border-gray-200 rounded-full">
+                      {board.post_count.toLocaleString()}건
+                    </span>
                   </div>
                   {board.description && (
                     <p className="text-sm text-gray-500 mt-0.5 truncate">{board.description}</p>
