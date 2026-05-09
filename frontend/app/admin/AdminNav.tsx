@@ -1,16 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function AdminNav() {
-  const router = useRouter();
-  const [displayName, setDisplayName] = useState("");
   const [isSuper, setIsSuper] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
 
   useEffect(() => {
-    setDisplayName(localStorage.getItem("admin_display_name") ?? "");
     setIsSuper(localStorage.getItem("admin_is_super") === "true");
     const token = localStorage.getItem("admin_token");
     if (token) {
@@ -23,15 +19,6 @@ export default function AdminNav() {
     }
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("admin_display_name");
-    localStorage.removeItem("admin_role");
-    localStorage.removeItem("admin_is_super");
-    document.cookie = "admin_authed=; path=/; max-age=0";
-    router.push("/admin");
-  }
-
   return (
     <div className="bg-[var(--color-primary)] text-white">
       {/* 상단 행: 로고 + 사용자 */}
@@ -41,23 +28,12 @@ export default function AdminNav() {
           <span className="font-serif font-bold">관리자</span>
           <span className="hidden sm:inline text-white/50 text-sm">— 세종성베드로성당</span>
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           {isSuper && (
-            <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">
               최고관리자
             </span>
           )}
-          {displayName && (
-            <span className="text-sm text-white/90 font-medium truncate max-w-[120px] sm:max-w-none">
-              {displayName}
-            </span>
-          )}
-          <button
-            onClick={handleLogout}
-            className="text-sm text-white/70 hover:text-white transition-colors shrink-0"
-          >
-            로그아웃
-          </button>
         </div>
       </div>
 
