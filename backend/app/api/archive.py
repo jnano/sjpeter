@@ -143,6 +143,67 @@ def delete_pastor(pastor_id: int, db: Session = Depends(get_db), _=Depends(get_c
     db.commit()
 
 
+def _infer_staff_role(title: Optional[str], category: str) -> str:
+    """parish_pastors의 title·category로 parish_staff.role을 추론.
+
+    수녀(category=sister)는 '수녀'로 고정. priest의 경우 title에 '보좌'가 있으면
+    '보좌신부', 그 외에는 '주임신부' 기본.
+    """
+    if category == "sister":
+        return "수녀"
+    if title and "보좌" in title:
+        return "보좌신부"
+    return "주임신부"
+
+
+@router.post("/pastors/{pastor_id}/restore-to-staff")
+def restore_pastor_to_staff(
+    pastor_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    """역대 사목자 record를 본당 가족(parish_staff)으로 복원.
+
+    이전(move-to-archive)의 역연산. parish_pastors record는 삭제되고,
+    parish_staff에 새로 등록된다. 사진 URL은 그대로 옮겨져 파일은 재사용.
+    """
+    row = db.execute(
+        text("SELECT * FROM parish_pastors WHERE id=:id"),
+        {"id": pastor_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="역대 사목자 record가 없습니다.")
+
+    role = _infer_staff_role(row.title, getattr(row, "category", "priest") or "priest")
+
+    # 가장 큰 sort_order + 1로 새 staff를 등록
+    max_order = db.execute(
+        text("SELECT COALESCE(MAX(sort_order), -1) AS m FROM parish_staff WHERE role=:r"),
+        {"r": role},
+    ).fetchone()
+    next_order = (max_order.m if max_order else -1) + 1
+
+    db.execute(
+        text(
+            "INSERT INTO parish_staff "
+            "(role, name, title, photo_url, career_items, sort_order, is_active, created_at, updated_at) "
+            "VALUES (:role, :name, :title, :photo, :career, :ord, TRUE, NOW(), NOW())"
+        ),
+        {
+            "role": role,
+            "name": row.name,
+            "title": row.title,
+            "photo": row.photo_url,
+            "career": row.bio,
+            "ord": next_order,
+        },
+    )
+    # 사진 파일은 새 staff record가 참조하므로 유지, parish_pastors record만 삭제
+    db.execute(text("DELETE FROM parish_pastors WHERE id=:id"), {"id": pastor_id})
+    db.commit()
+    return {"ok": True, "role": role}
+
+
 # ══════════════════════════════════════════════════════════
 # 본당 출신 사제 (parish_priests)
 # ══════════════════════════════════════════════════════════
