@@ -64,10 +64,6 @@ export default async function InfoPage() {
     const dayDiff = (DAY_ORDER[a.day] ?? 99) - (DAY_ORDER[b.day] ?? 99);
     return dayDiff !== 0 ? dayDiff : a.time.localeCompare(b.time);
   });
-  const groupedDays = Object.keys(DAY_ORDER).filter((d) =>
-    sortedEntries.some((e) => e.day === d)
-  );
-
   const mapReady = appKey && appKey !== "여기에_JavaScript_키_입력" && lat !== null && lng !== null;
 
   return (
@@ -97,112 +93,89 @@ export default async function InfoPage() {
       </div>
 
       {sortedEntries.length > 0 && (() => {
-        const sundayEntries  = sortedEntries.filter((e) => e.day === "주일");
+        const sundayEntries   = sortedEntries.filter((e) => e.day === "주일");
         const saturdayEntries = sortedEntries.filter((e) => e.day === "토요일");
-        const holidayEntries = sortedEntries.filter((e) => e.day === "공휴일");
+        const holidayEntries  = sortedEntries.filter((e) => e.day === "공휴일");
         const weekdayOrder = ["월요일", "화요일", "수요일", "목요일", "금요일"];
-        const weekdayEntries = weekdayOrder
+        const weekdayByDay = weekdayOrder
           .map((d) => ({ day: d, list: sortedEntries.filter((e) => e.day === d) }))
           .filter((g) => g.list.length > 0);
 
+        // 평일을 같은 시간 패턴끼리 묶기 (예: 월·화·수·목 → 06:00, 금 → 06:00·19:30)
+        const weekdayGroups: { label: string; times: MassEntry[] }[] = [];
+        const seenPatterns = new Set<string>();
+        for (const { day, list } of weekdayByDay) {
+          const key = list.map((e) => `${e.time}|${e.note ?? ""}`).join(";");
+          if (seenPatterns.has(key)) continue;
+          seenPatterns.add(key);
+          const sameDays = weekdayByDay
+            .filter((g) => g.list.map((e) => `${e.time}|${e.note ?? ""}`).join(";") === key)
+            .map((g) => g.day.replace("요일", ""));
+          weekdayGroups.push({ label: sameDays.join("·"), times: list });
+        }
+
+        const renderTimes = (times: MassEntry[]) => (
+          <div className="flex-1 flex flex-wrap gap-x-3.5 gap-y-1">
+            {times.map((e, i) => (
+              <span key={i} className="text-sm">
+                <span className="font-semibold text-[var(--color-text)]">{e.time}</span>
+                {e.note && (
+                  <span className="text-[11px] text-[var(--color-text-muted)] ml-1">({e.note})</span>
+                )}
+              </span>
+            ))}
+          </div>
+        );
+
         return (
-          <div className="mb-5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-            {/* 헤더 */}
-            <div className="px-6 py-4 flex items-center gap-3">
-              <span className="text-[var(--color-accent)] text-xl">✝</span>
-              <h2 className="font-serif font-bold text-[var(--color-primary)] text-lg tracking-wide">미사 시간</h2>
+          <div className="mb-5 bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-2.5">
+              <span className="text-[var(--color-accent)]">✝</span>
+              <h2 className="font-serif font-bold text-[var(--color-primary)] text-base tracking-wide">미사 시간</h2>
             </div>
 
-            {/* 주일 */}
-            {sundayEntries.length > 0 && (
-              <div className="bg-[var(--color-primary)]/[0.04] border-b border-[var(--color-border)] px-6 py-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-block w-1.5 h-5 rounded-full bg-[var(--color-accent)]" />
-                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">주일 미사</h3>
+            <div className="divide-y divide-[var(--color-border)]/60">
+              {sundayEntries.length > 0 && (
+                <div className="px-5 py-3 flex items-baseline gap-4">
+                  <div className="w-20 sm:w-24 shrink-0">
+                    <span className="font-semibold text-sm text-[var(--color-primary)]">주일</span>
+                  </div>
+                  {renderTimes(sundayEntries)}
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
-                  {sundayEntries.map((e, i) => (
-                    <div
-                      key={i}
-                      className="bg-white rounded-xl px-4 py-4 text-center"
-                    >
-                      <p className="text-2xl font-bold tracking-tight leading-none mb-1.5 text-[var(--color-primary)]">{e.time}</p>
-                      {e.note && (
-                        <p className="text-[11px] text-[var(--color-text-muted)] leading-tight">{e.note}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* 평일 */}
-            {weekdayEntries.length > 0 && (
-              <div className="bg-white border-b border-[var(--color-border)] px-6 py-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-block w-1.5 h-5 rounded-full bg-[var(--color-border-dark)]" />
-                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">평일 미사</h3>
+              {saturdayEntries.length > 0 && (
+                <div className="px-5 py-3 flex items-baseline gap-4">
+                  <div className="w-20 sm:w-24 shrink-0">
+                    <span className="font-semibold text-sm text-[var(--color-primary)]">토요일</span>
+                    <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5">주일 특전</span>
+                  </div>
+                  {renderTimes(saturdayEntries)}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-6">
-                  {weekdayEntries.map(({ day, list }) => (
-                    <div key={day} className="flex items-start gap-3">
-                      <span className="text-xs font-semibold text-white bg-[var(--color-text-muted)] rounded px-1.5 py-0.5 mt-0.5 shrink-0 w-14 text-center">
-                        {day.replace("요일", "")}
-                      </span>
-                      <div className="space-y-1">
-                        {list.map((e, i) => (
-                          <div key={i}>
-                            <span className="font-bold text-[var(--color-text)] text-sm">{e.time}</span>
-                            {e.note && (
-                              <span className="text-[11px] text-[var(--color-text-muted)] ml-1.5">{e.note}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* 토요일 */}
-            {saturdayEntries.length > 0 && (
-              <div className="bg-indigo-50/60 border-b border-[var(--color-border)] px-6 py-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-block w-1.5 h-5 rounded-full bg-indigo-400" />
-                  <h3 className="font-serif font-bold text-[var(--color-primary)] text-base">토요일 미사</h3>
+              {weekdayGroups.map(({ label, times }) => (
+                <div key={label} className="px-5 py-3 flex items-baseline gap-4">
+                  <div className="w-20 sm:w-24 shrink-0">
+                    <span className="font-medium text-sm text-[var(--color-text)]">{label}</span>
+                  </div>
+                  {renderTimes(times)}
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {saturdayEntries.map((e, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-4 py-2.5 shadow-sm">
-                      <span className="font-bold text-indigo-700 text-base">{e.time}</span>
-                      {e.note && (
-                        <span className="text-xs text-indigo-500 border-l border-indigo-200 pl-2">{e.note}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              ))}
 
-            {/* 공휴일 */}
-            {holidayEntries.length > 0 && (
-              <div className="bg-amber-50/60 border-b border-[var(--color-border)] px-6 py-4">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded px-2 py-1">공휴일</span>
-                  {holidayEntries.map((e, i) => (
-                    <span key={i} className="text-sm font-bold text-[var(--color-text)]">
-                      {e.time}{e.note ? ` · ${e.note}` : ""}
-                    </span>
-                  ))}
+              {holidayEntries.length > 0 && (
+                <div className="px-5 py-3 flex items-baseline gap-4">
+                  <div className="w-20 sm:w-24 shrink-0">
+                    <span className="font-medium text-sm text-[var(--color-text)]">공휴일</span>
+                  </div>
+                  {renderTimes(holidayEntries)}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* 안내 메시지 */}
             {parish?.mass_schedule?.note && (
-              <div className="bg-[var(--color-surface-warm)] px-6 py-3 flex items-start gap-2">
-                <span className="text-[var(--color-text-muted)] text-xs mt-0.5 shrink-0">ⓘ</span>
+              <div className="px-5 py-2.5 bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] flex items-start gap-2">
+                <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5">ⓘ</span>
                 <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
                   {parish.mass_schedule.note}
                 </p>
