@@ -22,12 +22,21 @@ interface Staff {
 
 const ROLE_OPTIONS = ["주임신부", "보좌신부", "수녀", "사무장"];
 
+// role 값(백엔드용) → 화면 표시 라벨.
+// role 자체는 정렬·매핑·필터 등에 쓰이므로 변경 금지(주임신부/보좌신부/수녀/사무장).
+const ROLE_LABEL: Record<string, string> = {
+  "주임신부": "주임신부님",
+  "보좌신부": "보좌신부님",
+  "수녀": "수녀님",
+  "사무장": "사무장님",
+};
+
 // role → 기본 직함 매핑. 등록 폼에서 역할 선택 시 직함이 자동 채워진다.
 const ROLE_DEFAULT_TITLE: Record<string, string> = {
   "주임신부": "주임신부님",
   "보좌신부": "보좌신부님",
   "수녀": "수녀님",
-  "사무장": "사무장",
+  "사무장": "사무장님",
 };
 
 // 사용자가 따로 입력하지 않은 경우(=기본 매핑 그대로일 때)에만 자동 갱신할지 판단할 때 사용
@@ -284,7 +293,7 @@ export default function AdminParishStaffPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
             >
               {ROLE_OPTIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>
               ))}
             </select>
           </Field>
