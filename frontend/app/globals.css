@@ -92,10 +92,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 영화 엔딩크레딧 — 위로 흐르는 텍스트.
-   페이드 1% (~0.7초)로 즉시 선명해지면서 루프 리셋 깜빡임은 가림. */
+   페이드 0.5% (50초 사이클 기준 ~0.25초)로 거의 즉시 선명. */
 @keyframes credits-scroll {
-  0%   { transform: translateY(0);     opacity: 0; }
-  1%   { transform: translateY(-1%);   opacity: 1; }
-  99%  { transform: translateY(-99%);  opacity: 1; }
-  100% { transform: translateY(-100%); opacity: 0; }
+  0%    { transform: translateY(0);      opacity: 0; }
+  0.5%  { transform: translateY(-0.5%);  opacity: 1; }
+  99.5% { transform: translateY(-99.5%); opacity: 1; }
+  100%  { transform: translateY(-100%);  opacity: 0; }
 }
