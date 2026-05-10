@@ -45,11 +45,9 @@ const SHORT: Record<string, string> = {
 function buildMassRows(entries: MassEntry[]): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = [];
 
-  // 주일
   const sunday = entries.filter((e) => e.day === "주일").map((e) => e.time);
   if (sunday.length) rows.push({ label: "주일", value: formatTimesRow(sunday) });
 
-  // 평일 — 같은 시간이면 묶고, 다르면 요일별로
   const wdMap: Record<string, string[]> = {};
   for (const e of entries) {
     if (WEEKDAYS.includes(e.day)) {
@@ -69,7 +67,6 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
     }
   }
 
-  // 토요일
   const sat = entries.filter((e) => e.day === "토요일").map((e) => e.time);
   if (sat.length) rows.push({ label: "토요일", value: formatTimesRow(sat) });
 
@@ -79,10 +76,10 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
 const QUICK_LINKS = [
   { href: "/bulletin", label: "주보" },
   { href: "/about",   label: "성당 소개" },
-  { href: "/pastor",  label: "신부님" },
-  { href: "/history", label: "우리의 역사" },
-  { href: "/word",    label: "오늘의 말씀" },
-  { href: "/info",    label: "오시는 길" },
+  { href: "/pastor",  label: "주임신부" },
+  { href: "/history", label: "본당 연혁" },
+  { href: "/word",    label: "오늘의 복음" },
+  { href: "/info",    label: "찾아오시는 길" },
 ];
 
 export default async function Footer() {
@@ -91,24 +88,24 @@ export default async function Footer() {
   const massRows = buildMassRows(entries);
 
   return (
-    <footer className="bg-[var(--color-primary-dark)] text-white/80 mt-16">
+    <footer className="bg-white border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
           {/* 성당 정보 */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[var(--color-accent-light)] text-xl">✝</span>
-              <span className="font-serif font-bold text-white text-lg">
+              <span className="text-[var(--color-accent)] text-xl">✝</span>
+              <span className="font-serif font-bold text-[var(--color-primary)] text-lg">
                 {parish?.name ?? "세종성베드로성당"}
               </span>
             </div>
-            <address className="not-italic text-sm leading-relaxed space-y-1">
+            <address className="not-italic text-sm leading-relaxed space-y-1 text-[var(--color-text-muted)]">
               {parish?.address && <p>{parish.address}</p>}
               {(parish?.phone || parish?.fax) && (
                 <p>
                   {parish.phone && <>☏ {parish.phone}</>}
-                  {parish.phone && parish.fax && <span className="mx-1.5 text-white/30">|</span>}
+                  {parish.phone && parish.fax && <span className="mx-1.5 text-[var(--color-border-dark)]">|</span>}
                   {parish.fax && <>팩스 {parish.fax}</>}
                 </p>
               )}
@@ -118,37 +115,37 @@ export default async function Footer() {
 
           {/* 미사 시간 */}
           <div>
-            <h3 className="font-serif font-bold text-white mb-4">미사 시간</h3>
+            <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">미사 시간</h3>
             {massRows.length > 0 ? (
               <table className="text-sm w-full">
                 <tbody>
                   {massRows.map((row) => (
                     <tr key={row.label}>
-                      <td className="text-white/50 pr-4 pb-1.5 whitespace-nowrap align-top">
+                      <td className="text-[var(--color-text-muted)] pr-4 pb-1.5 whitespace-nowrap align-top w-12">
                         {row.label}
                       </td>
-                      <td className="pb-1.5">{row.value}</td>
+                      <td className="pb-1.5 text-[var(--color-text)]">{row.value}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p className="text-sm text-white/40">미사 시간 정보 없음</p>
+              <p className="text-sm text-[var(--color-text-muted)]">미사 시간 정보 없음</p>
             )}
             {parish?.mass_schedule?.note && (
-              <p className="text-xs text-white/40 mt-3">※ {parish.mass_schedule.note}</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-3">※ {parish.mass_schedule.note}</p>
             )}
           </div>
 
           {/* 바로가기 */}
           <div>
-            <h3 className="font-serif font-bold text-white mb-4">바로가기</h3>
+            <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">바로가기</h3>
             <nav className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               {QUICK_LINKS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="hover:text-white transition-colors"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                 >
                   {item.label}
                 </Link>
@@ -157,7 +154,7 @@ export default async function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-6 text-center text-xs text-white/40">
+        <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)]">
           © {new Date().getFullYear()} {parish?.name ?? "세종성베드로성당"}. All rights reserved.
         </div>
       </div>
