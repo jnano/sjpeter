@@ -42,7 +42,7 @@
 }
 
 html {
-  font-size: 14.5px; /* 60대 이상 접근성 — 기본 font-size 키움 */
+  font-size: 13px; /* 14.5px에서 약 10% 축소, 60대 가독성은 여백·줄간격으로 보완 */
   overflow-x: hidden; /* 뷰포트 가로 스크롤 원천 차단 — body가 아닌 html에만 설정해야 sticky 헤더가 유지됨 */
 }
 
@@ -50,7 +50,8 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-sans);
-  line-height: 1.7;
+  line-height: 1.6; /* 본문 행간 — 조밀하지만 답답하지 않게 */
+  letter-spacing: -0.005em;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
