@@ -22,11 +22,22 @@ interface Staff {
 
 const ROLE_OPTIONS = ["주임신부", "보좌신부", "수녀", "사무장"];
 
+// role → 기본 직함 매핑. 등록 폼에서 역할 선택 시 직함이 자동 채워진다.
+const ROLE_DEFAULT_TITLE: Record<string, string> = {
+  "주임신부": "주임신부님",
+  "보좌신부": "보좌신부님",
+  "수녀": "수녀님",
+  "사무장": "사무장",
+};
+
+// 사용자가 따로 입력하지 않은 경우(=기본 매핑 그대로일 때)에만 자동 갱신할지 판단할 때 사용
+const DEFAULT_TITLES = new Set(Object.values(ROLE_DEFAULT_TITLE));
+
 const EMPTY_FORM = {
   id: 0,
   role: "주임신부",
   name: "",
-  title: "",
+  title: "주임신부님",
   feast_day: "",
   introduction: "",
   career_items: "",
@@ -260,7 +271,16 @@ export default function AdminParishStaffPage() {
           <Field label="역할">
             <select
               value={editing.role}
-              onChange={(e) => setEditing({ ...editing, role: e.target.value })}
+              onChange={(e) => {
+                const newRole = e.target.value;
+                // 직함이 비어 있거나 기본 매핑값일 때만 새 role의 기본값으로 자동 채움
+                const shouldUpdateTitle = !editing.title.trim() || DEFAULT_TITLES.has(editing.title);
+                setEditing({
+                  ...editing,
+                  role: newRole,
+                  title: shouldUpdateTitle ? (ROLE_DEFAULT_TITLE[newRole] ?? "") : editing.title,
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
             >
               {ROLE_OPTIONS.map((r) => (
@@ -288,9 +308,10 @@ export default function AdminParishStaffPage() {
             <input
               value={editing.title}
               onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-              placeholder="예: 주임 신부님"
+              placeholder="예: 주임신부님 / 보좌신부님 / 수녀님"
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
             />
+            <p className="text-xs text-gray-400 mt-1">역할 선택 시 자동 채워집니다. 필요하면 수정하세요.</p>
           </Field>
           <Field label="축일 (예: 6.29)">
             <input
@@ -492,12 +513,12 @@ export default function AdminParishStaffPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">
                     {s.name}
-                    <span className="ml-2 text-xs text-gray-500">{s.role}</span>
+                    {s.title && <span className="ml-1.5 text-gray-700">{s.title}</span>}
+                    <span className="ml-2 text-xs text-gray-400 font-normal">[{s.role}]</span>
                     {!s.is_active && (
                       <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-gray-700 text-white rounded">비공개</span>
                     )}
                   </p>
-                  {s.title && <p className="text-xs text-gray-500 truncate">{s.title}</p>}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button

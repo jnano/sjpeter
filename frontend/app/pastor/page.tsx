@@ -101,10 +101,12 @@ function PriestCard({ staff }: { staff: Staff }) {
               </div>
             )}
           </div>
-          <p className="mt-2.5 font-serif font-bold text-sm text-[var(--color-text)]">{staff.name}</p>
-          {staff.title && (
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{staff.title}</p>
-          )}
+          <p className="mt-2.5 font-serif font-bold text-sm text-[var(--color-text)]">
+            {staff.name}
+            {staff.title && (
+              <span className="font-normal text-[var(--color-text-muted)]"> {staff.title}</span>
+            )}
+          </p>
           {staff.feast_day && (
             <p className="text-[11px] text-[var(--color-text-muted)] mt-1">· 축일 : {staff.feast_day}</p>
           )}
@@ -155,7 +157,12 @@ function CompactCard({ staff }: { staff: Staff }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-serif font-bold text-sm text-[var(--color-text)]">{staff.name}</p>
+        <p className="font-serif font-bold text-sm text-[var(--color-text)]">
+          {staff.name}
+          {staff.title && (
+            <span className="font-normal text-[var(--color-text-muted)]"> {staff.title}</span>
+          )}
+        </p>
         {staff.introduction && (
           <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">{staff.introduction}</p>
         )}
