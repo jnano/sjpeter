@@ -57,7 +57,7 @@ export default function MiniCalendar() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="border border-[var(--color-border)] rounded-xl bg-white overflow-hidden">
+    <div className="border border-[var(--color-border)] rounded-xl bg-white overflow-hidden flex flex-col h-full">
       {/* 헤더 — 월 이동 */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
         <button
@@ -80,12 +80,12 @@ export default function MiniCalendar() {
       </div>
 
       {/* 그리드 */}
-      <div className="p-2">
+      <div className="p-2 flex flex-col flex-1 min-h-0">
         <div className="grid grid-cols-7 mb-1">
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
-              className={`text-center text-[10.5px] font-medium py-1 ${
+              className={`text-center text-[11px] font-medium py-1 ${
                 i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
               }`}
             >
@@ -93,7 +93,7 @@ export default function MiniCalendar() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-y-0.5">
+        <div className="grid grid-cols-7 flex-1 auto-rows-fr min-h-0">
           {cells.map((day, i) => {
             if (day === null) return <div key={i} />;
             const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -104,12 +104,12 @@ export default function MiniCalendar() {
               <Link
                 key={i}
                 href="/calendar"
-                className="relative h-7 flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
+                className="relative flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
               >
                 <span
-                  className={`text-[11.5px] ${
+                  className={`text-[12.5px] ${
                     isToday
-                      ? "bg-[var(--color-primary)] text-white w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10.5px]"
+                      ? "bg-[var(--color-primary)] text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11.5px]"
                       : dow === 0
                       ? "text-red-500"
                       : dow === 6
@@ -120,7 +120,7 @@ export default function MiniCalendar() {
                   {day}
                 </span>
                 {hasEvent && !isToday && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--color-accent)]" />
+                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--color-accent)]" />
                 )}
               </Link>
             );
