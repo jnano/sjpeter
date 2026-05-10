@@ -1,7 +1,7 @@
 import json
 import os
 import uuid
-from datetime import date, datetime
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ from typing import Optional
 from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.config import settings
-from app.models.parish import Parish, PastorPhoto
+from app.models.parish import Parish
 from app.models.admin import Admin
 
 PHOTO_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -42,20 +42,7 @@ class ParishUpdate(BaseModel):
     description: Optional[str] = None
     member_count: Optional[int] = None
     founded_at: Optional[date] = None
-    pastor_name: Optional[str] = None
-    pastor_appointed: Optional[str] = None
-    pastor_message: Optional[str] = None
     mass_schedule: Optional[MassSchedule] = None
-
-
-class PastorPhotoOut(BaseModel):
-    id: int
-    url: str
-    is_selected: bool
-    uploaded_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ParishOut(BaseModel):
@@ -72,10 +59,6 @@ class ParishOut(BaseModel):
     description: Optional[str]
     member_count: Optional[int]
     founded_at: Optional[date]
-    pastor_name: Optional[str]
-    pastor_appointed: Optional[str]
-    pastor_message: Optional[str]
-    pastor_photo_url: Optional[str]
     about_photo_url: Optional[str]
     mass_schedule: Optional[MassSchedule]
 
@@ -90,7 +73,7 @@ def _get_parish(db: Session) -> Parish:
     return parish
 
 
-def _parish_to_out(parish: Parish, selected_photo_url: Optional[str] = None) -> ParishOut:
+def _parish_to_out(parish: Parish) -> ParishOut:
     schedule = None
     if parish.mass_schedule:
         try:
@@ -111,10 +94,6 @@ def _parish_to_out(parish: Parish, selected_photo_url: Optional[str] = None) -> 
         description=parish.description,
         member_count=parish.member_count,
         founded_at=parish.founded_at,
-        pastor_name=parish.pastor_name,
-        pastor_appointed=parish.pastor_appointed,
-        pastor_message=parish.pastor_message,
-        pastor_photo_url=selected_photo_url or parish.pastor_photo_url,
         about_photo_url=parish.about_photo_url,
         mass_schedule=schedule,
     )
@@ -123,8 +102,7 @@ def _parish_to_out(parish: Parish, selected_photo_url: Optional[str] = None) -> 
 @router.get("/", response_model=ParishOut)
 def get_parish(db: Session = Depends(get_db)):
     parish = _get_parish(db)
-    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
-    return _parish_to_out(parish, selected.url if selected else None)
+    return _parish_to_out(parish)
 
 
 @router.put("/", response_model=ParishOut)
@@ -146,79 +124,7 @@ def update_parish(
 
     db.commit()
     db.refresh(parish)
-    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
-    return _parish_to_out(parish, selected.url if selected else None)
-
-
-# ──────────────────────────── 신부님 사진 관리 ────────────────────────────
-
-@router.get("/photos", response_model=list[PastorPhotoOut])
-def list_photos(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    return db.query(PastorPhoto).order_by(PastorPhoto.uploaded_at.desc()).all()
-
-
-@router.post("/photos/upload", response_model=PastorPhotoOut)
-async def upload_photo(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
-):
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if ext not in PHOTO_IMAGE_EXTS:
-        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
-
-    data = await file.read()
-    if len(data) > PHOTO_MAX_SIZE:
-        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
-
-    photo_dir = os.path.join(settings.UPLOAD_DIR, "pastor_photos")
-    os.makedirs(photo_dir, exist_ok=True)
-
-    filename = f"{uuid.uuid4().hex}{ext}"
-    with open(os.path.join(photo_dir, filename), "wb") as f:
-        f.write(data)
-
-    photo = PastorPhoto(url=f"/uploads/pastor_photos/{filename}", is_selected=False)
-    db.add(photo)
-    db.commit()
-    db.refresh(photo)
-    return photo
-
-
-@router.patch("/photos/{photo_id}/select", response_model=PastorPhotoOut)
-def select_photo(
-    photo_id: int,
-    db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
-):
-    photo = db.query(PastorPhoto).filter_by(id=photo_id).first()
-    if not photo:
-        raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
-
-    db.query(PastorPhoto).update({"is_selected": False})
-    photo.is_selected = True
-    db.commit()
-    db.refresh(photo)
-    return photo
-
-
-@router.delete("/photos/{photo_id}")
-def delete_photo(
-    photo_id: int,
-    db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
-):
-    photo = db.query(PastorPhoto).filter_by(id=photo_id).first()
-    if not photo:
-        raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
-
-    file_path = os.path.join(settings.UPLOAD_DIR, photo.url.removeprefix("/uploads/"))
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    db.delete(photo)
-    db.commit()
-    return {"ok": True}
+    return _parish_to_out(parish)
 
 
 # ──────────────────────────── 성당 소개 사진 (/about) ────────────────────────────
@@ -258,8 +164,7 @@ async def upload_about_photo(
     db.commit()
     db.refresh(parish)
 
-    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
-    return _parish_to_out(parish, selected.url if selected else None)
+    return _parish_to_out(parish)
 
 
 @router.delete("/about-photo", response_model=ParishOut)
@@ -280,5 +185,4 @@ def delete_about_photo(
     db.commit()
     db.refresh(parish)
 
-    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
-    return _parish_to_out(parish, selected.url if selected else None)
+    return _parish_to_out(parish)

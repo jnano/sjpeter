@@ -28,10 +28,10 @@ async function getVisions(): Promise<VisionOut[]> {
 
 async function getPastorName(): Promise<string | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/parish-staff/`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.pastor_name ?? null;
+    const staff: { role: string; name: string }[] = await res.json();
+    return staff.find((s) => s.role === "주임신부")?.name ?? null;
   } catch {
     return null;
   }

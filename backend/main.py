@@ -153,15 +153,13 @@ def _migrate_add_columns():
             )
         """))
 
-        # 신부님 사진 테이블
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS pastor_photos (
-                id SERIAL PRIMARY KEY,
-                url VARCHAR(500) NOT NULL,
-                is_selected BOOLEAN DEFAULT FALSE,
-                uploaded_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
+        # legacy 신부님 사진 테이블 / 컬럼 제거 (parish_staff로 이전됨)
+        conn.execute(text("DROP TABLE IF EXISTS pastor_photos"))
+        for legacy_col in ("pastor_name", "pastor_appointed", "pastor_message", "pastor_photo_url"):
+            try:
+                conn.execute(text(f"ALTER TABLE parishes DROP COLUMN IF EXISTS {legacy_col}"))
+            except Exception:
+                pass
 
         # 본당 가족 (parish_staff)
         conn.execute(text("""
@@ -256,7 +254,6 @@ def _migrate_add_columns():
         # parishes 추가 컬럼
         for col, col_type in [
             ("member_count", "INTEGER"),
-            ("pastor_appointed", "VARCHAR(100)"),
             ("about_photo_url", "VARCHAR(500)"),
         ]:
             try:

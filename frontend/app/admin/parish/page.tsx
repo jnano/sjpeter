@@ -9,13 +9,6 @@ const DAY_ORDER: Record<string, number> = {
   "목요일": 4, "금요일": 5, "토요일": 6, "공휴일": 7,
 };
 
-interface PastorPhoto {
-  id: number;
-  url: string;
-  is_selected: boolean;
-  uploaded_at: string;
-}
-
 interface MassEntry {
   day: string;
   time: string;
@@ -36,8 +29,6 @@ interface ParishInfo {
   fax: string | null;
   cafe_url: string | null;
   band_url: string | null;
-  pastor_name: string | null;
-  pastor_message: string | null;
   about_photo_url: string | null;
   mass_schedule: MassSchedule | null;
 }
@@ -68,10 +59,6 @@ export default function AdminParishPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  const [photos, setPhotos] = useState<PastorPhoto[]>([]);
-  const [photoLoading, setPhotoLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [aboutPhotoLoading, setAboutPhotoLoading] = useState(false);
   const aboutFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,59 +67,7 @@ export default function AdminParishPage() {
       setInfo(data);
       setSchedule({ ...DEFAULT_SCHEDULE, ...(data.mass_schedule ?? {}) });
     });
-    fetchPhotos();
   }, []);
-
-  function fetchPhotos() {
-    const token = getToken();
-    fetch(`${API}/api/parish/photos`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.ok ? r.json() : [])
-      .then((data: PastorPhoto[]) => setPhotos(data))
-      .catch(() => {});
-  }
-
-  async function uploadPhoto(file: File) {
-    setPhotoLoading(true);
-    const token = getToken();
-    const fd = new FormData();
-    fd.append("file", file);
-    try {
-      const res = await fetch(`${API}/api/parish/photos/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.detail || "업로드에 실패했습니다.");
-        return;
-      }
-      fetchPhotos();
-    } finally {
-      setPhotoLoading(false);
-    }
-  }
-
-  async function selectPhoto(id: number) {
-    const token = getToken();
-    const res = await fetch(`${API}/api/parish/photos/${id}/select`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) fetchPhotos();
-  }
-
-  async function deletePhoto(id: number) {
-    if (!confirm("사진을 삭제하시겠습니까?")) return;
-    const token = getToken();
-    const res = await fetch(`${API}/api/parish/photos/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) fetchPhotos();
-  }
 
   async function uploadAboutPhoto(file: File) {
     setAboutPhotoLoading(true);
@@ -272,7 +207,7 @@ export default function AdminParishPage() {
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">성당 정보 관리</h1>
-        <p className="text-sm text-gray-500 mt-1">미사 시간, 신부님 소개, 성당 연락처를 관리합니다.</p>
+        <p className="text-sm text-gray-500 mt-1">미사 시간, 연락처, 성당 소개 사진을 관리합니다. 신부님·수녀님 정보는 좌측 메뉴 &quot;본당 가족&quot;에서 관리합니다.</p>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
@@ -457,25 +392,6 @@ export default function AdminParishPage() {
           </div>
         </section>
 
-        {/* 신부님 정보 */}
-        <section className="p-6 bg-white border border-gray-200 rounded-xl space-y-4">
-          <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">신부님 소개</h2>
-          <div>
-            <label className="block text-sm font-medium mb-1">신부님 성함</label>
-            <input value={info.pastor_name ?? ""} onChange={(e) => setInfo((p) => p && ({ ...p, pastor_name: e.target.value }))} className={`w-full ${inputCls}`} placeholder="홍길동 신부" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">인사말</label>
-            <textarea
-              value={info.pastor_message ?? ""}
-              onChange={(e) => setInfo((p) => p && ({ ...p, pastor_message: e.target.value }))}
-              rows={6}
-              className={`w-full resize-none ${inputCls}`}
-              placeholder="신부님 인사말을 입력하세요..."
-            />
-          </div>
-        </section>
-
         <div className="flex justify-end">
           <button type="submit" disabled={loading} className="px-8 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
             {loading ? "저장 중..." : "저장"}
@@ -542,71 +458,6 @@ export default function AdminParishPage() {
             <p className="mt-1.5">권장 비율: <strong className="text-gray-700">4:3</strong> · 최대 10MB · JPG, PNG, WEBP, GIF</p>
           </div>
         </div>
-      </section>
-
-      {/* 신부님 사진 관리 */}
-      <section className="mt-8 p-6 bg-white border border-gray-200 rounded-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="font-semibold text-gray-800">신부님 사진</h2>
-            <p className="text-xs text-gray-400 mt-0.5">사진을 올린 후 클릭하면 대표 사진으로 설정됩니다.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={photoLoading}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {photoLoading ? "업로드 중..." : "사진 추가"}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) uploadPhoto(file);
-              e.target.value = "";
-            }}
-          />
-        </div>
-
-        {photos.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-8">등록된 사진이 없습니다.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
-                  photo.is_selected
-                    ? "border-blue-500 ring-2 ring-blue-300"
-                    : "border-transparent hover:border-gray-300"
-                }`}
-                onClick={() => !photo.is_selected && selectPhoto(photo.id)}
-              >
-                <img
-                  src={`${API}${photo.url}`}
-                  alt="신부님 사진"
-                  className="w-full aspect-square object-cover"
-                />
-                {photo.is_selected && (
-                  <div className="absolute top-1.5 left-1.5 bg-blue-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
-                    대표
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
-                  className="absolute top-1.5 right-1.5 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                >
-                  삭제
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
     </div>
   );

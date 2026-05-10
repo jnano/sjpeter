@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Text, Float, Boolean, DateTime
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Date, Text, Float
 from app.core.database import Base
 
 
@@ -17,21 +16,8 @@ class Parish(Base):
     founded_at = Column(Date)
     description = Column(Text)
     member_count = Column(Integer, nullable=True)            # 신자 수
-    pastor_name = Column(String(100))
-    pastor_appointed = Column(String(100))                   # 부임 시기 (예: 2023년 3월)
-    pastor_message = Column(Text)
-    pastor_photo_url = Column(String(500))
     about_photo_url = Column(String(500))  # /about 페이지 안내 옆 사진
     mass_schedule = Column(Text)  # JSON 문자열로 저장
     fax = Column(String(20))
     cafe_url = Column(String(500))
     band_url = Column(String(500))
-
-
-class PastorPhoto(Base):
-    __tablename__ = "pastor_photos"
-
-    id = Column(Integer, primary_key=True, index=True)
-    url = Column(String(500), nullable=False)
-    is_selected = Column(Boolean, default=False)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
