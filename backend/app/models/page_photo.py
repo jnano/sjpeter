@@ -1,6 +1,22 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from datetime import datetime
 from app.core.database import Base
+
+
+class PagePhotoSlug(Base):
+    """페이지 사진 슬러그 등록부. /admin/page-photos에서 관리."""
+
+    __tablename__ = "page_photo_slugs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(50), unique=True, nullable=False, index=True)
+    label = Column(String(100), nullable=False)
+    public_href = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    fallback_url = Column(String(500), nullable=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class PagePhoto(Base):

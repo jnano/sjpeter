@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
-import PageHeroSlideshow from "@/components/PageHeroSlideshow";
 
 export const metadata: Metadata = {
   title: "성 베드로",
@@ -132,17 +131,6 @@ export default function SaintPage() {
       />
 
       <SectionLayout group="about">
-        {/* 히어로 사진 슬라이드쇼 — md 이상에서 사이드바 사진과 동일한 세로 높이로 맞춤 */}
-        <PageHeroSlideshow
-          slug="saint"
-          fallbackSrc="/saints/st_peter.jpg"
-          fallbackAlt="성 베드로 사도 성상 — 천국의 열쇠를 들고 있는 모습"
-          className="relative w-full aspect-[3/1] md:aspect-auto md:h-[179px] lg:h-48 rounded-xl overflow-hidden border border-[var(--color-border)] mb-8"
-          imgStyle={{ objectFit: "cover" }}
-          sizes="(max-width: 768px) 100vw, 768px"
-          priority
-        />
-
         {/* 도입부 */}
         <p className="text-center text-sm text-[var(--color-text-muted)] italic mb-12">
           어부에서 교회의 반석으로 — 시몬 베드로의 이야기

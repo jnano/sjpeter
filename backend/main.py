@@ -236,6 +236,22 @@ def _migrate_add_columns():
         conn.execute(text(
             "ALTER TABLE page_photo_settings ADD COLUMN IF NOT EXISTS transition_duration_ms INTEGER DEFAULT 700 NOT NULL"
         ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS page_photo_slugs (
+                id SERIAL PRIMARY KEY,
+                slug VARCHAR(50) UNIQUE NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                public_href VARCHAR(200) NOT NULL,
+                description TEXT,
+                fallback_url VARCHAR(500),
+                sort_order INTEGER DEFAULT 0 NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_page_photo_slugs_sort ON page_photo_slugs(sort_order)"
+        ))
 
         # parishes 추가 컬럼
         for col, col_type in [
@@ -629,6 +645,27 @@ def _seed_initial_data():
                 ),
             ]
             db.add_all(pages)
+            db.commit()
+
+        # 페이지 사진 슬러그 초기 시드 (테이블이 비었을 때만)
+        from app.models.page_photo import PagePhotoSlug
+        if not db.query(PagePhotoSlug).first():
+            slug_seed = [
+                PagePhotoSlug(slug="saint", label="성 베드로", public_href="/saint",
+                              description="/saint 본문 상단 히어로 이미지",
+                              fallback_url="/saints/st_peter.jpg", sort_order=0),
+                PagePhotoSlug(slug="history", label="본당 연혁", public_href="/history",
+                              description="/history 상단 히어로 이미지", sort_order=1),
+                PagePhotoSlug(slug="vision", label="사목 지표", public_href="/vision",
+                              description="/vision 상단 히어로 이미지", sort_order=2),
+                PagePhotoSlug(slug="council", label="사목 위원회", public_href="/council",
+                              description="/council 상단 히어로 이미지", sort_order=3),
+                PagePhotoSlug(slug="groups", label="공동체", public_href="/groups",
+                              description="/groups 상단 히어로 이미지", sort_order=4),
+                PagePhotoSlug(slug="pastor", label="주임 신부", public_href="/pastor",
+                              description="/pastor 상단 히어로 이미지", sort_order=5),
+            ]
+            db.add_all(slug_seed)
             db.commit()
 
     finally:

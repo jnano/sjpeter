@@ -22,7 +22,7 @@ from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.admin import Admin
-from app.models.page_photo import PagePhoto, PagePhotoSetting
+from app.models.page_photo import PagePhoto, PagePhotoSetting, PagePhotoSlug
 
 router = APIRouter(prefix="/page-photos", tags=["page-photos"])
 
@@ -81,6 +81,38 @@ class ReorderBody(BaseModel):
     photo_ids: list[int]  # 새 순서대로 나열
 
 
+# ──────────────────────────── 슬러그 스키마 ────────────────────────────
+
+class PagePhotoSlugOut(BaseModel):
+    id: int
+    slug: str
+    label: str
+    public_href: str
+    description: Optional[str]
+    fallback_url: Optional[str]
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class PagePhotoSlugCreate(BaseModel):
+    slug: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    label: str = Field(..., min_length=1, max_length=100)
+    public_href: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = None
+    fallback_url: Optional[str] = None
+    sort_order: int = 0
+
+
+class PagePhotoSlugUpdate(BaseModel):
+    label: Optional[str] = Field(None, min_length=1, max_length=100)
+    public_href: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    fallback_url: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
 # ──────────────────────────── 헬퍼 ────────────────────────────
 
 def _get_or_create_settings(db: Session, slug: str) -> PagePhotoSetting:
@@ -106,6 +138,78 @@ def _ensure_image_file(file: UploadFile, data: bytes) -> str:
         raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
     return ext
 
+
+# ──────────────────────────── 슬러그 CRUD ────────────────────────────
+# 주의: 동적 /{slug} 라우트보다 먼저 정의되어야 한다.
+
+@router.get("/slugs", response_model=list[PagePhotoSlugOut])
+def list_slugs(db: Session = Depends(get_db)):
+    return (
+        db.query(PagePhotoSlug)
+        .order_by(PagePhotoSlug.sort_order.asc(), PagePhotoSlug.id.asc())
+        .all()
+    )
+
+
+@router.post("/slugs", response_model=PagePhotoSlugOut)
+def create_slug(
+    body: PagePhotoSlugCreate,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    if db.query(PagePhotoSlug).filter_by(slug=body.slug).first():
+        raise HTTPException(status_code=409, detail="이미 사용 중인 슬러그입니다.")
+    if body.slug == "slugs":
+        raise HTTPException(status_code=400, detail="'slugs'는 예약된 이름입니다.")
+    item = PagePhotoSlug(**body.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.patch("/slugs/{slug_id}", response_model=PagePhotoSlugOut)
+def update_slug(
+    slug_id: int,
+    body: PagePhotoSlugUpdate,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    item = db.query(PagePhotoSlug).filter_by(id=slug_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="슬러그를 찾을 수 없습니다.")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(item, k, v)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/slugs/{slug_id}")
+def delete_slug(
+    slug_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    item = db.query(PagePhotoSlug).filter_by(id=slug_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="슬러그를 찾을 수 없습니다.")
+
+    # 해당 슬러그의 모든 사진 파일 + DB 행 + 설정 정리
+    photos = db.query(PagePhoto).filter_by(page_slug=item.slug).all()
+    for p in photos:
+        _remove_uploaded_file(p.file_url)
+        db.delete(p)
+    setting = db.query(PagePhotoSetting).filter_by(page_slug=item.slug).first()
+    if setting:
+        db.delete(setting)
+
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
+
+
+# ──────────────────────────── 사진 헬퍼 ────────────────────────────
 
 def _remove_uploaded_file(file_url: str) -> None:
     if not file_url.startswith("/uploads/page_photos/"):
