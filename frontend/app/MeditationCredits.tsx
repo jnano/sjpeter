@@ -22,8 +22,8 @@ export default function MeditationCredits() {
       .catch(() => setMeditation(null));
   }, []);
 
-  // 한 사이클 57초 고정
-  const duration = 57;
+  // 한 사이클 50초 고정
+  const duration = 50;
 
   return (
     <Link
