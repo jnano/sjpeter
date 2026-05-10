@@ -1,85 +1,83 @@
 "use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function AdminNav() {
+interface Props {
+  onMenuClick?: () => void;
+}
+
+export default function AdminNav({ onMenuClick }: Props) {
+  const router = useRouter();
   const [isSuper, setIsSuper] = useState(false);
-  const [draftCount, setDraftCount] = useState(0);
+  const [username, setUsername] = useState<string>("");
 
   useEffect(() => {
     setIsSuper(localStorage.getItem("admin_is_super") === "true");
-    const token = localStorage.getItem("admin_token");
-    if (token) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/boards/drafts/count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((r) => r.ok ? r.json() : null)
-        .then((d) => { if (d) setDraftCount(d.count ?? 0); })
-        .catch(() => {});
-    }
+    setUsername(localStorage.getItem("admin_username") ?? "");
   }, []);
 
+  function handleLogout() {
+    if (!confirm("로그아웃하시겠습니까?")) return;
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_is_super");
+    localStorage.removeItem("admin_username");
+    document.cookie = "admin_authed=; Max-Age=0; path=/";
+    router.push("/admin");
+  }
+
   return (
-    <div className="bg-[var(--color-primary)] text-white">
-      {/* 상단 행: 로고 + 사용자 */}
-      <div className="px-4 py-3 flex items-center justify-between gap-4">
-        <Link href="/admin/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+    <header className="sticky top-0 z-30 h-14 bg-[var(--color-primary)] text-white flex items-center justify-between px-4 shadow-sm">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* 모바일 햄버거 */}
+        {onMenuClick && (
+          <button
+            type="button"
+            aria-label="메뉴"
+            onClick={onMenuClick}
+            className="md:hidden p-1.5 -ml-1.5 rounded hover:bg-white/10"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
+        <Link href="/admin/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0">
           <span className="text-[var(--color-accent-light)] text-xl">✝</span>
-          <span className="font-serif font-bold">관리자</span>
-          <span className="hidden sm:inline text-white/50 text-sm">— 세종성베드로성당</span>
+          <span className="font-serif font-bold whitespace-nowrap">관리자</span>
+          <span className="hidden md:inline text-white/50 text-sm whitespace-nowrap">— 세종성베드로성당</span>
         </Link>
-        <div className="flex items-center gap-2 min-w-0">
-          {isSuper && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">
-              최고관리자
-            </span>
-          )}
-        </div>
+        {isSuper && (
+          <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">
+            최고관리자
+          </span>
+        )}
       </div>
 
-      {/* 하단 행: 메뉴 링크 (모바일 가로 스크롤) */}
-      <div className="border-t border-white/10">
-        <div className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-hide">
-          <Link href="/admin/dashboard" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            대시보드
-          </Link>
-          <Link href="/admin/boards" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            게시판
-          </Link>
-          <Link href="/admin/content" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            콘텐츠
-          </Link>
-          <Link href="/admin/home-banner" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            홈 배너
-          </Link>
-          <Link href="/admin/parish-staff" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            본당 가족
-          </Link>
-          <Link href="/admin/page-photos" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            페이지 사진
-          </Link>
-          <Link href="/admin/members" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            회원
-          </Link>
-          <Link href="/admin/drafts" className="relative text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            임시저장
-            {draftCount > 0 && (
-              <span className="absolute top-1 right-0 bg-amber-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                {draftCount}
-              </span>
-            )}
-          </Link>
-          <Link href="/admin/event-mapping" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            분류 설정
-          </Link>
-          <Link href="/admin/settings" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            사이트 설정
-          </Link>
-          <Link href="/admin/docs" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
-            문서
-          </Link>
-        </div>
+      <div className="flex items-center gap-1.5">
+        {username && (
+          <span className="hidden sm:inline text-xs text-white/70 mr-2">{username}</span>
+        )}
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs px-2.5 py-1.5 rounded hover:bg-white/10 transition-colors whitespace-nowrap"
+          title="공개 사이트 보기"
+        >
+          공개 사이트 ↗
+        </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-xs px-2.5 py-1.5 rounded hover:bg-white/10 transition-colors whitespace-nowrap"
+        >
+          로그아웃
+        </button>
       </div>
-    </div>
+    </header>
   );
 }
