@@ -14,9 +14,15 @@ interface SlugStat {
 }
 
 const TRANSITION_KO: Record<string, string> = {
+  none: "전환 없음",
   fade: "페이드",
   slide: "슬라이드",
-  none: "전환 없음",
+  "slide-up": "슬라이드↑",
+  "slide-down": "슬라이드↓",
+  "zoom-in": "줌 인",
+  "zoom-out": "줌 아웃",
+  "ken-burns": "켄 번즈",
+  blur: "블러",
 };
 
 export default function AdminPagePhotosIndex() {

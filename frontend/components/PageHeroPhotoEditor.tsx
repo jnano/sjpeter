@@ -17,10 +17,28 @@ function getToken(): string | null {
 }
 
 const TRANSITION_LABEL: Record<TransitionMode, string> = {
+  none: "전환 없음 (첫 사진만)",
   fade: "페이드",
-  slide: "슬라이드",
-  none: "전환 없음(첫 사진만)",
+  slide: "슬라이드 (좌→우)",
+  "slide-up": "슬라이드 (위로)",
+  "slide-down": "슬라이드 (아래로)",
+  "zoom-in": "줌 인 (확대되며 등장)",
+  "zoom-out": "줌 아웃 (축소되며 등장)",
+  "ken-burns": "켄 번즈 (천천히 확대·이동)",
+  blur: "블러 페이드",
 };
+
+const TRANSITION_MODES: TransitionMode[] = [
+  "fade",
+  "ken-burns",
+  "zoom-in",
+  "zoom-out",
+  "blur",
+  "slide",
+  "slide-up",
+  "slide-down",
+  "none",
+];
 
 export default function PageHeroPhotoEditor({ slug, title, description }: Props) {
   const [photos, setPhotos] = useState<PagePhoto[]>([]);
@@ -28,6 +46,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
     page_slug: slug,
     transition_mode: "fade",
     interval_seconds: 5,
+    transition_duration_ms: 700,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -117,6 +136,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
       body: JSON.stringify({
         transition_mode: next.transition_mode,
         interval_seconds: next.interval_seconds,
+        transition_duration_ms: next.transition_duration_ms,
       }),
     });
     if (!res.ok) {
@@ -142,15 +162,15 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
       {saved && <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">{saved}</div>}
 
       {/* 슬라이드쇼 설정 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="sm:col-span-3">
           <label className="block text-sm font-medium mb-1">전환 방식</label>
           <select
             value={settings.transition_mode}
             onChange={(e) => saveSettings({ ...settings, transition_mode: e.target.value as TransitionMode })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {(["fade", "slide", "none"] as TransitionMode[]).map((m) => (
+            {TRANSITION_MODES.map((m) => (
               <option key={m} value={m}>{TRANSITION_LABEL[m]}</option>
             ))}
           </select>
@@ -166,7 +186,21 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
             onBlur={() => saveSettings(settings)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <p className="text-xs text-gray-400 mt-1">1~60초. 입력 후 다른 곳을 클릭하면 저장됩니다.</p>
+          <p className="text-xs text-gray-400 mt-1">한 사진이 보이는 시간(1~60초)</p>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium mb-1">전환 애니메이션 시간 (ms)</label>
+          <input
+            type="number"
+            min={100}
+            max={5000}
+            step={100}
+            value={settings.transition_duration_ms}
+            onChange={(e) => setSettings((p) => ({ ...p, transition_duration_ms: parseInt(e.target.value) || 100 }))}
+            onBlur={() => saveSettings(settings)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-xs text-gray-400 mt-1">페이드·슬라이드·줌·블러 동작 자체의 길이(100~5000ms). 700ms가 부드러움.</p>
         </div>
       </div>
 

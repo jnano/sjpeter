@@ -23,6 +23,8 @@ class PagePhotoSetting(Base):
     __tablename__ = "page_photo_settings"
 
     page_slug = Column(String(50), primary_key=True)
-    transition_mode = Column(String(20), default="fade", nullable=False)  # fade | slide | none
+    # fade | slide | slide-up | slide-down | zoom-in | zoom-out | ken-burns | blur | none
+    transition_mode = Column(String(20), default="fade", nullable=False)
     interval_seconds = Column(Integer, default=5, nullable=False)
+    transition_duration_ms = Column(Integer, default=700, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

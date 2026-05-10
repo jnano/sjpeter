@@ -28,8 +28,12 @@ router = APIRouter(prefix="/page-photos", tags=["page-photos"])
 
 PHOTO_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 PHOTO_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
-ALLOWED_TRANSITION = {"fade", "slide", "none"}
+ALLOWED_TRANSITION = {
+    "none", "fade", "slide", "slide-up", "slide-down",
+    "zoom-in", "zoom-out", "ken-burns", "blur",
+}
 DEFAULT_INTERVAL = 5
+DEFAULT_DURATION_MS = 700
 
 
 # ──────────────────────────── 스키마 ────────────────────────────
@@ -50,6 +54,7 @@ class PagePhotoSettingOut(BaseModel):
     page_slug: str
     transition_mode: str
     interval_seconds: int
+    transition_duration_ms: int
 
     class Config:
         from_attributes = True
@@ -67,8 +72,9 @@ class PagePhotoUpdate(BaseModel):
 
 
 class PagePhotoSettingUpdate(BaseModel):
-    transition_mode: str = Field(..., pattern="^(fade|slide|none)$")
+    transition_mode: str
     interval_seconds: int = Field(..., ge=1, le=60)
+    transition_duration_ms: int = Field(..., ge=100, le=5000)
 
 
 class ReorderBody(BaseModel):
@@ -84,6 +90,7 @@ def _get_or_create_settings(db: Session, slug: str) -> PagePhotoSetting:
             page_slug=slug,
             transition_mode="fade",
             interval_seconds=DEFAULT_INTERVAL,
+            transition_duration_ms=DEFAULT_DURATION_MS,
         )
         db.add(setting)
         db.commit()
@@ -207,9 +214,12 @@ def update_page_photo_settings(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ):
+    if body.transition_mode not in ALLOWED_TRANSITION:
+        raise HTTPException(status_code=400, detail=f"허용되지 않는 전환 방식입니다: {body.transition_mode}")
     setting = _get_or_create_settings(db, slug)
     setting.transition_mode = body.transition_mode
     setting.interval_seconds = body.interval_seconds
+    setting.transition_duration_ms = body.transition_duration_ms
     db.commit()
     db.refresh(setting)
     return setting

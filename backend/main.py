@@ -233,6 +233,9 @@ def _migrate_add_columns():
                 updated_at TIMESTAMP DEFAULT NOW() NOT NULL
             )
         """))
+        conn.execute(text(
+            "ALTER TABLE page_photo_settings ADD COLUMN IF NOT EXISTS transition_duration_ms INTEGER DEFAULT 700 NOT NULL"
+        ))
 
         # parishes 추가 컬럼
         for col, col_type in [

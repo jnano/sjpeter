@@ -5,7 +5,16 @@ import Image from "next/image";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
-export type TransitionMode = "fade" | "slide" | "none";
+export type TransitionMode =
+  | "none"
+  | "fade"
+  | "slide"
+  | "slide-up"
+  | "slide-down"
+  | "zoom-in"
+  | "zoom-out"
+  | "ken-burns"
+  | "blur";
 
 export interface PagePhoto {
   id: number;
@@ -19,6 +28,7 @@ export interface PagePhotoSettings {
   page_slug: string;
   transition_mode: TransitionMode;
   interval_seconds: number;
+  transition_duration_ms: number;
 }
 
 interface Props {
@@ -32,9 +42,11 @@ interface Props {
   priority?: boolean;
 }
 
+const SLIDE_MODES: TransitionMode[] = ["slide", "slide-up", "slide-down"];
+
 /**
  * 페이지(슬러그)별 히어로 영역 슬라이드쇼.
- * 사진이 0장이면 fallback, 1장이면 정적 이미지, 2장 이상이면 자동 전환.
+ * 사진 0장: fallback / 1장 또는 none: 정적 / 2장 이상: 모드별 자동 전환.
  */
 export default function PageHeroSlideshow({
   slug,
@@ -51,6 +63,7 @@ export default function PageHeroSlideshow({
     page_slug: slug,
     transition_mode: "fade",
     interval_seconds: 5,
+    transition_duration_ms: 700,
   });
   const [index, setIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -62,7 +75,7 @@ export default function PageHeroSlideshow({
       .then((data) => {
         if (cancelled || !data) return;
         setPhotos(data.photos ?? []);
-        setSettings(data.settings ?? settings);
+        if (data.settings) setSettings(data.settings);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -80,7 +93,7 @@ export default function PageHeroSlideshow({
     return () => clearInterval(id);
   }, [photos.length, settings.transition_mode, settings.interval_seconds]);
 
-  // 사진 0장: fallback
+  // 0장: fallback
   if (loaded && photos.length === 0) {
     if (!fallbackSrc) return null;
     return (
@@ -98,7 +111,7 @@ export default function PageHeroSlideshow({
     );
   }
 
-  // 1장이거나 transition=none: 정적
+  // 1장 또는 none: 정적
   if (photos.length === 1 || settings.transition_mode === "none") {
     const p = photos[0];
     if (!p) return <div className={className} />;
@@ -117,22 +130,32 @@ export default function PageHeroSlideshow({
     );
   }
 
-  // 2장 이상: fade or slide
-  if (settings.transition_mode === "slide") {
+  const duration = settings.transition_duration_ms;
+
+  // 슬라이드 계열: 캐러셀 (가로/세로 translate)
+  if (SLIDE_MODES.includes(settings.transition_mode)) {
+    const isVertical = settings.transition_mode !== "slide";
+    const direction = settings.transition_mode === "slide-down" ? 1 : -1;
     return (
       <div className={`${className ?? ""} relative overflow-hidden`}>
         <div
-          className="flex h-full transition-transform duration-700 ease-in-out"
+          className="absolute inset-0"
           style={{
-            width: `${photos.length * 100}%`,
-            transform: `translateX(-${(index * 100) / photos.length}%)`,
+            transition: `transform ${duration}ms ease-in-out`,
+            transform: isVertical
+              ? `translateY(${direction * index * 100}%)`
+              : `translateX(-${index * 100}%)`,
           }}
         >
-          {photos.map((p) => (
+          {photos.map((p, i) => (
             <div
               key={p.id}
-              className="relative h-full"
-              style={{ width: `${100 / photos.length}%`, flexShrink: 0 }}
+              className="absolute inset-0"
+              style={{
+                transform: isVertical
+                  ? `translateY(${i * 100 * direction * -1}%)`
+                  : `translateX(${i * 100}%)`,
+              }}
             >
               <Image
                 src={`${API}${p.file_url}`}
@@ -141,7 +164,7 @@ export default function PageHeroSlideshow({
                 className={imgClassName ?? "object-cover"}
                 style={imgStyle}
                 sizes={sizes}
-                priority={priority}
+                priority={priority && i === 0}
               />
             </div>
           ))}
@@ -150,21 +173,40 @@ export default function PageHeroSlideshow({
     );
   }
 
-  // fade
+  // 페이드 계열: 스택 (fade / zoom-in / zoom-out / ken-burns / blur)
+  // 인접한 두 장만 렌더(부담 ↓), 켄번즈는 active 사진에 CSS animation
   return (
     <div className={`${className ?? ""} relative`}>
-      {photos.map((p, i) => (
-        <Image
-          key={p.id}
-          src={`${API}${p.file_url}`}
-          alt={p.alt ?? fallbackAlt ?? "사진"}
-          fill
-          className={`${imgClassName ?? "object-cover"} transition-opacity duration-700 ease-in-out`}
-          style={{ ...imgStyle, opacity: i === index ? 1 : 0 }}
-          sizes={sizes}
-          priority={priority && i === 0}
-        />
-      ))}
+      {photos.map((p, i) => {
+        const active = i === index;
+        const style: React.CSSProperties = {
+          ...imgStyle,
+          opacity: active ? 1 : 0,
+          transition: `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out, filter ${duration}ms ease-in-out`,
+        };
+        if (settings.transition_mode === "zoom-in") {
+          style.transform = active ? "scale(1)" : "scale(0.92)";
+        } else if (settings.transition_mode === "zoom-out") {
+          style.transform = active ? "scale(1)" : "scale(1.1)";
+        } else if (settings.transition_mode === "blur") {
+          style.filter = active ? "blur(0px)" : "blur(10px)";
+        } else if (settings.transition_mode === "ken-burns" && active) {
+          // 한 사진이 표시되는 시간 = 전환 간격, 켄 번즈는 그 동안 천천히 진행
+          style.animation = `ken-burns ${Math.max(1, settings.interval_seconds + duration / 1000)}s ease-out forwards`;
+        }
+        return (
+          <Image
+            key={p.id}
+            src={`${API}${p.file_url}`}
+            alt={p.alt ?? fallbackAlt ?? "사진"}
+            fill
+            className={imgClassName ?? "object-cover"}
+            style={style}
+            sizes={sizes}
+            priority={priority && i === 0}
+          />
+        );
+      })}
     </div>
   );
 }
