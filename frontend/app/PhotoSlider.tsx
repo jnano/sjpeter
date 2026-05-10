@@ -99,7 +99,7 @@ export default function PhotoSlider() {
         ))}
         {/* 캡션 그라디언트 */}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent p-4 sm:p-5">
-          <p className="text-[10px] uppercase tracking-widest text-white/70 mb-1">
+          <p className="text-[10.3px] uppercase tracking-widest text-white/70 mb-1">
             {current.source === "events" ? "행사 사진" : "전례 사진"}
           </p>
           <p className="text-white font-serif font-bold text-base sm:text-lg leading-tight line-clamp-1">

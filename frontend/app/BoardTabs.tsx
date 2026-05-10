@@ -41,7 +41,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
         ))}
         <Link
           href={current.moreHref}
-          className="ml-auto self-center pr-4 text-[10.5px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+          className="ml-auto self-center pr-4 text-[10.8px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
         >
           더 보기 →
         </Link>
@@ -49,7 +49,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
 
       {/* 게시글 목록 */}
       {current.items.length === 0 ? (
-        <p className="text-[11px] text-[var(--color-text-muted)] text-center py-10">
+        <p className="text-[11.3px] text-[var(--color-text-muted)] text-center py-10">
           등록된 글이 없습니다.
         </p>
       ) : (
@@ -77,7 +77,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
                 >
                   {item.title}
                 </span>
-                <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">
+                <span className="text-[10.3px] text-[var(--color-text-muted)] shrink-0">
                   {new Date(item.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
                 </span>
               </Link>

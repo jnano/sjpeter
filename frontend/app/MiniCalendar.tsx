@@ -97,7 +97,7 @@ export default function MiniCalendar() {
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
-              className={`text-center text-[10px] font-medium py-1 ${
+              className={`text-center text-[10.3px] font-medium py-1 ${
                 i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
               }`}
             >
@@ -160,7 +160,7 @@ export default function MiniCalendar() {
                   <span className="text-[var(--color-text)] truncate flex-1">{e.title}</span>
                   {e.event_kind && (
                     <span
-                      className={`text-[9px] px-1 rounded shrink-0 ${
+                      className={`text-[9.3px] px-1 rounded shrink-0 ${
                         e.event_kind === "행사"
                           ? "bg-blue-50 text-blue-600"
                           : "bg-green-50 text-green-600"
@@ -176,7 +176,7 @@ export default function MiniCalendar() {
         )}
         <Link
           href="/calendar"
-          className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+          className="inline-block mt-2 text-[11.3px] font-medium text-[var(--color-primary)] hover:underline"
         >
           전체 일정 →
         </Link>
