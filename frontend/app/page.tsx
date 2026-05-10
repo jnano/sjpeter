@@ -3,6 +3,7 @@ import Image from "next/image";
 import MiniCalendar from "./MiniCalendar";
 import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
+import MeditationCredits from "./MeditationCredits";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -99,12 +100,10 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
 }
 
 const QUICK_LINKS = [
-  { href: "/bulletin", label: "주보 보기", icon: "📖" },
   { href: "/about", label: "성당 안내", icon: "⛪" },
-  { href: "/calendar", label: "행사 일정", icon: "📅" },
-  { href: "/info", label: "미사 시간", icon: "⏰" },
-  { href: "/word", label: "오늘의 복음", icon: "✝️" },
-  { href: "/boards/notice", label: "공지·알림", icon: "📢" },
+  { href: "/groups", label: "분과와 단체", icon: "🤝" },
+  { href: "/vision", label: "사목 방향", icon: "🎯" },
+  { href: "/bulletin", label: "주보 보기", icon: "📖" },
 ];
 
 const CONTAINER = "max-w-5xl mx-auto px-4";
@@ -266,7 +265,7 @@ export default async function HomePage() {
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-6">
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5 sm:gap-3">
               {QUICK_LINKS.map((item) => (
                 <Link
                   key={item.href}
@@ -279,6 +278,9 @@ export default async function HomePage() {
                   </span>
                 </Link>
               ))}
+              <div className="col-span-2">
+                <MeditationCredits />
+              </div>
             </div>
           </div>
         </div>
