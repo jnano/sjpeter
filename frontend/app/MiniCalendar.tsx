@@ -104,12 +104,12 @@ export default function MiniCalendar() {
               <Link
                 key={i}
                 href="/calendar"
-                className="relative aspect-square flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
+                className="relative h-7 flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
               >
                 <span
-                  className={`text-[12px] ${
+                  className={`text-[11.5px] ${
                     isToday
-                      ? "bg-[var(--color-primary)] text-white w-6 h-6 rounded-full flex items-center justify-center font-bold"
+                      ? "bg-[var(--color-primary)] text-white w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10.5px]"
                       : dow === 0
                       ? "text-red-500"
                       : dow === 6
@@ -120,7 +120,7 @@ export default function MiniCalendar() {
                   {day}
                 </span>
                 {hasEvent && !isToday && (
-                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--color-accent)]" />
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--color-accent)]" />
                 )}
               </Link>
             );
