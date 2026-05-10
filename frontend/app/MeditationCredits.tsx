@@ -22,9 +22,8 @@ export default function MeditationCredits() {
       .catch(() => setMeditation(null));
   }, []);
 
-  // 텍스트 길이에 비례한 흐름 속도 (긴 글일수록 느리게)
-  const bodyLen = (meditation?.body ?? "").length;
-  const duration = Math.max(45, Math.min(120, bodyLen * 0.3));
+  // 한 사이클 57초 고정
+  const duration = 57;
 
   return (
     <Link
