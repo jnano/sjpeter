@@ -92,11 +92,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 영화 엔딩크레딧 — 위로 흐르는 텍스트.
-   매 사이클 시작·끝 3% 구간에 opacity 페이드 추가 → 루프 리셋 시 깜빡 없이
-   서서히 등장/사라짐. */
+   페이드 1% (~0.7초)로 즉시 선명해지면서 루프 리셋 깜빡임은 가림. */
 @keyframes credits-scroll {
   0%   { transform: translateY(0);     opacity: 0; }
-  3%   { transform: translateY(-3%);   opacity: 1; }
-  97%  { transform: translateY(-97%);  opacity: 1; }
+  1%   { transform: translateY(-1%);   opacity: 1; }
+  99%  { transform: translateY(-99%);  opacity: 1; }
   100% { transform: translateY(-100%); opacity: 0; }
 }
