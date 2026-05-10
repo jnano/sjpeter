@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 
 export interface SidebarItem {
   href: string;
@@ -18,6 +19,8 @@ interface Props {
 
 export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, items }: Props) {
   const pathname = usePathname();
+  const archiveCounts = useArchiveCounts();
+  const visibleItems = items.filter((it) => !isArchiveLinkHidden(it.href, archiveCounts));
 
   return (
     <aside className="w-full md:w-56 lg:w-60 shrink-0">
@@ -34,7 +37,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, items }
       )}
       <nav>
         <ul>
-          {items.map((it) => {
+          {visibleItems.map((it) => {
             const active = pathname === it.href;
             return (
               <li key={it.href} className="border-b border-[var(--color-border)] last:border-b-0">

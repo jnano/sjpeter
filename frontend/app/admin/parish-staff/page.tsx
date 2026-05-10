@@ -173,6 +173,67 @@ export default function AdminParishStaffPage() {
     }
   };
 
+  // 역대 사목자로 이전 모달 상태
+  const today = new Date().toISOString().slice(0, 10);
+  const [archiveModal, setArchiveModal] = useState<{
+    appointed_at: string;
+    resigned_at: string;
+    bio: string;
+  } | null>(null);
+  const [archiving, setArchiving] = useState(false);
+
+  const onActiveToggle = (next: boolean) => {
+    if (next) {
+      // 다시 활성화는 단순 토글
+      setEditing({ ...editing, is_active: true });
+      return;
+    }
+    // 비활성화 시도: 사무장이 아니면 역대 사목자 이전 모달
+    if (editing.role === "사무장") {
+      setEditing({ ...editing, is_active: false });
+      return;
+    }
+    if (editing.id === 0) {
+      setError("등록 후 현역 해제가 가능합니다.");
+      return;
+    }
+    setArchiveModal({
+      appointed_at: "",
+      resigned_at: today,
+      bio: editing.career_items.trim(),
+    });
+  };
+
+  const submitArchive = async () => {
+    if (!archiveModal) return;
+    setArchiving(true);
+    setError(null);
+    try {
+      const r = await fetch(`${API}/api/parish-staff/${editing.id}/move-to-archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({
+          appointed_at: archiveModal.appointed_at || null,
+          resigned_at: archiveModal.resigned_at || null,
+          bio: archiveModal.bio.trim() || null,
+        }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.detail || "이전에 실패했습니다.");
+      }
+      setArchiveModal(null);
+      setEditing(EMPTY_FORM);
+      setPhotoFile(null);
+      setCurrentPhoto(null);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "오류");
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <header className="mb-6">
@@ -299,16 +360,33 @@ export default function AdminParishStaffPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
             />
           </Field>
-          <Field label="공개 여부">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={editing.is_active}
-                onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })}
-              />
-              공개
-            </label>
-          </Field>
+          {editing.role !== "사무장" && (
+            <Field label="현역 여부">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editing.is_active}
+                  onChange={(e) => onActiveToggle(e.target.checked)}
+                />
+                현역
+              </label>
+              <p className="text-xs text-gray-400 mt-1">
+                체크 해제 시 역대 사목자로 이전합니다. (이임일·부임일 입력 모달 표시)
+              </p>
+            </Field>
+          )}
+          {editing.role === "사무장" && (
+            <Field label="공개 여부">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editing.is_active}
+                  onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })}
+                />
+                공개
+              </label>
+            </Field>
+          )}
         </div>
 
         {error && (
@@ -323,6 +401,71 @@ export default function AdminParishStaffPage() {
           </button>
         </div>
       </section>
+
+      {/* 역대 사목자 이전 모달 */}
+      {archiveModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">역대 사목자로 이전</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                <strong>{editing.name}</strong> ({editing.role})을(를) 역대 사목자 목록으로 이전합니다.
+                이전 후 본당 가족 목록에서는 사라지고 /pastors 페이지에 표시됩니다.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="block text-xs font-medium text-gray-700 mb-1">부임일</span>
+                <input
+                  type="date"
+                  value={archiveModal.appointed_at}
+                  onChange={(e) => setArchiveModal({ ...archiveModal, appointed_at: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="block text-xs font-medium text-gray-700 mb-1">이임일</span>
+                <input
+                  type="date"
+                  value={archiveModal.resigned_at}
+                  onChange={(e) => setArchiveModal({ ...archiveModal, resigned_at: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                />
+                <span className="text-xs text-gray-400 mt-1 block">기본값은 오늘. 비워 두면 표시되지 않음.</span>
+              </label>
+              <label className="block text-sm">
+                <span className="block text-xs font-medium text-gray-700 mb-1">약력 (이전 후 표시)</span>
+                <textarea
+                  rows={6}
+                  value={archiveModal.bio}
+                  onChange={(e) => setArchiveModal({ ...archiveModal, bio: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono"
+                />
+                <span className="text-xs text-gray-400 mt-1 block">현재 카드의 약력이 자동으로 채워집니다. 필요시 수정하세요.</span>
+              </label>
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => { setArchiveModal(null); setError(null); }}
+                disabled={archiving}
+                className="px-4 py-2 border border-gray-300 text-sm rounded hover:bg-gray-50 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={submitArchive}
+                disabled={archiving}
+                className="px-4 py-2 bg-gray-900 text-white text-sm rounded hover:bg-black disabled:opacity-50"
+              >
+                {archiving ? "이전 중..." : "이전하기"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 목록 */}
       <section>

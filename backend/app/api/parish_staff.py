@@ -9,15 +9,16 @@
 - POST /api/parish-staff/{id}/photo — 사진 업로드
 - DELETE /api/parish-staff/{id} — 삭제
 - PUT /api/parish-staff/reorder — 순서 재배치
+- POST /api/parish-staff/{id}/move-to-archive — 역대 사목자로 이전 (사무장 제외)
 """
 import os
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import asc
+from sqlalchemy import asc, text
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_admin
@@ -192,6 +193,53 @@ def delete_photo(
     db.commit()
     db.refresh(staff)
     return staff
+
+
+class MoveToArchiveIn(BaseModel):
+    appointed_at: Optional[date] = None
+    resigned_at: Optional[date] = None
+    bio: Optional[str] = None
+
+
+@router.post("/{staff_id}/move-to-archive")
+def move_to_archive(
+    staff_id: int,
+    body: MoveToArchiveIn,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """본당 가족을 역대 사목자(parish_pastors)로 이전.
+
+    사무장은 이전 대상이 아님. 사진 URL은 그대로 복사하므로 파일은 삭제하지 않는다.
+    parish_staff 레코드는 이전 후 삭제된다.
+    """
+    staff = db.query(ParishStaff).filter(ParishStaff.id == staff_id).first()
+    if not staff:
+        raise HTTPException(status_code=404, detail="찾을 수 없습니다.")
+    if staff.role == "사무장":
+        raise HTTPException(status_code=400, detail="사무장은 역대 사목자로 이전할 수 없습니다.")
+
+    bio = body.bio if body.bio is not None else staff.career_items
+    db.execute(
+        text(
+            "INSERT INTO parish_pastors "
+            "(name, title, appointed_at, resigned_at, photo_url, bio, sort_order) "
+            "VALUES (:name, :title, :app, :res, :photo, :bio, :ord)"
+        ),
+        {
+            "name": staff.name,
+            "title": staff.role,
+            "app": body.appointed_at,
+            "res": body.resigned_at,
+            "photo": staff.photo_url,
+            "bio": bio,
+            "ord": 0,
+        },
+    )
+    # 사진 URL을 새 record에서 참조하므로 파일은 삭제하지 않고 staff만 삭제
+    db.delete(staff)
+    db.commit()
+    return {"ok": True}
 
 
 @router.delete("/{staff_id}", status_code=204)

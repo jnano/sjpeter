@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
+import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 
 const navGroups = [
   {
@@ -71,6 +72,14 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isAdminAuthed, setIsAdminAuthed] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const archiveCounts = useArchiveCounts();
+
+  const visibleNavGroups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => !isArchiveLinkHidden(i.href, archiveCounts)),
+    }))
+    .filter((g) => g.items.length > 0);
 
   useEffect(() => {
     setIsAdminAuthed(document.cookie.split(";").some((c) => c.trim().startsWith("admin_authed=")));
@@ -221,7 +230,7 @@ export default function Header() {
 
           {/* 데스크톱 네비게이션 */}
           <nav className="hidden md:flex items-center h-full">
-            {navGroups.map((group, idx) => (
+            {visibleNavGroups.map((group, idx) => (
               <div
                 key={group.label}
                 className="relative h-full flex items-center"
@@ -345,7 +354,7 @@ export default function Header() {
         {/* 모바일 메뉴 — 그룹 아코디언 */}
         {menuOpen && (
           <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
-            {navGroups.map((group, idx) => (
+            {visibleNavGroups.map((group, idx) => (
               <div key={group.label}>
                 <button
                   onClick={() => setOpenGroup(openGroup === idx ? null : idx)}
