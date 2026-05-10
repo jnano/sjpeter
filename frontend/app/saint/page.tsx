@@ -132,8 +132,8 @@ export default function SaintPage() {
       />
 
       <SectionLayout group="about">
-        {/* 성 베드로 성상 — 본문 상단 가로 이미지 (가로 100% / 세로 50% 축소) */}
-        <div className="relative w-full aspect-[3/1] rounded-xl overflow-hidden border border-[var(--color-border)] mb-8">
+        {/* 성 베드로 성상 — md 이상에서 사이드바 사진과 동일한 세로 높이로 맞춤 */}
+        <div className="relative w-full aspect-[3/1] md:aspect-auto md:h-[179px] lg:h-48 rounded-xl overflow-hidden border border-[var(--color-border)] mb-8">
           <Image
             src="/saints/st_peter.jpg"
             alt="성 베드로 사도 성상 — 천국의 열쇠를 들고 있는 모습"
