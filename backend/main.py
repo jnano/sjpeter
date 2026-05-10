@@ -161,6 +161,14 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # parish_pastors: 신부님/수녀님 구분 컬럼
+        try:
+            conn.execute(text(
+                "ALTER TABLE parish_pastors ADD COLUMN IF NOT EXISTS category VARCHAR(20) NOT NULL DEFAULT 'priest'"
+            ))
+        except Exception:
+            pass
+
         # 본당 가족 (parish_staff)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS parish_staff (

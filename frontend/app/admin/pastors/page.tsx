@@ -13,11 +13,15 @@ interface Pastor {
   photo_url: string | null;
   bio: string | null;
   sort_order: number;
+  category: "priest" | "sister";
 }
 
 const EMPTY: Omit<Pastor, "id" | "photo_url"> = {
   name: "", title: "주임신부", appointed_at: "", resigned_at: "", bio: "", sort_order: 0,
+  category: "priest",
 };
+
+const CATEGORY_LABEL: Record<string, string> = { priest: "신부님", sister: "수녀님" };
 
 function getToken() {
   return typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
@@ -48,7 +52,7 @@ export default function AdminPastorsPage() {
     setForm({ name: p.name, title: p.title,
       appointed_at: p.appointed_at?.slice(0, 10) ?? "",
       resigned_at: p.resigned_at?.slice(0, 10) ?? "",
-      bio: p.bio ?? "", sort_order: p.sort_order });
+      bio: p.bio ?? "", sort_order: p.sort_order, category: p.category });
     setEditId(p.id); setMsg(null); setShowForm(true);
   }
 
@@ -94,7 +98,7 @@ export default function AdminPastorsPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)]">역대 사목자 관리</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-primary)]">역대 신부님·수녀님 관리</h1>
         <button onClick={openCreate} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium">
           + 등록
         </button>
@@ -111,6 +115,26 @@ export default function AdminPastorsPage() {
           <h2 className="font-semibold text-[var(--color-primary)]">{editId ? "수정" : "새 사목자 등록"}</h2>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
+              <label className="block text-xs font-medium mb-1">구분 *</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as "priest" | "sister" }))}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]"
+              >
+                <option value="priest">역대 신부님 (/pastors)</option>
+                <option value="sister">역대 수녀님 (/sisters)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">정렬 순서</label>
+              <input
+                type="number"
+                value={form.sort_order}
+                onChange={(e) => setForm((p) => ({ ...p, sort_order: parseInt(e.target.value) || 0 }))}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]"
+              />
+            </div>
+            <div>
               <label className="block text-xs font-medium mb-1">이름 *</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required
                 className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]" />
@@ -119,7 +143,7 @@ export default function AdminPastorsPage() {
               <label className="block text-xs font-medium mb-1">직함</label>
               <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
                 className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]"
-                placeholder="주임신부, 보좌신부…" />
+                placeholder="주임신부, 보좌신부, 수녀…" />
             </div>
             <div>
               <label className="block text-xs font-medium mb-1">부임일</label>
@@ -159,8 +183,16 @@ export default function AdminPastorsPage() {
             </div>
             {/* 정보 */}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[var(--color-primary)]">{p.name}
-                <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">{p.title}</span>
+              <p className="font-semibold text-[var(--color-primary)] flex items-center gap-2 flex-wrap">
+                <span>{p.name}</span>
+                <span className="text-xs font-normal text-[var(--color-text-muted)]">{p.title}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  p.category === "sister"
+                    ? "bg-pink-100 text-pink-700"
+                    : "bg-blue-100 text-blue-700"
+                }`}>
+                  {CATEGORY_LABEL[p.category] ?? p.category}
+                </span>
               </p>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                 {p.appointed_at?.slice(0, 7) ?? "??"} ~ {p.resigned_at?.slice(0, 7) ?? "현재"}

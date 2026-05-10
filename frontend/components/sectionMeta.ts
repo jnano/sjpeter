@@ -6,7 +6,8 @@ export const ABOUT_SIDEBAR_ITEMS: SidebarItem[] = [
   { href: "/pastor", label: "주임신부" },
   { href: "/saint", label: "수호성인 성 베드로" },
   { href: "/history", label: "본당 연혁" },
-  { href: "/pastors", label: "역대 사목자" },
+  { href: "/pastors", label: "역대 신부님" },
+  { href: "/sisters", label: "역대 수녀님" },
   { href: "/priests", label: "본당 출신 사제" },
   { href: "/info", label: "찾아오시는 길" },
 ];

@@ -32,7 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: "👤",
     items: [
       { href: "/admin/parish-staff", label: "본당 가족" },
-      { href: "/admin/pastors", label: "역대 사목자" },
+      { href: "/admin/pastors", label: "역대 신부님·수녀님" },
       { href: "/admin/priests", label: "본당 출신 사제" },
     ],
   },

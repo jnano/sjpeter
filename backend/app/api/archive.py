@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 from datetime import date
 import os, uuid
 from app.core.database import get_db
@@ -10,6 +10,9 @@ from app.core.auth import get_current_admin
 from app.core.config import settings
 
 router = APIRouter(prefix="/archive", tags=["archive"])
+
+ALLOWED_PASTOR_CATEGORIES = ("priest", "sister")
+PastorCategory = Literal["priest", "sister"]
 
 
 # ── 공통 헬퍼 ──────────────────────────────────────────────
@@ -43,6 +46,7 @@ class PastorIn(BaseModel):
     resigned_at: Optional[date] = None
     bio: Optional[str] = None
     sort_order: int = 0
+    category: PastorCategory = "priest"
 
 
 class PastorOut(BaseModel):
@@ -54,6 +58,7 @@ class PastorOut(BaseModel):
     photo_url: Optional[str]
     bio: Optional[str]
     sort_order: int
+    category: str
 
 
 def _pastor_row(r) -> dict:
@@ -61,24 +66,36 @@ def _pastor_row(r) -> dict:
         "id": r.id, "name": r.name, "title": r.title,
         "appointed_at": r.appointed_at, "resigned_at": r.resigned_at,
         "photo_url": r.photo_url, "bio": r.bio, "sort_order": r.sort_order,
+        "category": getattr(r, "category", "priest") or "priest",
     }
 
 
 @router.get("/pastors", response_model=list[PastorOut])
-def list_pastors(db: Session = Depends(get_db)):
-    rows = db.execute(text(
-        "SELECT * FROM parish_pastors ORDER BY sort_order DESC, appointed_at DESC NULLS LAST"
-    )).fetchall()
+def list_pastors(
+    category: Optional[PastorCategory] = Query(None, description="priest|sister 필터, 미지정 시 전체"),
+    db: Session = Depends(get_db),
+):
+    if category:
+        rows = db.execute(text(
+            "SELECT * FROM parish_pastors WHERE category=:cat "
+            "ORDER BY sort_order DESC, appointed_at DESC NULLS LAST"
+        ), {"cat": category}).fetchall()
+    else:
+        rows = db.execute(text(
+            "SELECT * FROM parish_pastors "
+            "ORDER BY sort_order DESC, appointed_at DESC NULLS LAST"
+        )).fetchall()
     return [_pastor_row(r) for r in rows]
 
 
 @router.post("/pastors", response_model=PastorOut, status_code=201)
 def create_pastor(body: PastorIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
     row = db.execute(text(
-        "INSERT INTO parish_pastors (name, title, appointed_at, resigned_at, bio, sort_order) "
-        "VALUES (:name, :title, :app, :res, :bio, :ord) RETURNING *"
+        "INSERT INTO parish_pastors (name, title, appointed_at, resigned_at, bio, sort_order, category) "
+        "VALUES (:name, :title, :app, :res, :bio, :ord, :cat) RETURNING *"
     ), {"name": body.name, "title": body.title, "app": body.appointed_at,
-        "res": body.resigned_at, "bio": body.bio, "ord": body.sort_order}).fetchone()
+        "res": body.resigned_at, "bio": body.bio, "ord": body.sort_order,
+        "cat": body.category}).fetchone()
     db.commit()
     return _pastor_row(row)
 
@@ -106,9 +123,10 @@ async def upload_pastor_photo(
 def update_pastor(pastor_id: int, body: PastorIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
     row = db.execute(text(
         "UPDATE parish_pastors SET name=:name, title=:title, appointed_at=:app, "
-        "resigned_at=:res, bio=:bio, sort_order=:ord WHERE id=:id RETURNING *"
+        "resigned_at=:res, bio=:bio, sort_order=:ord, category=:cat WHERE id=:id RETURNING *"
     ), {"name": body.name, "title": body.title, "app": body.appointed_at,
-        "res": body.resigned_at, "bio": body.bio, "ord": body.sort_order, "id": pastor_id}).fetchone()
+        "res": body.resigned_at, "bio": body.bio, "ord": body.sort_order,
+        "cat": body.category, "id": pastor_id}).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="사목자를 찾을 수 없습니다.")
     db.commit()

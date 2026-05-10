@@ -219,12 +219,20 @@ def move_to_archive(
     if staff.role == "사무장":
         raise HTTPException(status_code=400, detail="사무장은 역대 사목자로 이전할 수 없습니다.")
 
+    # role → category 매핑: 주임/보좌신부 → priest, 수녀 → sister
+    if staff.role == "수녀":
+        category = "sister"
+    elif staff.role in ("주임신부", "보좌신부"):
+        category = "priest"
+    else:
+        raise HTTPException(status_code=400, detail=f"알 수 없는 역할입니다: {staff.role}")
+
     bio = body.bio if body.bio is not None else staff.career_items
     db.execute(
         text(
             "INSERT INTO parish_pastors "
-            "(name, title, appointed_at, resigned_at, photo_url, bio, sort_order) "
-            "VALUES (:name, :title, :app, :res, :photo, :bio, :ord)"
+            "(name, title, appointed_at, resigned_at, photo_url, bio, sort_order, category) "
+            "VALUES (:name, :title, :app, :res, :photo, :bio, :ord, :cat)"
         ),
         {
             "name": staff.name,
@@ -234,6 +242,7 @@ def move_to_archive(
             "photo": staff.photo_url,
             "bio": bio,
             "ord": 0,
+            "cat": category,
         },
     )
     # 사진 URL을 새 record에서 참조하므로 파일은 삭제하지 않고 staff만 삭제

@@ -4,13 +4,13 @@ import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
-  title: "역대 신부님",
-  description: "세종성베드로성당 역대 신부님 소개",
+  title: "역대 수녀님",
+  description: "세종성베드로성당을 거쳐 가신 수녀님들",
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-interface Pastor {
+interface Sister {
   id: number;
   name: string;
   title: string;
@@ -19,14 +19,17 @@ interface Pastor {
   photo_url: string | null;
   bio: string | null;
   sort_order: number;
+  category: string;
 }
 
-async function getPastors(): Promise<Pastor[]> {
+async function getSisters(): Promise<Sister[]> {
   try {
-    const res = await fetch(`${API}/api/archive/pastors?category=priest`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/archive/pastors?category=sister`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return res.json();
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function formatPeriod(appointed: string | null, resigned: string | null): string {
@@ -37,31 +40,31 @@ function formatPeriod(appointed: string | null, resigned: string | null): string
   return "기간 미상";
 }
 
-export default async function PastorsPage() {
-  const pastors = await getPastors();
+export default async function SistersPage() {
+  const sisters = await getSisters();
 
   return (
     <>
-      <PageHeader group="성당 소개" title="역대 신부님" subtitle="세종성베드로성당을 이끌어 오신 신부님들" />
+      <PageHeader group="성당 소개" title="역대 수녀님" subtitle="세종성베드로성당을 거쳐 가신 수녀님들" />
       <SectionLayout group="about">
-        {pastors.length === 0 ? (
+        {sisters.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4">✝</div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-1">준비 중입니다</p>
-            <p className="text-sm">신부님 정보를 곧 등록하겠습니다.</p>
+            <p className="text-sm">수녀님 정보를 곧 등록하겠습니다.</p>
           </div>
         ) : (
           <div className="space-y-6">
-            {pastors.map((p) => (
-              <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
+            {sisters.map((s) => (
+              <div key={s.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden">
                 <div className="flex flex-col sm:flex-row">
                   {/* 사진 */}
                   <div className="sm:w-44 shrink-0 bg-[var(--color-surface-warm)] flex items-center justify-center">
-                    {p.photo_url ? (
+                    {s.photo_url ? (
                       <div className="relative w-full h-44 sm:h-full">
                         <Image
-                          src={p.photo_url.startsWith("/") ? `${API}${p.photo_url}` : p.photo_url}
-                          alt={p.name}
+                          src={s.photo_url.startsWith("/") ? `${API}${s.photo_url}` : s.photo_url}
+                          alt={s.name}
                           fill
                           className="object-cover"
                         />
@@ -75,15 +78,15 @@ export default async function PastorsPage() {
                   {/* 정보 */}
                   <div className="flex-1 p-6">
                     <div className="flex items-baseline gap-3 mb-1">
-                      <h2 className="font-serif text-xl font-bold text-[var(--color-primary)]">{p.name}</h2>
-                      <span className="text-sm text-[var(--color-text-muted)]">{p.title}</span>
+                      <h2 className="font-serif text-xl font-bold text-[var(--color-primary)]">{s.name}</h2>
+                      <span className="text-sm text-[var(--color-text-muted)]">{s.title}</span>
                     </div>
                     <p className="text-sm text-[var(--color-accent)] font-medium mb-3">
-                      {formatPeriod(p.appointed_at, p.resigned_at)}
+                      {formatPeriod(s.appointed_at, s.resigned_at)}
                     </p>
-                    {p.bio && (
+                    {s.bio && (
                       <p className="text-sm text-[var(--color-text)] leading-relaxed whitespace-pre-wrap">
-                        {p.bio}
+                        {s.bio}
                       </p>
                     )}
                   </div>
