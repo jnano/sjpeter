@@ -42,7 +42,7 @@
 }
 
 html {
-  font-size: 13px; /* 14.5px에서 약 10% 축소, 60대 가독성은 여백·줄간격으로 보완 */
+  font-size: 13.4px; /* 13px에서 3% 증가 */
   overflow-x: hidden; /* 뷰포트 가로 스크롤 원천 차단 — body가 아닌 html에만 설정해야 sticky 헤더가 유지됨 */
 }
 
