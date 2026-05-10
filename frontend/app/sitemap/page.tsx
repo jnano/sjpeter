@@ -13,10 +13,11 @@ const sections = [
     icon: "⛪",
     pages: [
       { href: "/about",    title: "성당 안내",          desc: "세종시 첫 본당, 교회 공동체 소개" },
-      { href: "/pastor",   title: "주임신부",           desc: "현재 주임 신부님 소개" },
+      { href: "/pastor",   title: "주임신부님",         desc: "현재 주임 신부님 소개" },
       { href: "/saint",    title: "수호성인 성 베드로", desc: "본당 주보성인 사도 베드로" },
       { href: "/history",  title: "본당 연혁",          desc: "창립부터 현재까지의 연표" },
-      { href: "/pastors",  title: "역대 사목자",        desc: "본당을 거쳐간 신부님들" },
+      { href: "/pastors",  title: "역대 신부님",        desc: "본당을 거쳐간 신부님들" },
+      { href: "/sisters",  title: "역대 수녀님",        desc: "본당을 거쳐간 수녀님들" },
       { href: "/priests",  title: "본당 출신 사제",     desc: "본당에서 성소를 받은 사제들" },
       { href: "/info",     title: "찾아오시는 길",      desc: "주소, 미사 시간, 오시는 방법" },
     ],

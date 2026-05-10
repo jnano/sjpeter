@@ -76,7 +76,7 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
 const QUICK_LINKS = [
   { href: "/bulletin", label: "주보" },
   { href: "/about",   label: "성당 소개" },
-  { href: "/pastor",  label: "주임신부" },
+  { href: "/pastor",  label: "주임신부님" },
   { href: "/history", label: "본당 연혁" },
   { href: "/word",    label: "오늘의 복음" },
   { href: "/info",    label: "찾아오시는 길" },

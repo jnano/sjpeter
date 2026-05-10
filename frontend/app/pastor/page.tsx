@@ -3,7 +3,7 @@ import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
-  title: "주임신부",
+  title: "주임신부님",
   description: "세종성베드로성당 본당 가족 — 주임신부, 보좌신부, 수녀, 사무장",
 };
 
@@ -49,7 +49,7 @@ export default async function PastorPage() {
 
   return (
     <>
-      <PageHeader group="성당 소개" title="주임신부" subtitle="주임 신부님과 함께하는 본당 공동체" />
+      <PageHeader group="성당 소개" title="주임신부님" subtitle="주임 신부님과 함께하는 본당 공동체" />
       <SectionLayout group="about">
         <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)] mb-5 pb-3 border-b border-[var(--color-border)]">
           본당 가족
