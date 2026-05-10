@@ -32,12 +32,12 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, items }
           />
         </div>
       )}
-      <nav className="border-t-2 border-[var(--color-primary)]">
+      <nav>
         <ul>
           {items.map((it) => {
             const active = pathname === it.href;
             return (
-              <li key={it.href} className="border-b border-[var(--color-border)]">
+              <li key={it.href} className="border-b border-[var(--color-border)] last:border-b-0">
                 <Link
                   href={it.href}
                   className={`block py-2.5 text-sm transition-colors ${
