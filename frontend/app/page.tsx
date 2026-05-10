@@ -2,14 +2,17 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Bulletin } from "@/lib/api";
 import HomeBoards from "./HomeBoards";
-import NoticeTicker from "./NoticeTicker";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const PF = "'Playfair Display', var(--font-playfair), Georgia, serif";
 
 const DAY_ORDER: Record<string, number> = {
   "주일": 0, "월요일": 1, "화요일": 2, "수요일": 3,
   "목요일": 4, "금요일": 5, "토요일": 6, "공휴일": 7,
+};
+
+const WEEKDAYS = ["월요일", "화요일", "수요일", "목요일", "금요일"];
+const SHORT: Record<string, string> = {
+  "월요일": "월", "화요일": "화", "수요일": "수", "목요일": "목", "금요일": "금",
 };
 
 interface MassEntry { day: string; time: string; note: string; }
@@ -19,7 +22,6 @@ interface Parish {
   mass_schedule: { entries: MassEntry[]; note: string; } | null;
 }
 interface Notice { id: number; title: string; is_pinned: boolean; created_at: string; }
-interface CommunityGroupDB { id: number; name: string; description: string | null; board_slug: string | null; sort_order: number; }
 interface GospelToday {
   date: string;
   liturgical_season: string | null;
@@ -36,9 +38,6 @@ async function getNotices(): Promise<Notice[]> {
 async function getBulletins(): Promise<Bulletin[]> {
   try { const r = await fetch(`${API}/api/bulletins/`, { next: { revalidate: 300 } }); return r.ok ? r.json() : []; } catch { return []; }
 }
-async function getCommunityGroups(): Promise<CommunityGroupDB[]> {
-  try { const r = await fetch(`${API}/api/content/community`, { next: { revalidate: 600 } }); return r.ok ? r.json() : []; } catch { return []; }
-}
 async function getGospelToday(): Promise<GospelToday | null> {
   try {
     const r = await fetch(`${API}/api/gospel/today`, { next: { revalidate: 3600 } });
@@ -48,286 +47,201 @@ async function getGospelToday(): Promise<GospelToday | null> {
   } catch { return null; }
 }
 
+function formatTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const period = h < 12 ? "오전" : "오후";
+  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${period} ${hour}시` : `${period} ${hour}시 ${String(m).padStart(2, "0")}분`;
+}
+
+function formatTimesRow(times: string[]): string {
+  const am = times.filter((t) => parseInt(t) < 12).map(formatTime);
+  const pm = times.filter((t) => parseInt(t) >= 12).map(formatTime);
+  return [...am, ...pm].join(", ");
+}
+
+function buildMassRows(entries: MassEntry[]): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+
+  const sunday = entries.filter((e) => e.day === "주일").map((e) => e.time);
+  if (sunday.length) rows.push({ label: "주일", value: formatTimesRow(sunday) });
+
+  const wdMap: Record<string, string[]> = {};
+  for (const e of entries) {
+    if (WEEKDAYS.includes(e.day)) {
+      (wdMap[e.day] ??= []).push(e.time);
+    }
+  }
+  const wdKeys = WEEKDAYS.filter((d) => wdMap[d]);
+  if (wdKeys.length) {
+    const first = JSON.stringify(wdMap[wdKeys[0]]);
+    const allSame = wdKeys.every((d) => JSON.stringify(wdMap[d]) === first);
+    if (allSame) {
+      rows.push({ label: "평일", value: formatTimesRow(wdMap[wdKeys[0]]) });
+    } else {
+      for (const day of wdKeys) {
+        rows.push({ label: SHORT[day], value: formatTimesRow(wdMap[day]) });
+      }
+    }
+  }
+
+  const sat = entries.filter((e) => e.day === "토요일").map((e) => e.time);
+  if (sat.length) rows.push({ label: "토요일", value: formatTimesRow(sat) });
+
+  return rows;
+}
+
+const QUICK_LINKS = [
+  { href: "/bulletin", label: "주보 보기", icon: "📖" },
+  { href: "/about", label: "성당 안내", icon: "⛪" },
+  { href: "/calendar", label: "행사 일정", icon: "📅" },
+  { href: "/info", label: "미사 시간", icon: "⏰" },
+  { href: "/word", label: "오늘의 복음", icon: "✝️" },
+  { href: "/boards/notice", label: "공지·알림", icon: "📢" },
+];
 
 export default async function HomePage() {
-  const [parish, notices, bulletins, gospel, communityGroupsDB] = await Promise.all([getParish(), getNotices(), getBulletins(), getGospelToday(), getCommunityGroups()]);
+  const [parish, notices, bulletins, gospel] = await Promise.all([
+    getParish(), getNotices(), getBulletins(), getGospelToday(),
+  ]);
 
   const entries = parish?.mass_schedule?.entries ?? [];
-  const sorted = [...entries].sort((a, b) => {
-    const d = (DAY_ORDER[a.day] ?? 99) - (DAY_ORDER[b.day] ?? 99);
-    return d !== 0 ? d : a.time.localeCompare(b.time);
-  });
-  const massDays = Object.keys(DAY_ORDER).filter((d) => sorted.some((e) => e.day === d));
-
-  const pinnedNotices = notices.filter((n) => n.is_pinned);
-
-  const resolvedCommunities = communityGroupsDB.map((g) => ({
-    name: g.name,
-    description: g.description,
-    href: g.board_slug ? `/boards/${g.board_slug}` : "/community",
-  }));
+  const massRows = buildMassRows(entries);
 
   return (
-    <div style={{ fontFamily: "var(--font-sans)", overflowX: "hidden" }}>
+    <div>
+      {/* ── 메인 3단 — 큰 사진 + 오늘의 복음 + 미사 시간 ── */}
+      <section className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
 
-      {/* ── HERO (65vh) ── */}
-      <section style={{
-        height: "65vh", minHeight: "480px",
-        background: "var(--navy-deep)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        position: "relative", overflow: "hidden", isolation: "isolate",
-      }}>
-        <Image src="/yakhoun.jpg" alt="" fill priority style={{ objectFit: "cover", objectPosition: "center" }} />
-        <div style={{ position: "absolute", inset: 0, background: "rgba(10,18,40,0.62)" }} />
-        <svg style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(900px,100vw)", height: "min(900px,100vw)", opacity: 0.06, animation: "slowRotate 140s linear infinite", pointerEvents: "none" }} viewBox="0 0 400 400" fill="none">
-          <circle cx="200" cy="200" r="196" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="200" cy="200" r="158" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="200" cy="200" r="110" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="200" cy="200" r="60"  stroke="#b8975a" strokeWidth="0.6"/>
-          <circle cx="200" cy="200" r="24"  stroke="#b8975a" strokeWidth="1"/>
-          <line x1="200" y1="4"   x2="200" y2="396" stroke="#b8975a" strokeWidth="0.25"/>
-          <line x1="4"   y1="200" x2="396" y2="200" stroke="#b8975a" strokeWidth="0.25"/>
-          <line x1="60"  y1="60"  x2="340" y2="340" stroke="#b8975a" strokeWidth="0.2"/>
-          <line x1="340" y1="60"  x2="60"  y2="340" stroke="#b8975a" strokeWidth="0.2"/>
-          <line x1="126" y1="8"   x2="274" y2="392" stroke="#b8975a" strokeWidth="0.15"/>
-          <line x1="274" y1="8"   x2="126" y2="392" stroke="#b8975a" strokeWidth="0.15"/>
-          <circle cx="200" cy="42"  r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="200" cy="358" r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="42"  cy="200" r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="358" cy="200" r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="88"  cy="88"  r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="312" cy="88"  r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="88"  cy="312" r="16" stroke="#b8975a" strokeWidth="0.4"/>
-          <circle cx="312" cy="312" r="16" stroke="#b8975a" strokeWidth="0.4"/>
-        </svg>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 55% 70% at 50% 38%, rgba(184,151,90,0.09) 0%, transparent 70%)" }} />
-        <div style={{ position: "relative", zIndex: 2, textAlign: "center", padding: "40px 24px", maxWidth: "820px" }}>
-          <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "13px", color: "var(--gold)", letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "22px" }}>
-            Parochia Sancti Petri · Sejong · 대전교구
-          </p>
-          <h1 style={{ fontFamily: PF, fontSize: "clamp(46px,7vw,84px)", fontWeight: 700, color: "#fff", lineHeight: 1.02, letterSpacing: "-0.01em", margin: 0 }}>
-            St. Peter
-            <em style={{ display: "block", fontStyle: "italic", color: "var(--gold-light)", fontSize: "0.65em" }}>Parish</em>
-          </h1>
-          <p style={{ fontSize: "clamp(16px,2.4vw,22px)", fontWeight: 600, color: "rgba(232,216,180,0.85)", letterSpacing: "0.22em", margin: "14px 0 24px" }}>
-            세종 성베드로 성당
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", margin: "0 auto 22px", width: "280px" }}>
-            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, var(--gold))" }} />
-            <span style={{ color: "var(--gold)" }}>✦</span>
-            <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, var(--gold))" }} />
-          </div>
-          <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/about" style={{ display: "inline-block", background: "var(--gold)", color: "#fff", padding: "12px 28px", borderRadius: "2px", fontWeight: 600, fontSize: "14px", textDecoration: "none", letterSpacing: "0.05em" }}>
-              미사 시간표
-            </Link>
-            <Link href="/about" style={{ display: "inline-block", border: "1px solid rgba(232,216,180,0.4)", color: "rgba(232,216,180,0.9)", padding: "12px 28px", borderRadius: "2px", fontWeight: 400, fontSize: "14px", textDecoration: "none", letterSpacing: "0.05em" }}>
-              본당 안내
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── TICKER ── */}
-      <div className="ticker-section" style={{ background: "var(--burgundy)", padding: "10px 40px", display: "flex", alignItems: "center", gap: "20px", overflow: "hidden" }}>
-        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,255,255,0.9)", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0, paddingRight: "16px", borderRight: "1px solid rgba(255,255,255,0.2)" }}>
-          알림
-        </span>
-        <NoticeTicker notices={pinnedNotices} />
-      </div>
-
-      {/* ── INFO SNAPSHOT ── */}
-      <div className="snapshot-section" style={{ background: "var(--cream-dark)", padding: "52px 40px" }}>
-        <div className="snapshot-grid" style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", border: "1px solid var(--border-gold)" }}>
-
-          {/* 미사 시간 */}
-          <div className="snapshot-col" style={{ padding: "32px 28px", background: "#fff", borderRight: "1px solid var(--border-gold)" }}>
-            <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "var(--gold)", letterSpacing: "0.25em", textTransform: "uppercase", margin: "0 0 6px" }}>Liturgy</p>
-            <h3 style={{ fontFamily: PF, fontSize: "20px", fontWeight: 700, color: "var(--navy)", margin: "0 0 22px" }}>미사 시간</h3>
-            {massDays.length === 0 ? (
-              <p style={{ fontSize: "13px", color: "var(--stone)" }}>미사 시간 정보가 없습니다.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0", marginBottom: "22px" }}>
-                {massDays.slice(0, 5).map((day) => {
-                  const dayEntries = sorted.filter((e) => e.day === day);
-                  return (
-                    <div key={day} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid var(--border-gold)" }}>
-                      <span style={{ fontFamily: PF, fontStyle: "italic", fontSize: "13px", color: "var(--gold)", fontWeight: 600, minWidth: "52px" }}>{day}</span>
-                      <span style={{ fontSize: "14px", color: "var(--navy)", fontWeight: 300, textAlign: "right" }}>
-                        {dayEntries.map((e) => e.time).join(" · ")}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <Link href="/about" style={{ fontSize: "12px", color: "var(--gold)", fontWeight: 600, textDecoration: "none", letterSpacing: "0.05em", borderBottom: "1px solid var(--border-gold)", paddingBottom: "1px" }}>
-              전체 미사 안내 →
-            </Link>
+          {/* 큰 사진 */}
+          <div className="relative w-full aspect-[4/3] md:aspect-auto md:min-h-[300px] rounded-xl overflow-hidden border border-[var(--color-border)]">
+            <Image
+              src="/yakhoun.jpg"
+              alt="세종성베드로성당"
+              fill
+              priority
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent p-4">
+              <p className="text-white font-serif font-bold text-lg leading-tight tracking-tight">
+                {parish?.name ?? "세종성베드로성당"}
+              </p>
+              <p className="text-white/80 text-xs mt-0.5">St. Peter&apos;s Cathedral, Sejong</p>
+            </div>
           </div>
 
-          {/* 최신 공지 */}
-          <div className="snapshot-col" style={{ padding: "32px 28px", background: "#fff", borderRight: "1px solid var(--border-gold)" }}>
-            <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "var(--gold)", letterSpacing: "0.25em", textTransform: "uppercase", margin: "0 0 6px" }}>Notice</p>
-            <h3 style={{ fontFamily: PF, fontSize: "20px", fontWeight: 700, color: "var(--navy)", margin: "0 0 22px" }}>공지 사항</h3>
-            {notices.length === 0 ? (
-              <p style={{ fontSize: "13px", color: "var(--stone)" }}>등록된 공지사항이 없습니다.</p>
-            ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 22px" }}>
-                {notices.slice(0, 5).map((n) => (
-                  <li key={n.id} style={{ borderBottom: "1px solid var(--border-gold)" }}>
-                    <Link href={`/boards/notice/${n.id}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px", padding: "10px 0", textDecoration: "none", color: "inherit" }}>
-                      <span style={{ fontSize: "13.5px", color: "var(--navy)", fontWeight: n.is_pinned ? 600 : 400, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {n.is_pinned && <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "var(--burgundy)", marginRight: "7px", verticalAlign: "middle", flexShrink: 0 }} />}
-                        {n.title}
-                      </span>
-                      <span style={{ fontSize: "11px", color: "var(--stone)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                        {new Date(n.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link href="/boards/notice" style={{ fontSize: "12px", color: "var(--gold)", fontWeight: 600, textDecoration: "none", letterSpacing: "0.05em", borderBottom: "1px solid var(--border-gold)", paddingBottom: "1px" }}>
-              더 보기 →
-            </Link>
-          </div>
-
-          {/* 오늘의 말씀 */}
-          <div className="snapshot-col" style={{ padding: "32px 28px", background: "var(--navy)" }}>
-            <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "rgba(184,151,90,0.6)", letterSpacing: "0.25em", textTransform: "uppercase", margin: "0 0 6px" }}>Word of God</p>
-            <h3 style={{ fontFamily: PF, fontSize: "20px", fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>
-              오늘의 말씀
+          {/* 오늘의 복음 */}
+          <div className="border border-[var(--color-border)] rounded-xl p-5 flex flex-col bg-white">
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-[var(--color-border)]">
+              <h2 className="font-serif font-bold text-[var(--color-primary)] text-base">
+                오늘의 복음
+              </h2>
               {gospel?.liturgical_season && (
-                <span style={{ display: "block", fontSize: "12px", fontWeight: 400, color: "rgba(184,151,90,0.55)", marginTop: "4px", fontStyle: "italic" }}>{gospel.liturgical_season}</span>
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate ml-2">
+                  {gospel.liturgical_season}
+                </span>
               )}
-            </h3>
+            </div>
             {gospel?.gospel_text ? (
               <>
-                <blockquote style={{ fontStyle: "italic", fontSize: "14px", lineHeight: 1.9, color: "rgba(232,216,180,0.82)", margin: "0 0 12px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 6, WebkitBoxOrient: "vertical" } as React.CSSProperties}>
+                <blockquote
+                  className="text-[13.5px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
+                  style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
+                >
                   &ldquo;{gospel.gospel_text}&rdquo;
                 </blockquote>
                 {gospel.gospel_reference && (
-                  <cite style={{ display: "block", fontSize: "11px", color: "rgba(184,151,90,0.6)", marginBottom: "16px", letterSpacing: "0.1em", fontStyle: "normal" }}>
+                  <cite className="block text-xs text-[var(--color-text-muted)] mt-3 not-italic">
                     — {gospel.gospel_reference}
                   </cite>
                 )}
+                <Link
+                  href="/word"
+                  className="inline-block mt-3 text-xs font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  전체 보기 →
+                </Link>
               </>
             ) : (
-              <p style={{ fontSize: "13px", color: "rgba(232,216,180,0.5)", fontStyle: "italic", marginBottom: "16px", lineHeight: 1.8 }}>
+              <p className="text-sm text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
                 오늘의 말씀을 불러오는 중입니다…
               </p>
             )}
-            <a href="/word" style={{ fontSize: "12px", color: "rgba(184,151,90,0.7)", textDecoration: "none", letterSpacing: "0.05em", borderBottom: "1px solid rgba(184,151,90,0.3)", paddingBottom: "1px" }}>
-              전체 독서 보기 →
-            </a>
           </div>
-        </div>
-      </div>
 
-      {/* ── 게시판 (사이드바 없음 · 전체 너비) ── */}
-      <div className="boards-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "72px 40px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px" }}>
-          <div>
-            <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "var(--gold)", letterSpacing: "0.25em", textTransform: "uppercase", margin: "0 0 6px" }}>Bulletin Board</p>
-            <h2 style={{ fontFamily: PF, fontSize: "clamp(20px,2.5vw,28px)", color: "var(--navy)", margin: 0, fontWeight: 700 }}>소식</h2>
-          </div>
-        </div>
-        <HomeBoards notices={notices.slice(0, 10)} bulletins={bulletins.slice(0, 7)} />
-      </div>
-
-      {/* ── 단체/분과 ── */}
-      <div className="community-section" style={{ background: "var(--cream-dark)", padding: "60px 40px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "8px" }}>
-            <div>
-              <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "var(--gold)", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: "4px" }}>Community</p>
-              <h2 style={{ fontFamily: PF, fontSize: "clamp(22px,3vw,32px)", color: "var(--navy)", margin: 0, fontWeight: 700 }}>우리 가족</h2>
+          {/* 미사 시간 */}
+          <div className="border border-[var(--color-border)] rounded-xl p-5 flex flex-col bg-white">
+            <div className="mb-3 pb-3 border-b border-[var(--color-border)]">
+              <h2 className="font-serif font-bold text-[var(--color-primary)] text-base">
+                미사 시간
+              </h2>
             </div>
-            <Link href="/community" style={{ background: "var(--gold)", color: "#fff", padding: "10px 22px", borderRadius: "2px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>
-              전체보기
-            </Link>
-          </div>
-          <div style={{ width: "100%", height: "1px", background: "var(--border-gold)", margin: "20px 0 28px" }} />
-          {resolvedCommunities.length === 0 ? (
-            <p style={{ fontSize: "14px", color: "var(--stone)" }}>등록된 단체/분과가 없습니다.</p>
-          ) : (
-            <div className="community-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(resolvedCommunities.length, 6)}, 1fr)`, gap: "12px" }}>
-              {resolvedCommunities.map((c) => (
-                <Link key={c.name} href={c.href} style={{ background: "#fff", padding: "24px 16px", textAlign: "center", border: "1px solid var(--border-gold)", textDecoration: "none", color: "inherit", display: "block", transition: "all 0.25s" }}>
-                  <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--cream-dark)", border: "1px solid var(--border-gold)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: "18px", fontWeight: 700, color: "var(--navy)", fontFamily: PF }}>
-                    {c.name.slice(0, 1)}
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--navy)", marginBottom: "4px" }}>{c.name}</div>
-                  {c.description && (
-                    <div style={{ fontSize: "11px", color: "var(--stone)", fontWeight: 300, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as React.CSSProperties}>{c.description}</div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── PETER FEATURE (축소) ── */}
-      <section className="peter-section" style={{ background: "var(--navy-deep)", padding: "52px 40px" }}>
-        <div className="peter-inner" style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "40px", flexWrap: "wrap" }}>
-          <div>
-            <p style={{ fontFamily: PF, fontStyle: "italic", fontSize: "11px", color: "var(--gold)", letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 10px" }}>Vita Sancti Petri</p>
-            <h2 style={{ fontFamily: PF, fontSize: "clamp(22px,3vw,34px)", color: "#fff", margin: "0 0 8px", fontWeight: 700 }}>성 베드로의 생애</h2>
-            <p style={{ fontSize: "14px", color: "rgba(232,216,180,0.5)", margin: 0, fontWeight: 300, letterSpacing: "0.05em" }}>어부에서 교회의 반석으로</p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "40px", flexWrap: "wrap" }}>
-            <p style={{ fontSize: "15px", color: "rgba(232,216,180,0.65)", maxWidth: "440px", fontWeight: 300, lineHeight: 2, margin: 0 }}>
-              갈릴래아 호수의 어부 시몬은 예수님의 부르심으로 교회의 반석 베드로가 되었습니다.
-            </p>
-            <Link href="/about" style={{ display: "inline-block", border: "1px solid rgba(184,151,90,0.4)", color: "rgba(232,216,180,0.88)", padding: "12px 26px", borderRadius: "2px", fontSize: "13px", fontWeight: 400, textDecoration: "none", letterSpacing: "0.06em", whiteSpace: "nowrap", transition: "border-color 0.2s" }}>
-              더 알아보기 →
+            {massRows.length > 0 ? (
+              <table className="text-sm w-full flex-1">
+                <tbody>
+                  {massRows.map((row) => (
+                    <tr key={row.label} className="align-top">
+                      <td className="text-[var(--color-text-muted)] pr-3 pb-2 whitespace-nowrap w-12 text-xs font-medium">
+                        {row.label}
+                      </td>
+                      <td className="pb-2 text-[13px] text-[var(--color-text)] leading-relaxed">
+                        {row.value}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+                미사 시간 정보가 없습니다.
+              </p>
+            )}
+            {parish?.mass_schedule?.note && (
+              <p className="text-[11px] text-[var(--color-text-muted)] mt-2 leading-relaxed">
+                ※ {parish.mass_schedule.note}
+              </p>
+            )}
+            <Link
+              href="/info"
+              className="inline-block mt-3 text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              찾아오시는 길 →
             </Link>
           </div>
         </div>
       </section>
 
-      {/* 애니메이션 + 반응형 CSS */}
-      <style>{`
-        @keyframes slowRotate { to { transform: translate(-50%,-50%) rotate(360deg); } }
+      {/* ── 빠른 메뉴 6개 ── */}
+      <section className="border-t border-[var(--color-border)]">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
+            {QUICK_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center justify-center gap-2 px-2 py-5 border border-[var(--color-border)] rounded-xl bg-white hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-warm)] transition-colors"
+              >
+                <span className="text-3xl leading-none">{item.icon}</span>
+                <span className="text-xs sm:text-sm font-medium text-[var(--color-text)] text-center">
+                  {item.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        @media (max-width: 767px) {
-          .ticker-section { padding: 10px 16px !important; }
-          .peter-section { padding: 40px 16px !important; }
-
-          .snapshot-section { padding: 0 !important; }
-          .snapshot-grid {
-            grid-template-columns: 1fr !important;
-            border: none !important;
-          }
-          .snapshot-col {
-            border-right: none !important;
-            border-bottom: 1px solid var(--border-gold);
-            padding: 28px 20px !important;
-          }
-          .snapshot-col:last-child { border-bottom: none; }
-
-          .boards-section {
-            padding: 48px 16px !important;
-          }
-
-          .community-section { padding: 40px 16px !important; }
-          .community-grid { grid-template-columns: repeat(3, 1fr) !important; }
-
-          .peter-inner {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 20px !important;
-          }
-          .peter-inner > div:last-child {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 16px !important;
-          }
-        }
-      `}</style>
+      {/* ── 게시판 ── */}
+      <section className="border-t border-[var(--color-border)]">
+        <div className="max-w-6xl mx-auto px-4 py-10">
+          <div className="mb-5">
+            <h2 className="font-serif font-bold text-[var(--color-primary)] text-xl">소식</h2>
+          </div>
+          <HomeBoards notices={notices.slice(0, 10)} bulletins={bulletins.slice(0, 7)} />
+        </div>
+      </section>
     </div>
   );
 }
