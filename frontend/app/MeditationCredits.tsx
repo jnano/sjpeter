@@ -24,7 +24,7 @@ export default function MeditationCredits() {
 
   // 텍스트 길이에 비례한 흐름 속도 (긴 글일수록 느리게)
   const bodyLen = (meditation?.body ?? "").length;
-  const duration = Math.max(28, Math.min(80, bodyLen * 0.18));
+  const duration = Math.max(45, Math.min(120, bodyLen * 0.3));
 
   return (
     <Link
