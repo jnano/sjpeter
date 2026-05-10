@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api, home_banner, parish_staff
+from app.api import settings_api, home_banner, parish_staff, page_photos
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -47,6 +47,7 @@ app.include_router(settings_api.router)
 app.include_router(settings_api.internal_router)
 app.include_router(home_banner.router, prefix="/api")
 app.include_router(parish_staff.router, prefix="/api")
+app.include_router(page_photos.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -208,6 +209,30 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_home_banners_sort ON home_banners(sort_order)"
         ))
+
+        # 페이지별 사진 (다중) + 슬라이드쇼 설정
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS page_photos (
+                id SERIAL PRIMARY KEY,
+                page_slug VARCHAR(50) NOT NULL,
+                file_url VARCHAR(500) NOT NULL,
+                alt VARCHAR(200),
+                sort_order INTEGER DEFAULT 0 NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_page_photos_slug ON page_photos(page_slug)"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS page_photo_settings (
+                page_slug VARCHAR(50) PRIMARY KEY,
+                transition_mode VARCHAR(20) DEFAULT 'fade' NOT NULL,
+                interval_seconds INTEGER DEFAULT 5 NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
 
         # parishes 추가 컬럼
         for col, col_type in [

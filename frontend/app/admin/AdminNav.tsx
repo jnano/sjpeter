@@ -55,6 +55,9 @@ export default function AdminNav() {
           <Link href="/admin/parish-staff" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
             본당 가족
           </Link>
+          <Link href="/admin/page-photos" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
+            페이지 사진
+          </Link>
           <Link href="/admin/members" className="text-sm text-white/70 hover:text-white hover:bg-white/10 px-3 py-2 transition-colors whitespace-nowrap rounded">
             회원
           </Link>
