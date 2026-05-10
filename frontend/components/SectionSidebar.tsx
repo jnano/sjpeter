@@ -32,10 +32,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, items }
           />
         </div>
       )}
-      <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-3 pb-3 border-b-2 border-[var(--color-primary)]">
-        {groupTitle}
-      </h2>
-      <nav>
+      <nav className="border-t-2 border-[var(--color-primary)]">
         <ul>
           {items.map((it) => {
             const active = pathname === it.href;
