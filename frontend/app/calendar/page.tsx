@@ -698,9 +698,9 @@ export default function CalendarPage() {
         subtitle="본당 행사와 모임 일정을 확인하세요."
         action={
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">‹</button>
-            <span className="text-sm font-semibold text-white min-w-[130px] text-center">{navigationLabel()}</span>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded hover:bg-white/20 transition-colors text-white text-lg leading-none">›</button>
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none">‹</button>
+            <span className="text-sm font-semibold text-[var(--color-primary)] min-w-[130px] text-center">{navigationLabel()}</span>
+            <button onClick={() => navigate(1)} className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none">›</button>
           </div>
         }
       />

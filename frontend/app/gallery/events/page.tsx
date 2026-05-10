@@ -144,7 +144,7 @@ export default async function EventsGalleryPage({
         action={canWrite ? (
           <Link
             href="/gallery/events/write"
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors border border-white/30"
+            className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm font-medium rounded-lg transition-colors"
           >
             사진 올리기
           </Link>
