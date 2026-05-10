@@ -102,7 +102,6 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
 const QUICK_LINKS = [
   { href: "/about", label: "성당 안내", icon: "⛪" },
   { href: "/groups", label: "분과와 단체", icon: "🤝" },
-  { href: "/vision", label: "사목 방향", icon: "🎯" },
   { href: "/bulletin", label: "주보 보기", icon: "📖" },
 ];
 
@@ -265,7 +264,7 @@ export default async function HomePage() {
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-6">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
               {QUICK_LINKS.map((item) => (
                 <Link
                   key={item.href}
@@ -278,7 +277,7 @@ export default async function HomePage() {
                   </span>
                 </Link>
               ))}
-              <div className="col-span-2">
+              <div className="col-span-3">
                 <MeditationCredits />
               </div>
             </div>
