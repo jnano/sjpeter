@@ -288,7 +288,7 @@ export default async function HomePage() {
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-6">
-            <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4 md:items-start">
               <BoardTabs tabs={boardTabs} />
               <MiniCalendar />
             </div>
