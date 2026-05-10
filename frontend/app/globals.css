@@ -92,9 +92,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 영화 엔딩크레딧 — 위로 흐르는 텍스트.
-   시작 0% (자식 상단이 박스 상단에 정렬) → 새로고침 직후 즉시 텍스트 보임.
-   끝 -100%로 자식이 박스 위로 완전히 사라진 뒤 무한 루프. */
+   매 사이클 시작·끝 3% 구간에 opacity 페이드 추가 → 루프 리셋 시 깜빡 없이
+   서서히 등장/사라짐. */
 @keyframes credits-scroll {
-  0%   { transform: translateY(0); }
-  100% { transform: translateY(-100%); }
+  0%   { transform: translateY(0);     opacity: 0; }
+  3%   { transform: translateY(-3%);   opacity: 1; }
+  97%  { transform: translateY(-97%);  opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 0; }
 }
