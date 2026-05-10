@@ -92,10 +92,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 영화 엔딩크레딧 — 위로 흐르는 텍스트.
-   페이드 0.5% (50초 사이클 기준 ~0.25초)로 거의 즉시 선명. */
+   페이드 인/아웃 3% (50초 사이클 기준 ~1.5초씩) — 이전 사이클이 천천히
+   사라지고 다음 사이클이 부드럽게 등장해 매끄럽게 이어짐. */
 @keyframes credits-scroll {
-  0%    { transform: translateY(0);      opacity: 0; }
-  0.5%  { transform: translateY(-0.5%);  opacity: 1; }
-  99.5% { transform: translateY(-99.5%); opacity: 1; }
-  100%  { transform: translateY(-100%);  opacity: 0; }
+  0%   { transform: translateY(0);     opacity: 0; }
+  3%   { transform: translateY(-3%);   opacity: 1; }
+  97%  { transform: translateY(-97%);  opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 0; }
 }
