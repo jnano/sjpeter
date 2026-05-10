@@ -6,11 +6,8 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Event {
   id: number;
-  title: string;
   event_date: string;
   end_date: string | null;
-  start_time: string | null;
-  event_kind: string | null;
 }
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -34,15 +31,12 @@ export default function MiniCalendar() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     fetch(`${API}/api/events/?year=${year}&month=${month}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setEvents(Array.isArray(data) ? data : []))
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
+      .catch(() => setEvents([]));
   }, [year, month]);
 
   function prevMonth() {
@@ -61,12 +55,6 @@ export default function MiniCalendar() {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
-
-  // 이번 달 다가오는 행사 3건 (오늘 포함, 미래순)
-  const upcoming = events
-    .filter((e) => (e.end_date ?? e.event_date) >= todayStr)
-    .sort((a, b) => a.event_date.localeCompare(b.event_date))
-    .slice(0, 3);
 
   return (
     <div className="border border-[var(--color-border)] rounded-xl bg-white overflow-hidden">
@@ -140,43 +128,11 @@ export default function MiniCalendar() {
         </div>
       </div>
 
-      {/* 다가오는 행사 미리보기 */}
-      <div className="border-t border-[var(--color-border)] px-4 py-3">
-        {loading ? (
-          <p className="text-[11.5px] text-[var(--color-text-muted)] text-center py-1">불러오는 중…</p>
-        ) : upcoming.length === 0 ? (
-          <p className="text-[11.5px] text-[var(--color-text-muted)] text-center py-1">
-            이번 달 예정된 행사가 없습니다.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {upcoming.map((e) => {
-              const d = new Date(e.event_date);
-              return (
-                <li key={e.id} className="flex items-baseline gap-2 text-[11.5px]">
-                  <span className="text-[var(--color-accent)] font-mono font-semibold shrink-0 w-12">
-                    {d.getMonth() + 1}.{d.getDate()}
-                  </span>
-                  <span className="text-[var(--color-text)] truncate flex-1">{e.title}</span>
-                  {e.event_kind && (
-                    <span
-                      className={`text-[9.3px] px-1 rounded shrink-0 ${
-                        e.event_kind === "행사"
-                          ? "bg-blue-50 text-blue-600"
-                          : "bg-green-50 text-green-600"
-                      }`}
-                    >
-                      {e.event_kind}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      {/* 푸터 — 전체 일정 링크 */}
+      <div className="border-t border-[var(--color-border)] px-4 py-2 text-right">
         <Link
           href="/calendar"
-          className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+          className="text-[11px] font-medium text-[var(--color-primary)] hover:underline"
         >
           전체 일정 →
         </Link>
