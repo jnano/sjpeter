@@ -91,8 +91,10 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
-/* 영화 엔딩크레딧 — 위로 흐르는 텍스트 */
+/* 영화 엔딩크레딧 — 위로 흐르는 텍스트.
+   시작 0% (자식 상단이 박스 상단에 정렬) → 새로고침 직후 즉시 텍스트 보임.
+   끝 -100%로 자식이 박스 위로 완전히 사라진 뒤 무한 루프. */
 @keyframes credits-scroll {
-  0%   { transform: translateY(100%); }
+  0%   { transform: translateY(0); }
   100% { transform: translateY(-100%); }
 }
