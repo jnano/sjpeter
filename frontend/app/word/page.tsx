@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "오늘의 복음",
@@ -46,7 +47,7 @@ export default async function WordPage() {
   return (
     <>
       <PageHeader group="말씀과 기도" title="오늘의 복음" subtitle={subtitle} />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout group="word">
 
         {!gospel ? (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center">
@@ -118,7 +119,7 @@ export default async function WordPage() {
             </p>
           </div>
         )}
-      </div>
+      </SectionLayout>
     </>
   );
 }

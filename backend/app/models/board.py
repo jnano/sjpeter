@@ -16,7 +16,7 @@ class Board(Base):
     members_only_read = Column(Boolean, default=False)      # True: 회원만 보기
     members_selected = Column(Boolean, default=False)       # True: 지정 회원만 접근
     moderator_only_write = Column(Boolean, default=False)   # True: 게시판 관리자만 쓰기
-    posts_per_page = Column(Integer, default=20)
+    posts_per_page = Column(Integer, default=12)
     exclude_from_search = Column(Boolean, default=False)
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

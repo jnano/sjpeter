@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "사목지표",
@@ -43,7 +44,7 @@ export default async function VisionPage() {
   return (
     <>
       <PageHeader group="본당 공동체" title="올해의 사목 방향" subtitle="매년 신부님이 제시하는 한 해의 씨앗" />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout group="community">
 
       {current && (
         <div className="bg-[var(--color-primary)] text-white rounded-xl p-8 mb-8 text-center">
@@ -96,7 +97,7 @@ export default async function VisionPage() {
       <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
         지표는 씨앗이고, 한 해의 기록은 그 씨앗이 자란 나무입니다.
       </p>
-    </div>
+    </SectionLayout>
     </>
   );
 }

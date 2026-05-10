@@ -54,7 +54,7 @@ export default function BulletinClient({ bulletins, kakaoKey = "" }: { bulletins
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div>
       <Script
         src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
         strategy="lazyOnload"

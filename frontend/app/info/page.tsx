@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import KakaoMap from "./KakaoMap";
 
 export const metadata: Metadata = {
@@ -69,7 +70,7 @@ export default async function InfoPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="찾아오시는 길" subtitle="세종성베드로성당을 찾아오시는 방법" />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout group="about">
 
       <div className="mb-6">
         {mapReady ? (
@@ -228,7 +229,7 @@ export default async function InfoPage() {
           </div>
         </div>
       </div>
-    </div>
+      </SectionLayout>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "기도문",
@@ -35,7 +36,7 @@ export default async function PrayerPage() {
   return (
     <>
       <PageHeader group="말씀과 기도" title={title} subtitle={subtitle} />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout group="word">
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8">
         {body ? (
@@ -50,7 +51,7 @@ export default async function PrayerPage() {
           </div>
         )}
       </div>
-    </div>
+    </SectionLayout>
     </>
   );
 }

@@ -76,6 +76,7 @@ class ParishOut(BaseModel):
     pastor_appointed: Optional[str]
     pastor_message: Optional[str]
     pastor_photo_url: Optional[str]
+    about_photo_url: Optional[str]
     mass_schedule: Optional[MassSchedule]
 
     class Config:
@@ -114,6 +115,7 @@ def _parish_to_out(parish: Parish, selected_photo_url: Optional[str] = None) -> 
         pastor_appointed=parish.pastor_appointed,
         pastor_message=parish.pastor_message,
         pastor_photo_url=selected_photo_url or parish.pastor_photo_url,
+        about_photo_url=parish.about_photo_url,
         mass_schedule=schedule,
     )
 
@@ -217,3 +219,66 @@ def delete_photo(
     db.delete(photo)
     db.commit()
     return {"ok": True}
+
+
+# ──────────────────────────── 성당 소개 사진 (/about) ────────────────────────────
+
+@router.post("/about-photo/upload", response_model=ParishOut)
+async def upload_about_photo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in PHOTO_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+
+    data = await file.read()
+    if len(data) > PHOTO_MAX_SIZE:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
+
+    photo_dir = os.path.join(settings.UPLOAD_DIR, "about_photos")
+    os.makedirs(photo_dir, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}{ext}"
+    with open(os.path.join(photo_dir, filename), "wb") as f:
+        f.write(data)
+
+    parish = _get_parish(db)
+    # 기존 about 사진이 업로드 디렉터리에 있으면 정리
+    if parish.about_photo_url and parish.about_photo_url.startswith("/uploads/about_photos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.about_photo_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    parish.about_photo_url = f"/uploads/about_photos/{filename}"
+    db.commit()
+    db.refresh(parish)
+
+    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
+    return _parish_to_out(parish, selected.url if selected else None)
+
+
+@router.delete("/about-photo", response_model=ParishOut)
+def delete_about_photo(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    parish = _get_parish(db)
+    if parish.about_photo_url and parish.about_photo_url.startswith("/uploads/about_photos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.about_photo_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    parish.about_photo_url = None
+    db.commit()
+    db.refresh(parish)
+
+    selected = db.query(PastorPhoto).filter_by(is_selected=True).first()
+    return _parish_to_out(parish, selected.url if selected else None)

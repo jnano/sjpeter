@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "우리의 역사",
@@ -34,7 +35,7 @@ export default async function HistoryPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="본당 연혁" subtitle="현재부터 창립까지 — 세종성베드로성당의 역사" />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout group="about">
 
       <div className="relative">
         <div className="absolute left-[5.5rem] top-0 bottom-0 w-0.5 bg-[var(--color-border)]" />
@@ -103,7 +104,7 @@ export default async function HistoryPage() {
           오늘을 기록하면 역사가 됩니다. 주보 아카이브에서 본당의 전체 역사를 확인하세요.
         </p>
       </div>
-    </div>
+      </SectionLayout>
     </>
   );
 }

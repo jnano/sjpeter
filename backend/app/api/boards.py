@@ -42,7 +42,7 @@ class BoardIn(BaseModel):
     members_only_read: bool = False
     members_selected: bool = False
     moderator_only_write: bool = False
-    posts_per_page: int = 20
+    posts_per_page: int = 12
     exclude_from_search: bool = False
     moderator_id: Optional[int] = None
 
@@ -81,7 +81,7 @@ class BoardOut(BaseModel):
     members_only_read: bool = False
     members_selected: bool = False
     moderator_only_write: bool = False
-    posts_per_page: int = 20
+    posts_per_page: int = 12
     post_count: int = 0
     exclude_from_search: bool = False
     moderator: Optional[ModeratorOut] = None
@@ -281,6 +281,7 @@ def _make_excerpt(content: str, keyword: str) -> str:
 @router.get("/api/search", response_model=SearchOut)
 def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
     from app.models.content import HistoryItem, Vision, CommunityGroup
+    from app.models.notice import Notice
 
     q = q.strip()
     if not q:
@@ -324,6 +325,21 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
 
     # ── 콘텐츠 페이지 검색 (전체 반환, 페이지네이션 없음) ─
     content_results: list[ContentSearchItem] = []
+
+    # 공지사항 (notices 별도 테이블) — 핀 우선·최신순
+    for n in (
+        db.query(Notice)
+        .filter(or_(Notice.title.ilike(keyword), Notice.content.ilike(keyword)))
+        .order_by(desc(Notice.is_pinned), desc(Notice.created_at))
+        .all()
+    ):
+        excerpt = _make_excerpt(n.content or "", q) if n.content else ""
+        content_results.append(ContentSearchItem(
+            type="notice", label="공지사항",
+            title=n.title,
+            excerpt=excerpt,
+            url=f"/boards/notice/{n.id}",
+        ))
 
     for h in db.query(HistoryItem).filter(
         or_(HistoryItem.event.ilike(keyword), HistoryItem.detail.ilike(keyword))

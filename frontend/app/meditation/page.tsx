@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "묵상 글",
@@ -46,7 +47,7 @@ export default async function MeditationPage() {
         title="묵상 글"
         subtitle="말씀 앞에 잠시 멈추는 시간"
       />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout group="word">
         {meditation ? (
           <article className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             {/* 헤더 */}
@@ -96,7 +97,7 @@ export default async function MeditationPage() {
             </div>
           </div>
         )}
-      </div>
+      </SectionLayout>
     </>
   );
 }

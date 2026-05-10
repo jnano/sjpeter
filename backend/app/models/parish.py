@@ -21,6 +21,7 @@ class Parish(Base):
     pastor_appointed = Column(String(100))                   # 부임 시기 (예: 2023년 3월)
     pastor_message = Column(Text)
     pastor_photo_url = Column(String(500))
+    about_photo_url = Column(String(500))  # /about 페이지 안내 옆 사진
     mass_schedule = Column(Text)  # JSON 문자열로 저장
     fax = Column(String(20))
     cafe_url = Column(String(500))

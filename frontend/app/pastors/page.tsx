@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "역대 사목자",
@@ -42,7 +43,7 @@ export default async function PastorsPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="역대 사목자" subtitle="세종성베드로성당을 이끌어 오신 사목자들" />
-      <div className="max-w-4xl mx-auto px-4 py-10">
+      <SectionLayout group="about">
         {pastors.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4">✝</div>
@@ -91,7 +92,7 @@ export default async function PastorsPage() {
             ))}
           </div>
         )}
-      </div>
+      </SectionLayout>
     </>
   );
 }

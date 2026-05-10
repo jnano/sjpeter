@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "성당 소개",
@@ -33,6 +34,7 @@ interface ParishOut {
   description: string | null;
   member_count: number | null;
   founded_at: string | null;
+  about_photo_url: string | null;
   mass_schedule: MassSchedule | null;
 }
 
@@ -95,69 +97,74 @@ export default async function AboutPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <SectionLayout group="about">
 
-      <div className="relative w-full h-72 md:h-96 rounded-xl overflow-hidden mb-8">
-        <Image
-          src="/yakhoun.jpg"
-          alt="세종성베드로성당"
-          fill
-          className="object-cover"
-          style={{ objectPosition: "center 30%" }}
-          priority
-        />
+      {/* 상단 2단: 좌 40% 사진 / 우 60% 안내 */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 items-stretch">
+        {/* 사진 — 좌측 40% */}
+        <div className="md:col-span-2 relative w-full aspect-[4/3] md:aspect-auto md:min-h-[280px] rounded-xl overflow-hidden">
+          <Image
+            src={parish?.about_photo_url ? `${API}${parish.about_photo_url}` : "/yakhoun.jpg"}
+            alt="세종성베드로성당"
+            fill
+            className="object-cover"
+            style={{ objectPosition: "center 30%" }}
+            sizes="(max-width: 768px) 100vw, 40vw"
+            priority
+          />
+        </div>
+
+        {/* 안내 — 우측 60% */}
+        <div className="md:col-span-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8">
+          {infoRows.length > 0 ? (
+            <>
+              <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-4">안내</h2>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {infoRows.map((row) => (
+                    <tr key={row.label}>
+                      <td className="py-3 pr-6 text-[var(--color-text-muted)] w-28">{row.label}</td>
+                      <td className="py-3 font-medium">
+                        {"href" in row && row.href ? (
+                          <a
+                            href={row.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--color-primary)] hover:underline break-all"
+                          >
+                            {row.value}
+                          </a>
+                        ) : (
+                          row.value
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--color-text-muted)]">안내 정보가 없습니다.</p>
+          )}
+        </div>
       </div>
 
-      {/* 본당 소개 + 기본 정보 */}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 space-y-6 mb-12">
-        {parish?.description && (
-          <>
-            <section>
-              <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-3">본당 소개</h2>
-              <p className="leading-relaxed text-[var(--color-text)] whitespace-pre-line">
-                {parish.description}
-              </p>
-            </section>
-            <div className="border-t border-[var(--color-border)]" />
-          </>
-        )}
-
-        {infoRows.length > 0 && (
-          <section>
-            <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-4">안내</h2>
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {infoRows.map((row) => (
-                  <tr key={row.label}>
-                    <td className="py-3 pr-6 text-[var(--color-text-muted)] w-32">{row.label}</td>
-                    <td className="py-3 font-medium">
-                      {"href" in row && row.href ? (
-                        <a
-                          href={row.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[var(--color-primary)] hover:underline"
-                        >
-                          {row.value}
-                        </a>
-                      ) : (
-                        row.value
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-      </div>
+      {/* 본당 소개 (별도 카드) */}
+      {parish?.description && (
+        <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 mb-12">
+          <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-3">본당 소개</h2>
+          <p className="leading-relaxed text-[var(--color-text)] whitespace-pre-line">
+            {parish.description}
+          </p>
+        </section>
+      )}
 
       {/* 미사 시간표 */}
       <section>
         {/* 섹션 헤더 */}
-        <p className="text-xs tracking-[0.3em] mb-2" style={{ color: GOLD }}>MASS SCHEDULE</p>
-        <h2 className="font-serif text-4xl font-bold text-[var(--color-primary)] mb-3">미사 시간표</h2>
-        <div className="w-10 h-0.5 mb-8" style={{ backgroundColor: GOLD }} />
+        <p className="text-[10px] tracking-[0.3em] mb-1.5" style={{ color: GOLD }}>MASS SCHEDULE</p>
+        <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-2">미사 시간표</h2>
+        <div className="w-8 h-0.5 mb-6" style={{ backgroundColor: GOLD }} />
 
         {sortedEntries.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">미사 시간 정보가 없습니다.</p>
@@ -174,20 +181,20 @@ export default async function AboutPage() {
                 {weekdayDays.map((day) => {
                   const dayEntries = sortedEntries.filter((e) => e.day === day);
                   return (
-                    <div key={day} className="bg-white p-6">
-                      <p className="font-serif italic text-lg mb-1" style={{ color: GOLD }}>
+                    <div key={day} className="bg-white p-4">
+                      <p className="font-serif italic text-sm mb-1" style={{ color: GOLD }}>
                         {day}
-                        <span className="font-light text-base"> · {DAY_EN[day]}</span>
+                        <span className="font-light text-xs"> · {DAY_EN[day]}</span>
                       </p>
-                      <div className="border-b border-[var(--color-border)] mb-5" />
-                      <div className="space-y-4">
+                      <div className="border-b border-[var(--color-border)] mb-3" />
+                      <div className="space-y-2.5">
                         {dayEntries.map((e, i) => (
                           <div key={i} className="flex flex-col gap-0.5">
-                            <span className="text-[1.313rem] font-thin text-[var(--color-text)] tabular-nums">
+                            <span className="text-base font-light text-[var(--color-text)] tabular-nums">
                               {e.time}
                             </span>
                             {e.note && (
-                              <span className="text-xs text-[var(--color-text-muted)]">
+                              <span className="text-[11px] text-[var(--color-text-muted)]">
                                 {e.note}
                               </span>
                             )}
@@ -204,22 +211,22 @@ export default async function AboutPage() {
             {/* 주일 행 */}
             {sundayEntries.length > 0 && (
               <div
-                className="p-6"
+                className="p-4"
                 style={{ backgroundColor: "var(--color-surface-warm)" }}
               >
-                <p className="font-serif italic text-lg mb-1" style={{ color: GOLD }}>
+                <p className="font-serif italic text-sm mb-1" style={{ color: GOLD }}>
                   주일
-                  <span className="font-light text-base"> · Sunday</span>
+                  <span className="font-light text-xs"> · Sunday</span>
                 </p>
-                <div className="border-b border-[var(--color-border)] mb-6" />
-                <div className="flex flex-wrap gap-x-12 gap-y-4">
+                <div className="border-b border-[var(--color-border)] mb-3" />
+                <div className="flex flex-wrap gap-x-8 gap-y-2.5">
                   {sundayEntries.map((e, i) => (
                     <div key={i} className="flex flex-col gap-0.5">
-                      <span className="text-[1.313rem] font-thin text-[var(--color-text)] tabular-nums">
+                      <span className="text-base font-light text-[var(--color-text)] tabular-nums">
                         {e.time}
                       </span>
                       {e.note && (
-                        <span className="text-xs text-[var(--color-text-muted)]">{e.note}</span>
+                        <span className="text-[11px] text-[var(--color-text-muted)]">{e.note}</span>
                       )}
                     </div>
                   ))}
@@ -230,12 +237,12 @@ export default async function AboutPage() {
         )}
 
         {parish?.mass_schedule?.note && (
-          <p className="mt-5 text-sm text-[var(--color-text-muted)]">
+          <p className="mt-4 text-xs text-[var(--color-text-muted)]">
             ※ {parish.mass_schedule.note}
           </p>
         )}
       </section>
-    </div>
+      </SectionLayout>
     </>
   );
 }

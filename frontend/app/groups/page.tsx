@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "분과와 단체",
@@ -35,7 +36,7 @@ export default async function GroupsPage() {
   return (
     <>
       <PageHeader group="본당 공동체" title="분과와 단체" subtitle="함께 믿음을 키워가는 분과와 단체들" />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout group="community">
 
       {groups.length === 0 ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
@@ -97,7 +98,7 @@ export default async function GroupsPage() {
           })}
         </div>
       )}
-    </div>
+    </SectionLayout>
     </>
   );
 }

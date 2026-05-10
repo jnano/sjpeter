@@ -35,3 +35,12 @@ frontend/.turbo/
 
 # 로그
 *.log
+
+# Claude Code 워크스페이스
+.claude/
+
+# DB 백업
+backups/
+
+# 임시 프레젠테이션
+presentation.html

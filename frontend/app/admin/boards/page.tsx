@@ -168,7 +168,7 @@ export default function AdminBoardsPage() {
     slug: "",
     description: "",
     access_mode: "write-restricted" as AccessMode,
-    posts_per_page: 20,
+    posts_per_page: 12,
     exclude_from_search: false,
     moderator_id: null as number | null,
   });
@@ -229,7 +229,7 @@ export default function AdminBoardsPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.detail || "게시판 생성에 실패했습니다."); return; }
       setBoards((prev) => [...prev, data]);
-      setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 20, exclude_from_search: false, moderator_id: null });
+      setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 12, exclude_from_search: false, moderator_id: null });
       setFormModerator(null);
       setShowForm(false);
     } finally {
@@ -355,7 +355,7 @@ export default function AdminBoardsPage() {
               <input
                 type="number" min={1} max={100}
                 value={form.posts_per_page}
-                onChange={(e) => setForm((p) => ({ ...p, posts_per_page: parseInt(e.target.value) || 20 }))}
+                onChange={(e) => setForm((p) => ({ ...p, posts_per_page: parseInt(e.target.value) || 12 }))}
                 className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               개
@@ -623,7 +623,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           <input
             type="number" min={1} max={100}
             value={postsPerPage}
-            onChange={(e) => setPostsPerPage(parseInt(e.target.value) || 20)}
+            onChange={(e) => setPostsPerPage(parseInt(e.target.value) || 12)}
             className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none"
           />
           개

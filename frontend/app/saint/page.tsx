@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const metadata: Metadata = {
   title: "성 베드로",
@@ -129,7 +131,19 @@ export default function SaintPage() {
         subtitle="세종성베드로성당의 주보성인 — 시몬 베드로의 일대기"
       />
 
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <SectionLayout group="about">
+        {/* 성 베드로 성상 — 본문 상단 가로 이미지 (가로 100% / 세로 50% 축소) */}
+        <div className="relative w-full aspect-[3/1] rounded-xl overflow-hidden border border-[var(--color-border)] mb-8">
+          <Image
+            src="/saints/st_peter.jpg"
+            alt="성 베드로 사도 성상 — 천국의 열쇠를 들고 있는 모습"
+            fill
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 768px"
+          />
+        </div>
+
         {/* 도입부 */}
         <p className="text-center text-sm text-[var(--color-text-muted)] italic mb-12">
           어부에서 교회의 반석으로 — 시몬 베드로의 이야기
@@ -208,7 +222,7 @@ export default function SaintPage() {
             성 바오로 사도 축일과 함께 지냅니다
           </p>
         </div>
-      </div>
+      </SectionLayout>
     </>
   );
 }

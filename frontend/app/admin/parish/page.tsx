@@ -38,6 +38,7 @@ interface ParishInfo {
   band_url: string | null;
   pastor_name: string | null;
   pastor_message: string | null;
+  about_photo_url: string | null;
   mass_schedule: MassSchedule | null;
 }
 
@@ -70,6 +71,9 @@ export default function AdminParishPage() {
   const [photos, setPhotos] = useState<PastorPhoto[]>([]);
   const [photoLoading, setPhotoLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [aboutPhotoLoading, setAboutPhotoLoading] = useState(false);
+  const aboutFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`${API}/api/parish/`).then((r) => r.json()).then((data: ParishInfo) => {
@@ -128,6 +132,52 @@ export default function AdminParishPage() {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) fetchPhotos();
+  }
+
+  async function uploadAboutPhoto(file: File) {
+    setAboutPhotoLoading(true);
+    setError("");
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`${API}/api/parish/about-photo/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || "업로드에 실패했습니다.");
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setAboutPhotoLoading(false);
+    }
+  }
+
+  async function deleteAboutPhoto() {
+    if (!confirm("성당 소개 사진을 삭제하시겠습니까? 기본 사진(yakhoun.jpg)으로 돌아갑니다.")) return;
+    setAboutPhotoLoading(true);
+    setError("");
+    const token = getToken();
+    try {
+      const res = await fetch(`${API}/api/parish/about-photo`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || "삭제에 실패했습니다.");
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setAboutPhotoLoading(false);
+    }
   }
 
   async function saveParish(newSchedule: MassSchedule) {
@@ -432,6 +482,67 @@ export default function AdminParishPage() {
           </button>
         </div>
       </form>
+
+      {/* 성당 소개 사진 (/about 페이지) */}
+      <section className="mt-8 p-6 bg-white border border-gray-200 rounded-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div>
+            <h2 className="font-semibold text-gray-800">성당 소개 사진</h2>
+            <p className="text-xs text-gray-400 mt-0.5">/about 페이지 안내 옆에 표시됩니다. 등록하지 않으면 기본 사진(yakhoun.jpg)이 사용됩니다.</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => aboutFileInputRef.current?.click()}
+              disabled={aboutPhotoLoading}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {aboutPhotoLoading ? "처리 중..." : info.about_photo_url ? "사진 변경" : "사진 등록"}
+            </button>
+            {info.about_photo_url && (
+              <button
+                type="button"
+                onClick={deleteAboutPhoto}
+                disabled={aboutPhotoLoading}
+                className="px-4 py-2 border border-gray-300 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                기본 사진으로
+              </button>
+            )}
+          </div>
+          <input
+            ref={aboutFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadAboutPhoto(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        <div className="flex items-start gap-4">
+          <div className="relative w-64 aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+            <img
+              src={info.about_photo_url ? `${API}${info.about_photo_url}` : "/yakhoun.jpg"}
+              alt="성당 소개 사진"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: "center 30%" }}
+            />
+            {!info.about_photo_url && (
+              <div className="absolute top-2 left-2 bg-gray-900/70 text-white text-xs px-2 py-0.5 rounded">
+                기본 사진
+              </div>
+            )}
+          </div>
+          <div className="flex-1 text-sm text-gray-500 leading-relaxed pt-2">
+            <p>이 사진은 <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">/about</code> 페이지 상단의 안내 영역 옆에 표시됩니다.</p>
+            <p className="mt-1.5">권장 비율: <strong className="text-gray-700">4:3</strong> · 최대 10MB · JPG, PNG, WEBP, GIF</p>
+          </div>
+        </div>
+      </section>
 
       {/* 신부님 사진 관리 */}
       <section className="mt-8 p-6 bg-white border border-gray-200 rounded-xl space-y-4">

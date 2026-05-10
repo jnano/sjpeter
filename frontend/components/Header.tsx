@@ -23,7 +23,6 @@ const navGroups = [
     label: "본당 공동체",
     subtitle: "조직과 활동",
     items: [
-      { href: "/community", label: "공동체 안내" },
       { href: "/council", label: "사목평의회" },
       { href: "/groups", label: "분과와 단체" },
       { href: "/vision", label: "올해의 사목 방향" },
@@ -46,7 +45,6 @@ const navGroups = [
       { href: "/boards/notice", label: "공지·알림" },
       { href: "/calendar", label: "행사 일정" },
       { href: "/boards", label: "자유 게시판" },
-      { href: "/boards/news", label: "공동체 소식" },
     ],
   },
   {

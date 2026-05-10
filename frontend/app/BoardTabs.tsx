@@ -7,6 +7,7 @@ export interface BoardTabItem {
   title: string;
   is_pinned: boolean;
   created_at: string;
+  href?: string; // 지정 시 `${itemBase}/${id}` 대신 이 경로 사용
 }
 
 export interface BoardTab {
@@ -57,7 +58,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
           {current.items.slice(0, 7).map((item) => (
             <li key={item.id}>
               <Link
-                href={`${current.itemBase}/${item.id}`}
+                href={item.href ?? `${current.itemBase}/${item.id}`}
                 className="flex items-baseline gap-2 px-4 py-2.5 hover:bg-[var(--color-surface-warm)] transition-colors"
               >
                 {item.is_pinned ? (

@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api
+from app.api import settings_api, home_banner, parish_staff
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -45,6 +45,8 @@ app.include_router(events.router, prefix="/api")
 app.include_router(archive.router, prefix="/api")
 app.include_router(settings_api.router)
 app.include_router(settings_api.internal_router)
+app.include_router(home_banner.router, prefix="/api")
+app.include_router(parish_staff.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -160,10 +162,58 @@ def _migrate_add_columns():
             )
         """))
 
+        # 본당 가족 (parish_staff)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS parish_staff (
+                id SERIAL PRIMARY KEY,
+                role VARCHAR(30) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                title VARCHAR(100),
+                feast_day VARCHAR(20),
+                photo_url VARCHAR(500),
+                introduction TEXT,
+                career_items TEXT,
+                scripture_quote TEXT,
+                scripture_reference VARCHAR(100),
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_parish_staff_role ON parish_staff(role)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_parish_staff_sort ON parish_staff(sort_order)"
+        ))
+
+        # 홈 배너 테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS home_banners (
+                id SERIAL PRIMARY KEY,
+                file_url VARCHAR(500) NOT NULL,
+                original_name VARCHAR(300) NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        # SQLAlchemy create_tables가 먼저 만든 경우 default가 빠질 수 있어 보정
+        try:
+            conn.execute(text("ALTER TABLE home_banners ALTER COLUMN created_at SET DEFAULT NOW()"))
+            conn.execute(text("UPDATE home_banners SET created_at = NOW() WHERE created_at IS NULL"))
+        except Exception:
+            pass
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_home_banners_sort ON home_banners(sort_order)"
+        ))
+
         # parishes 추가 컬럼
         for col, col_type in [
             ("member_count", "INTEGER"),
             ("pastor_appointed", "VARCHAR(100)"),
+            ("about_photo_url", "VARCHAR(500)"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE parishes ADD COLUMN IF NOT EXISTS {col} {col_type}"))

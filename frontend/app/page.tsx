@@ -1,9 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import MiniCalendar from "./MiniCalendar";
 import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
+import HomeHero from "./HomeHero";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -25,6 +25,13 @@ interface BoardPost {
   created_at: string;
 }
 interface BoardPostList { posts: BoardPost[] }
+interface CalendarEvent {
+  id: number;
+  title: string;
+  event_date: string;
+  end_date: string | null;
+  event_kind: string | null;
+}
 interface GospelToday {
   date: string;
   liturgical_season: string | null;
@@ -44,6 +51,29 @@ async function getBoardPosts(slug: string): Promise<BoardPost[]> {
     if (!r.ok) return [];
     const data: BoardPostList = await r.json();
     return data.posts ?? [];
+  } catch { return []; }
+}
+
+async function getUpcomingEvents(): Promise<CalendarEvent[]> {
+  // 오늘부터 약 60일 — 이번 달 + 다음 달 fetch 후 다가오는 순으로 정렬
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+  const months = [
+    { y: today.getFullYear(), m: today.getMonth() + 1 },
+    { y: today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear(), m: today.getMonth() === 11 ? 1 : today.getMonth() + 2 },
+  ];
+  try {
+    const lists = await Promise.all(
+      months.map((mm) =>
+        fetch(`${API}/api/events/?year=${mm.y}&month=${mm.m}`, { next: { revalidate: 300 } })
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ),
+    );
+    const all: CalendarEvent[] = lists.flat();
+    return all
+      .filter((e) => (e.end_date ?? e.event_date) >= todayKey)
+      .sort((a, b) => a.event_date.localeCompare(b.event_date));
   } catch { return []; }
 }
 async function getGospelToday(): Promise<GospelToday | null> {
@@ -108,11 +138,11 @@ const QUICK_LINKS = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, newsPosts, youthPosts] = await Promise.all([
+  const [parish, notices, gospel, upcomingEvents, youthPosts] = await Promise.all([
     getParish(),
     getNotices(),
     getGospelToday(),
-    getBoardPosts("news"),
+    getUpcomingEvents(),
     getBoardPosts("youth_council"),
   ]);
 
@@ -134,11 +164,17 @@ export default async function HomePage() {
       items: sortedNotices,
     },
     {
-      key: "news",
-      label: "공동체 소식",
-      moreHref: "/boards/news",
-      itemBase: "/boards/news",
-      items: newsPosts.map((p) => ({ id: p.id, title: p.title, is_pinned: false, created_at: p.created_at })),
+      key: "events",
+      label: "행사·모임",
+      moreHref: "/calendar",
+      itemBase: "/calendar",
+      items: upcomingEvents.map((e) => ({
+        id: e.id,
+        title: e.event_kind ? `[${e.event_kind}] ${e.title}` : e.title,
+        is_pinned: false,
+        created_at: e.event_date,
+        href: "/calendar",
+      })),
     },
     {
       key: "youth",
@@ -156,25 +192,8 @@ export default async function HomePage() {
         <div className={`${CONTAINER} py-5 sm:py-7`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-            {/* 큰 사진 */}
-            <div className="relative w-full aspect-[4/3] md:aspect-auto md:min-h-[260px] rounded-xl overflow-hidden border border-[var(--color-border)] group">
-              <Image
-                src="/yakhoun.jpg"
-                alt="세종성베드로성당"
-                fill
-                priority
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 33vw"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent p-3.5">
-                <p className="text-white font-serif font-bold text-sm leading-tight tracking-tight">
-                  {parish?.name ?? "세종성베드로성당"}
-                </p>
-                <p className="text-white/80 text-[10.3px] mt-0.5 tracking-wider">
-                  ST. PETER&apos;S CATHEDRAL · SEJONG
-                </p>
-              </div>
-            </div>
+            {/* 큰 사진 (관리자 등록 배너 크로스페이드, 없으면 yakhoun.jpg) */}
+            <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
 
             {/* 오늘의 복음 */}
             <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
