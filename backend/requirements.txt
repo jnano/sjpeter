@@ -1,5 +1,6 @@
 fastapi==0.136.1
 uvicorn==0.46.0
+watchfiles==1.1.1  # uvicorn --reload의 fsevents 기반 감시 (StatReload 폴링 대체로 CPU 사용 ↓)
 sqlalchemy==2.0.49
 alembic==1.18.4
 psycopg2-binary==2.9.12
