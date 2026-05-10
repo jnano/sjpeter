@@ -181,12 +181,12 @@ export default async function HomePage() {
             {/* 오늘의 복음 */}
             <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
               <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-                <h2 className="font-serif font-bold text-[var(--color-primary)] text-xs flex items-center gap-1.5">
+                <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
                   <span className="text-[var(--color-accent)]">✝</span>
                   오늘의 복음
                 </h2>
                 {gospel?.liturgical_season && (
-                  <span className="text-[10.3px] text-[var(--color-text-muted)] truncate ml-2">
+                  <span className="text-[11px] text-[var(--color-text-muted)] truncate ml-2">
                     {gospel.liturgical_season}
                   </span>
                 )}
@@ -194,25 +194,25 @@ export default async function HomePage() {
               {gospel?.gospel_text ? (
                 <>
                   <blockquote
-                    className="text-xs text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
+                    className="text-[12px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
                     style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
                   >
                     &ldquo;{gospel.gospel_text}&rdquo;
                   </blockquote>
                   {gospel.gospel_reference && (
-                    <cite className="block text-[10.8px] text-[var(--color-text-muted)] mt-2 not-italic">
+                    <cite className="block text-[11px] text-[var(--color-text-muted)] mt-2 not-italic">
                       — {gospel.gospel_reference}
                     </cite>
                   )}
                   <Link
                     href="/word"
-                    className="inline-block mt-2 text-[10.8px] font-medium text-[var(--color-primary)] hover:underline"
+                    className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
                   >
                     전체 보기 →
                   </Link>
                 </>
               ) : (
-                <p className="text-[11.3px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+                <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
                   오늘의 말씀을 불러오는 중입니다…
                 </p>
               )}
@@ -221,13 +221,13 @@ export default async function HomePage() {
             {/* 미사 시간 */}
             <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
               <div className="mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-                <h2 className="font-serif font-bold text-[var(--color-primary)] text-xs flex items-center gap-1.5">
+                <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
                   <span className="text-[var(--color-accent)]">⏰</span>
                   미사 시간
                 </h2>
               </div>
               {massRows.length > 0 ? (
-                <table className="text-[11.8px] w-full flex-1">
+                <table className="text-[12px] w-full flex-1">
                   <tbody>
                     {massRows.map((row) => (
                       <tr key={row.label} className="align-top">
@@ -242,18 +242,18 @@ export default async function HomePage() {
                   </tbody>
                 </table>
               ) : (
-                <p className="text-[11.3px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+                <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
                   미사 시간 정보가 없습니다.
                 </p>
               )}
               {parish?.mass_schedule?.note && (
-                <p className="text-[10.3px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+                <p className="text-[10.5px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
                   ※ {parish.mass_schedule.note}
                 </p>
               )}
               <Link
                 href="/info"
-                className="inline-block mt-2 text-[10.8px] font-medium text-[var(--color-primary)] hover:underline"
+                className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
               >
                 찾아오시는 길 →
               </Link>
@@ -274,7 +274,7 @@ export default async function HomePage() {
                   className="flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 border border-[var(--color-border)] rounded-xl bg-white hover:border-[var(--color-primary)] hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200"
                 >
                   <span className="text-2xl leading-none">{item.icon}</span>
-                  <span className="text-[10.8px] sm:text-[11.3px] font-medium text-[var(--color-text)] text-center leading-tight">
+                  <span className="text-[12px] font-medium text-[var(--color-text)] text-center leading-tight">
                     {item.label}
                   </span>
                 </Link>
@@ -301,11 +301,11 @@ export default async function HomePage() {
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif font-bold text-[var(--color-primary)] text-sm flex items-center gap-1.5">
+              <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
                 <span className="text-[var(--color-accent)]">📷</span>
                 사진 갤러리
               </h2>
-              <div className="flex items-center gap-3 text-[10.8px]">
+              <div className="flex items-center gap-3 text-[11px]">
                 <Link href="/gallery/liturgy" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
                   전례 사진
                 </Link>
@@ -328,7 +328,7 @@ export default async function HomePage() {
             <blockquote className="font-serif italic text-[var(--color-primary)] text-xs sm:text-sm mt-2 leading-relaxed">
               &ldquo;너는 베드로이다. 나는 이 반석 위에 내 교회를 세우겠다.&rdquo;
             </blockquote>
-            <p className="text-[10.8px] text-[var(--color-text-muted)] mt-1">— 마태오 16,18</p>
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">— 마태오 16,18</p>
           </div>
         </div>
       </section>

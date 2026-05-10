@@ -79,7 +79,7 @@ export default function MiniCalendar() {
         >
           ‹
         </button>
-        <h3 className="font-serif font-bold text-[var(--color-primary)] text-sm">
+        <h3 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px]">
           {year}년 {month}월
         </h3>
         <button
@@ -97,7 +97,7 @@ export default function MiniCalendar() {
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
-              className={`text-center text-[10.3px] font-medium py-1 ${
+              className={`text-center text-[10.5px] font-medium py-1 ${
                 i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
               }`}
             >
@@ -119,7 +119,7 @@ export default function MiniCalendar() {
                 className="relative aspect-square flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
               >
                 <span
-                  className={`text-xs ${
+                  className={`text-[12px] ${
                     isToday
                       ? "bg-[var(--color-primary)] text-white w-6 h-6 rounded-full flex items-center justify-center font-bold"
                       : dow === 0
@@ -143,9 +143,9 @@ export default function MiniCalendar() {
       {/* 다가오는 행사 미리보기 */}
       <div className="border-t border-[var(--color-border)] px-4 py-3">
         {loading ? (
-          <p className="text-xs text-[var(--color-text-muted)] text-center py-1">불러오는 중…</p>
+          <p className="text-[11.5px] text-[var(--color-text-muted)] text-center py-1">불러오는 중…</p>
         ) : upcoming.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)] text-center py-1">
+          <p className="text-[11.5px] text-[var(--color-text-muted)] text-center py-1">
             이번 달 예정된 행사가 없습니다.
           </p>
         ) : (
@@ -153,7 +153,7 @@ export default function MiniCalendar() {
             {upcoming.map((e) => {
               const d = new Date(e.event_date);
               return (
-                <li key={e.id} className="flex items-baseline gap-2 text-xs">
+                <li key={e.id} className="flex items-baseline gap-2 text-[11.5px]">
                   <span className="text-[var(--color-accent)] font-mono font-semibold shrink-0 w-12">
                     {d.getMonth() + 1}.{d.getDate()}
                   </span>
@@ -176,7 +176,7 @@ export default function MiniCalendar() {
         )}
         <Link
           href="/calendar"
-          className="inline-block mt-2 text-[11.3px] font-medium text-[var(--color-primary)] hover:underline"
+          className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
         >
           전체 일정 →
         </Link>

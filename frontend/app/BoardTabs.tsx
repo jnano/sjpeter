@@ -30,7 +30,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
           <button
             key={t.key}
             onClick={() => setActive(t.key)}
-            className={`px-3.5 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px ${
+            className={`px-3.5 py-2.5 text-[12.5px] font-bold transition-colors border-b-2 -mb-px ${
               active === t.key
                 ? "text-[var(--color-primary)] border-[var(--color-primary)] bg-white"
                 : "text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-primary)]"
@@ -41,7 +41,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
         ))}
         <Link
           href={current.moreHref}
-          className="ml-auto self-center pr-4 text-[10.8px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+          className="ml-auto self-center pr-4 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
         >
           더 보기 →
         </Link>
@@ -49,7 +49,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
 
       {/* 게시글 목록 */}
       {current.items.length === 0 ? (
-        <p className="text-[11.3px] text-[var(--color-text-muted)] text-center py-10">
+        <p className="text-[12px] text-[var(--color-text-muted)] text-center py-10">
           등록된 글이 없습니다.
         </p>
       ) : (
@@ -69,7 +69,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)]/40 shrink-0" />
                 )}
                 <span
-                  className={`flex-1 truncate text-xs ${
+                  className={`flex-1 truncate text-[12px] ${
                     item.is_pinned
                       ? "font-semibold text-[var(--color-text)]"
                       : "text-[var(--color-text)]"
@@ -77,7 +77,7 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
                 >
                   {item.title}
                 </span>
-                <span className="text-[10.3px] text-[var(--color-text-muted)] shrink-0">
+                <span className="text-[11px] text-[var(--color-text-muted)] shrink-0">
                   {new Date(item.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
                 </span>
               </Link>
