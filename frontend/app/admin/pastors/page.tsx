@@ -35,6 +35,13 @@ export default function AdminPastorsPage() {
   const [uploading, setUploading] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  function scrollToForm() {
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
 
   useEffect(() => { load(); }, []);
 
@@ -47,13 +54,25 @@ export default function AdminPastorsPage() {
 
   function openCreate() {
     setForm({ ...EMPTY }); setEditId(null); setMsg(null); setShowForm(true);
+    scrollToForm();
+  }
+  function closeForm() {
+    setShowForm(false); setEditId(null); setMsg(null);
   }
   function openEdit(p: Pastor) {
     setForm({ name: p.name, title: p.title,
       appointed_at: p.appointed_at?.slice(0, 10) ?? "",
       resigned_at: p.resigned_at?.slice(0, 10) ?? "",
       bio: p.bio ?? "", sort_order: p.sort_order, category: p.category });
-    setEditId(p.id); setMsg(null); setShowForm(true);
+    setEditId(p.id); setMsg(null); setShowForm(false); // 새 폼은 닫고 인라인으로
+    scrollToForm();
+  }
+  function toggleEdit(p: Pastor) {
+    if (editId === p.id) {
+      setEditId(null); setMsg(null);
+    } else {
+      openEdit(p);
+    }
   }
 
   // editId가 있고 이임일이 비어 있으면 "본당 가족으로 복원" 모드
@@ -118,24 +137,26 @@ export default function AdminPastorsPage() {
     load();
   }
 
-  return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)]">역대 신부님·수녀님 관리</h1>
-        <button onClick={openCreate} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium">
-          + 등록
-        </button>
+  const renderForm = () => (
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="p-5 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl space-y-3"
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-[var(--color-primary)]">
+          {editId ? `수정 — ${form.name || "(이름 없음)"}` : "새 사목자 등록"}
+        </h2>
+        {editId && (
+          <button
+            type="button"
+            onClick={openCreate}
+            className="text-xs text-gray-600 underline"
+          >
+            닫고 새로 등록
+          </button>
+        )}
       </div>
-
-      {msg && (
-        <p className={`mb-4 text-sm px-3 py-2 rounded-lg ${msg.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-          {msg.text}
-        </p>
-      )}
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-5 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl space-y-3">
-          <h2 className="font-semibold text-[var(--color-primary)]">{editId ? "수정" : "새 사목자 등록"}</h2>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium mb-1">구분 *</label>
@@ -190,7 +211,7 @@ export default function AdminPastorsPage() {
               className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none" />
           </div>
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm">취소</button>
+            <button type="button" onClick={closeForm} className="px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm">취소</button>
             <button
               type="submit"
               className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${
@@ -203,50 +224,104 @@ export default function AdminPastorsPage() {
             </button>
           </div>
         </form>
+  );
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-primary)]">역대 신부님·수녀님 관리</h1>
+        <button
+          onClick={showForm && !editId ? closeForm : openCreate}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            showForm && !editId
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showForm && !editId ? "닫기" : "+ 등록"}
+        </button>
+      </div>
+
+      {msg && (
+        <p className={`mb-4 text-sm px-3 py-2 rounded-lg ${msg.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          {msg.text}
+        </p>
+      )}
+
+      {editId !== null && (
+        <div className="mb-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+          <strong>{form.name || "(이름 없음)"}</strong> 수정 중 — 해당 항목 아래에서 폼이 펼쳐집니다
+        </div>
+      )}
+
+      {/* 새 등록 폼 (버튼 토글 + 편집 중이 아닐 때) */}
+      {showForm && !editId && (
+        <div className="mb-6">{renderForm()}</div>
       )}
 
       <div className="space-y-3">
         {pastors.length === 0 && <p className="text-center py-12 text-[var(--color-text-muted)] text-sm">등록된 사목자가 없습니다.</p>}
-        {pastors.map((p) => (
-          <div key={p.id} className="flex items-center gap-4 bg-white border border-[var(--color-border)] rounded-xl p-4">
-            {/* 사진 */}
-            <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center relative">
-              {p.photo_url ? (
-                <Image src={p.photo_url.startsWith("/") ? `${API}${p.photo_url}` : p.photo_url}
-                  alt={p.name} fill className="object-cover" />
-              ) : (
-                <span className="text-2xl text-[var(--color-border)]">✝</span>
+        {pastors.map((p) => {
+          const isEditing = editId === p.id;
+          return (
+            <div key={p.id}>
+              <div className={`flex items-center gap-4 bg-white border p-4 ${
+                isEditing ? "rounded-t-xl border-amber-300 border-b-0" : "rounded-xl border-[var(--color-border)]"
+              }`}>
+                {/* 사진 */}
+                <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center relative">
+                  {p.photo_url ? (
+                    <Image src={p.photo_url.startsWith("/") ? `${API}${p.photo_url}` : p.photo_url}
+                      alt={p.name} fill className="object-cover" />
+                  ) : (
+                    <span className="text-2xl text-[var(--color-border)]">✝</span>
+                  )}
+                </div>
+                {/* 정보 */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[var(--color-primary)] flex items-center gap-2 flex-wrap">
+                    <span>{p.name}</span>
+                    <span className="text-xs font-normal text-[var(--color-text-muted)]">{p.title}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      p.category === "sister"
+                        ? "bg-pink-100 text-pink-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {CATEGORY_LABEL[p.category] ?? p.category}
+                    </span>
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                    {p.appointed_at?.slice(0, 7) ?? "??"} ~ {p.resigned_at?.slice(0, 7) ?? "현재"}
+                  </p>
+                </div>
+                {/* 액션 */}
+                <div className="flex gap-2 shrink-0">
+                  <label className="px-3 py-1.5 text-xs border border-[var(--color-border)] rounded-lg cursor-pointer hover:bg-gray-50">
+                    {uploading === p.id ? "업로드 중…" : "사진"}
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden"
+                      onChange={e => e.target.files?.[0] && handlePhoto(p.id, e.target.files[0])} />
+                  </label>
+                  <button
+                    onClick={() => toggleEdit(p)}
+                    className={`px-3 py-1.5 text-xs border rounded-lg ${
+                      isEditing
+                        ? "bg-amber-100 border-amber-400 text-amber-800"
+                        : "border-[var(--color-border)] hover:bg-gray-50"
+                    }`}
+                  >
+                    {isEditing ? "수정 닫기" : "수정"}
+                  </button>
+                  <button onClick={() => handleDelete(p.id)} className="px-3 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50">삭제</button>
+                </div>
+              </div>
+              {isEditing && (
+                <div className="border border-t-0 border-amber-300 rounded-b-xl overflow-hidden">
+                  {renderForm()}
+                </div>
               )}
             </div>
-            {/* 정보 */}
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[var(--color-primary)] flex items-center gap-2 flex-wrap">
-                <span>{p.name}</span>
-                <span className="text-xs font-normal text-[var(--color-text-muted)]">{p.title}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                  p.category === "sister"
-                    ? "bg-pink-100 text-pink-700"
-                    : "bg-blue-100 text-blue-700"
-                }`}>
-                  {CATEGORY_LABEL[p.category] ?? p.category}
-                </span>
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {p.appointed_at?.slice(0, 7) ?? "??"} ~ {p.resigned_at?.slice(0, 7) ?? "현재"}
-              </p>
-            </div>
-            {/* 액션 */}
-            <div className="flex gap-2 shrink-0">
-              <label className="px-3 py-1.5 text-xs border border-[var(--color-border)] rounded-lg cursor-pointer hover:bg-gray-50">
-                {uploading === p.id ? "업로드 중…" : "사진"}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                  onChange={e => e.target.files?.[0] && handlePhoto(p.id, e.target.files[0])} />
-              </label>
-              <button onClick={() => openEdit(p)} className="px-3 py-1.5 text-xs border border-[var(--color-border)] rounded-lg hover:bg-gray-50">수정</button>
-              <button onClick={() => handleDelete(p.id)} className="px-3 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50">삭제</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

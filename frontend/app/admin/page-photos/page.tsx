@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -55,6 +55,13 @@ export default function AdminPagePhotosIndex() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  function scrollToForm() {
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
 
   async function fetchSlugs() {
     const res = await fetch(`${API}/api/page-photos/slugs`);
@@ -87,6 +94,13 @@ export default function AdminPagePhotosIndex() {
     setForm({ ...EMPTY_FORM });
     setError("");
     setShowForm(true);
+    scrollToForm();
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setError("");
   }
 
   function startEdit(s: PagePhotoSlug) {
@@ -100,7 +114,17 @@ export default function AdminPagePhotosIndex() {
       sort_order: s.sort_order,
     });
     setError("");
-    setShowForm(true);
+    setShowForm(false); // 새 폼은 닫고 인라인으로
+    scrollToForm();
+  }
+
+  function toggleEdit(s: PagePhotoSlug) {
+    if (editingId === s.id) {
+      setEditingId(null);
+      setError("");
+    } else {
+      startEdit(s);
+    }
   }
 
   async function submitForm(e: React.FormEvent) {
@@ -132,7 +156,7 @@ export default function AdminPagePhotosIndex() {
         setError(data.detail || "저장에 실패했습니다.");
         return;
       }
-      setShowForm(false);
+      closeForm();
       await fetchSlugs();
     } finally {
       setSaving(false);
@@ -153,29 +177,22 @@ export default function AdminPagePhotosIndex() {
     }
   }
 
-  return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">페이지 사진 관리</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            각 페이지의 히어로 영역에 표시될 사진을 등록·관리합니다. 여러 장 등록하면 자동 슬라이드쇼로 전환됩니다.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + 새 페이지 등록
-        </button>
+  const renderForm = () => (
+    <form
+      ref={formRef}
+      onSubmit={submitForm}
+      className="p-5 bg-white border border-blue-200 rounded-xl space-y-3"
+    >
+      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+        <h2 className="font-semibold text-gray-800">
+          {editingId ? `페이지 수정 — ${form.label || "(이름 없음)"}` : "새 페이지 등록"}
+        </h2>
+        {editingId && (
+          <button type="button" onClick={startCreate} className="text-xs text-gray-600 underline">
+            닫고 새로 등록
+          </button>
+        )}
       </div>
-
-      {showForm && (
-        <form onSubmit={submitForm} className="mb-6 p-5 bg-white border border-blue-200 rounded-xl space-y-3">
-          <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-2">
-            {editingId ? "페이지 수정" : "새 페이지 등록"}
-          </h2>
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -245,7 +262,7 @@ export default function AdminPagePhotosIndex() {
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               className="px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
             >
               취소
@@ -259,52 +276,101 @@ export default function AdminPagePhotosIndex() {
             </button>
           </div>
         </form>
+  );
+
+  return (
+    <div className="p-8 max-w-3xl mx-auto">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">페이지 사진 관리</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            각 페이지의 히어로 영역에 표시될 사진을 등록·관리합니다. 여러 장 등록하면 자동 슬라이드쇼로 전환됩니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={showForm && !editingId ? closeForm : startCreate}
+          className={`shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showForm && !editingId
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+        >
+          {showForm && !editingId ? "닫기" : "+ 새 페이지 등록"}
+        </button>
+      </div>
+
+      {editingId !== null && (
+        <div className="mb-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+          <strong>{form.label || "(이름 없음)"}</strong> 수정 중 — 해당 항목 아래에서 폼이 펼쳐집니다
+        </div>
+      )}
+
+      {/* 새 등록 폼 (버튼 토글 + 편집 중이 아닐 때) */}
+      {showForm && !editingId && (
+        <div className="mb-6">{renderForm()}</div>
       )}
 
       <ul className="space-y-2">
         {slugs.map((s) => {
           const stat = stats[s.slug];
+          const isEditing = editingId === s.id;
           return (
-            <li key={s.id} className="p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-200 transition-colors">
-              <div className="flex items-center justify-between gap-4">
-                <Link
-                  href={`/admin/page-photos/${s.slug}`}
-                  className="flex-1 min-w-0"
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="font-semibold text-gray-800">{s.label}</h2>
-                    <code className="text-xs text-gray-400 px-1.5 py-0.5 bg-gray-100 rounded">{s.slug}</code>
-                    <code className="text-xs text-blue-500 px-1.5 py-0.5 bg-blue-50 rounded">{s.public_href}</code>
-                  </div>
-                  {s.description && <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>}
-                </Link>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-medium text-gray-700">
-                    {stat ? `${stat.count}장` : "..."}
-                  </p>
-                  {stat && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {TRANSITION_KO[stat.transition_mode] ?? stat.transition_mode} · {stat.interval_seconds}초
+            <li key={s.id}>
+              <div className={`p-4 bg-white border transition-colors ${
+                isEditing
+                  ? "rounded-t-xl border-amber-300 border-b-0"
+                  : "rounded-xl border-gray-200 hover:border-blue-200"
+              }`}>
+                <div className="flex items-center justify-between gap-4">
+                  <Link
+                    href={`/admin/page-photos/${s.slug}`}
+                    className="flex-1 min-w-0"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-semibold text-gray-800">{s.label}</h2>
+                      <code className="text-xs text-gray-400 px-1.5 py-0.5 bg-gray-100 rounded">{s.slug}</code>
+                      <code className="text-xs text-blue-500 px-1.5 py-0.5 bg-blue-50 rounded">{s.public_href}</code>
+                    </div>
+                    {s.description && <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>}
+                  </Link>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-medium text-gray-700">
+                      {stat ? `${stat.count}장` : "..."}
                     </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(s)}
-                    className="px-2.5 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteSlug(s)}
-                    className="px-2.5 py-1 text-xs text-red-500 border border-red-200 rounded hover:bg-red-50"
-                  >
-                    삭제
-                  </button>
+                    {stat && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {TRANSITION_KO[stat.transition_mode] ?? stat.transition_mode} · {stat.interval_seconds}초
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleEdit(s)}
+                      className={`px-2.5 py-1 text-xs border rounded ${
+                        isEditing
+                          ? "bg-amber-100 border-amber-400 text-amber-800"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {isEditing ? "수정 닫기" : "수정"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteSlug(s)}
+                      className="px-2.5 py-1 text-xs text-red-500 border border-red-200 rounded hover:bg-red-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               </div>
+              {isEditing && (
+                <div className="border border-t-0 border-amber-300 rounded-b-xl overflow-hidden">
+                  {renderForm()}
+                </div>
+              )}
             </li>
           );
         })}
