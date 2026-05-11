@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -97,6 +98,7 @@ export default function DraftsPage() {
         setDrafts((d) => d.filter((x) => x.id !== draft.id));
         setSelected((s) => { const n = new Set(s); n.delete(draft.id); return n; });
         setPublishingId(null);
+        notify(DataEvent.DRAFTS_COUNT);
       } else {
         alert("게시 처리에 실패했습니다.");
       }
@@ -137,6 +139,7 @@ export default function DraftsPage() {
       if (res.ok || res.status === 204) {
         setDrafts((d) => d.filter((x) => x.id !== id));
         setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
+        notify(DataEvent.DRAFTS_COUNT);
       } else alert("삭제에 실패했습니다.");
     } finally {
       setProcessing((p) => ({ ...p, [id]: false }));
@@ -164,6 +167,7 @@ export default function DraftsPage() {
       if (succeeded.size > 0) {
         setDrafts((d) => d.filter((x) => !succeeded.has(x.id)));
         setSelected((s) => { const n = new Set(s); succeeded.forEach((id) => n.delete(id)); return n; });
+        notify(DataEvent.DRAFTS_COUNT);
       }
       if (failedCount > 0) alert(`${failedCount}개 게시 처리에 실패했습니다.`);
     } finally {
@@ -192,6 +196,7 @@ export default function DraftsPage() {
       if (succeeded.size > 0) {
         setDrafts((d) => d.filter((x) => !succeeded.has(x.id)));
         setSelected((s) => { const n = new Set(s); succeeded.forEach((id) => n.delete(id)); return n; });
+        notify(DataEvent.DRAFTS_COUNT);
       }
       if (failedCount > 0) alert(`${failedCount}개 삭제 처리에 실패했습니다.`);
     } finally {

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -48,6 +49,11 @@ export default function AdminPriestsPage() {
     if (res.ok) setPriests(await res.json());
   }
 
+  function loadAfterMutation() {
+    load();
+    notify(DataEvent.ARCHIVE_COUNTS);
+  }
+
   function openCreate() {
     setForm({ ...EMPTY }); setEditId(null); setMsg(null); setShowForm(true);
     scrollToForm();
@@ -90,7 +96,7 @@ export default function AdminPriestsPage() {
     if (!res.ok) { setMsg({ type: "err", text: "저장에 실패했습니다." }); return; }
     setMsg({ type: "ok", text: "저장되었습니다." });
     setShowForm(false);
-    load();
+    loadAfterMutation();
   }
 
   async function handleDelete(id: number) {
@@ -98,7 +104,7 @@ export default function AdminPriestsPage() {
     await fetch(`${API}/api/archive/priests/${id}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
-    load();
+    loadAfterMutation();
   }
 
   async function handlePhoto(id: number, file: File) {

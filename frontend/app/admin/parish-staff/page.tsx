@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -267,6 +268,7 @@ export default function AdminParishStaffPage() {
       setPhotoFile(null);
       setCurrentPhoto(null);
       await reload();
+      notify(DataEvent.ARCHIVE_COUNTS);  // parish_staff → parish_pastors 이전: archive 카운트 증가
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류");
     } finally {

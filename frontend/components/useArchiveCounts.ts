@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { DataEvent, useInvalidationListener } from "./dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -26,7 +27,7 @@ export function useArchiveCounts(): ArchiveCounts | null {
   const [counts, setCounts] = useState<ArchiveCounts | null>(null);
   const pathname = usePathname();
 
-  useEffect(() => {
+  const fetchCounts = useCallback(() => {
     let cancelled = false;
     Promise.all([
       fetch(`${API}/api/archive/pastors?category=priest`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
@@ -43,7 +44,14 @@ export function useArchiveCounts(): ArchiveCounts | null {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => {
+    const cleanup = fetchCounts();
+    return cleanup;
+  }, [pathname, fetchCounts]);
+
+  useInvalidationListener(DataEvent.ARCHIVE_COUNTS, fetchCounts);
 
   return counts;
 }

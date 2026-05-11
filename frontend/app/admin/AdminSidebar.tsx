@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -84,14 +85,17 @@ export default function AdminSidebar({ open, onClose }: Props) {
   const pathname = usePathname();
   const [draftCount, setDraftCount] = useState(0);
 
-  useEffect(() => {
+  const fetchDraftCount = useCallback(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
     if (!token) return;
     fetch(`${API}/api/boards/drafts/count`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d) setDraftCount(d.count ?? 0); })
       .catch(() => {});
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => { fetchDraftCount(); }, [pathname, fetchDraftCount]);
+  useInvalidationListener(DataEvent.DRAFTS_COUNT, fetchDraftCount);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 

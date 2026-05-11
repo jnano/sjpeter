@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -52,6 +53,11 @@ export default function AdminPastorsPage() {
     if (res.ok) setPastors(await res.json());
   }
 
+  function loadAfterMutation() {
+    load();
+    notify(DataEvent.ARCHIVE_COUNTS);
+  }
+
   function openCreate() {
     setForm({ ...EMPTY }); setEditId(null); setMsg(null); setShowForm(true);
     scrollToForm();
@@ -97,7 +103,7 @@ export default function AdminPastorsPage() {
       }
       setMsg({ type: "ok", text: "본당 가족으로 복원되었습니다." });
       setShowForm(false);
-      load();
+      loadAfterMutation();
       return;
     }
 
@@ -115,7 +121,7 @@ export default function AdminPastorsPage() {
     if (!res.ok) { setMsg({ type: "err", text: "저장에 실패했습니다." }); return; }
     setMsg({ type: "ok", text: "저장되었습니다." });
     setShowForm(false);
-    load();
+    loadAfterMutation();
   }
 
   async function handleDelete(id: number) {
@@ -123,7 +129,7 @@ export default function AdminPastorsPage() {
     await fetch(`${API}/api/archive/pastors/${id}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
-    load();
+    loadAfterMutation();
   }
 
   async function handlePhoto(id: number, file: File) {
@@ -134,7 +140,7 @@ export default function AdminPastorsPage() {
       method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
     });
     setUploading(null);
-    load();
+    load();  // 사진 업로드는 archive counts에 영향 없음
   }
 
   const renderForm = () => (

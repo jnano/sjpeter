@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = "http://localhost:8000";
 
@@ -55,6 +56,7 @@ export default function NewBulletinPage() {
             setExtractionCount(data.length);
             setAnalysisStatus("done");
             clearInterval(pollRef.current!);
+            notify(DataEvent.DRAFTS_COUNT);  // AI 추출 결과가 일부 drafts로 저장됨
             return;
           }
         }
