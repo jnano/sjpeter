@@ -215,7 +215,13 @@ def list_boards_for_menu(db: Session = Depends(get_db), _: Admin = Depends(get_c
 
     각 게시판이 이미 다른 menu_item에 연결되어 있는지(linked_item_id)도 함께 알려줌.
     """
-    boards = db.query(Board).filter(Board.is_active == True).order_by(Board.sort_order, Board.id).all()  # noqa: E712
+    # ai-extract 등 검색 제외 게시판은 메뉴 선택지에서도 숨김
+    boards = (
+        db.query(Board)
+        .filter(Board.is_active == True, Board.exclude_from_search == False)  # noqa: E712
+        .order_by(Board.id)
+        .all()
+    )
     linked = {
         b_id: mid
         for (b_id, mid) in db.execute(
