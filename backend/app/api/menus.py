@@ -11,8 +11,61 @@ from app.core.auth import get_current_admin
 from app.models.admin import Admin
 from app.models.menu import MenuGroup, MenuItem
 from app.models.content import CommunityGroup
+from app.models.board import Board
 
 router = APIRouter(prefix="/menus", tags=["menus"])
+
+
+def _sync_boards_menu(db: Session) -> None:
+    """show_in_menu=True인 board들을 menu_items에 자동 동기화.
+
+    - 신규 board → 'board' 그룹에 menu_item 자동 추가 (없으면 첫 그룹)
+    - show_in_menu=False 또는 board 삭제 → 대응 menu_item is_active=False
+    - 라벨은 admin이 수정했을 가능성 있으니 최초 생성 시에만 board.name 사용
+    - href는 slug 변경 시 자동 갱신 (URL은 자동으로 따라가야 함)
+    """
+    default_group = (
+        db.query(MenuGroup).filter(MenuGroup.key == "board").first()
+        or db.query(MenuGroup).order_by(MenuGroup.sort_order, MenuGroup.id).first()
+    )
+    if not default_group:
+        return
+
+    visible_boards = db.query(Board).filter(Board.show_in_menu == True, Board.is_active == True).all()  # noqa: E712
+    visible_slugs = {b.slug for b in visible_boards}
+
+    # 기존 auto:boards menu_items
+    existing = {
+        it.source_id: it
+        for it in db.query(MenuItem).filter(MenuItem.source_type == "auto:boards").all()
+    }
+
+    # 새 board → menu_item 추가, 기존은 href만 갱신
+    for b in visible_boards:
+        if b.slug in existing:
+            it = existing[b.slug]
+            new_href = f"/boards/{b.slug}"
+            if it.href != new_href:
+                it.href = new_href  # slug 변경 따라가기
+            if not it.is_active:
+                it.is_active = True
+        else:
+            db.add(MenuItem(
+                group_id=default_group.id,
+                label=b.name,
+                href=f"/boards/{b.slug}",
+                source_type="auto:boards",
+                source_id=b.slug,
+                sort_order=999,
+                is_active=True,
+            ))
+
+    # 숨김 처리된 board → menu_item 비활성
+    for slug, it in existing.items():
+        if slug not in visible_slugs:
+            it.is_active = False
+
+    db.commit()
 
 
 def _sync_groups_children(db: Session) -> None:
@@ -138,6 +191,7 @@ class MenuGroupOut(MenuGroupIn):
 @router.get("/public", response_model=list[MenuGroupOut])
 def list_public_menus(db: Session = Depends(get_db)):
     _sync_groups_children(db)
+    _sync_boards_menu(db)
     groups = (
         db.query(MenuGroup)
         .filter(MenuGroup.is_active == True)  # noqa: E712
@@ -163,6 +217,7 @@ def list_public_menus(db: Session = Depends(get_db)):
 @router.get("/admin/all", response_model=list[MenuGroupOut])
 def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     _sync_groups_children(db)
+    _sync_boards_menu(db)
     groups = db.query(MenuGroup).order_by(asc(MenuGroup.sort_order), asc(MenuGroup.id)).all()
     result = []
     for g in groups:

@@ -138,6 +138,8 @@ def _migrate_add_columns():
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_read BOOLEAN DEFAULT FALSE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS moderator_id INTEGER REFERENCES members(id) ON DELETE SET NULL",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_selected BOOLEAN DEFAULT FALSE",
+            # 메뉴 자동 노출 토글 (default TRUE — 새 게시판은 자동, 기존은 별도 UPDATE로 false)
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_in_menu BOOLEAN DEFAULT TRUE",
         ]:
             try:
                 conn.execute(text(ddl))

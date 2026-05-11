@@ -18,6 +18,7 @@ class Board(Base):
     moderator_only_write = Column(Boolean, default=False)   # True: 게시판 관리자만 쓰기
     posts_per_page = Column(Integer, default=12)
     exclude_from_search = Column(Boolean, default=False)
+    show_in_menu = Column(Boolean, default=True)            # True: 헤더 메뉴에 자동 노출
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

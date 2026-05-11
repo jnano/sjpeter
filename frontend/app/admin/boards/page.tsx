@@ -35,6 +35,7 @@ interface Board {
   moderator_only_write: boolean;
   posts_per_page: number;
   exclude_from_search: boolean;
+  show_in_menu: boolean;
   post_count: number;
   moderator: Moderator | null;
   allowed_members: AllowedMember[];
@@ -584,6 +585,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   const [accessMode, setAccessMode] = useState<AccessMode>(getAccessMode(board));
   const [moderator, setModerator] = useState<Moderator | null>(board.moderator);
   const [excludeSearch, setExcludeSearch] = useState(board.exclude_from_search);
+  const [showInMenu, setShowInMenu] = useState(board.show_in_menu ?? true);
   const [postsPerPage, setPostsPerPage] = useState(board.posts_per_page);
   const [allowedMembers, setAllowedMembers] = useState<AllowedMember[]>(board.allowed_members ?? []);
   const [saving, setSaving] = useState(false);
@@ -595,9 +597,10 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
     setAccessMode(getAccessMode(board));
     setModerator(board.moderator);
     setExcludeSearch(board.exclude_from_search);
+    setShowInMenu(board.show_in_menu ?? true);
     setPostsPerPage(board.posts_per_page);
     setAllowedMembers(board.allowed_members ?? []);
-  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.posts_per_page, board.allowed_members]);
+  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members]);
 
   async function save() {
     setSaving(true);
@@ -613,6 +616,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           ...accessModeToFields(accessMode),
           moderator_id: moderator?.id ?? null,
           exclude_from_search: excludeSearch,
+          show_in_menu: showInMenu,
           posts_per_page: postsPerPage,
         }),
       });
@@ -729,7 +733,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
       )}
 
       {/* 기타 */}
-      <div className="col-span-2 flex items-center gap-6">
+      <div className="col-span-2 flex items-center gap-6 flex-wrap">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -738,6 +742,15 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
             className="rounded"
           />
           통합검색 제외
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer" title="체크 시 '알림과 게시판' 그룹에 자동으로 메뉴 항목 생성. 라벨·위치는 /admin/menus에서 자유롭게 수정 가능.">
+          <input
+            type="checkbox"
+            checked={showInMenu}
+            onChange={(e) => setShowInMenu(e.target.checked)}
+            className="rounded"
+          />
+          헤더 메뉴에 노출
         </label>
         <label className="flex items-center gap-2 text-sm">
           페이지당 게시글

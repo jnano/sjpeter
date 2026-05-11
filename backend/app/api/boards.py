@@ -44,6 +44,7 @@ class BoardIn(BaseModel):
     moderator_only_write: bool = False
     posts_per_page: int = 12
     exclude_from_search: bool = False
+    show_in_menu: bool = True
     moderator_id: Optional[int] = None
 
 
@@ -58,6 +59,7 @@ class BoardUpdate(BaseModel):
     is_active: Optional[bool] = None
     posts_per_page: Optional[int] = None
     exclude_from_search: Optional[bool] = None
+    show_in_menu: Optional[bool] = None
     moderator_id: Optional[int] = None
 
 
@@ -84,6 +86,7 @@ class BoardOut(BaseModel):
     posts_per_page: int = 12
     post_count: int = 0
     exclude_from_search: bool = False
+    show_in_menu: bool = True
     moderator: Optional[ModeratorOut] = None
     moderator_id: Optional[int] = None
     allowed_members: list[AllowedMemberOut] = []
