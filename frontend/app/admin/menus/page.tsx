@@ -55,7 +55,7 @@ export default function AdminMenusPage() {
   const load = useCallback(async () => {
     const t = getToken();
     if (!t) { router.push("/admin"); return; }
-    const res = await fetch(`${API}/api/menus/admin/all`, { headers: headers() });
+    const res = await fetch(`${API}/api/menus/admin/all`, { headers: headers(), cache: "no-store" });
     if (res.status === 401) { router.push("/admin"); return; }
     if (res.ok) {
       const data: MenuGroup[] = await res.json();
@@ -114,14 +114,21 @@ export default function AdminMenusPage() {
     const sorted = [...groups].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
     const i = sorted.findIndex((x) => x.id === g.id);
     const j = i + dir;
-    if (j < 0 || j >= sorted.length) return;
+    if (j < 0 || j >= sorted.length) {
+      flash(dir < 0 ? "이미 맨 위입니다" : "이미 맨 아래입니다");
+      return;
+    }
     [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
     const res = await fetch(`${API}/api/menus/groups/reorder`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
       body: JSON.stringify(sorted.map((x) => x.id)),
     });
-    if (res.ok) { await load(); notify(DataEvent.MENUS); }
+    if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || `이동 실패 (HTTP ${res.status})`);
+    }
   }
 
   // ─── Item CRUD ───────────────────────────────────────
@@ -166,17 +173,33 @@ export default function AdminMenusPage() {
 
   async function moveItem(item: MenuItem, dir: -1 | 1) {
     if (!selectedGroup) return;
-    const sorted = [...selectedGroup.items].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
-    const i = sorted.findIndex((x) => x.id === item.id);
+    // 같은 parent_id를 가진 형제끼리만 정렬
+    const allInGroup = [...selectedGroup.items];
+    function flatten(items: MenuItem[]): MenuItem[] {
+      const r: MenuItem[] = [];
+      for (const x of items) { r.push(x); if (x.children?.length) r.push(...flatten(x.children)); }
+      return r;
+    }
+    const siblings = flatten(allInGroup)
+      .filter((x) => (x.parent_id ?? null) === (item.parent_id ?? null))
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+    const i = siblings.findIndex((x) => x.id === item.id);
     const j = i + dir;
-    if (j < 0 || j >= sorted.length) return;
-    [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+    if (j < 0 || j >= siblings.length) {
+      flash(dir < 0 ? "이미 맨 위입니다" : "이미 맨 아래입니다");
+      return;
+    }
+    [siblings[i], siblings[j]] = [siblings[j], siblings[i]];
     const res = await fetch(`${API}/api/menus/groups/${selectedGroup.id}/items/reorder`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify(sorted.map((x) => x.id)),
+      body: JSON.stringify(siblings.map((x) => x.id)),
     });
-    if (res.ok) { await load(); notify(DataEvent.MENUS); }
+    if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || `이동 실패 (HTTP ${res.status})`);
+    }
   }
 
   // ─── 사이드바 이미지 업로드 ─────────────────────────
