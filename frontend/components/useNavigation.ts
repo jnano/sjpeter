@@ -10,6 +10,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export interface MenuItem {
   id: number;
   group_id: number;
+  parent_id: number | null;
   label: string;
   href: string;
   is_external: boolean;
@@ -17,6 +18,17 @@ export interface MenuItem {
   is_active: boolean;
   source_type: string;
   source_id: string | null;
+  children: MenuItem[];
+}
+
+/** 트리에서 한 항목과 그 자식들을 평평하게 펼침. */
+export function flattenItems(items: MenuItem[]): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const it of items) {
+    out.push(it);
+    if (it.children?.length) out.push(...flattenItems(it.children));
+  }
+  return out;
 }
 
 export interface MenuGroup {
@@ -71,12 +83,12 @@ export function useNavigation(): NavData {
   const groups = ctxGroups ?? fallbackGroups;
 
   // 현재 그룹 결정: 사이드바 전용 그룹(show_in_header=false) 우선,
-  // 그 안에서도 가장 긴 prefix 매칭. 없으면 헤더 그룹에서 매칭.
+  // 그 안에서도 모든 자식까지 평평하게 본 후 가장 긴 prefix 매칭.
   function matchInGroups(pool: MenuGroup[]): MenuGroup | null {
     let best: MenuGroup | null = null;
     let bestLen = -1;
     for (const g of pool) {
-      for (const it of g.items) {
+      for (const it of flattenItems(g.items)) {
         if (it.is_external) continue;
         if (it.href === pathname || pathname.startsWith(it.href + "/")) {
           if (it.href.length > bestLen) {

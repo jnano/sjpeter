@@ -38,11 +38,7 @@ export default function SectionLayout({ children, autoHero = true }: Props) {
           groupTitle={currentGroup.label}
           imageSrc={currentGroup.sidebar_image_url ?? undefined}
           widthPx={currentGroup.sidebar_width_px}
-          items={currentGroup.items.map((it) => ({
-            href: it.href,
-            label: it.label,
-            is_external: it.is_external,
-          }))}
+          items={currentGroup.items}
         />
         <div className="flex-1 min-w-0 mt-6 md:mt-0">
           {autoHero && <AutoPageHero />}

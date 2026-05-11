@@ -10,8 +10,61 @@ from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.models.admin import Admin
 from app.models.menu import MenuGroup, MenuItem
+from app.models.content import CommunityGroup
 
 router = APIRouter(prefix="/menus", tags=["menus"])
+
+
+def _sync_groups_children(db: Session) -> None:
+    """'분과와 단체' menu_item 자식들을 community_groups(top-level + slug)에서 자동 동기화.
+
+    - 신규 분과 → 자식 menu_item 자동 추가
+    - 분과 slug 변경/삭제 → 대응 item is_active=False (admin 결정 보존)
+    - 라벨은 admin이 한 번이라도 수정했으면 보존 (현재는 신규일 때만 분과명 그대로)
+    """
+    parent = db.query(MenuItem).filter(MenuItem.href == "/groups", MenuItem.parent_id.is_(None)).first()
+    if not parent:
+        return  # /groups 항목이 없으면 sync 안 함
+    community = db.query(CommunityGroup).filter(
+        CommunityGroup.parent_id.is_(None),
+        CommunityGroup.slug.isnot(None),
+    ).order_by(CommunityGroup.sort_order, CommunityGroup.id).all()
+
+    existing_by_slug = {
+        it.source_id: it
+        for it in db.query(MenuItem).filter(
+            MenuItem.parent_id == parent.id,
+            MenuItem.source_type == "auto:groups",
+        ).all()
+    }
+
+    seen_slugs = set()
+    for i, cg in enumerate(community):
+        seen_slugs.add(cg.slug)
+        if cg.slug in existing_by_slug:
+            it = existing_by_slug[cg.slug]
+            if not it.is_active:
+                it.is_active = True  # 다시 등장하면 활성화
+            # 정렬 순서만 유지 (라벨은 admin이 수정했을 수 있으니 건드리지 않음)
+            it.sort_order = i + 1  # 0은 '전체 보기' 자리
+        else:
+            db.add(MenuItem(
+                group_id=parent.group_id,
+                parent_id=parent.id,
+                label=cg.name,
+                href=f"/groups/{cg.slug}",
+                source_type="auto:groups",
+                source_id=cg.slug,
+                sort_order=i + 1,
+                is_active=True,
+            ))
+
+    # 삭제된 분과 → 자동 비활성
+    for slug, it in existing_by_slug.items():
+        if slug not in seen_slugs:
+            it.is_active = False
+
+    db.commit()
 
 
 # ─── Schemas ──────────────────────────────────────────────
@@ -24,14 +77,40 @@ class MenuItemIn(BaseModel):
     is_active: bool = True
     source_type: str = "manual"
     source_id: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 class MenuItemOut(MenuItemIn):
     id: int
     group_id: int
+    children: list["MenuItemOut"] = []
 
     class Config:
         from_attributes = True
+
+
+MenuItemOut.model_rebuild()
+
+
+def _to_tree(items: list[MenuItem]) -> list[MenuItemOut]:
+    """평평한 menu_item 리스트를 parent_id 트리로 변환."""
+    by_id: dict[int, MenuItemOut] = {it.id: MenuItemOut.model_validate(it) for it in items}
+    # children 초기화
+    for out in by_id.values():
+        out.children = []
+    roots: list[MenuItemOut] = []
+    for it in items:
+        if it.parent_id and it.parent_id in by_id:
+            by_id[it.parent_id].children.append(by_id[it.id])
+        else:
+            roots.append(by_id[it.id])
+    # 자식들 정렬
+    def sort_recursive(nodes: list[MenuItemOut]) -> None:
+        nodes.sort(key=lambda n: (n.sort_order, n.id))
+        for n in nodes:
+            sort_recursive(n.children)
+    sort_recursive(roots)
+    return roots
 
 
 class MenuGroupIn(BaseModel):
@@ -58,6 +137,7 @@ class MenuGroupOut(MenuGroupIn):
 
 @router.get("/public", response_model=list[MenuGroupOut])
 def list_public_menus(db: Session = Depends(get_db)):
+    _sync_groups_children(db)
     groups = (
         db.query(MenuGroup)
         .filter(MenuGroup.is_active == True)  # noqa: E712
@@ -73,7 +153,7 @@ def list_public_menus(db: Session = Depends(get_db)):
             .all()
         )
         out = MenuGroupOut.model_validate(g)
-        out.items = [MenuItemOut.model_validate(i) for i in items]
+        out.items = _to_tree(items)
         result.append(out)
     return result
 
@@ -82,6 +162,7 @@ def list_public_menus(db: Session = Depends(get_db)):
 
 @router.get("/admin/all", response_model=list[MenuGroupOut])
 def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    _sync_groups_children(db)
     groups = db.query(MenuGroup).order_by(asc(MenuGroup.sort_order), asc(MenuGroup.id)).all()
     result = []
     for g in groups:
@@ -92,7 +173,7 @@ def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_curre
             .all()
         )
         out = MenuGroupOut.model_validate(g)
-        out.items = [MenuItemOut.model_validate(i) for i in items]
+        out.items = _to_tree(items)
         result.append(out)
     return result
 

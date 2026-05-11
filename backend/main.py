@@ -347,6 +347,12 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        try:
+            conn.execute(text(
+                "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES menu_items(id) ON DELETE CASCADE"
+            ))
+        except Exception:
+            pass
 
         # 분과/소속단체 트리 + 슬러그 + 활동·사진 (2026-05-11)
         for stmt in [

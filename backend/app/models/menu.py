@@ -24,11 +24,12 @@ class MenuItem(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("menu_groups.id", ondelete="CASCADE"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("menu_items.id", ondelete="CASCADE"), nullable=True)  # 3-deep 트리 지원
     label = Column(String(100), nullable=False)
     href = Column(String(500), nullable=False)
     is_external = Column(Boolean, default=False)
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    source_type = Column(String(30), default="manual")           # 'manual' 만 사용 중 (향후 확장)
-    source_id = Column(String(100))                              # auto 항목 출처 id
+    source_type = Column(String(30), default="manual")           # 'manual' | 'auto:groups'
+    source_id = Column(String(100))                              # auto 항목 출처 id (예: 분과 slug)
     created_at = Column(DateTime, default=datetime.utcnow)

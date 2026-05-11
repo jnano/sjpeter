@@ -9,6 +9,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 interface MenuItem {
   id: number;
   group_id: number;
+  parent_id: number | null;
   label: string;
   href: string;
   is_external: boolean;
@@ -16,6 +17,7 @@ interface MenuItem {
   is_active: boolean;
   source_type: string;
   source_id: string | null;
+  children: MenuItem[];
 }
 
 interface MenuGroup {
@@ -338,43 +340,16 @@ export default function AdminMenusPage() {
               {selectedGroup.items.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-12">항목이 없습니다. 우상단 + 항목 추가 클릭.</p>
               ) : (
-                <ul className="divide-y divide-gray-100">
-                  {[...selectedGroup.items].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map((item) => (
-                    <li key={item.id} className={`px-5 py-3 ${!item.is_active ? "bg-gray-50/60 opacity-60" : ""}`}>
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 items-center">
-                        <input value={item.label} onChange={(e) => updateItem(item, { label: e.target.value })} className={inputCls} placeholder="라벨" />
-                        <input value={item.href} onChange={(e) => updateItem(item, { href: e.target.value })} className={inputCls + " font-mono text-xs"} placeholder="/about 또는 https://..." />
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => moveItem(item, -1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="위로">↑</button>
-                          <button onClick={() => moveItem(item, 1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="아래로">↓</button>
-                          <button onClick={() => deleteItem(item)} className="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50">삭제</button>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 mt-2 text-xs">
-                        <label className="inline-flex items-center gap-1.5">
-                          <input type="checkbox" checked={item.is_external} onChange={(e) => updateItem(item, { is_external: e.target.checked })} />
-                          외부 링크 (새 탭)
-                        </label>
-                        <label className="inline-flex items-center gap-1.5">
-                          <input type="checkbox" checked={item.is_active} onChange={(e) => updateItem(item, { is_active: e.target.checked })} />
-                          활성
-                        </label>
-                        <div className="ml-auto flex items-center gap-1.5">
-                          <span className="text-gray-400">그룹 이동:</span>
-                          <select
-                            value={item.group_id}
-                            onChange={(e) => moveItemToGroup(item, +e.target.value)}
-                            className="text-xs border border-gray-300 rounded px-2 py-0.5"
-                          >
-                            {groups.map((g) => (
-                              <option key={g.id} value={g.id}>{g.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <ItemTree
+                  items={selectedGroup.items}
+                  allGroups={groups}
+                  inputCls={inputCls}
+                  onUpdate={updateItem}
+                  onDelete={deleteItem}
+                  onMove={moveItem}
+                  onMoveToGroup={moveItemToGroup}
+                  depth={0}
+                />
               )}
             </section>
           </main>
@@ -383,5 +358,90 @@ export default function AdminMenusPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// ─── 트리 편집 컴포넌트 ──────────────────────────────────
+
+function ItemTree({
+  items,
+  allGroups,
+  inputCls,
+  onUpdate,
+  onDelete,
+  onMove,
+  onMoveToGroup,
+  depth,
+}: {
+  items: MenuItem[];
+  allGroups: MenuGroup[];
+  inputCls: string;
+  onUpdate: (item: MenuItem, patch: Partial<MenuItem>) => Promise<void>;
+  onDelete: (item: MenuItem) => Promise<void>;
+  onMove: (item: MenuItem, dir: -1 | 1) => Promise<void>;
+  onMoveToGroup: (item: MenuItem, groupId: number) => Promise<void>;
+  depth: number;
+}) {
+  return (
+    <ul className={depth === 0 ? "divide-y divide-gray-100" : "border-l-2 border-amber-200 ml-3"}>
+      {[...items].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map((item) => {
+        const isAuto = item.source_type === "auto:groups";
+        return (
+          <li key={item.id}>
+            <div className={`px-5 py-3 ${!item.is_active ? "bg-gray-50/60 opacity-60" : ""}`} style={{ paddingLeft: `${20 + depth * 16}px` }}>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 items-center">
+                <div className="flex items-center gap-1.5">
+                  {depth > 0 && <span className="text-xs text-amber-500">└</span>}
+                  <input value={item.label} onChange={(e) => onUpdate(item, { label: e.target.value })} className={inputCls} placeholder="라벨" />
+                </div>
+                <input value={item.href} onChange={(e) => onUpdate(item, { href: e.target.value })} className={inputCls + " font-mono text-xs"} placeholder="/about 또는 https://..." />
+                <div className="flex items-center gap-1">
+                  <button onClick={() => onMove(item, -1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="위로">↑</button>
+                  <button onClick={() => onMove(item, 1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="아래로">↓</button>
+                  <button onClick={() => onDelete(item)} className="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50">삭제</button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+                {isAuto && <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">auto:groups</span>}
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="checkbox" checked={item.is_external} onChange={(e) => onUpdate(item, { is_external: e.target.checked })} />
+                  외부 링크 (새 탭)
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="checkbox" checked={item.is_active} onChange={(e) => onUpdate(item, { is_active: e.target.checked })} />
+                  활성
+                </label>
+                {depth === 0 && (
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span className="text-gray-400">그룹 이동:</span>
+                    <select
+                      value={item.group_id}
+                      onChange={(e) => onMoveToGroup(item, +e.target.value)}
+                      className="text-xs border border-gray-300 rounded px-2 py-0.5"
+                    >
+                      {allGroups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+            {(item.children?.length ?? 0) > 0 && (
+              <ItemTree
+                items={item.children!}
+                allGroups={allGroups}
+                inputCls={inputCls}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                onMove={onMove}
+                onMoveToGroup={onMoveToGroup}
+                depth={depth + 1}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
