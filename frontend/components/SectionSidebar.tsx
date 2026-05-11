@@ -71,12 +71,25 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname));
     const hasChildren = (item.children?.length ?? 0) > 0;
     const [hovered, setHovered] = React.useState(false);
+    const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const openPopup = () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      setHovered(true);
+    };
+    const schedulePopupClose = () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = setTimeout(() => setHovered(false), 200);
+    };
+    React.useEffect(() => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    }, []);
 
     return (
       <li
         className="border-b border-[var(--color-border)] last:border-b-0 relative"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={openPopup}
+        onMouseLeave={schedulePopupClose}
       >
         <Link
           href={item.href}
@@ -96,12 +109,14 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
           {hasChildren && <span className="text-xs text-gray-400">▸</span>}
         </Link>
 
-        {/* hover 시 우측에 자식 레이어 띄우기 */}
+        {/* hover 시 우측에 자식 레이어 띄우기 + 닫기 지연(200ms)으로 마우스 이동 가능 */}
         {hasChildren && hovered && (
           <div
-            className="absolute top-0 left-full ml-2 z-40 w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden"
-            style={{ minWidth: "200px" }}
+            className="absolute top-0 left-full z-40 pl-2"
+            onMouseEnter={openPopup}
+            onMouseLeave={schedulePopupClose}
           >
+            <div className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden" style={{ minWidth: "200px" }}>
             <ul className="py-1 max-h-80 overflow-y-auto">
               {item.children!.map((c) => {
                 const cActive = pathname === c.href;
@@ -125,6 +140,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
                 );
               })}
             </ul>
+            </div>
           </div>
         )}
       </li>
