@@ -10,146 +10,71 @@ from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.models.admin import Admin
 from app.models.menu import MenuGroup, MenuItem
-from app.models.content import CommunityGroup
 from app.models.board import Board
+from app.core.static_pages import STATIC_PAGES, STATIC_PAGE_SLUGS, get_label_for_slug
 
 router = APIRouter(prefix="/menus", tags=["menus"])
 
 
-def _sync_boards_menu(db: Session) -> None:
-    """show_in_menu=True인 board들을 menu_items에 자동 동기화.
-
-    - 신규 board → 'board' 그룹에 menu_item 자동 추가 (없으면 첫 그룹)
-    - show_in_menu=False 또는 board 삭제 → 대응 menu_item is_active=False
-    - 라벨은 admin이 수정했을 가능성 있으니 최초 생성 시에만 board.name 사용
-    - href는 slug 변경 시 자동 갱신 (URL은 자동으로 따라가야 함)
-    """
-    default_group = (
-        db.query(MenuGroup).filter(MenuGroup.key == "board").first()
-        or db.query(MenuGroup).order_by(MenuGroup.sort_order, MenuGroup.id).first()
-    )
-    if not default_group:
-        return
-
-    all_boards = {b.slug: b for b in db.query(Board).all()}
-    visible_boards = [b for b in all_boards.values() if b.show_in_menu and b.is_active]
-
-    # 기존 auto:boards menu_items
-    existing = {
-        it.source_id: it
-        for it in db.query(MenuItem).filter(MenuItem.source_type == "auto:boards").all()
-    }
-
-    # 새 board → menu_item 추가, 기존은 href만 갱신
-    for b in visible_boards:
-        if b.slug in existing:
-            it = existing[b.slug]
-            new_href = f"/boards/{b.slug}"
-            if it.href != new_href:
-                it.href = new_href  # slug 변경 따라가기
-            if not it.is_active:
-                it.is_active = True
-        else:
-            db.add(MenuItem(
-                group_id=default_group.id,
-                label=b.name,
-                href=f"/boards/{b.slug}",
-                source_type="auto:boards",
-                source_id=b.slug,
-                sort_order=999,
-                is_active=True,
-            ))
-
-    # menu_item에 대응하는 board가 존재하는지로 분기
-    for slug, it in existing.items():
-        if slug not in all_boards:
-            # board가 DB에서 삭제됨 → menu_item도 물리 삭제 (admin이 복구할 수 없으므로)
-            db.delete(it)
-        elif not all_boards[slug].show_in_menu or not all_boards[slug].is_active:
-            # board는 존재하지만 토글 OFF 또는 비활성 → 보존 + 비활성화 (재토글로 복원 가능)
-            it.is_active = False
-
-    db.commit()
+def _compute_href(item: MenuItem, db: Session) -> str:
+    """link_type에 따라 href를 도출. 매 응답 시 호출하여 fresh URL 보장 (slug 변경 대응)."""
+    if item.link_type == "board" and item.board_id:
+        b = db.query(Board).filter(Board.id == item.board_id).first()
+        return f"/boards/{b.slug}" if b else item.href or ""
+    if item.link_type == "external":
+        return item.external_url or item.href or ""
+    if item.link_type == "page":
+        return item.static_page_slug or item.href or ""
+    return item.href or ""
 
 
-def _sync_groups_children(db: Session) -> None:
-    """'분과와 단체' menu_item 자식들을 community_groups(top-level + slug)에서 자동 동기화.
-
-    - 신규 분과 → 자식 menu_item 자동 추가
-    - 분과 slug 변경/삭제 → 대응 item is_active=False (admin 결정 보존)
-    - 라벨은 admin이 한 번이라도 수정했으면 보존 (현재는 신규일 때만 분과명 그대로)
-    """
-    parent = db.query(MenuItem).filter(MenuItem.href == "/groups", MenuItem.parent_id.is_(None)).first()
-    if not parent:
-        return  # /groups 항목이 없으면 sync 안 함
-    community = db.query(CommunityGroup).filter(
-        CommunityGroup.parent_id.is_(None),
-        CommunityGroup.slug.isnot(None),
-    ).order_by(CommunityGroup.sort_order, CommunityGroup.id).all()
-
-    existing_by_slug = {
-        it.source_id: it
-        for it in db.query(MenuItem).filter(
-            MenuItem.parent_id == parent.id,
-            MenuItem.source_type == "auto:groups",
-        ).all()
-    }
-
-    seen_slugs = set()
-    for i, cg in enumerate(community):
-        seen_slugs.add(cg.slug)
-        if cg.slug in existing_by_slug:
-            it = existing_by_slug[cg.slug]
-            if not it.is_active:
-                it.is_active = True  # 다시 등장하면 활성화
-            # 정렬 순서만 유지 (라벨은 admin이 수정했을 수 있으니 건드리지 않음)
-            it.sort_order = i + 1  # 0은 '전체 보기' 자리
-        else:
-            db.add(MenuItem(
-                group_id=parent.group_id,
-                parent_id=parent.id,
-                label=cg.name,
-                href=f"/groups/{cg.slug}",
-                source_type="auto:groups",
-                source_id=cg.slug,
-                sort_order=i + 1,
-                is_active=True,
-            ))
-
-    # 더 이상 안 보이는 분과 처리
-    # community_groups에 slug가 아예 없으면 → 삭제됨 → menu_item 물리 삭제
-    # parent_id가 생겨서 top-level이 아니게 됐으면 → 비활성 (재이동 시 복원 가능)
-    all_slugs = {
-        slug for (slug,) in db.execute(
-            text("SELECT slug FROM community_groups WHERE slug IS NOT NULL")
-        ).fetchall()
-    }
-    for slug, it in existing_by_slug.items():
-        if slug not in seen_slugs:
-            if slug in all_slugs:
-                it.is_active = False  # 존재하지만 top-level 아님
-            else:
-                db.delete(it)  # 완전 삭제됨
-
-    db.commit()
+def _compute_label(item: MenuItem, db: Session) -> str:
+    """label_override=True면 admin 저장값. False면 source에서 자동."""
+    if item.label_override or not item.label or item.label.strip() == "":
+        if item.label and item.label.strip():
+            return item.label
+    # auto 라벨
+    if item.link_type == "board" and item.board_id:
+        b = db.query(Board).filter(Board.id == item.board_id).first()
+        if b:
+            return b.name
+    if item.link_type == "page" and item.static_page_slug:
+        lab = get_label_for_slug(item.static_page_slug)
+        if lab:
+            return lab
+    return item.label or ""
 
 
 # ─── Schemas ──────────────────────────────────────────────
 
 class MenuItemIn(BaseModel):
     label: str
-    href: str
-    is_external: bool = False
+    label_override: bool = True
     sort_order: int = 0
     is_active: bool = True
-    source_type: str = "manual"
-    source_id: Optional[str] = None
     parent_id: Optional[int] = None
+    # 연결 종류 + 종류별 참조
+    link_type: str = "external"  # 'page' | 'board' | 'external'
+    static_page_slug: Optional[str] = None
+    board_id: Optional[int] = None
+    external_url: Optional[str] = None
 
 
-class MenuItemOut(MenuItemIn):
+class MenuItemOut(BaseModel):
     id: int
     group_id: int
+    parent_id: Optional[int] = None
+    label: str
+    label_override: bool = True
+    sort_order: int = 0
+    is_active: bool = True
+    link_type: str = "external"
+    static_page_slug: Optional[str] = None
+    board_id: Optional[int] = None
+    external_url: Optional[str] = None
+    # 호환성 응답 필드 (자동 계산)
+    href: str = ""
+    is_external: bool = False
     children: list["MenuItemOut"] = []
 
     class Config:
@@ -159,10 +84,87 @@ class MenuItemOut(MenuItemIn):
 MenuItemOut.model_rebuild()
 
 
-def _to_tree(items: list[MenuItem]) -> list[MenuItemOut]:
-    """평평한 menu_item 리스트를 parent_id 트리로 변환."""
-    by_id: dict[int, MenuItemOut] = {it.id: MenuItemOut.model_validate(it) for it in items}
-    # children 초기화
+def _validate_and_apply_link(body: "MenuItemIn", db: Session, item_id: Optional[int] = None) -> dict:
+    """link_type ↔ 참조 필드 정합성 검증 + 유일성 체크 + 저장에 쓸 dict 반환.
+
+    item_id가 주어지면 update 모드 — 자기 자신은 유일성 검사에서 제외.
+    """
+    lt = (body.link_type or "external").strip()
+    if lt not in ("page", "board", "external"):
+        raise HTTPException(status_code=400, detail="link_type은 page/board/external 중 하나여야 합니다.")
+
+    # link_type에 따른 참조 필드 정리
+    static_slug = None
+    board_id = None
+    external_url = None
+    href = ""
+
+    if lt == "page":
+        if not body.static_page_slug:
+            raise HTTPException(status_code=400, detail="page 연결은 static_page_slug가 필요합니다.")
+        static_slug = body.static_page_slug.strip()
+        # 화이트리스트 OR 동적 경로(/groups/{slug}, /boards/{slug} 등) 자유 입력 허용
+        # 단, 외부 URL은 거부 — 그건 external 타입
+        if static_slug.startswith("http://") or static_slug.startswith("https://"):
+            raise HTTPException(status_code=400, detail="외부 URL은 external 타입으로 등록하세요.")
+        if not static_slug.startswith("/"):
+            raise HTTPException(status_code=400, detail="내부 페이지 경로는 '/'로 시작해야 합니다.")
+        # 유일성: 같은 slug를 가진 다른 menu_item이 없어야 함
+        q = db.query(MenuItem).filter(MenuItem.static_page_slug == static_slug)
+        if item_id is not None:
+            q = q.filter(MenuItem.id != item_id)
+        if q.first():
+            raise HTTPException(status_code=400, detail=f"이미 '{static_slug}'에 연결된 메뉴 항목이 있습니다.")
+        href = static_slug
+
+    elif lt == "board":
+        if not body.board_id:
+            raise HTTPException(status_code=400, detail="board 연결은 board_id가 필요합니다.")
+        b = db.query(Board).filter(Board.id == body.board_id).first()
+        if not b:
+            raise HTTPException(status_code=404, detail="해당 게시판을 찾을 수 없습니다.")
+        board_id = b.id
+        q = db.query(MenuItem).filter(MenuItem.board_id == board_id)
+        if item_id is not None:
+            q = q.filter(MenuItem.id != item_id)
+        if q.first():
+            raise HTTPException(status_code=400, detail=f"'{b.name}' 게시판은 이미 다른 메뉴 항목에 연결되어 있습니다.")
+        href = f"/boards/{b.slug}"
+
+    else:  # external
+        if not body.external_url:
+            raise HTTPException(status_code=400, detail="external 연결은 external_url이 필요합니다.")
+        external_url = body.external_url.strip()
+        # external은 중복 허용 (같은 외부 사이트를 여러 위치에서 가리킬 수 있음)
+        href = external_url
+
+    return {
+        "label": body.label,
+        "label_override": body.label_override,
+        "sort_order": body.sort_order,
+        "is_active": body.is_active,
+        "parent_id": body.parent_id,
+        "link_type": lt,
+        "static_page_slug": static_slug,
+        "board_id": board_id,
+        "external_url": external_url,
+        "href": href,
+        "is_external": lt == "external",
+    }
+
+
+def _build_item_out(item: MenuItem, db: Session) -> MenuItemOut:
+    """MenuItem → MenuItemOut, href/is_external/label 자동 계산."""
+    out = MenuItemOut.model_validate(item)
+    out.href = _compute_href(item, db)
+    out.is_external = item.link_type == "external"
+    out.label = _compute_label(item, db)
+    return out
+
+
+def _to_tree(items: list[MenuItem], db: Session) -> list[MenuItemOut]:
+    """평평한 menu_item 리스트를 parent_id 트리로 변환 + href/label 자동 계산."""
+    by_id: dict[int, MenuItemOut] = {it.id: _build_item_out(it, db) for it in items}
     for out in by_id.values():
         out.children = []
     roots: list[MenuItemOut] = []
@@ -171,7 +173,6 @@ def _to_tree(items: list[MenuItem]) -> list[MenuItemOut]:
             by_id[it.parent_id].children.append(by_id[it.id])
         else:
             roots.append(by_id[it.id])
-    # 자식들 정렬
     def sort_recursive(nodes: list[MenuItemOut]) -> None:
         nodes.sort(key=lambda n: (n.sort_order, n.id))
         for n in nodes:
@@ -200,13 +201,43 @@ class MenuGroupOut(MenuGroupIn):
         from_attributes = True
 
 
+# ─── 메타: admin UI용 옵션 데이터 ─────────────────────────
+
+@router.get("/static-pages")
+def list_static_pages(_: Admin = Depends(get_current_admin)):
+    """admin 메뉴 편집기에서 'page' 연결 시 드롭다운에 표시할 화이트리스트."""
+    return STATIC_PAGES
+
+
+@router.get("/boards-list")
+def list_boards_for_menu(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    """admin 메뉴 편집기에서 'board' 연결 시 드롭다운에 표시할 게시판 목록.
+
+    각 게시판이 이미 다른 menu_item에 연결되어 있는지(linked_item_id)도 함께 알려줌.
+    """
+    boards = db.query(Board).filter(Board.is_active == True).order_by(Board.sort_order, Board.id).all()  # noqa: E712
+    linked = {
+        b_id: mid
+        for (b_id, mid) in db.execute(
+            text("SELECT board_id, MIN(id) FROM menu_items WHERE board_id IS NOT NULL GROUP BY board_id")
+        ).fetchall()
+    }
+    return [
+        {
+            "id": b.id,
+            "slug": b.slug,
+            "name": b.name,
+            "linked_item_id": linked.get(b.id),
+        }
+        for b in boards
+    ]
+
+
 # ─── Public: 활성 항목만 ──────────────────────────────────
 
 @router.get("/public", response_model=list[MenuGroupOut])
 def list_public_menus(db: Session = Depends(get_db)):
-    _sync_groups_children(db)
-    _sync_boards_menu(db)
-    groups = (
+    groups =(
         db.query(MenuGroup)
         .filter(MenuGroup.is_active == True)  # noqa: E712
         .order_by(asc(MenuGroup.sort_order), asc(MenuGroup.id))
@@ -221,7 +252,7 @@ def list_public_menus(db: Session = Depends(get_db)):
             .all()
         )
         out = MenuGroupOut.model_validate(g)
-        out.items = _to_tree(items)
+        out.items = _to_tree(items, db)
         result.append(out)
     return result
 
@@ -230,9 +261,7 @@ def list_public_menus(db: Session = Depends(get_db)):
 
 @router.get("/admin/all", response_model=list[MenuGroupOut])
 def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    _sync_groups_children(db)
-    _sync_boards_menu(db)
-    groups = db.query(MenuGroup).order_by(asc(MenuGroup.sort_order), asc(MenuGroup.id)).all()
+    groups =db.query(MenuGroup).order_by(asc(MenuGroup.sort_order), asc(MenuGroup.id)).all()
     result = []
     for g in groups:
         items = (
@@ -242,7 +271,7 @@ def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_curre
             .all()
         )
         out = MenuGroupOut.model_validate(g)
-        out.items = _to_tree(items)
+        out.items = _to_tree(items, db)
         result.append(out)
     return result
 
@@ -332,11 +361,20 @@ def delete_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depend
 def create_item(group_id: int, body: MenuItemIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     if not db.query(MenuGroup).filter(MenuGroup.id == group_id).first():
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
-    item = MenuItem(group_id=group_id, **body.model_dump())
+    data = _validate_and_apply_link(body, db)
+    # 새 항목은 같은 parent의 마지막에 — 형제 수를 sort_order로
+    sibling_count = (
+        db.query(MenuItem)
+        .filter(MenuItem.group_id == group_id, MenuItem.parent_id == data["parent_id"])
+        .count()
+    )
+    data["sort_order"] = sibling_count
+    item = MenuItem(group_id=group_id, **data)
     db.add(item)
     db.commit()
+    _renumber_items(db, group_id)
     db.refresh(item)
-    return MenuItemOut.model_validate(item)
+    return _build_item_out(item, db)
 
 
 @router.put("/items/{item_id}", response_model=MenuItemOut)
@@ -344,11 +382,14 @@ def update_item(item_id: int, body: MenuItemIn, db: Session = Depends(get_db), _
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
-    for k, v in body.model_dump().items():
+    data = _validate_and_apply_link(body, db, item_id=item_id)
+    # sort_order는 reorder 엔드포인트가 담당 — update에서는 건드리지 않음
+    data.pop("sort_order", None)
+    for k, v in data.items():
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
-    return MenuItemOut.model_validate(item)
+    return _build_item_out(item, db)
 
 
 @router.put("/items/{item_id}/move")

@@ -338,11 +338,18 @@ def _migrate_add_columns():
                 is_external BOOLEAN DEFAULT FALSE,
                 sort_order INTEGER DEFAULT 0,
                 is_active BOOLEAN DEFAULT TRUE,
-                source_type VARCHAR(30) DEFAULT 'manual',
-                source_id VARCHAR(100),
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        # 신규 DB 안전망: legacy 컬럼이 남아있다면 제거 — 2026-05-11
+        for stmt in [
+            "ALTER TABLE menu_items DROP COLUMN IF EXISTS source_type",
+            "ALTER TABLE menu_items DROP COLUMN IF EXISTS source_id",
+        ]:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
         try:
             conn.execute(text(
                 "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS show_in_header BOOLEAN DEFAULT TRUE"
@@ -355,6 +362,21 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        # 메뉴 연결 종류 + 참조 (3가지: page/board/external) — 2026-05-11
+        for stmt in [
+            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS link_type VARCHAR(20) DEFAULT 'external'",
+            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS static_page_slug VARCHAR(100)",
+            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS board_id INTEGER REFERENCES boards(id) ON DELETE CASCADE",
+            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS external_url VARCHAR(500)",
+            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS label_override BOOLEAN DEFAULT TRUE",
+            # unique 부분 인덱스: source 중복 방지 (NULL은 unique 검사에서 제외됨)
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_menu_items_board_unique ON menu_items (board_id) WHERE board_id IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_menu_items_page_unique ON menu_items (static_page_slug) WHERE static_page_slug IS NOT NULL",
+        ]:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
 
         # 분과/소속단체 트리 + 슬러그 + 활동·사진 (2026-05-11)
         for stmt in [
