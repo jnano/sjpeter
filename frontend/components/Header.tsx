@@ -16,6 +16,23 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<number | null>(null);
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
+  const closeGroupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openGroupNow = (idx: number) => {
+    if (closeGroupTimer.current) clearTimeout(closeGroupTimer.current);
+    if (openGroup !== idx) setHoveredItem(null); // 다른 그룹으로 이동 시 자식 미리보기 리셋
+    setOpenGroup(idx);
+  };
+  const scheduleGroupClose = () => {
+    if (closeGroupTimer.current) clearTimeout(closeGroupTimer.current);
+    closeGroupTimer.current = setTimeout(() => {
+      setOpenGroup(null);
+      setHoveredItem(null);
+    }, 250);
+  };
+  useEffect(() => () => {
+    if (closeGroupTimer.current) clearTimeout(closeGroupTimer.current);
+  }, []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [breadcrumb, setBreadcrumb] = useState<Breadcrumb | null>(null);
@@ -186,8 +203,8 @@ export default function Header() {
               <div
                 key={group.key}
                 className="relative h-full flex items-center"
-                onMouseEnter={() => setOpenGroup(idx)}
-                onMouseLeave={() => setOpenGroup(null)}
+                onMouseEnter={() => openGroupNow(idx)}
+                onMouseLeave={scheduleGroupClose}
               >
                 <button
                   className={`px-4 h-full text-sm font-medium transition-colors whitespace-nowrap ${
