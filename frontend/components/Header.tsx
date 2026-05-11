@@ -255,7 +255,7 @@ export default function Header() {
                                 onMouseEnter={() => setHoveredItem(item.id)}
                                 onMouseLeave={() => setHoveredItem(null)}
                               >
-                                <ul className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden py-1 max-h-80 overflow-y-auto">
+                                <ul className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg py-1 max-h-[440px] overflow-y-auto">
                                   {item.children!.map((c) => {
                                     const cActive = pathname === c.href;
                                     return (

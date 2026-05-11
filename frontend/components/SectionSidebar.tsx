@@ -117,7 +117,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             onMouseLeave={schedulePopupClose}
           >
             <div className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden" style={{ minWidth: "200px" }}>
-            <ul className="py-1 max-h-80 overflow-y-auto">
+            <ul className="py-1 max-h-[440px] overflow-y-auto">
               {item.children!.map((c) => {
                 const cActive = pathname === c.href;
                 return (
