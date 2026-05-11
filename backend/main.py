@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api, home_banner, parish_staff, page_photos, menus
+from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -49,6 +49,7 @@ app.include_router(home_banner.router, prefix="/api")
 app.include_router(parish_staff.router, prefix="/api")
 app.include_router(page_photos.router, prefix="/api")
 app.include_router(menus.router, prefix="/api")
+app.include_router(pages.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -402,6 +403,27 @@ def _migrate_add_columns():
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """))
+
+        # 동적 페이지 테이블 (admin이 코드 없이 생성/편집 — 2026-05-11)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS dynamic_pages (
+                id SERIAL PRIMARY KEY,
+                slug VARCHAR(80) UNIQUE NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                subtitle VARCHAR(300),
+                group_label VARCHAR(50),
+                layout_kind VARCHAR(30) NOT NULL DEFAULT 'body',
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                body_markdown TEXT,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        try:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_dynamic_pages_slug ON dynamic_pages(slug)"))
+        except Exception:
+            pass
 
         # 묵상 테이블
         conn.execute(text("""
