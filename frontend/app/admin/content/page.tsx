@@ -71,6 +71,7 @@ function HistoryTab() {
   const [editForm, setEditForm] = useState({ year: 0, event: "", detail: "", highlight: false, is_current: false, sort_order: 0 });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     const res = await fetch(`${API}/api/content/history`);
@@ -89,7 +90,7 @@ function HistoryTab() {
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), event: "", detail: "", highlight: false, is_current: false, sort_order: 0 }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), event: "", detail: "", highlight: false, is_current: false, sort_order: 0 }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -116,6 +117,21 @@ function HistoryTab() {
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showCreate
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showCreate ? "닫기" : "+ 새 연혁 추가"}
+        </button>
+      </div>
+
+      {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 연혁 추가</h3>
         <form onSubmit={create} className="space-y-3">
@@ -150,6 +166,7 @@ function HistoryTab() {
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
+      )}
 
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -213,6 +230,7 @@ function VisionTab() {
   const [editForm, setEditForm] = useState({ year: 0, motto: "", is_current: false });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     const res = await fetch(`${API}/api/content/visions`);
@@ -231,7 +249,7 @@ function VisionTab() {
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", is_current: false }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", is_current: false }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -258,6 +276,21 @@ function VisionTab() {
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showCreate
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showCreate ? "닫기" : "+ 새 사목지표 추가"}
+        </button>
+      </div>
+
+      {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 사목지표 추가</h3>
         <form onSubmit={create} className="space-y-3">
@@ -276,6 +309,7 @@ function VisionTab() {
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
+      )}
 
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -328,6 +362,7 @@ function CommunityTab() {
   const [editForm, setEditForm] = useState({ ...emptyComForm });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     const [communityRes, boardsRes] = await Promise.all([
@@ -353,7 +388,7 @@ function CommunityTab() {
       body: JSON.stringify({ ...form, board_slug: form.board_slug || null }),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyComForm }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyComForm }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -391,6 +426,21 @@ function CommunityTab() {
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showCreate
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showCreate ? "닫기" : "+ 새 단체/분과 추가"}
+        </button>
+      </div>
+
+      {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 단체/분과 추가</h3>
         <form onSubmit={create} className="space-y-3">
@@ -419,6 +469,7 @@ function CommunityTab() {
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
+      )}
 
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -586,6 +637,7 @@ function CouncilTab() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [photoUploading, setPhotoUploading] = useState<number | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     const res = await fetch(`${API}/api/content/council/admin`, {
@@ -606,7 +658,7 @@ function CouncilTab() {
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyCouncilForm }); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyCouncilForm }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -652,7 +704,22 @@ function CouncilTab() {
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showCreate
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showCreate ? "닫기" : "+ 구성원 추가"}
+        </button>
+      </div>
+
       {/* 추가 폼 */}
+      {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">구성원 추가</h3>
         <form onSubmit={create} className="space-y-3">
@@ -685,6 +752,7 @@ function CouncilTab() {
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
+      )}
 
       {/* 카테고리별 목록 */}
       {grouped.map(({ category, members }) => (
@@ -795,6 +863,7 @@ function MeditationTab() {
   const [editForm, setEditForm] = useState({ ...emptyMedForm });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     const res = await fetch(`${API}/api/content/meditations/admin`, {
@@ -832,7 +901,7 @@ function MeditationTab() {
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); load(); }
+    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -879,7 +948,22 @@ function MeditationTab() {
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            showCreate
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-[var(--color-primary)] text-white hover:opacity-90"
+          }`}
+        >
+          {showCreate ? "닫기" : "+ 새 묵상 작성"}
+        </button>
+      </div>
+
       {/* 새 묵상 작성 폼 */}
+      {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 묵상 작성</h3>
         <form onSubmit={create} className="space-y-3">
@@ -948,6 +1032,7 @@ function MeditationTab() {
           <button type="submit" disabled={loading} className={btnPrimary}>등록</button>
         </form>
       </section>
+      )}
 
       {/* 목록 */}
       <section className="bg-white border border-gray-200 rounded-xl p-6">
