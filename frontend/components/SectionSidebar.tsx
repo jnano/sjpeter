@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -65,33 +66,69 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     );
   }
 
-  function DesktopRow({ item, depth }: { item: MenuItem; depth: number }) {
+  function DesktopRow({ item }: { item: MenuItem }) {
     const active = pathname === item.href;
     const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname));
-    const expanded = active || childActive;
+    const hasChildren = (item.children?.length ?? 0) > 0;
+    const [hovered, setHovered] = React.useState(false);
+
     return (
-      <li className="border-b border-[var(--color-border)] last:border-b-0">
+      <li
+        className="border-b border-[var(--color-border)] last:border-b-0 relative"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
         <Link
           href={item.href}
           target={item.is_external ? "_blank" : undefined}
           rel={item.is_external ? "noopener noreferrer" : undefined}
-          className={`block py-2.5 text-sm transition-colors ${
-            active
+          className={`flex items-center justify-between py-2.5 text-sm transition-colors ${
+            active || childActive
               ? "text-[var(--color-primary)] font-bold"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
           }`}
-          style={{ paddingLeft: depth === 0 ? undefined : `${depth * 12}px` }}
           aria-current={active ? "page" : undefined}
         >
-          {item.label}
-          {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
+          <span>
+            {item.label}
+            {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
+          </span>
+          {hasChildren && <span className="text-xs text-gray-400">▸</span>}
         </Link>
-        {expanded && (item.children?.length ?? 0) > 0 && (
-          <ul className="border-t border-[var(--color-border)]/40 bg-[var(--color-surface-warm)]/40">
-            {item.children!.map((c) => (
-              <DesktopRow key={c.id} item={c} depth={depth + 1} />
-            ))}
-          </ul>
+
+        {/* hover 시 우측에 자식 레이어 띄우기 */}
+        {hasChildren && hovered && (
+          <div
+            className="absolute top-0 left-full ml-2 z-40 w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden"
+            style={{ minWidth: "200px" }}
+          >
+            <div className="px-3 py-2 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]">
+              {item.label}
+            </div>
+            <ul className="py-1 max-h-80 overflow-y-auto">
+              {item.children!.map((c) => {
+                const cActive = pathname === c.href;
+                return (
+                  <li key={c.id}>
+                    <Link
+                      href={c.href}
+                      target={c.is_external ? "_blank" : undefined}
+                      rel={c.is_external ? "noopener noreferrer" : undefined}
+                      className={`block px-3 py-1.5 text-sm transition-colors ${
+                        cActive
+                          ? "text-[var(--color-primary)] font-semibold bg-[var(--color-surface-warm)]"
+                          : "text-[var(--color-text)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)]"
+                      }`}
+                      aria-current={cActive ? "page" : undefined}
+                    >
+                      {c.label}
+                      {c.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </li>
     );
@@ -137,7 +174,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
       <nav className="hidden md:block">
         <ul>
           {visibleItems.map((it) => (
-            <DesktopRow key={it.id} item={it} depth={0} />
+            <DesktopRow key={it.id} item={it} />
           ))}
         </ul>
       </nav>
