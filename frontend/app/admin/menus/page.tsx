@@ -77,19 +77,33 @@ export default function AdminMenusPage() {
   const load = useCallback(async () => {
     const t = getToken();
     if (!t) { router.push("/admin"); return; }
+    // 옵션 데이터(static-pages/boards-list)는 실패해도 페이지는 뜨도록 개별 처리
+    const safeFetch = async (path: string) => {
+      try {
+        const r = await fetch(`${API}${path}`, { headers: headers(), cache: "no-store" });
+        return r;
+      } catch {
+        return null;
+      }
+    };
     const [resGroups, resPages, resBoards] = await Promise.all([
-      fetch(`${API}/api/menus/admin/all`, { headers: headers(), cache: "no-store" }),
-      fetch(`${API}/api/menus/static-pages`, { headers: headers(), cache: "no-store" }),
-      fetch(`${API}/api/menus/boards-list`, { headers: headers(), cache: "no-store" }),
+      safeFetch("/api/menus/admin/all"),
+      safeFetch("/api/menus/static-pages"),
+      safeFetch("/api/menus/boards-list"),
     ]);
+    if (!resGroups) {
+      setLoading(false);
+      flash("백엔드에 연결할 수 없습니다. 잠시 후 다시 시도하세요.");
+      return;
+    }
     if (resGroups.status === 401) { router.push("/admin"); return; }
     if (resGroups.ok) {
       const data: MenuGroup[] = await resGroups.json();
       setGroups(data);
       if (data.length > 0 && selectedGroupId === null) setSelectedGroupId(data[0].id);
     }
-    if (resPages.ok) setStaticPages(await resPages.json());
-    if (resBoards.ok) setBoards(await resBoards.json());
+    if (resPages?.ok) setStaticPages(await resPages.json());
+    if (resBoards?.ok) setBoards(await resBoards.json());
     setLoading(false);
   }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
