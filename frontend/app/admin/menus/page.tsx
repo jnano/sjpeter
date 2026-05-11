@@ -209,9 +209,20 @@ export default function AdminMenusPage() {
   }
 
   async function deleteItem(item: MenuItem) {
-    if (!confirm(`'${item.label}' 항목을 삭제하시겠습니까?`)) return;
+    const isAuto = item.source_type?.startsWith("auto:") ?? false;
+    const extraWarn = isAuto
+      ? `\n\n⚠️ 자동 항목입니다 (${item.source_type}). 삭제해도 sync에서 다시 생성됩니다.\n완전히 제거하려면 원본(board/community)의 '메뉴 노출' 토글을 OFF 하세요.`
+      : "";
+    if (!confirm(`'${item.label}' 항목을 삭제하시겠습니까?${extraWarn}`)) return;
     const res = await fetch(`${API}/api/menus/items/${item.id}`, { method: "DELETE", headers: headers() });
-    if (res.ok) { await load(); notify(DataEvent.MENUS); }
+    if (res.ok) {
+      setSelectedGroupId(item.group_id); // 항목 삭제 후에도 같은 그룹에 머무름 (안전망)
+      await load();
+      notify(DataEvent.MENUS);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(`삭제 실패: ${formatErr(err, res.status)}`);
+    }
   }
 
   async function moveItem(item: MenuItem, dir: -1 | 1) {
