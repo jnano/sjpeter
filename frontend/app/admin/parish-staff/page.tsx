@@ -63,6 +63,7 @@ export default function AdminParishStaffPage() {
   const [error, setError] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [currentPhoto, setCurrentPhoto] = useState<string | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
 
   const authHeader = useCallback((): HeadersInit => {
@@ -92,9 +93,22 @@ export default function AdminParishStaffPage() {
     setPhotoFile(null);
     setCurrentPhoto(null);
     setError(null);
+    setShowNewForm(true);
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
+  const closeNewForm = () => {
+    setShowNewForm(false);
+    setEditing(EMPTY_FORM);
+    setPhotoFile(null);
+    setCurrentPhoto(null);
+    setError(null);
   };
 
   const startEdit = (s: Staff) => {
+    setShowNewForm(false);
     setEditing({
       id: s.id,
       role: s.role,
@@ -169,6 +183,7 @@ export default function AdminParishStaffPage() {
       setEditing(EMPTY_FORM);
       setPhotoFile(null);
       setCurrentPhoto(null);
+      setShowNewForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류");
     }
@@ -441,21 +456,30 @@ export default function AdminParishStaffPage() {
         </p>
       </header>
 
-      {/* 편집 중이 아닐 때만 상단에 새 등록 폼 노출 */}
-      {editing.id === 0 ? (
-        <div className="mb-6">{renderForm()}</div>
-      ) : (
-        <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-          <span className="text-xs text-amber-800">
+      {/* 상단 액션 바: 새 등록 토글 + 수정 중 안내 */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        {editing.id !== 0 ? (
+          <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
             <strong>{editing.name || "(이름 없음)"}</strong> 수정 중 — 해당 항목 아래에서 폼이 펼쳐집니다
           </span>
-          <button
-            onClick={startNew}
-            className="text-xs px-3 py-1 bg-white border border-amber-300 text-amber-700 rounded hover:bg-amber-100"
-          >
-            + 새로 등록 폼
-          </button>
-        </div>
+        ) : (
+          <span />
+        )}
+        <button
+          onClick={showNewForm ? closeNewForm : startNew}
+          className={`text-sm px-4 py-2 rounded font-medium transition-colors ${
+            showNewForm
+              ? "bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-900 text-white hover:bg-black"
+          }`}
+        >
+          {showNewForm ? "닫기" : "+ 본당 가족 등록"}
+        </button>
+      </div>
+
+      {/* 새 등록 폼 (버튼 토글 시에만 노출) */}
+      {showNewForm && editing.id === 0 && (
+        <div className="mb-6">{renderForm()}</div>
       )}
 
       {/* 역대 사목자 이전 모달 */}
