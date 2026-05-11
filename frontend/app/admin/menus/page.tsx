@@ -453,7 +453,13 @@ function ItemTree({
                   defaultValue={item.href}
                   onBlur={(e) => {
                     const v = e.target.value.trim();
-                    if (v && v !== item.href) onUpdate(item, { href: v });
+                    if (v && v !== item.href) {
+                      // href가 http(s)면 자동으로 외부 링크로 표시
+                      const isHttp = v.startsWith("http://") || v.startsWith("https://");
+                      const patch: Partial<MenuItem> = { href: v };
+                      if (isHttp !== item.is_external) patch.is_external = isHttp;
+                      onUpdate(item, patch);
+                    }
                   }}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                   className={inputCls + " font-mono text-xs"}
