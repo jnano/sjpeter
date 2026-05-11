@@ -14,7 +14,7 @@ interface Parish {
 
 async function getParish(): Promise<Parish | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
