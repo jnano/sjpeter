@@ -3,7 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import GroupsLayout, { fetchGroups, type CommunityGroup } from "../GroupsLayout";
+import SectionLayout from "@/components/SectionLayout";
+import { fetchGroups, type CommunityGroup } from "../GroupsLayout";
 import CommunitySlideshow from "./CommunitySlideshow";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -47,7 +48,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   return (
     <>
       <PageHeader group="본당 공동체" title="분과와 단체" subtitle={group.name} />
-      <GroupsLayout groups={allGroups} currentSlug={slug}>
+      <SectionLayout autoHero={false}>
         <article className="space-y-8">
           {/* 분과명 + 설명 */}
           <header>
@@ -151,7 +152,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </Link>
           )}
         </article>
-      </GroupsLayout>
+      </SectionLayout>
     </>
   );
 }

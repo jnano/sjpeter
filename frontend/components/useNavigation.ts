@@ -29,6 +29,7 @@ export interface MenuGroup {
   sidebar_width_px: number;
   sort_order: number;
   is_active: boolean;
+  show_in_header: boolean;
   items: MenuItem[];
 }
 
@@ -69,20 +70,28 @@ export function useNavigation(): NavData {
 
   const groups = ctxGroups ?? fallbackGroups;
 
-  // 현재 pathname이 속한 그룹: 가장 긴 href prefix 매칭
-  let currentGroup: MenuGroup | null = null;
-  let bestLength = -1;
-  for (const g of groups) {
-    for (const it of g.items) {
-      if (it.is_external) continue;
-      if (it.href === pathname || pathname.startsWith(it.href + "/")) {
-        if (it.href.length > bestLength) {
-          bestLength = it.href.length;
-          currentGroup = g;
+  // 현재 그룹 결정: 사이드바 전용 그룹(show_in_header=false) 우선,
+  // 그 안에서도 가장 긴 prefix 매칭. 없으면 헤더 그룹에서 매칭.
+  function matchInGroups(pool: MenuGroup[]): MenuGroup | null {
+    let best: MenuGroup | null = null;
+    let bestLen = -1;
+    for (const g of pool) {
+      for (const it of g.items) {
+        if (it.is_external) continue;
+        if (it.href === pathname || pathname.startsWith(it.href + "/")) {
+          if (it.href.length > bestLen) {
+            bestLen = it.href.length;
+            best = g;
+          }
         }
       }
     }
+    return best;
   }
+
+  const sidebarOnly = groups.filter((g) => !g.show_in_header);
+  const headerVisible = groups.filter((g) => g.show_in_header);
+  const currentGroup = matchInGroups(sidebarOnly) ?? matchInGroups(headerVisible);
 
   return { groups, currentGroup, loading };
 }

@@ -43,6 +43,7 @@ class MenuGroupIn(BaseModel):
     sidebar_width_px: int = 220
     sort_order: int = 0
     is_active: bool = True
+    show_in_header: bool = True
 
 
 class MenuGroupOut(MenuGroupIn):

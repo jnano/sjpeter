@@ -341,6 +341,12 @@ def _migrate_add_columns():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        try:
+            conn.execute(text(
+                "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS show_in_header BOOLEAN DEFAULT TRUE"
+            ))
+        except Exception:
+            pass
 
         # 분과/소속단체 트리 + 슬러그 + 활동·사진 (2026-05-11)
         for stmt in [

@@ -15,6 +15,7 @@ class MenuGroup(Base):
     sidebar_width_px = Column(Integer, default=220)              # 사이드바 폭
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    show_in_header = Column(Boolean, default=True)               # FALSE면 헤더 dropdown 안 나옴 (사이드바 전용)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

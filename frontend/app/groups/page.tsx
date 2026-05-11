@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
-import GroupsLayout, { fetchGroups } from "./GroupsLayout";
+import SectionLayout from "@/components/SectionLayout";
+import { fetchGroups } from "./GroupsLayout";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default async function GroupsPage() {
   return (
     <>
       <PageHeader group="본당 공동체" title="분과와 단체" subtitle="좌측에서 분과를 선택하면 상세 내용을 볼 수 있습니다" />
-      <GroupsLayout groups={groups}>
+      <SectionLayout autoHero={false}>
         {topLevel.length === 0 ? (
           <div className="text-center py-16 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4">✝</div>
@@ -50,7 +51,7 @@ export default async function GroupsPage() {
             ))}
           </div>
         )}
-      </GroupsLayout>
+      </SectionLayout>
     </>
   );
 }

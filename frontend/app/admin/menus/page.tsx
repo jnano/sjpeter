@@ -28,6 +28,7 @@ interface MenuGroup {
   sidebar_width_px: number;
   sort_order: number;
   is_active: boolean;
+  show_in_header: boolean;
   items: MenuItem[];
 }
 
@@ -78,7 +79,7 @@ export default function AdminMenusPage() {
     const res = await fetch(`${API}/api/menus/groups`, {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ key, label, sort_order: groups.length, is_active: true, sidebar_width_px: 220 }),
+      body: JSON.stringify({ key, label, sort_order: groups.length, is_active: true, show_in_header: true, sidebar_width_px: 220 }),
     });
     if (res.ok) { const g = await res.json(); setSelectedGroupId(g.id); await load(); notify(DataEvent.MENUS); flash("그룹이 추가되었습니다."); }
     else alert((await res.json()).detail || "추가 실패");
@@ -290,6 +291,16 @@ export default function AdminMenusPage() {
                     <input type="checkbox" checked={selectedGroup.is_active} onChange={(e) => updateGroup(selectedGroup, { is_active: e.target.checked })} />
                     <span>{selectedGroup.is_active ? "노출 중" : "숨김"}</span>
                   </label>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">헤더 dropdown에 표시</label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={selectedGroup.show_in_header} onChange={(e) => updateGroup(selectedGroup, { show_in_header: e.target.checked })} />
+                    <span>{selectedGroup.show_in_header ? "헤더에 표시" : "사이드바 전용 (헤더 숨김)"}</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mt-1">
+                    체크 해제 시 헤더 dropdown에는 안 나오지만, 해당 경로 페이지에서 좌측 사이드바로 표시됩니다.
+                  </p>
                 </div>
               </div>
 

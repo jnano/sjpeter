@@ -25,6 +25,7 @@ export default function Header() {
   const { groups } = useNavigation();
 
   const visibleNavGroups = groups
+    .filter((g) => g.show_in_header)
     .map((g) => ({
       ...g,
       items: g.items.filter((i) => !isArchiveLinkHidden(i.href, archiveCounts)),
