@@ -495,7 +495,7 @@ function ItemTree({
   return (
     <ul className={depth === 0 ? "divide-y divide-gray-100" : "border-l-2 border-amber-200 ml-3"}>
       {[...items].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map((item) => {
-        const isAuto = item.source_type === "auto:groups";
+        const isAuto = item.source_type?.startsWith("auto:") ?? false;
         return (
           <li key={item.id}>
             <div className={`px-5 py-3 ${!item.is_active ? "bg-gray-50/60 opacity-60" : ""}`} style={{ paddingLeft: `${20 + depth * 16}px` }}>
@@ -538,7 +538,7 @@ function ItemTree({
                 </div>
               </div>
               <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
-                {isAuto && <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">auto:groups</span>}
+                {isAuto && <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">{item.source_type}</span>}
                 <label className="inline-flex items-center gap-1.5">
                   <input type="checkbox" checked={item.is_external} onChange={(e) => onUpdate(item, { is_external: e.target.checked })} />
                   외부 링크 (새 탭)
