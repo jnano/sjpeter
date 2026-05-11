@@ -282,15 +282,43 @@ export default function AdminMenusPage() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">표시 라벨</label>
-                  <input value={selectedGroup.label} onChange={(e) => updateGroup(selectedGroup, { label: e.target.value })} className={inputCls} />
+                  <input
+                    key={`label-${selectedGroup.id}`}
+                    defaultValue={selectedGroup.label}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v && v !== selectedGroup.label) updateGroup(selectedGroup, { label: v });
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">부제 (dropdown 보조 텍스트)</label>
-                  <input value={selectedGroup.subtitle ?? ""} onChange={(e) => updateGroup(selectedGroup, { subtitle: e.target.value })} className={inputCls} />
+                  <input
+                    key={`subtitle-${selectedGroup.id}`}
+                    defaultValue={selectedGroup.subtitle ?? ""}
+                    onBlur={(e) => {
+                      const v = e.target.value;
+                      if (v !== (selectedGroup.subtitle ?? "")) updateGroup(selectedGroup, { subtitle: v });
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">아이콘 (이모지)</label>
-                  <input value={selectedGroup.icon ?? ""} onChange={(e) => updateGroup(selectedGroup, { icon: e.target.value })} className={inputCls} placeholder="예: ⛪" />
+                  <input
+                    key={`icon-${selectedGroup.id}`}
+                    defaultValue={selectedGroup.icon ?? ""}
+                    onBlur={(e) => {
+                      const v = e.target.value;
+                      if (v !== (selectedGroup.icon ?? "")) updateGroup(selectedGroup, { icon: v });
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={inputCls}
+                    placeholder="예: ⛪"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">사이드바 폭 (px)</label>
@@ -408,9 +436,29 @@ function ItemTree({
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 items-center">
                 <div className="flex items-center gap-1.5">
                   {depth > 0 && <span className="text-xs text-amber-500">└</span>}
-                  <input value={item.label} onChange={(e) => onUpdate(item, { label: e.target.value })} className={inputCls} placeholder="라벨" />
+                  <input
+                    key={`item-label-${item.id}`}
+                    defaultValue={item.label}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v && v !== item.label) onUpdate(item, { label: v });
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={inputCls}
+                    placeholder="라벨"
+                  />
                 </div>
-                <input value={item.href} onChange={(e) => onUpdate(item, { href: e.target.value })} className={inputCls + " font-mono text-xs"} placeholder="/about 또는 https://..." />
+                <input
+                  key={`item-href-${item.id}`}
+                  defaultValue={item.href}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== item.href) onUpdate(item, { href: v });
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  className={inputCls + " font-mono text-xs"}
+                  placeholder="/about 또는 https://..."
+                />
                 <div className="flex items-center gap-1">
                   <button onClick={() => onMove(item, -1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="위로">↑</button>
                   <button onClick={() => onMove(item, 1)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50" title="아래로">↓</button>
