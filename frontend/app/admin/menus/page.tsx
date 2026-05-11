@@ -144,7 +144,16 @@ export default function AdminMenusPage() {
       headers: { ...headers(), "Content-Type": "application/json" },
       body: JSON.stringify({ ids: sorted.map((x) => x.id) }),
     });
-    if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
+    if (res.ok) {
+      await load();
+      setSelectedGroupId(g.id);  // 이동한 그룹을 계속 선택 유지
+      // 이동한 그룹을 좌측 리스트에서 시야에 표시
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-group-id="${g.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      notify(DataEvent.MENUS);
+      flash("순서 변경됨");
+    }
     else {
       const err = await res.json().catch(() => ({}));
       alert(`이동 실패: ${formatErr(err, res.status)}`);
@@ -287,7 +296,7 @@ export default function AdminMenusPage() {
           </div>
           <ul className="space-y-1">
             {groups.map((g) => (
-              <li key={g.id}>
+              <li key={g.id} data-group-id={g.id}>
                 <button
                   onClick={() => setSelectedGroupId(g.id)}
                   className={`w-full text-left px-3 py-2 text-sm rounded transition-colors flex items-center justify-between ${
