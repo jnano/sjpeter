@@ -5,6 +5,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SessionProvider from "@/components/SessionProvider";
 import SessionTimeout from "@/components/SessionTimeout";
+import { MenusProvider } from "@/components/MenusProvider";
+import { fetchServerMenus } from "@/components/fetchServerMenus";
 
 const notoSansKR = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -38,11 +40,12 @@ export const metadata: Metadata = {
   keywords: ["세종성베드로성당", "세종 성당", "대전교구", "가톨릭", "성당"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialMenus = await fetchServerMenus();
   return (
     <html
       lang="ko"
@@ -50,10 +53,12 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col bg-[var(--color-background)]">
         <SessionProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <SessionTimeout />
+          <MenusProvider initial={initialMenus}>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <SessionTimeout />
+          </MenusProvider>
         </SessionProvider>
       </body>
     </html>

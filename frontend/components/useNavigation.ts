@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DataEvent, useInvalidationListener } from "./dataEvents";
+import { useMenusContext } from "./MenusProvider";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -38,24 +39,35 @@ export interface NavData {
 }
 
 /**
- * 메뉴 관리(menu_groups + menu_items)를 한 번 fetch해 헤더·사이드바 모두에 공급.
- * pathname 변경 시 currentGroup 재계산. 메뉴 admin 변경 시 이벤트로 refetch.
+ * 메뉴 데이터: MenusContext가 있으면 그 값 사용 (SSR 일관성), 없으면 자체 fetch (fallback).
+ * pathname 변경 시 currentGroup 재계산, DataEvent.MENUS 수신 시 갱신.
  */
 export function useNavigation(): NavData {
-  const [groups, setGroups] = useState<MenuGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const ctxGroups = useMenusContext();
+  const [fallbackGroups, setFallbackGroups] = useState<MenuGroup[]>([]);
+  const [loading, setLoading] = useState(ctxGroups === null);
   const pathname = usePathname();
 
   const fetchMenus = useCallback(() => {
     fetch(`${API}/api/menus/public`)
       .then((r) => (r.ok ? r.json() : []))
-      .then((d: MenuGroup[]) => setGroups(Array.isArray(d) ? d : []))
-      .catch(() => setGroups([]))
+      .then((d: MenuGroup[]) => setFallbackGroups(Array.isArray(d) ? d : []))
+      .catch(() => setFallbackGroups([]))
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchMenus(); }, [fetchMenus]);
-  useInvalidationListener(DataEvent.MENUS, fetchMenus);
+  // context가 없는 경우만 fallback fetch
+  useEffect(() => {
+    if (ctxGroups === null) fetchMenus();
+    else setLoading(false);
+  }, [ctxGroups, fetchMenus]);
+
+  useInvalidationListener(DataEvent.MENUS, () => {
+    if (ctxGroups === null) fetchMenus();
+    // ctxGroups가 있을 땐 MenusProvider가 자체 갱신
+  });
+
+  const groups = ctxGroups ?? fallbackGroups;
 
   // 현재 pathname이 속한 그룹: 가장 긴 href prefix 매칭
   let currentGroup: MenuGroup | null = null;
