@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -15,12 +16,15 @@ export default function MeditationCredits() {
   const [meditation, setMeditation] = useState<Meditation | null>(null);
   const [paused, setPaused] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     fetch(`${API}/api/content/meditations/current`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setMeditation)
       .catch(() => setMeditation(null));
   }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+  useInvalidationListener(DataEvent.MEDITATION_CURRENT, reload);
 
   // 한 사이클 50초 고정
   const duration = 50;

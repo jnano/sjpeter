@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { DataEvent, useInvalidationListener } from "./dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -68,21 +69,20 @@ export default function PageHeroSlideshow({
   const [index, setIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const reload = useCallback(() => {
     fetch(`${API}/api/page-photos/${slug}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (cancelled || !data) return;
+        if (!data) return;
         setPhotos(data.photos ?? []);
         if (data.settings) setSettings(data.settings);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
-    return () => {
-      cancelled = true;
-    };
   }, [slug]);
+
+  useEffect(() => { reload(); }, [reload]);
+  useInvalidationListener(DataEvent.PAGE_PHOTOS, reload);
 
   useEffect(() => {
     if (photos.length < 2 || settings.transition_mode === "none") return;

@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PageHeroSlideshow from "./PageHeroSlideshow";
+import { DataEvent, useInvalidationListener } from "./dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -36,12 +37,10 @@ export default function AutoPageHero({ className, sizes, priority = true }: Prop
   const [meta, setMeta] = useState<PagePhotoSlug | null>(null);
   const [resolved, setResolved] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const resolveMeta = useCallback(() => {
     fetch(`${API}/api/page-photos/slugs`)
       .then((r) => (r.ok ? r.json() : []))
       .then((slugs: PagePhotoSlug[]) => {
-        if (cancelled) return;
         const direct = slugs.find((s) => s.public_href === pathname);
         if (direct) {
           setMeta(direct);
@@ -54,10 +53,10 @@ export default function AutoPageHero({ className, sizes, priority = true }: Prop
         setResolved(true);
       })
       .catch(() => setResolved(true));
-    return () => {
-      cancelled = true;
-    };
   }, [pathname]);
+
+  useEffect(() => { resolveMeta(); }, [resolveMeta]);
+  useInvalidationListener(DataEvent.PAGE_PHOTOS, resolveMeta);
 
   if (!resolved || !meta) return null;
 

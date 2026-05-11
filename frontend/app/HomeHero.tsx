@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -24,18 +25,17 @@ export default function HomeHero({ parishName }: Props) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchBanners = useCallback(() => {
     fetch(`${API}/api/home-banners/`)
       .then((r) => (r.ok ? r.json() : []))
       .then((list: Banner[]) => {
-        if (!cancelled && list.length > 0) setBanners(list);
+        setBanners(list ?? []);
       })
       .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => { fetchBanners(); }, [fetchBanners]);
+  useInvalidationListener(DataEvent.HOME_BANNERS, fetchBanners);
 
   const slides = useMemo(() => {
     if (banners.length === 0) return [FALLBACK];

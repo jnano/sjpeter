@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PagePhoto, PagePhotoSettings, TransitionMode } from "./PageHeroSlideshow";
+import { DataEvent, notify } from "./dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -90,6 +91,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
         }
       }
       await fetchData();
+      notify(DataEvent.PAGE_PHOTOS);
       flash("사진이 등록되었습니다.");
     } finally {
       setLoading(false);
@@ -105,6 +107,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
     });
     if (res.ok) {
       await fetchData();
+      notify(DataEvent.PAGE_PHOTOS);
       flash("삭제되었습니다.");
     }
   }
@@ -124,6 +127,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
     if (res.ok) {
       const data = await res.json();
       setPhotos(data);
+      notify(DataEvent.PAGE_PHOTOS);
     }
   }
 
@@ -146,6 +150,7 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
     }
     const data = await res.json();
     setSettings(data);
+    notify(DataEvent.PAGE_PHOTOS);
     flash("설정이 저장되었습니다.");
   }
 

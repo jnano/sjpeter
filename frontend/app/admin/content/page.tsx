@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -901,7 +902,7 @@ function MeditationTab() {
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); setShowCreate(false); load(); }
+    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); setShowCreate(false); load(); notify(DataEvent.MEDITATION_CURRENT); }
   }
 
   async function update(id: number) {
@@ -920,7 +921,7 @@ function MeditationTab() {
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.ok) { flash("수정되었습니다."); setEditId(null); load(); }
+    if (res.ok) { flash("수정되었습니다."); setEditId(null); load(); notify(DataEvent.MEDITATION_CURRENT); }
   }
 
   async function remove(id: number) {
@@ -930,6 +931,7 @@ function MeditationTab() {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     load();
+    notify(DataEvent.MEDITATION_CURRENT);
   }
 
   function startEdit(item: Meditation) {

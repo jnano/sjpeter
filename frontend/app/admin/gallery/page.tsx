@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -77,6 +78,7 @@ export default function GalleryAdminPage() {
       setFiles(null);
       if (fileRef.current) fileRef.current.value = "";
       loadPosts(boardSlug);
+      notify(DataEvent.PHOTO_POSTS);  // 홈 PhotoSlider 즉시 갱신
     } catch {
       setMessage({ type: "err", text: "업로드 중 오류가 발생했습니다." });
     } finally {
@@ -90,7 +92,10 @@ export default function GalleryAdminPage() {
       method: "DELETE",
       headers: authHeader,
     });
-    if (res.ok) setPosts((prev) => prev.filter((p) => p.id !== postId));
+    if (res.ok) {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      notify(DataEvent.PHOTO_POSTS);
+    }
   }
 
   return (

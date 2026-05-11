@@ -18,14 +18,33 @@ export const DataEvent = {
   ARCHIVE_COUNTS: "data:archive-counts",
   /** AI 추출 임시저장 글 수 변경 (AdminSidebar 뱃지) */
   DRAFTS_COUNT: "data:drafts-count",
+  /** 홈 메인 배너 변경 (HomeHero) */
+  HOME_BANNERS: "data:home-banners",
+  /** photo·liturgy 게시판 사진 변경 (홈 PhotoSlider) */
+  PHOTO_POSTS: "data:photo-posts",
+  /** 오늘의 묵상 변경 (홈 MeditationCredits) */
+  MEDITATION_CURRENT: "data:meditation-current",
+  /** 페이지 사진 슬러그/사진/설정 변경 (AutoPageHero, PageHeroSlideshow) */
+  PAGE_PHOTOS: "data:page-photos",
 } as const;
 
 export type DataEventName = (typeof DataEvent)[keyof typeof DataEvent];
 
-/** 데이터 변경 알림 발행 (admin 저장/삭제 직후 호출) */
+// 탭 간 통신용 BroadcastChannel (지연 초기화 — SSR 안전)
+let channel: BroadcastChannel | null = null;
+function getChannel(): BroadcastChannel | null {
+  if (typeof window === "undefined") return null;
+  if (!channel && "BroadcastChannel" in window) {
+    channel = new BroadcastChannel("faithandme-data-events");
+  }
+  return channel;
+}
+
+/** 데이터 변경 알림 발행 (admin 저장/삭제 직후 호출). 같은 탭 + 다른 탭 모두 수신. */
 export function notify(event: DataEventName): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(event));
+  getChannel()?.postMessage(event);
 }
 
 /** 데이터 변경 알림 수신 → refetch 호출 */
@@ -33,6 +52,14 @@ export function useInvalidationListener(event: DataEventName, refetch: () => voi
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.addEventListener(event, refetch);
-    return () => window.removeEventListener(event, refetch);
+    const handleBroadcast = (e: MessageEvent) => {
+      if (e.data === event) refetch();
+    };
+    const ch = getChannel();
+    ch?.addEventListener("message", handleBroadcast);
+    return () => {
+      window.removeEventListener(event, refetch);
+      ch?.removeEventListener("message", handleBroadcast);
+    };
   }, [event, refetch]);
 }

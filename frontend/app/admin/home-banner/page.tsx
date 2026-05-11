@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -39,6 +40,11 @@ export default function AdminHomeBannerPage() {
     if (res.ok) setBanners(await res.json());
   }, [authHeader, router]);
 
+  const reloadAfterMutation = useCallback(async () => {
+    await reload();
+    notify(DataEvent.HOME_BANNERS);
+  }, [reload]);
+
   useEffect(() => {
     if (!localStorage.getItem("admin_token")) {
       router.push("/admin");
@@ -68,14 +74,14 @@ export default function AdminHomeBannerPage() {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.detail || `업로드 실패 (${res.status})`);
         }
-        await reload();
+        await reloadAfterMutation();
       } catch (e) {
         setError(e instanceof Error ? e.message : "업로드 실패");
       } finally {
         setUploading(false);
       }
     },
-    [authHeader, reload],
+    [authHeader, reloadAfterMutation],
   );
 
   const onDrop = (e: React.DragEvent) => {
@@ -90,7 +96,7 @@ export default function AdminHomeBannerPage() {
       method: "DELETE",
       headers: authHeader(),
     });
-    if (res.ok) reload();
+    if (res.ok) reloadAfterMutation();
     else setError("삭제 실패");
   };
 
@@ -99,7 +105,7 @@ export default function AdminHomeBannerPage() {
       method: "PATCH",
       headers: authHeader(),
     });
-    if (res.ok) reload();
+    if (res.ok) reloadAfterMutation();
   };
 
   const reorder = async (newOrder: number[]) => {
@@ -109,6 +115,7 @@ export default function AdminHomeBannerPage() {
       headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ ids: newOrder }),
     });
+    notify(DataEvent.HOME_BANNERS);
   };
 
   const onItemDragStart = (id: number) => setDraggingId(id);

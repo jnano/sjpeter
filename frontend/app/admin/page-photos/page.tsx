@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -158,6 +159,7 @@ export default function AdminPagePhotosIndex() {
       }
       closeForm();
       await fetchSlugs();
+      notify(DataEvent.PAGE_PHOTOS);
     } finally {
       setSaving(false);
     }
@@ -170,7 +172,7 @@ export default function AdminPagePhotosIndex() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) await fetchSlugs();
+    if (res.ok) { await fetchSlugs(); notify(DataEvent.PAGE_PHOTOS); }
     else {
       const d = await res.json().catch(() => ({}));
       alert(d.detail || "삭제에 실패했습니다.");

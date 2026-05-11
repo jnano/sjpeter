@@ -1,7 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -56,9 +57,9 @@ export default function PhotoSlider() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
-  useEffect(() => {
-    fetchSlides().then(setSlides);
-  }, []);
+  const reload = useCallback(() => { fetchSlides().then(setSlides); }, []);
+  useEffect(() => { reload(); }, [reload]);
+  useInvalidationListener(DataEvent.PHOTO_POSTS, reload);
 
   useEffect(() => {
     if (slides.length <= 1 || paused) return;
