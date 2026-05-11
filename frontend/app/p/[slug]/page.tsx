@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import DynamicPageBody from "@/components/dynamic-page/DynamicPageBody";
 import DynamicPageBodyWithHero from "@/components/dynamic-page/DynamicPageBodyWithHero";
 import DynamicPageSections from "@/components/dynamic-page/DynamicPageSections";
@@ -41,6 +42,9 @@ export default async function DynamicPageRoute({
   const data = await fetchPage(slug);
   if (!data) notFound();
 
+  // body_with_hero 레이아웃은 자체 슬라이드쇼를 그리므로 SectionLayout의 autoHero는 끔
+  const useAutoHero = data.layout_kind !== "body_with_hero";
+
   return (
     <>
       <PageHeader
@@ -48,7 +52,7 @@ export default async function DynamicPageRoute({
         title={data.title}
         subtitle={data.subtitle ?? ""}
       />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout autoHero={useAutoHero}>
         {data.layout_kind === "body" && (
           <DynamicPageBody bodyMarkdown={data.body_markdown ?? ""} />
         )}
@@ -64,7 +68,7 @@ export default async function DynamicPageRoute({
             payload={data.payload}
           />
         )}
-      </div>
+      </SectionLayout>
     </>
   );
 }
