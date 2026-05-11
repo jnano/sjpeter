@@ -144,6 +144,7 @@ class CommunityGroupIn(BaseModel):
     parent_id: Optional[int] = None
     slug: Optional[str] = None
     activities: Optional[str] = None
+    photo_display_mode: Optional[str] = "slideshow"
 
 
 class CommunityGroupOut(BaseModel):
@@ -158,6 +159,7 @@ class CommunityGroupOut(BaseModel):
     slug: Optional[str] = None
     activities: Optional[str] = None
     photo_urls: Optional[list[str]] = None
+    photo_display_mode: Optional[str] = "slideshow"
 
     class Config:
         from_attributes = True

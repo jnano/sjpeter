@@ -40,6 +40,7 @@ class CommunityGroup(Base):
     slug = Column(String(100), nullable=True, unique=True)   # /groups/{slug} URL
     activities = Column(Text)            # 주요 활동 — 한 줄에 한 항목
     photo_urls = Column(ARRAY(Text))     # 분과 사진 URL 리스트
+    photo_display_mode = Column(String(20), default="slideshow")  # 'slideshow' | 'grid'
 
 
 class StaticPage(Base):

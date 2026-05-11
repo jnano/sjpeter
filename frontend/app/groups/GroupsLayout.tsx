@@ -14,6 +14,7 @@ export interface CommunityGroup {
   sort_order: number;
   activities: string | null;
   photo_urls: string[] | null;
+  photo_display_mode: string | null;
 }
 
 export async function fetchGroups(): Promise<CommunityGroup[]> {

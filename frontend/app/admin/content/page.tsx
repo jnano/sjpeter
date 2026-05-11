@@ -43,6 +43,7 @@ interface CommunityGroup {
   slug: string | null;
   activities: string | null;
   photo_urls: string[] | null;
+  photo_display_mode: string | null;
 }
 
 interface BoardOption { slug: string; name: string; }
@@ -456,6 +457,7 @@ const emptyComForm = {
   parent_id: null as number | null,
   slug: "",
   activities: "",
+  photo_display_mode: "slideshow",
 };
 
 function CommunityTab() {
@@ -636,6 +638,17 @@ function CommunityTab() {
               <BoardSelect value={form.board_slug} onChange={(v) => setForm((p) => ({ ...p, board_slug: v }))} />
             </div>
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">사진 표시 방식</label>
+            <select
+              value={form.photo_display_mode}
+              onChange={(e) => setForm((p) => ({ ...p, photo_display_mode: e.target.value }))}
+              className={inputCls}
+            >
+              <option value="slideshow">슬라이드쇼 (자동 전환)</option>
+              <option value="grid">사진 격자 (정적, 2열)</option>
+            </select>
+          </div>
           <p className="text-xs text-gray-400">사진은 등록 후 수정 모드에서 추가하세요.</p>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
@@ -691,9 +704,22 @@ function CommunityTab() {
                   <textarea value={editForm.activities} onChange={(e) => setEditForm((p) => ({ ...p, activities: e.target.value }))} rows={4} className={`${inputCls} resize-y font-mono text-xs`} />
                 </div>
                 <input value={editForm.activity_time} onChange={(e) => setEditForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="활동 시간" />
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
-                  <BoardSelect value={editForm.board_slug} onChange={(v) => setEditForm((p) => ({ ...p, board_slug: v }))} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
+                    <BoardSelect value={editForm.board_slug} onChange={(v) => setEditForm((p) => ({ ...p, board_slug: v }))} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">사진 표시 방식</label>
+                    <select
+                      value={editForm.photo_display_mode}
+                      onChange={(e) => setEditForm((p) => ({ ...p, photo_display_mode: e.target.value }))}
+                      className={inputCls}
+                    >
+                      <option value="slideshow">슬라이드쇼 (자동 전환)</option>
+                      <option value="grid">사진 격자 (정적, 2열)</option>
+                    </select>
+                  </div>
                 </div>
                 <CommunityPhotoManager group={g} onChange={load} />
                 <div className="flex gap-2">
@@ -733,7 +759,7 @@ function CommunityTab() {
                   </div>
                 </div>
                 <div className="flex gap-3 shrink-0 ml-4">
-                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", board_slug: g.board_slug ?? "", sort_order: g.sort_order, parent_id: g.parent_id, slug: g.slug ?? "", activities: g.activities ?? "" }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", board_slug: g.board_slug ?? "", sort_order: g.sort_order, parent_id: g.parent_id, slug: g.slug ?? "", activities: g.activities ?? "", photo_display_mode: g.photo_display_mode ?? "slideshow" }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
                 </div>
               </div>

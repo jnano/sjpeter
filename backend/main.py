@@ -317,6 +317,7 @@ def _migrate_add_columns():
             "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS slug VARCHAR(100)",
             "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS activities TEXT",
             "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS photo_urls TEXT[]",
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS photo_display_mode VARCHAR(20) DEFAULT 'slideshow'",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_community_groups_slug ON community_groups (slug) WHERE slug IS NOT NULL",
         ]:
             try:

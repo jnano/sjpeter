@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import GroupsLayout, { fetchGroups, type CommunityGroup } from "../GroupsLayout";
@@ -106,10 +107,26 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </div>
           )}
 
-          {/* 사진 슬라이드쇼 — 5초 간격 페이드 전환, 마우스 hover 시 일시정지 */}
+          {/* 사진 — admin이 선택한 표시 방식 (슬라이드쇼 / 격자) */}
           {group.photo_urls && group.photo_urls.length > 0 && (
             <section>
-              <CommunitySlideshow photos={group.photo_urls} alt={group.name} />
+              {group.photo_display_mode === "grid" ? (
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  {group.photo_urls.map((url, i) => (
+                    <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-[var(--color-border)]">
+                      <Image
+                        src={url.startsWith("http") ? url : `${API}${url}`}
+                        alt={`${group.name} 사진 ${i + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, 50vw"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <CommunitySlideshow photos={group.photo_urls} alt={group.name} />
+              )}
             </section>
           )}
 
