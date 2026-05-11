@@ -84,6 +84,8 @@ export function useNavigation(): NavData {
 
   // 현재 그룹 결정: 사이드바 전용 그룹(show_in_header=false) 우선,
   // 그 안에서도 모든 자식까지 평평하게 본 후 가장 긴 prefix 매칭.
+  // 같은 href가 여러 그룹에 있으면 나중에 정의된(sort_order ↑) 그룹 우선
+  // — admin이 새 그룹에 같은 항목을 추가하면 그 그룹이 우선됨.
   function matchInGroups(pool: MenuGroup[]): MenuGroup | null {
     let best: MenuGroup | null = null;
     let bestLen = -1;
@@ -91,7 +93,7 @@ export function useNavigation(): NavData {
       for (const it of flattenItems(g.items)) {
         if (it.is_external) continue;
         if (it.href === pathname || pathname.startsWith(it.href + "/")) {
-          if (it.href.length > bestLen) {
+          if (it.href.length >= bestLen) {
             bestLen = it.href.length;
             best = g;
           }
