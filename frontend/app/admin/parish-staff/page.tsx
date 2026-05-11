@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -63,6 +63,7 @@ export default function AdminParishStaffPage() {
   const [error, setError] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [currentPhoto, setCurrentPhoto] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   const authHeader = useCallback((): HeadersInit => {
     const t = localStorage.getItem("admin_token");
@@ -110,6 +111,10 @@ export default function AdminParishStaffPage() {
     setPhotoFile(null);
     setCurrentPhoto(s.photo_url);
     setError(null);
+    // 폼이 펼쳐진 직후 viewport에 보이도록
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
   };
 
   const save = async () => {
@@ -254,29 +259,23 @@ export default function AdminParishStaffPage() {
     }
   };
 
-  return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <header className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">본당 가족 관리</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          주임·보좌신부, 수녀, 사무장 등 현재 재임 중인 분들을 관리합니다. (`/pastor` 페이지에 노출)
-        </p>
-      </header>
+  const renderForm = () => (
+    <section
+      ref={formRef}
+      className="bg-white border border-gray-200 rounded-xl p-5"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-900">
+          {editing.id === 0 ? "새 등록" : `수정 #${editing.id} — ${editing.name || "(이름 없음)"}`}
+        </h2>
+        {editing.id !== 0 && (
+          <button onClick={startNew} className="text-xs text-gray-600 underline">
+            닫고 새로 등록
+          </button>
+        )}
+      </div>
 
-      {/* 폼 */}
-      <section className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900">
-            {editing.id === 0 ? "새 등록" : `수정 #${editing.id}`}
-          </h2>
-          {editing.id !== 0 && (
-            <button onClick={startNew} className="text-xs text-gray-600 underline">
-              새로 등록 폼으로
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="역할">
             <select
               value={editing.role}
@@ -431,6 +430,33 @@ export default function AdminParishStaffPage() {
           </button>
         </div>
       </section>
+  );
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      <header className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">본당 가족 관리</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          주임·보좌신부, 수녀, 사무장 등 현재 재임 중인 분들을 관리합니다. (`/pastor` 페이지에 노출)
+        </p>
+      </header>
+
+      {/* 편집 중이 아닐 때만 상단에 새 등록 폼 노출 */}
+      {editing.id === 0 ? (
+        <div className="mb-6">{renderForm()}</div>
+      ) : (
+        <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+          <span className="text-xs text-amber-800">
+            <strong>{editing.name || "(이름 없음)"}</strong> 수정 중 — 해당 항목 아래에서 폼이 펼쳐집니다
+          </span>
+          <button
+            onClick={startNew}
+            className="text-xs px-3 py-1 bg-white border border-amber-300 text-amber-700 rounded hover:bg-amber-100"
+          >
+            + 새로 등록 폼
+          </button>
+        </div>
+      )}
 
       {/* 역대 사목자 이전 모달 */}
       {archiveModal && (
@@ -504,47 +530,60 @@ export default function AdminParishStaffPage() {
           <p className="text-sm text-gray-500">아직 등록된 항목이 없습니다.</p>
         ) : (
           <ul className="space-y-2">
-            {list.map((s) => (
-              <li
-                key={s.id}
-                className={`flex items-center gap-4 bg-white border rounded-lg p-3 ${
-                  s.is_active ? "border-gray-200" : "border-gray-200 opacity-60"
-                }`}
-              >
-                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
-                  {s.photo_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={`${API}${s.photo_url}`} alt={s.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xl text-gray-400">✝</span>
+            {list.map((s) => {
+              const isEditing = editing.id === s.id;
+              return (
+                <li key={s.id}>
+                  <div
+                    className={`flex items-center gap-4 bg-white border p-3 ${
+                      isEditing ? "rounded-t-lg border-amber-300 border-b-0" : "rounded-lg"
+                    } ${s.is_active ? "" : "opacity-60"} ${!isEditing && s.is_active ? "border-gray-200" : ""} ${!isEditing && !s.is_active ? "border-gray-200" : ""}`}
+                  >
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
+                      {s.photo_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={`${API}${s.photo_url}`} alt={s.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl text-gray-400">✝</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">
+                        {s.name}
+                        {s.title && <span className="ml-1.5 text-gray-700">{s.title}</span>}
+                        <span className="ml-2 text-xs text-gray-400 font-normal">[{s.role}]</span>
+                        {!s.is_active && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-gray-700 text-white rounded">비공개</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => (isEditing ? startNew() : startEdit(s))}
+                        className={`text-xs px-2 py-1 border rounded ${
+                          isEditing
+                            ? "bg-amber-100 border-amber-400 text-amber-800"
+                            : "border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {isEditing ? "수정 닫기" : "수정"}
+                      </button>
+                      <button
+                        onClick={() => remove(s.id)}
+                        className="text-xs px-2 py-1 border border-red-300 text-red-600 rounded hover:bg-red-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                  {isEditing && (
+                    <div className="border border-t-0 border-amber-300 rounded-b-lg overflow-hidden">
+                      {renderForm()}
+                    </div>
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">
-                    {s.name}
-                    {s.title && <span className="ml-1.5 text-gray-700">{s.title}</span>}
-                    <span className="ml-2 text-xs text-gray-400 font-normal">[{s.role}]</span>
-                    {!s.is_active && (
-                      <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-gray-700 text-white rounded">비공개</span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => startEdit(s)}
-                    className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => remove(s.id)}
-                    className="text-xs px-2 py-1 border border-red-300 text-red-600 rounded hover:bg-red-50"
-                  >
-                    삭제
-                  </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
