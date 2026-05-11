@@ -42,9 +42,9 @@ export default function GroupsLayout({
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      {/* 모바일: 가로 스크롤 칩 (sticky top, 본문 위에 컴팩트) */}
-      <nav className="md:hidden -mx-6 px-6 mb-5 sticky top-0 z-10 bg-[var(--color-bg,_white)]">
-        <ul className="flex gap-1.5 overflow-x-auto pb-1 pt-1" style={{ WebkitOverflowScrolling: "touch" }}>
+      {/* 모바일: 가로 스크롤 칩 (Header h-16 바로 아래 sticky) */}
+      <nav className="md:hidden -mx-6 px-6 mb-5 sticky top-16 z-30 bg-white border-b border-[var(--color-border)]">
+        <ul className="flex gap-1.5 overflow-x-auto py-2" style={{ WebkitOverflowScrolling: "touch" }}>
           <li className="shrink-0">
             <Link
               href="/groups"
