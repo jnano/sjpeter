@@ -106,10 +106,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </div>
           )}
 
-          {/* 사진 갤러리 */}
+          {/* 사진 갤러리 — 모바일도 2열 (스크린샷 원본과 동일 레이아웃) */}
           {group.photo_urls && group.photo_urls.length > 0 && (
             <section>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {group.photo_urls.map((url, i) => (
                   <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-[var(--color-border)]">
                     <Image
@@ -117,7 +117,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
                       alt={`${group.name} 사진 ${i + 1}`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 640px) 100vw, 50vw"
+                      sizes="(max-width: 640px) 50vw, 50vw"
                     />
                   </div>
                 ))}
