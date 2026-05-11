@@ -149,7 +149,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
 
   return (
     <aside
-      className="w-full shrink-0 md:max-w-[var(--sidebar-w)]"
+      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-5rem)] md:overflow-y-auto"
       style={{ ["--sidebar-w" as string]: `${widthPx}px` } as React.CSSProperties}
     >
       {/* 모바일: 2-row 칩 (Header 아래 sticky) */}
