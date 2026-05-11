@@ -141,6 +141,9 @@ class CommunityGroupIn(BaseModel):
     link_url: Optional[str] = None
     board_slug: Optional[str] = None
     sort_order: int = 0
+    parent_id: Optional[int] = None
+    slug: Optional[str] = None
+    activities: Optional[str] = None
 
 
 class CommunityGroupOut(BaseModel):
@@ -151,6 +154,10 @@ class CommunityGroupOut(BaseModel):
     link_url: Optional[str]
     board_slug: Optional[str]
     sort_order: int
+    parent_id: Optional[int] = None
+    slug: Optional[str] = None
+    activities: Optional[str] = None
+    photo_urls: Optional[list[str]] = None
 
     class Config:
         from_attributes = True
@@ -161,8 +168,20 @@ def list_community(db: Session = Depends(get_db)):
     return db.query(CommunityGroup).order_by(CommunityGroup.sort_order, CommunityGroup.id).all()
 
 
+@router.get("/community/slug/{slug}", response_model=CommunityGroupOut)
+def get_community_by_slug(slug: str, db: Session = Depends(get_db)):
+    group = db.query(CommunityGroup).filter(CommunityGroup.slug == slug).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="분과를 찾을 수 없습니다.")
+    return group
+
+
 @router.post("/community", response_model=CommunityGroupOut)
 def create_community(body: CommunityGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    if body.slug:
+        existing = db.query(CommunityGroup).filter(CommunityGroup.slug == body.slug).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="이미 사용 중인 슬러그입니다.")
     group = CommunityGroup(**body.model_dump())
     db.add(group)
     db.commit()
@@ -175,6 +194,12 @@ def update_community(group_id: int, body: CommunityGroupIn, db: Session = Depend
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    if body.slug and body.slug != group.slug:
+        existing = db.query(CommunityGroup).filter(CommunityGroup.slug == body.slug, CommunityGroup.id != group_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="이미 사용 중인 슬러그입니다.")
+    if body.parent_id == group_id:
+        raise HTTPException(status_code=400, detail="자기 자신을 부모로 지정할 수 없습니다.")
     for k, v in body.model_dump().items():
         setattr(group, k, v)
     db.commit()
@@ -189,6 +214,59 @@ def delete_community(group_id: int, db: Session = Depends(get_db), _: Admin = De
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
     db.delete(group)
     db.commit()
+    return {"ok": True}
+
+
+@router.post("/community/{group_id}/photos", response_model=CommunityGroupOut)
+def upload_community_photo(
+    group_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+    folder = f"uploads/community/{group_id}"
+    os.makedirs(folder, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}{ext}"
+    path = os.path.join(folder, fname)
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+    url = f"/{path}"
+    urls = list(group.photo_urls or [])
+    urls.append(url)
+    group.photo_urls = urls
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.delete("/community/{group_id}/photos")
+def delete_community_photo(
+    group_id: int,
+    url: str,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    urls = list(group.photo_urls or [])
+    if url in urls:
+        urls.remove(url)
+        group.photo_urls = urls
+        db.commit()
+        # 물리 파일 정리 (best-effort)
+        path = url.lstrip("/")
+        if os.path.isfile(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
     return {"ok": True}
 
 

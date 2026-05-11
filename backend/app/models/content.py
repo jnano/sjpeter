@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, ForeignKey
+from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 from app.core.database import Base
 
@@ -34,6 +35,11 @@ class CommunityGroup(Base):
     link_url = Column(String(500), nullable=True)   # deprecated — board_slug 사용
     board_slug = Column(String(100), nullable=True)  # 연결 게시판 slug
     sort_order = Column(Integer, default=0)
+    # 분과(parent_id=NULL) ↔ 소속단체(parent_id=분과 id) 트리
+    parent_id = Column(Integer, ForeignKey("community_groups.id", ondelete="CASCADE"), nullable=True)
+    slug = Column(String(100), nullable=True, unique=True)   # /groups/{slug} URL
+    activities = Column(Text)            # 주요 활동 — 한 줄에 한 항목
+    photo_urls = Column(ARRAY(Text))     # 분과 사진 URL 리스트
 
 
 class StaticPage(Base):

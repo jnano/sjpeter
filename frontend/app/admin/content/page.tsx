@@ -39,6 +39,10 @@ interface CommunityGroup {
   link_url: string | null;
   board_slug: string | null;
   sort_order: number;
+  parent_id: number | null;
+  slug: string | null;
+  activities: string | null;
+  photo_urls: string[] | null;
 }
 
 interface BoardOption { slug: string; name: string; }
@@ -443,7 +447,16 @@ function VisionTab() {
 
 // ─── Community Tab ────────────────────────────────────────
 
-const emptyComForm = { name: "", description: "", activity_time: "", board_slug: "", sort_order: 0 };
+const emptyComForm = {
+  name: "",
+  description: "",
+  activity_time: "",
+  board_slug: "",
+  sort_order: 0,
+  parent_id: null as number | null,
+  slug: "",
+  activities: "",
+};
 
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
@@ -541,6 +554,19 @@ function CommunityTab() {
     );
   }
 
+  // 분과(parent_id=null) 먼저, 그 뒤에 같은 부모의 소속단체들 트리 정렬
+  const topLevel = items.filter((i) => !i.parent_id).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const children = (parentId: number) =>
+    items.filter((i) => i.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const sortedItems: CommunityGroup[] = [];
+  for (const top of topLevel) {
+    sortedItems.push(top);
+    sortedItems.push(...children(top.id));
+  }
+  // parent가 사라진 고아도 끝에 표시
+  const orphans = items.filter((i) => i.parent_id && !topLevel.find((t) => t.id === i.parent_id));
+  sortedItems.push(...orphans);
+
   return (
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
@@ -555,36 +581,62 @@ function CommunityTab() {
               : "bg-[var(--color-primary)] text-white hover:opacity-90"
           }`}
         >
-          {showCreate ? "닫기" : "+ 새 단체/분과 추가"}
+          {showCreate ? "닫기" : "+ 새 분과/소속단체 추가"}
         </button>
       </div>
 
       {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
-        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 단체/분과 추가</h3>
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 분과/소속단체 추가</h3>
         <form onSubmit={create} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">단체명</label>
-              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="예: 성가대" required />
+              <label className="block text-xs font-medium text-gray-600 mb-1">이름 *</label>
+              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="예: 전례분과" required />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">순서</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">정렬 순서</label>
               <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">분류</label>
+              <select
+                value={form.parent_id ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, parent_id: e.target.value ? +e.target.value : null }))}
+                className={inputCls}
+              >
+                <option value="">최상위 분과 (사이드바에 노출)</option>
+                {items.filter((i) => !i.parent_id).map((i) => (
+                  <option key={i.id} value={i.id}>┗ {i.name}의 소속단체</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">URL 슬러그 (분과만 필요)</label>
+              <input value={form.slug} onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))} className={inputCls} placeholder="liturgy, education" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">설명</label>
-            <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} placeholder="단체 소개" />
+            <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} placeholder="분과/단체 소개 한두 문단" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">활동 시간</label>
-            <input value={form.activity_time} onChange={(e) => setForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="예: 매주 화요일" />
+            <label className="block text-xs font-medium text-gray-600 mb-1">주요 활동 (한 줄에 하나씩)</label>
+            <textarea value={form.activities} onChange={(e) => setForm((p) => ({ ...p, activities: e.target.value }))} rows={4} className={`${inputCls} resize-y font-mono text-xs`} placeholder="전례 행사 관련 봉사&#10;전례 실무자 회의 등 분과 운영" />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
-            <BoardSelect value={form.board_slug} onChange={(v) => setForm((p) => ({ ...p, board_slug: v }))} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">활동 시간</label>
+              <input value={form.activity_time} onChange={(e) => setForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="예: 매주 화요일 저녁 7시" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
+              <BoardSelect value={form.board_slug} onChange={(v) => setForm((p) => ({ ...p, board_slug: v }))} />
+            </div>
           </div>
+          <p className="text-xs text-gray-400">사진은 등록 후 수정 모드에서 추가하세요.</p>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
@@ -607,43 +659,81 @@ function CommunityTab() {
           />
         </div>
         <div className="divide-y divide-gray-100">
-          {items.map((g) =>
+          {sortedItems.map((g) =>
             editId === g.id ? (
               <div key={g.id} className="p-4 bg-blue-50 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="단체명" />
+                  <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="이름" />
                   <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
                 </div>
-                <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">분류</label>
+                    <select
+                      value={editForm.parent_id ?? ""}
+                      onChange={(e) => setEditForm((p) => ({ ...p, parent_id: e.target.value ? +e.target.value : null }))}
+                      className={inputCls}
+                    >
+                      <option value="">최상위 분과 (사이드바에 노출)</option>
+                      {items.filter((i) => !i.parent_id && i.id !== g.id).map((i) => (
+                        <option key={i.id} value={i.id}>┗ {i.name}의 소속단체</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">URL 슬러그</label>
+                    <input value={editForm.slug} onChange={(e) => setEditForm((p) => ({ ...p, slug: e.target.value }))} className={inputCls} placeholder="liturgy" />
+                  </div>
+                </div>
+                <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={2} className={`${inputCls} resize-none`} placeholder="설명" />
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">주요 활동 (한 줄에 하나)</label>
+                  <textarea value={editForm.activities} onChange={(e) => setEditForm((p) => ({ ...p, activities: e.target.value }))} rows={4} className={`${inputCls} resize-y font-mono text-xs`} />
+                </div>
                 <input value={editForm.activity_time} onChange={(e) => setEditForm((p) => ({ ...p, activity_time: e.target.value }))} className={inputCls} placeholder="활동 시간" />
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">연결 게시판</label>
                   <BoardSelect value={editForm.board_slug} onChange={(v) => setEditForm((p) => ({ ...p, board_slug: v }))} />
                 </div>
+                <CommunityPhotoManager group={g} onChange={load} />
                 <div className="flex gap-2">
                   <button onClick={() => update(g.id)} disabled={loading} className={btnPrimary}>저장</button>
                   <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
                 </div>
               </div>
             ) : (
-              <div key={g.id} className={`flex items-start justify-between px-6 py-4 ${select.isSelected(g.id) ? "bg-red-50/30" : "hover:bg-gray-50"}`}>
+              <div key={g.id} className={`flex items-start justify-between px-6 py-4 ${select.isSelected(g.id) ? "bg-red-50/30" : "hover:bg-gray-50"} ${g.parent_id ? "pl-12" : ""}`}>
                 <input type="checkbox" checked={select.isSelected(g.id)} onChange={() => select.toggle(g.id)} className="rounded mr-3 mt-0.5" aria-label={`${g.name} 선택`} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm">{g.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {g.parent_id ? (
+                      <span className="text-xs text-gray-400">└</span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">분과</span>
+                    )}
+                    <p className="font-medium text-sm">{g.name}</p>
+                    {g.slug && !g.parent_id && (
+                      <code className="text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">/groups/{g.slug}</code>
+                    )}
+                    {g.photo_urls && g.photo_urls.length > 0 && (
+                      <span className="text-[10px] text-gray-500">사진 {g.photo_urls.length}장</span>
+                    )}
+                  </div>
                   {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
+                  {g.activities && (
+                    <p className="text-xs text-gray-400 mt-0.5">활동: {g.activities.split("\n").filter(Boolean).length}개 항목</p>
+                  )}
                   {g.activity_time && <p className="text-xs text-gray-400 mt-0.5">{g.activity_time}</p>}
                   <div className="mt-1.5">
                     {g.board_slug ? (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
                         <span>🔗</span> {boards.find((b) => b.slug === g.board_slug)?.name ?? g.board_slug}
                       </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">게시판 미연결</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex gap-3 shrink-0 ml-4">
-                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", board_slug: g.board_slug ?? "", sort_order: g.sort_order }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => { setEditId(g.id); setEditForm({ name: g.name, description: g.description ?? "", activity_time: g.activity_time ?? "", board_slug: g.board_slug ?? "", sort_order: g.sort_order, parent_id: g.parent_id, slug: g.slug ?? "", activities: g.activities ?? "" }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(g.id)} className={btnDanger}>삭제</button>
                 </div>
               </div>
@@ -651,6 +741,61 @@ function CommunityTab() {
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onChange: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const photos = group.photo_urls ?? [];
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API}/api/content/community/${group.id}/photos`, {
+        method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
+      });
+      if (res.ok) onChange();
+      else alert("업로드 실패");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function remove(url: string) {
+    if (!confirm("이 사진을 삭제하시겠습니까?")) return;
+    const res = await fetch(`${API}/api/content/community/${group.id}/photos?url=${encodeURIComponent(url)}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) onChange();
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 bg-white">
+      <label className="block text-xs font-medium text-gray-600 mb-2">사진 ({photos.length}장)</label>
+      {photos.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+          {photos.map((u) => (
+            <div key={u} className="relative group aspect-square rounded overflow-hidden border border-gray-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`${API}${u}`} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => remove(u)}
+                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                title="삭제"
+              >×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <input type="file" accept="image/*" onChange={upload} disabled={uploading} className="text-xs" />
+      {uploading && <p className="text-xs text-gray-400 mt-1">업로드 중…</p>}
     </div>
   );
 }

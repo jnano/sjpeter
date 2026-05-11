@@ -311,6 +311,18 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        # 분과/소속단체 트리 + 슬러그 + 활동·사진 (2026-05-11)
+        for stmt in [
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES community_groups(id) ON DELETE CASCADE",
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS slug VARCHAR(100)",
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS activities TEXT",
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS photo_urls TEXT[]",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_community_groups_slug ON community_groups (slug) WHERE slug IS NOT NULL",
+        ]:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
 
         # 정적 페이지 테이블
         conn.execute(text("""
