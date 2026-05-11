@@ -131,7 +131,7 @@ export default function BulletinListPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <div className="min-w-[480px] divide-y divide-[var(--color-border)]">
+          <div className="min-w-[520px] divide-y divide-[var(--color-border)]">
             <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
               <span className="w-4"></span>
               <span>주보</span>

@@ -30,7 +30,7 @@ export default function BulkActionBar({
 }: Props) {
   if (total === 0) return null;
   return (
-    <div className={`flex items-center justify-between mb-3 px-1 ${className}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-2 mb-3 px-1 ${className}`}>
       <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
         <input
           type="checkbox"
