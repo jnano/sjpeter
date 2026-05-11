@@ -100,7 +100,8 @@ export default function AdminMenusPage() {
     if (resGroups.ok) {
       const data: MenuGroup[] = await resGroups.json();
       setGroups(data);
-      if (data.length > 0 && selectedGroupId === null) setSelectedGroupId(data[0].id);
+      // 이미 선택된 그룹이 있으면 유지 — load는 useCallback 클로저라 selectedGroupId가 stale
+      setSelectedGroupId((prev) => (prev !== null && data.some((g) => g.id === prev)) ? prev : data[0]?.id ?? null);
     }
     if (resPages?.ok) setStaticPages(await resPages.json());
     if (resBoards?.ok) setBoards(await resBoards.json());
