@@ -184,13 +184,40 @@ class ReorderIn(BaseModel):
     ids: list[int]
 
 
+def _renumber_groups(db: Session) -> None:
+    """모든 그룹의 sort_order를 0,1,2,...로 재정규화."""
+    rows = db.query(MenuGroup).order_by(MenuGroup.sort_order, MenuGroup.id).all()
+    for i, g in enumerate(rows):
+        if g.sort_order != i:
+            g.sort_order = i
+    db.commit()
+
+
+def _renumber_items(db: Session, group_id: int) -> None:
+    """그룹 내 같은 parent의 형제끼리 sort_order 0,1,2,...로 재정규화."""
+    # parent 별로 그룹화
+    items = db.query(MenuItem).filter(MenuItem.group_id == group_id).order_by(MenuItem.sort_order, MenuItem.id).all()
+    by_parent: dict[Optional[int], list[MenuItem]] = {}
+    for it in items:
+        by_parent.setdefault(it.parent_id, []).append(it)
+    for siblings in by_parent.values():
+        for i, it in enumerate(siblings):
+            if it.sort_order != i:
+                it.sort_order = i
+    db.commit()
+
+
 @router.post("/groups", response_model=MenuGroupOut)
 def create_group(body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     if db.query(MenuGroup).filter(MenuGroup.key == body.key).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 그룹 key입니다.")
-    g = MenuGroup(**body.model_dump())
+    # 새 그룹은 항상 마지막에 — 기존 그룹 수를 sort_order로
+    body_data = body.model_dump()
+    body_data["sort_order"] = db.query(MenuGroup).count()
+    g = MenuGroup(**body_data)
     db.add(g)
     db.commit()
+    _renumber_groups(db)
     db.refresh(g)
     return MenuGroupOut.model_validate(g)
 
@@ -201,6 +228,7 @@ def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), _: Admin = De
     for i, gid in enumerate(body.ids):
         db.query(MenuGroup).filter(MenuGroup.id == gid).update({"sort_order": i})
     db.commit()
+    _renumber_groups(db)
     return {"ok": True}
 
 
@@ -225,6 +253,7 @@ def delete_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depend
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
     db.delete(g)
     db.commit()
+    _renumber_groups(db)
     return {"ok": True}
 
 
@@ -281,6 +310,7 @@ def reorder_items(group_id: int, body: ReorderIn, db: Session = Depends(get_db),
     for i, item_id in enumerate(body.ids):
         db.query(MenuItem).filter(MenuItem.id == item_id, MenuItem.group_id == group_id).update({"sort_order": i})
     db.commit()
+    _renumber_items(db, group_id)
     return {"ok": True}
 
 
