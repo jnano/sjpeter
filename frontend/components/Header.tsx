@@ -216,89 +216,76 @@ export default function Header() {
                   {group.label}
                 </button>
 
-                {/* 메가메뉴 dropdown (자식 있으면 2열) */}
-                {openGroup === idx && (() => {
-                  const hasChildren = group.items.some((it) => (it.children?.length ?? 0) > 0);
-                  return (
-                    <div
-                      className={`absolute top-full left-1/2 -translate-x-1/2 bg-white text-[var(--color-text)] shadow-lg z-50 border border-[var(--color-border)] rounded-b ${
-                        hasChildren ? "w-[460px]" : "w-48"
-                      }`}
-                    >
-                      {/* 서사형 부제 */}
-                      <div className="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
-                        <span className="text-[11px] text-[var(--color-text-muted)] tracking-wide">
-                          {group.subtitle}
-                        </span>
-                      </div>
-                      <div className={hasChildren ? "grid grid-cols-[180px_1fr]" : ""}>
-                        {/* 좌: top-level 항목 */}
-                        <ul className={hasChildren ? "border-r border-[var(--color-border)]" : ""}>
-                          {group.items.map((item) => {
-                            const isHovered = hoveredItem === item.id;
-                            const itemHasChildren = (item.children?.length ?? 0) > 0;
-                            return (
-                              <li
-                                key={item.id}
-                                onMouseEnter={() => itemHasChildren && setHoveredItem(item.id)}
+                {/* dropdown — 1열, 자식 있으면 hover 시 우측 popup */}
+                {openGroup === idx && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 bg-white text-[var(--color-text)] shadow-lg z-50 border border-[var(--color-border)] rounded-b w-48">
+                    <ul>
+                      {group.items.map((item) => {
+                        const itemHasChildren = (item.children?.length ?? 0) > 0;
+                        const isHovered = hoveredItem === item.id;
+                        return (
+                          <li
+                            key={item.id}
+                            className="relative"
+                            onMouseEnter={() => itemHasChildren && setHoveredItem(item.id)}
+                            onMouseLeave={() => itemHasChildren && setHoveredItem(null)}
+                          >
+                            <Link
+                              href={item.href}
+                              target={item.is_external ? "_blank" : undefined}
+                              rel={item.is_external ? "noopener noreferrer" : undefined}
+                              onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
+                              className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
+                                pathname === item.href || isHovered
+                                  ? "text-[var(--color-primary)] font-semibold bg-[var(--color-surface-warm)]"
+                                  : "text-[var(--color-text)]"
+                              }`}
+                            >
+                              <span>
+                                {item.label}
+                                {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
+                              </span>
+                              {itemHasChildren && <span className="text-xs text-gray-400">▸</span>}
+                            </Link>
+
+                            {/* 자식 popup (사이드바와 동일 패턴) */}
+                            {itemHasChildren && isHovered && (
+                              <div
+                                className="absolute top-0 left-full z-50 pl-1"
+                                onMouseEnter={() => setHoveredItem(item.id)}
+                                onMouseLeave={() => setHoveredItem(null)}
                               >
-                                <Link
-                                  href={item.href}
-                                  target={item.is_external ? "_blank" : undefined}
-                                  rel={item.is_external ? "noopener noreferrer" : undefined}
-                                  onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
-                                  className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
-                                    pathname === item.href || isHovered
-                                      ? "text-[var(--color-primary)] font-semibold bg-[var(--color-surface-warm)]"
-                                      : "text-[var(--color-text)]"
-                                  }`}
-                                >
-                                  <span>
-                                    {item.label}
-                                    {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
-                                  </span>
-                                  {itemHasChildren && <span className="text-xs text-gray-400">▸</span>}
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        {/* 우: 자식 항목 (hover된 부모의 자식들) */}
-                        {hasChildren && (
-                          <ul className="py-1 max-h-80 overflow-y-auto">
-                            {(() => {
-                              const targetParent = hoveredItem
-                                ? group.items.find((it) => it.id === hoveredItem)
-                                : group.items.find((it) => (it.children?.length ?? 0) > 0);
-                              const childItems = targetParent?.children ?? [];
-                              if (childItems.length === 0) {
-                                return <li className="px-4 py-2.5 text-xs text-gray-400">왼쪽에서 ▸가 있는 항목 위로 마우스</li>;
-                              }
-                              return childItems.map((c) => (
-                                <li key={c.id}>
-                                  <Link
-                                    href={c.href}
-                                    target={c.is_external ? "_blank" : undefined}
-                                    rel={c.is_external ? "noopener noreferrer" : undefined}
-                                    onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
-                                    className={`block px-4 py-2 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
-                                      pathname === c.href
-                                        ? "text-[var(--color-primary)] font-semibold"
-                                        : "text-[var(--color-text)]"
-                                    }`}
-                                  >
-                                    {c.label}
-                                    {c.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
-                                  </Link>
-                                </li>
-                              ));
-                            })()}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
+                                <ul className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden py-1 max-h-80 overflow-y-auto">
+                                  {item.children!.map((c) => {
+                                    const cActive = pathname === c.href;
+                                    return (
+                                      <li key={c.id}>
+                                        <Link
+                                          href={c.href}
+                                          target={c.is_external ? "_blank" : undefined}
+                                          rel={c.is_external ? "noopener noreferrer" : undefined}
+                                          onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
+                                          className={`block px-4 py-2 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
+                                            cActive
+                                              ? "text-[var(--color-primary)] font-semibold bg-[var(--color-surface-warm)]"
+                                              : "text-[var(--color-text)]"
+                                          }`}
+                                        >
+                                          {c.label}
+                                          {c.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
+                                        </Link>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
               </div>
             ))}
 
