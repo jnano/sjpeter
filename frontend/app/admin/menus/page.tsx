@@ -142,7 +142,7 @@ export default function AdminMenusPage() {
     const res = await fetch(`${API}/api/menus/groups/reorder`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify(sorted.map((x) => x.id)),
+      body: JSON.stringify({ ids: sorted.map((x) => x.id) }),
     });
     if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
     else {
@@ -228,7 +228,7 @@ export default function AdminMenusPage() {
     const res = await fetch(`${API}/api/menus/groups/${selectedGroup.id}/items/reorder`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify(siblings.map((x) => x.id)),
+      body: JSON.stringify({ ids: siblings.map((x) => x.id) }),
     });
     if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
     else {

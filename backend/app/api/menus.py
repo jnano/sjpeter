@@ -215,9 +215,13 @@ def delete_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depend
     return {"ok": True}
 
 
+class ReorderIn(BaseModel):
+    ids: list[int]
+
+
 @router.put("/groups/reorder")
-def reorder_groups(ids: list[int] = Body(...), db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    for i, gid in enumerate(ids):
+def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    for i, gid in enumerate(body.ids):
         db.query(MenuGroup).filter(MenuGroup.id == gid).update({"sort_order": i})
     db.commit()
     return {"ok": True}
@@ -272,8 +276,8 @@ def delete_item(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(
 
 
 @router.put("/groups/{group_id}/items/reorder")
-def reorder_items(group_id: int, ids: list[int] = Body(...), db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    for i, item_id in enumerate(ids):
+def reorder_items(group_id: int, body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    for i, item_id in enumerate(body.ids):
         db.query(MenuItem).filter(MenuItem.id == item_id, MenuItem.group_id == group_id).update({"sort_order": i})
     db.commit()
     return {"ok": True}
