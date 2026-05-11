@@ -1,7 +1,9 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -176,6 +178,7 @@ export default function AdminBoardsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [postsExpandedId, setPostsExpandedId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchParams = useSearchParams();
@@ -463,6 +466,7 @@ export default function AdminBoardsPage() {
           const mode = getAccessMode(board);
           const modeInfo = ACCESS_LABELS[mode];
           const isExpanded = expandedId === board.id;
+          const isPostsExpanded = postsExpandedId === board.id;
 
           return (
             <div key={board.id} id={`board-${board.id}`} className={`bg-white border rounded-xl overflow-hidden ${selected.has(board.id) ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
@@ -510,7 +514,23 @@ export default function AdminBoardsPage() {
                     보기 ↗
                   </Link>
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : board.id)}
+                    onClick={() => {
+                      setPostsExpandedId(isPostsExpanded ? null : board.id);
+                      if (!isPostsExpanded) setExpandedId(null);
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                      isPostsExpanded
+                        ? "bg-amber-100 border-amber-400 text-amber-800"
+                        : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {isPostsExpanded ? "글 관리 닫기" : `글 관리 (${board.post_count})`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setExpandedId(isExpanded ? null : board.id);
+                      if (!isExpanded) setPostsExpandedId(null);
+                    }}
                     className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                   >
                     {isExpanded ? "접기" : "설정"}
@@ -537,6 +557,18 @@ export default function AdminBoardsPage() {
                 <BoardSettingsPanel board={board} onUpdate={(updated) =>
                   setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
                 } />
+              )}
+
+              {/* 게시글 관리 패널 */}
+              {isPostsExpanded && (
+                <BoardPostsPanel
+                  board={board}
+                  onPostCountChange={(delta) =>
+                    setBoards((prev) =>
+                      prev.map((b) => (b.id === board.id ? { ...b, post_count: Math.max(0, b.post_count + delta) } : b)),
+                    )
+                  }
+                />
               )}
             </div>
           );
@@ -728,6 +760,215 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────
+// BoardPostsPanel: 게시판 별 게시글 다중 선택 + 일괄 삭제
+// ───────────────────────────────────────────────────────────
+
+interface PostListItem {
+  id: number;
+  title: string;
+  view_count: number;
+  created_at: string;
+  comment_count: number;
+  thumbnail_url: string | null;
+  member: { id: number; nickname: string } | null;
+}
+
+function BoardPostsPanel({
+  board,
+  onPostCountChange,
+}: {
+  board: Board;
+  onPostCountChange: (delta: number) => void;
+}) {
+  const [posts, setPosts] = useState<PostListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [perPage, setPerPage] = useState(board.posts_per_page || 12);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(posts.map((p) => p.id));
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    const token = getAdminToken();
+    try {
+      const res = await fetch(`${API}/api/boards/${board.slug}/posts?page=${page}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data.posts ?? []);
+        setTotal(data.total ?? 0);
+        if (data.posts_per_page) setPerPage(data.posts_per_page);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [board.slug, page]);
+
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  async function deletePost(id: number) {
+    if (!confirm("이 글을 삭제하시겠습니까? 댓글·첨부도 함께 삭제됩니다.")) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/posts/${id}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+      select.remove(id);
+      setTotal((t) => Math.max(0, t - 1));
+      onPostCountChange(-1);
+    } else {
+      alert("삭제에 실패했습니다.");
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 글 ${ids.length}개를 삭제하시겠습니까?\n댓글·첨부도 함께 삭제됩니다.`)) return;
+    setBulkDeleting(true);
+    const token = getAdminToken();
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/boards/${board.slug}/posts/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        setPosts((prev) => prev.filter((p) => !succeeded.has(p.id)));
+        select.removeMany(succeeded);
+        setTotal((t) => Math.max(0, t - succeeded.size));
+        onPostCountChange(-succeeded.size);
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">
+          &lsquo;{board.name}&rsquo; 게시글{" "}
+          <span className="text-xs text-gray-500 font-normal">({total}건)</span>
+        </h3>
+        {totalPages > 1 && (
+          <span className="text-xs text-gray-500">
+            페이지 {page} / {totalPages}
+          </span>
+        )}
+      </div>
+
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
+
+      {loading ? (
+        <p className="text-sm text-gray-500 text-center py-8">불러오는 중…</p>
+      ) : posts.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-8">게시글이 없습니다.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {posts.map((p) => {
+            const isChecked = select.isSelected(p.id);
+            return (
+              <li
+                key={p.id}
+                className={`flex items-center gap-3 bg-white border rounded-lg px-3 py-2 ${
+                  isChecked ? "border-red-300 bg-red-50/30" : "border-gray-200"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => select.toggle(p.id)}
+                  className="rounded shrink-0"
+                  aria-label={`${p.title} 선택`}
+                />
+                {p.thumbnail_url && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={`${API}${p.thumbnail_url}`} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
+                )}
+                <Link
+                  href={`/boards/${board.slug}/${p.id}`}
+                  target="_blank"
+                  className="flex-1 min-w-0 hover:text-blue-600"
+                >
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {p.member?.nickname ?? "익명"} · {new Date(p.created_at).toLocaleDateString("ko-KR")}
+                    {p.comment_count > 0 && ` · 댓글 ${p.comment_count}`}
+                    {" · 조회 "}{p.view_count}
+                  </p>
+                </Link>
+                <button
+                  onClick={() => deletePost(p.id)}
+                  className="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50 shrink-0"
+                >
+                  삭제
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-1 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 text-xs border border-gray-300 rounded disabled:opacity-40 hover:bg-white"
+          >
+            이전
+          </button>
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            const p = totalPages <= 7 ? i + 1 : Math.max(1, Math.min(page - 3, totalPages - 6)) + i;
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-7 text-xs rounded ${
+                  p === page ? "bg-gray-800 text-white" : "border border-gray-300 hover:bg-white"
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1 text-xs border border-gray-300 rounded disabled:opacity-40 hover:bg-white"
+          >
+            다음
+          </button>
+        </div>
+      )}
     </div>
   );
 }
