@@ -42,8 +42,44 @@ export default function GroupsLayout({
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="grid md:grid-cols-[220px_1fr] gap-8">
-        <aside className="md:sticky md:top-24 md:self-start">
+      {/* 모바일: 가로 스크롤 칩 (sticky top, 본문 위에 컴팩트) */}
+      <nav className="md:hidden -mx-6 px-6 mb-5 sticky top-0 z-10 bg-[var(--color-bg,_white)]">
+        <ul className="flex gap-1.5 overflow-x-auto pb-1 pt-1" style={{ WebkitOverflowScrolling: "touch" }}>
+          <li className="shrink-0">
+            <Link
+              href="/groups"
+              className={`inline-block px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                !currentSlug
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "border-[var(--color-border)] text-[var(--color-text-muted)] bg-white"
+              }`}
+            >
+              전체
+            </Link>
+          </li>
+          {sidebarItems.map((g) => {
+            const active = g.slug === currentSlug;
+            return (
+              <li key={g.id} className="shrink-0">
+                <Link
+                  href={`/groups/${g.slug}`}
+                  className={`inline-block px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                    active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "border-[var(--color-border)] text-[var(--color-text-muted)] bg-white"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {g.name}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="md:grid md:grid-cols-[220px_1fr] md:gap-8">
+        <aside className="hidden md:block md:sticky md:top-24 md:self-start">
           <h3 className="font-serif font-bold text-[var(--color-primary)] mb-3 text-sm">분과 목록</h3>
           <nav>
             <ul className="space-y-0">
