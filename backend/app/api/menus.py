@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import asc
+from sqlalchemy import asc, text
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -31,8 +31,8 @@ def _sync_boards_menu(db: Session) -> None:
     if not default_group:
         return
 
-    visible_boards = db.query(Board).filter(Board.show_in_menu == True, Board.is_active == True).all()  # noqa: E712
-    visible_slugs = {b.slug for b in visible_boards}
+    all_boards = {b.slug: b for b in db.query(Board).all()}
+    visible_boards = [b for b in all_boards.values() if b.show_in_menu and b.is_active]
 
     # 기존 auto:boards menu_items
     existing = {
@@ -60,9 +60,13 @@ def _sync_boards_menu(db: Session) -> None:
                 is_active=True,
             ))
 
-    # 숨김 처리된 board → menu_item 비활성
+    # menu_item에 대응하는 board가 존재하는지로 분기
     for slug, it in existing.items():
-        if slug not in visible_slugs:
+        if slug not in all_boards:
+            # board가 DB에서 삭제됨 → menu_item도 물리 삭제 (admin이 복구할 수 없으므로)
+            db.delete(it)
+        elif not all_boards[slug].show_in_menu or not all_boards[slug].is_active:
+            # board는 존재하지만 토글 OFF 또는 비활성 → 보존 + 비활성화 (재토글로 복원 가능)
             it.is_active = False
 
     db.commit()
@@ -112,10 +116,20 @@ def _sync_groups_children(db: Session) -> None:
                 is_active=True,
             ))
 
-    # 삭제된 분과 → 자동 비활성
+    # 더 이상 안 보이는 분과 처리
+    # community_groups에 slug가 아예 없으면 → 삭제됨 → menu_item 물리 삭제
+    # parent_id가 생겨서 top-level이 아니게 됐으면 → 비활성 (재이동 시 복원 가능)
+    all_slugs = {
+        slug for (slug,) in db.execute(
+            text("SELECT slug FROM community_groups WHERE slug IS NOT NULL")
+        ).fetchall()
+    }
     for slug, it in existing_by_slug.items():
         if slug not in seen_slugs:
-            it.is_active = False
+            if slug in all_slugs:
+                it.is_active = False  # 존재하지만 top-level 아님
+            else:
+                db.delete(it)  # 완전 삭제됨
 
     db.commit()
 
