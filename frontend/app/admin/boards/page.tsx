@@ -176,6 +176,8 @@ export default function AdminBoardsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => { fetchBoards(); }, []);
@@ -257,7 +259,59 @@ export default function AdminBoardsPage() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) setBoards((prev) => prev.filter((b) => b.id !== board.id));
+    if (res.ok) {
+      setBoards((prev) => prev.filter((b) => b.id !== board.id));
+      setSelected((s) => { const n = new Set(s); n.delete(board.id); return n; });
+    }
+  }
+
+  function toggleSelect(id: number) {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((s) => (s.size === boards.length ? new Set() : new Set(boards.map((b) => b.id))));
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const targets = boards.filter((b) => ids.includes(b.id));
+    const names = targets.map((b) => `"${b.name}"`).join(", ");
+    if (!confirm(`선택한 게시판 ${ids.length}개(${names})를 삭제하시겠습니까?\n각 게시판의 모든 게시글도 함께 삭제됩니다.`)) return;
+
+    setBulkDeleting(true);
+    const token = getAdminToken();
+    try {
+      const results = await Promise.all(
+        targets.map(async (board) => {
+          try {
+            const res = await fetch(`${API}/api/boards/${board.slug}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            return { board, ok: res.ok };
+          } catch {
+            return { board, ok: false };
+          }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.board.id));
+      const failed = results.filter((r) => !r.ok).map((r) => r.board.name);
+      if (succeeded.size > 0) {
+        setBoards((prev) => prev.filter((b) => !succeeded.has(b.id)));
+        setSelected((s) => { const n = new Set(s); succeeded.forEach((id) => n.delete(id)); return n; });
+      }
+      if (failed.length > 0) {
+        alert(`${failed.length}개 삭제 실패: ${failed.join(", ")}`);
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   return (
@@ -375,6 +429,34 @@ export default function AdminBoardsPage() {
         </form>
       )}
 
+      {/* 다중 선택 액션 바 */}
+      {boards.length > 0 && (
+        <div className="flex items-center justify-between mb-3 px-1">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={selected.size > 0 && selected.size === boards.length}
+              ref={(el) => {
+                if (el) el.indeterminate = selected.size > 0 && selected.size < boards.length;
+              }}
+              onChange={toggleSelectAll}
+              className="rounded"
+            />
+            전체 선택 ({selected.size}/{boards.length})
+          </label>
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-3 py-1.5 text-xs rounded-lg border border-red-300 bg-red-50 text-red-700 font-medium hover:bg-red-100 disabled:opacity-50 transition-colors"
+            >
+              {bulkDeleting ? `삭제 중…` : `선택 ${selected.size}개 삭제`}
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         {boards.length === 0 && <p className="text-center py-12 text-gray-500">게시판이 없습니다.</p>}
         {boards.map((board) => {
@@ -383,9 +465,16 @@ export default function AdminBoardsPage() {
           const isExpanded = expandedId === board.id;
 
           return (
-            <div key={board.id} id={`board-${board.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div key={board.id} id={`board-${board.id}`} className={`bg-white border rounded-xl overflow-hidden ${selected.has(board.id) ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
               {/* 기본 행 */}
-              <div className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between p-4 gap-3">
+                <input
+                  type="checkbox"
+                  checked={selected.has(board.id)}
+                  onChange={() => toggleSelect(board.id)}
+                  className="rounded shrink-0"
+                  aria-label={`${board.name} 선택`}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">{board.name}</span>
