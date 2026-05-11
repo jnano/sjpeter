@@ -87,8 +87,28 @@ export default function AdminMenusPage() {
     else alert((await res.json()).detail || "추가 실패");
   }
 
+  function formatErr(err: { detail?: unknown }, status: number): string {
+    const d = err.detail;
+    if (Array.isArray(d)) {
+      return d.map((x) => (x && typeof x === "object" ? (x as { msg?: string; loc?: unknown[] }).msg ?? JSON.stringify(x) : String(x))).join(", ");
+    }
+    if (typeof d === "string") return d;
+    return `HTTP ${status}`;
+  }
+
   async function updateGroup(g: MenuGroup, patch: Partial<MenuGroup>) {
-    const body = { ...g, ...patch };
+    const merged = { ...g, ...patch };
+    const body = {
+      key: merged.key,
+      label: merged.label,
+      subtitle: merged.subtitle,
+      icon: merged.icon,
+      sidebar_image_url: merged.sidebar_image_url,
+      sidebar_width_px: merged.sidebar_width_px,
+      sort_order: merged.sort_order,
+      is_active: merged.is_active,
+      show_in_header: merged.show_in_header,
+    };
     const res = await fetch(`${API}/api/menus/groups/${g.id}`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
@@ -97,7 +117,7 @@ export default function AdminMenusPage() {
     if (res.ok) { await load(); notify(DataEvent.MENUS); }
     else {
       const err = await res.json().catch(() => ({}));
-      alert(err.detail || `저장 실패 (HTTP ${res.status})`);
+      alert(`저장 실패: ${formatErr(err, res.status)}`);
     }
   }
 
@@ -127,7 +147,7 @@ export default function AdminMenusPage() {
     if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
     else {
       const err = await res.json().catch(() => ({}));
-      alert(err.detail || `이동 실패 (HTTP ${res.status})`);
+      alert(`이동 실패: ${formatErr(err, res.status)}`);
     }
   }
 
@@ -149,13 +169,28 @@ export default function AdminMenusPage() {
   }
 
   async function updateItem(item: MenuItem, patch: Partial<MenuItem>) {
-    const body = { ...item, ...patch };
+    // 백엔드가 받는 필드만 전송 (children·id·group_id 등 응답 전용 필드 제외)
+    const merged = { ...item, ...patch };
+    const body = {
+      label: merged.label,
+      href: merged.href,
+      is_external: merged.is_external,
+      sort_order: merged.sort_order,
+      is_active: merged.is_active,
+      source_type: merged.source_type,
+      source_id: merged.source_id,
+      parent_id: merged.parent_id,
+    };
     const res = await fetch(`${API}/api/menus/items/${item.id}`, {
       method: "PUT",
       headers: { ...headers(), "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (res.ok) { await load(); notify(DataEvent.MENUS); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      alert(`항목 저장 실패: ${formatErr(err, res.status)}`);
+    }
   }
 
   async function moveItemToGroup(item: MenuItem, targetGroupId: number) {
@@ -198,7 +233,7 @@ export default function AdminMenusPage() {
     if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
     else {
       const err = await res.json().catch(() => ({}));
-      alert(err.detail || `이동 실패 (HTTP ${res.status})`);
+      alert(`이동 실패: ${formatErr(err, res.status)}`);
     }
   }
 
