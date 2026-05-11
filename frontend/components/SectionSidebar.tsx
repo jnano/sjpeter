@@ -33,8 +33,8 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
 
   return (
     <aside
-      className="w-full shrink-0"
-      style={{ maxWidth: widthPx ? `${widthPx}px` : undefined }}
+      className="w-full shrink-0 md:max-w-[var(--sidebar-w)]"
+      style={{ ["--sidebar-w" as string]: `${widthPx}px` } as React.CSSProperties}
     >
       {resolvedImage && (
         <div className="relative w-full aspect-[5/4] rounded-lg overflow-hidden mb-5 hidden md:block">
