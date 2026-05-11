@@ -102,9 +102,6 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             className="absolute top-0 left-full ml-2 z-40 w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden"
             style={{ minWidth: "200px" }}
           >
-            <div className="px-3 py-2 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]">
-              {item.label}
-            </div>
             <ul className="py-1 max-h-80 overflow-y-auto">
               {item.children!.map((c) => {
                 const cActive = pathname === c.href;
