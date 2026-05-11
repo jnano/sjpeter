@@ -47,8 +47,7 @@ export default function Header() {
     .map((g) => ({
       ...g,
       items: g.items.filter((i) => !isArchiveLinkHidden(i.href, archiveCounts)),
-    }))
-    .filter((g) => g.items.length > 0);
+    }));
 
   useEffect(() => {
     setIsAdminAuthed(document.cookie.split(";").some((c) => c.trim().startsWith("admin_authed=")));
@@ -219,6 +218,9 @@ export default function Header() {
                 {/* dropdown — 1열, 자식 있으면 hover 시 우측 popup */}
                 {openGroup === idx && (
                   <div className="absolute top-full left-1/2 -translate-x-1/2 bg-white text-[var(--color-text)] shadow-lg z-50 border border-[var(--color-border)] rounded-b w-48">
+                    {group.items.length === 0 ? (
+                      <p className="px-4 py-3 text-xs text-gray-400">항목이 없습니다</p>
+                    ) : (
                     <ul>
                       {group.items.map((item) => {
                         const itemHasChildren = (item.children?.length ?? 0) > 0;
@@ -284,6 +286,7 @@ export default function Header() {
                         );
                       })}
                     </ul>
+                    )}
                   </div>
                 )}
               </div>
