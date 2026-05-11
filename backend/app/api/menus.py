@@ -180,6 +180,10 @@ def list_admin_menus(db: Session = Depends(get_db), _: Admin = Depends(get_curre
 
 # ─── Group CRUD ──────────────────────────────────────────
 
+class ReorderIn(BaseModel):
+    ids: list[int]
+
+
 @router.post("/groups", response_model=MenuGroupOut)
 def create_group(body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     if db.query(MenuGroup).filter(MenuGroup.key == body.key).first():
@@ -189,6 +193,15 @@ def create_group(body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = De
     db.commit()
     db.refresh(g)
     return MenuGroupOut.model_validate(g)
+
+
+# /groups/reorder는 /groups/{group_id}보다 먼저 정의해야 FastAPI 라우트 매칭 우선순위에서 잡힘
+@router.put("/groups/reorder")
+def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    for i, gid in enumerate(body.ids):
+        db.query(MenuGroup).filter(MenuGroup.id == gid).update({"sort_order": i})
+    db.commit()
+    return {"ok": True}
 
 
 @router.put("/groups/{group_id}", response_model=MenuGroupOut)
@@ -211,18 +224,6 @@ def delete_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depend
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
     db.delete(g)
-    db.commit()
-    return {"ok": True}
-
-
-class ReorderIn(BaseModel):
-    ids: list[int]
-
-
-@router.put("/groups/reorder")
-def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    for i, gid in enumerate(body.ids):
-        db.query(MenuGroup).filter(MenuGroup.id == gid).update({"sort_order": i})
     db.commit()
     return {"ok": True}
 
