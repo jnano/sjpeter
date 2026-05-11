@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -39,7 +40,7 @@ export default async function BoardsPage() {
   return (
     <>
       <PageHeader group="알림과 게시판" title="자유 게시판" subtitle="성당 공동체의 이야기를 나누는 공간입니다." />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout autoHero={false}>
 
       {boards.length === 0 ? (
         <p className="text-center py-16 text-[var(--color-text-muted)]">등록된 게시판이 없습니다.</p>
@@ -83,7 +84,7 @@ export default async function BoardsPage() {
           ))}
         </div>
       )}
-    </div>
+      </SectionLayout>
     </>
   );
 }

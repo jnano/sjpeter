@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ export default async function NoticePage() {
   return (
     <>
       <PageHeader group="알림과 게시판" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout autoHero={false}>
 
       {notices.length === 0 ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
@@ -84,7 +85,7 @@ export default async function NoticePage() {
           ))}
         </div>
       )}
-    </div>
+      </SectionLayout>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 // admin에서 변경한 게시판/게시글이 새로고침 없이 반영되도록
 export const dynamic = "force-dynamic";
@@ -159,16 +160,15 @@ export default async function BoardPage({
           </div>
         }
       />
-      <div className="max-w-3xl mx-auto px-4 py-8">
-      <BoardList
-        posts={postList.posts}
-        slug={slug}
-        currentPage={page}
-        totalPages={totalPages}
-        currentView={currentView}
-      />
-
-    </div>
+      <SectionLayout autoHero={false}>
+        <BoardList
+          posts={postList.posts}
+          slug={slug}
+          currentPage={page}
+          totalPages={totalPages}
+          currentView={currentView}
+        />
+      </SectionLayout>
     </>
   );
 }
