@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import PostDetail from "./PostDetail";
+import SectionLayout from "@/components/SectionLayout";
 import { auth } from "@/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -73,8 +74,8 @@ export default async function PostPage({
   if (!post) notFound();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
+    <SectionLayout autoHero={false}>
       <PostDetail post={post} slug={slug} />
-    </div>
+    </SectionLayout>
   );
 }

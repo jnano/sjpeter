@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import SectionLayout from "@/components/SectionLayout";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -42,7 +43,7 @@ export default async function NoticeDetailPage({
   if (!notice) notFound();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
+    <SectionLayout autoHero={false}>
       {/* 뒤로 가기 */}
       <Link
         href="/boards/notice"
@@ -90,6 +91,6 @@ export default async function NoticeDetailPage({
           ← 목록으로
         </Link>
       </div>
-    </div>
+    </SectionLayout>
   );
 }
