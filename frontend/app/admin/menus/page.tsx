@@ -152,7 +152,6 @@ export default function AdminMenusPage() {
         document.querySelector(`[data-group-id="${g.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
       notify(DataEvent.MENUS);
-      flash("순서 변경됨");
     }
     else {
       const err = await res.json().catch(() => ({}));
@@ -239,7 +238,7 @@ export default function AdminMenusPage() {
       headers: { ...headers(), "Content-Type": "application/json" },
       body: JSON.stringify({ ids: siblings.map((x) => x.id) }),
     });
-    if (res.ok) { await load(); notify(DataEvent.MENUS); flash("순서 변경됨"); }
+    if (res.ok) { await load(); notify(DataEvent.MENUS); }
     else {
       const err = await res.json().catch(() => ({}));
       alert(`이동 실패: ${formatErr(err, res.status)}`);
