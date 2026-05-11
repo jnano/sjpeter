@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api, home_banner, parish_staff, page_photos
+from app.api import settings_api, home_banner, parish_staff, page_photos, menus
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -48,6 +48,7 @@ app.include_router(settings_api.internal_router)
 app.include_router(home_banner.router, prefix="/api")
 app.include_router(parish_staff.router, prefix="/api")
 app.include_router(page_photos.router, prefix="/api")
+app.include_router(menus.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -311,6 +312,36 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        # 메뉴 관리 (Header + Sidebar 통합) — 2026-05-11
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS menu_groups (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(50) UNIQUE NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                subtitle VARCHAR(200),
+                icon VARCHAR(20),
+                sidebar_image_url VARCHAR(500),
+                sidebar_width_px INTEGER DEFAULT 220,
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS menu_items (
+                id SERIAL PRIMARY KEY,
+                group_id INTEGER NOT NULL REFERENCES menu_groups(id) ON DELETE CASCADE,
+                label VARCHAR(100) NOT NULL,
+                href VARCHAR(500) NOT NULL,
+                is_external BOOLEAN DEFAULT FALSE,
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                source_type VARCHAR(30) DEFAULT 'manual',
+                source_id VARCHAR(100),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
         # 분과/소속단체 트리 + 슬러그 + 활동·사진 (2026-05-11)
         for stmt in [
             "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES community_groups(id) ON DELETE CASCADE",

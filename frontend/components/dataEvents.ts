@@ -26,6 +26,8 @@ export const DataEvent = {
   MEDITATION_CURRENT: "data:meditation-current",
   /** 페이지 사진 슬러그/사진/설정 변경 (AutoPageHero, PageHeroSlideshow) */
   PAGE_PHOTOS: "data:page-photos",
+  /** 메뉴 그룹·항목 변경 (Header, SectionSidebar) */
+  MENUS: "data:menus",
 } as const;
 
 export type DataEventName = (typeof DataEvent)[keyof typeof DataEvent];

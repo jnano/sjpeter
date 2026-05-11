@@ -5,59 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
-
-const navGroups = [
-  {
-    label: "성당 소개",
-    subtitle: "본당과 사목자",
-    items: [
-      { href: "/about", label: "성당 안내" },
-      { href: "/pastor", label: "주임신부님" },
-      { href: "/saint", label: "수호성인 성 베드로" },
-      { href: "/history", label: "본당 연혁" },
-      { href: "/pastors", label: "역대 신부님" },
-      { href: "/sisters", label: "역대 수녀님" },
-      { href: "/priests", label: "본당 출신 사제" },
-      { href: "/info", label: "찾아오시는 길" },
-    ],
-  },
-  {
-    label: "본당 공동체",
-    subtitle: "조직과 활동",
-    items: [
-      { href: "/council", label: "사목평의회" },
-      { href: "/groups", label: "분과와 단체" },
-      { href: "/vision", label: "올해의 사목 방향" },
-    ],
-  },
-  {
-    label: "말씀과 기도",
-    subtitle: "전례와 영성",
-    items: [
-      { href: "/word", label: "오늘의 복음" },
-      { href: "/bulletin", label: "주보 아카이브" },
-      { href: "/meditation", label: "묵상 글" },
-      { href: "/prayer", label: "기도문" },
-    ],
-  },
-  {
-    label: "알림과 게시판",
-    subtitle: "공지와 소통",
-    items: [
-      { href: "/boards/notice", label: "공지·알림" },
-      { href: "/calendar", label: "행사 일정" },
-      { href: "/boards", label: "자유 게시판" },
-    ],
-  },
-  {
-    label: "사진 갤러리",
-    subtitle: "전례·행사 사진",
-    items: [
-      { href: "/gallery/liturgy", label: "전례 사진" },
-      { href: "/gallery/events", label: "행사 사진" },
-    ],
-  },
-];
+import { useNavigation } from "./useNavigation";
 
 interface Breadcrumb { group: string; title: string }
 
@@ -74,8 +22,9 @@ export default function Header() {
   const [isAdminAuthed, setIsAdminAuthed] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const archiveCounts = useArchiveCounts();
+  const { groups } = useNavigation();
 
-  const visibleNavGroups = navGroups
+  const visibleNavGroups = groups
     .map((g) => ({
       ...g,
       items: g.items.filter((i) => !isArchiveLinkHidden(i.href, archiveCounts)),
@@ -233,7 +182,7 @@ export default function Header() {
           <nav className="hidden md:flex items-center h-full">
             {visibleNavGroups.map((group, idx) => (
               <div
-                key={group.label}
+                key={group.key}
                 className="relative h-full flex items-center"
                 onMouseEnter={() => setOpenGroup(idx)}
                 onMouseLeave={() => setOpenGroup(null)}
@@ -260,9 +209,11 @@ export default function Header() {
                     {/* 항목 */}
                     <ul>
                       {group.items.map((item) => (
-                        <li key={item.href}>
+                        <li key={item.id}>
                           <Link
                             href={item.href}
+                            target={item.is_external ? "_blank" : undefined}
+                            rel={item.is_external ? "noopener noreferrer" : undefined}
                             onClick={() => setOpenGroup(null)}
                             className={`block px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] ${
                               pathname === item.href
@@ -271,6 +222,7 @@ export default function Header() {
                             }`}
                           >
                             {item.label}
+                            {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
                           </Link>
                         </li>
                       ))}
@@ -356,7 +308,7 @@ export default function Header() {
         {menuOpen && (
           <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
             {visibleNavGroups.map((group, idx) => (
-              <div key={group.label}>
+              <div key={group.key}>
                 <button
                   onClick={() => setOpenGroup(openGroup === idx ? null : idx)}
                   className="w-full flex items-center justify-between px-3 py-3 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-warm)] transition-colors"
@@ -379,8 +331,10 @@ export default function Header() {
                     </div>
                     {group.items.map((item) => (
                       <Link
-                        key={item.href}
+                        key={item.id}
                         href={item.href}
+                        target={item.is_external ? "_blank" : undefined}
+                        rel={item.is_external ? "noopener noreferrer" : undefined}
                         onClick={() => { setMenuOpen(false); setOpenGroup(null); }}
                         className={`block px-7 py-2.5 text-sm transition-colors ${
                           pathname === item.href
@@ -389,6 +343,7 @@ export default function Header() {
                         }`}
                       >
                         {item.label}
+                        {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
                       </Link>
                     ))}
                   </div>
