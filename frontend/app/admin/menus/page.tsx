@@ -95,7 +95,10 @@ export default function AdminMenusPage() {
       body: JSON.stringify(body),
     });
     if (res.ok) { await load(); notify(DataEvent.MENUS); }
-    else alert("저장 실패");
+    else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || `저장 실패 (HTTP ${res.status})`);
+    }
   }
 
   async function deleteGroup(g: MenuGroup) {
@@ -262,7 +265,20 @@ export default function AdminMenusPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">key (URL 식별자, 변경 신중)</label>
-                  <input value={selectedGroup.key} onChange={(e) => updateGroup(selectedGroup, { key: e.target.value })} className={inputCls} />
+                  <input
+                    key={`key-${selectedGroup.id}`}
+                    defaultValue={selectedGroup.key}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v && v !== selectedGroup.key) updateGroup(selectedGroup, { key: v });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    className={inputCls}
+                    placeholder="예: outreach"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">입력 후 Enter 또는 포커스 이동 시 저장됩니다.</p>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">표시 라벨</label>
