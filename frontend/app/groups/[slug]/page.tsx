@@ -107,10 +107,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </div>
           )}
 
-          {/* 사진 — admin이 선택한 표시 방식 (슬라이드쇼 / 격자) */}
+          {/* 사진 — admin이 선택한 표시 방식 + 1장이면 무조건 가로 전체 */}
           {group.photo_urls && group.photo_urls.length > 0 && (
             <section>
-              {group.photo_display_mode === "grid" ? (
+              {group.photo_urls.length === 1 ? (
+                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-[var(--color-border)]">
+                  <Image
+                    src={group.photo_urls[0].startsWith("http") ? group.photo_urls[0] : `${API}${group.photo_urls[0]}`}
+                    alt={`${group.name} 사진`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 720px"
+                    priority
+                  />
+                </div>
+              ) : group.photo_display_mode === "grid" ? (
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {group.photo_urls.map((url, i) => (
                     <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-[var(--color-border)]">
