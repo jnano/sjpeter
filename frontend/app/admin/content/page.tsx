@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -73,6 +75,8 @@ function HistoryTab() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(items.map((i) => i.id));
 
   async function load() {
     const res = await fetch(`${API}/api/content/history`);
@@ -111,7 +115,33 @@ function HistoryTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     load();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 연혁 ${ids.length}개를 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/content/history/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   return (
@@ -173,6 +203,18 @@ function HistoryTab() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">연혁 목록 ({items.length}건)</h3>
         </div>
+        <div className="px-6 pt-3">
+          <BulkActionBar
+            selectedCount={select.selectedCount}
+            total={select.total}
+            allSelected={select.allSelected}
+            someSelected={select.someSelected}
+            onToggleAll={select.toggleAll}
+            onDelete={handleBulkDelete}
+            deleting={bulkDeleting}
+            className="mb-0"
+          />
+        </div>
         <div className="divide-y divide-gray-100">
           {items.map((item) =>
             editId === item.id ? (
@@ -199,8 +241,15 @@ function HistoryTab() {
                 </div>
               </div>
             ) : (
-              <div key={item.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
-                <div>
+              <div key={item.id} className={`flex items-start justify-between px-6 py-4 ${select.isSelected(item.id) ? "bg-red-50/30" : "hover:bg-gray-50"}`}>
+                <input
+                  type="checkbox"
+                  checked={select.isSelected(item.id)}
+                  onChange={() => select.toggle(item.id)}
+                  className="rounded mr-3 mt-0.5"
+                  aria-label={`${item.year} ${item.event} 선택`}
+                />
+                <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-500 w-12">{item.year}</span>
                     <span className="font-medium text-sm">{item.event}</span>
@@ -232,6 +281,8 @@ function VisionTab() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(items.map((i) => i.id));
 
   async function load() {
     const res = await fetch(`${API}/api/content/visions`);
@@ -270,7 +321,33 @@ function VisionTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     load();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 사목지표 ${ids.length}개를 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/content/visions/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   return (
@@ -316,6 +393,18 @@ function VisionTab() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">사목지표 목록 ({items.length}건)</h3>
         </div>
+        <div className="px-6 pt-3">
+          <BulkActionBar
+            selectedCount={select.selectedCount}
+            total={select.total}
+            allSelected={select.allSelected}
+            someSelected={select.someSelected}
+            onToggleAll={select.toggleAll}
+            onDelete={handleBulkDelete}
+            deleting={bulkDeleting}
+            className="mb-0"
+          />
+        </div>
         <div className="divide-y divide-gray-100">
           {items.map((v) =>
             editId === v.id ? (
@@ -332,8 +421,9 @@ function VisionTab() {
                 </div>
               </div>
             ) : (
-              <div key={v.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50">
+              <div key={v.id} className={`flex items-center justify-between px-6 py-4 ${select.isSelected(v.id) ? "bg-red-50/30" : "hover:bg-gray-50"}`}>
                 <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={select.isSelected(v.id)} onChange={() => select.toggle(v.id)} className="rounded" aria-label={`${v.year} 선택`} />
                   <span className="text-sm font-bold text-gray-500 w-12">{v.year}</span>
                   <span className="text-sm">&ldquo;{v.motto}&rdquo;</span>
                   {v.is_current && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">올해</span>}
@@ -364,6 +454,8 @@ function CommunityTab() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(items.map((i) => i.id));
 
   async function load() {
     const [communityRes, boardsRes] = await Promise.all([
@@ -409,7 +501,33 @@ function CommunityTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     load();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 단체/분과 ${ids.length}개를 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/content/community/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   function BoardSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -476,6 +594,18 @@ function CommunityTab() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">단체/분과 목록 ({items.length}건)</h3>
         </div>
+        <div className="px-6 pt-3">
+          <BulkActionBar
+            selectedCount={select.selectedCount}
+            total={select.total}
+            allSelected={select.allSelected}
+            someSelected={select.someSelected}
+            onToggleAll={select.toggleAll}
+            onDelete={handleBulkDelete}
+            deleting={bulkDeleting}
+            className="mb-0"
+          />
+        </div>
         <div className="divide-y divide-gray-100">
           {items.map((g) =>
             editId === g.id ? (
@@ -496,7 +626,8 @@ function CommunityTab() {
                 </div>
               </div>
             ) : (
-              <div key={g.id} className="flex items-start justify-between px-6 py-4 hover:bg-gray-50">
+              <div key={g.id} className={`flex items-start justify-between px-6 py-4 ${select.isSelected(g.id) ? "bg-red-50/30" : "hover:bg-gray-50"}`}>
+                <input type="checkbox" checked={select.isSelected(g.id)} onChange={() => select.toggle(g.id)} className="rounded mr-3 mt-0.5" aria-label={`${g.name} 선택`} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm">{g.name}</p>
                   {g.description && <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>}
@@ -639,6 +770,8 @@ function CouncilTab() {
   const [msg, setMsg] = useState("");
   const [photoUploading, setPhotoUploading] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(items.map((i) => i.id));
 
   async function load() {
     const res = await fetch(`${API}/api/content/council/admin`, {
@@ -679,7 +812,33 @@ function CouncilTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     load();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 구성원 ${ids.length}명을 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/content/council/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function uploadPhoto(id: number, file: File) {
@@ -755,6 +914,17 @@ function CouncilTab() {
       </section>
       )}
 
+      {/* 다중 선택 일괄 작업 바 (전체 카테고리 범위) */}
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
+
       {/* 카테고리별 목록 */}
       {grouped.map(({ category, members }) => (
         <section key={category} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -767,7 +937,7 @@ function CouncilTab() {
           ) : (
             <div className="divide-y divide-gray-100">
               {members.map((m) => (
-                <div key={m.id} className="px-6 py-3">
+                <div key={m.id} className={`px-6 py-3 ${select.isSelected(m.id) ? "bg-red-50/30" : ""}`}>
                   {editId === m.id ? (
                     <div className="space-y-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -791,6 +961,7 @@ function CouncilTab() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-4">
+                      <input type="checkbox" checked={select.isSelected(m.id)} onChange={() => select.toggle(m.id)} className="rounded shrink-0" aria-label={`${m.name} 선택`} />
                       {/* 사진 */}
                       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
                         {m.photo_url ? (
@@ -865,6 +1036,8 @@ function MeditationTab() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(items.map((i) => i.id));
 
   async function load() {
     const res = await fetch(`${API}/api/content/meditations/admin`, {
@@ -930,8 +1103,34 @@ function MeditationTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     load();
     notify(DataEvent.MEDITATION_CURRENT);
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 묵상 ${ids.length}편을 삭제하시겠습니까? 복구할 수 없습니다.`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/content/meditations/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      if (succeeded.size > 0) { select.removeMany(succeeded); load(); notify(DataEvent.MEDITATION_CURRENT); }
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   function startEdit(item: Meditation) {
@@ -1041,10 +1240,19 @@ function MeditationTab() {
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">
           묵상 목록 <span className="text-gray-400 font-normal text-sm">({total}편)</span>
         </h3>
+        <BulkActionBar
+          selectedCount={select.selectedCount}
+          total={select.total}
+          allSelected={select.allSelected}
+          someSelected={select.someSelected}
+          onToggleAll={select.toggleAll}
+          onDelete={handleBulkDelete}
+          deleting={bulkDeleting}
+        />
         <div className="space-y-3">
           {items.length === 0 && <p className="text-sm text-gray-400 text-center py-8">등록된 묵상이 없습니다.</p>}
           {items.map((item, idx) => (
-            <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+            <div key={item.id} className={`border rounded-lg overflow-hidden ${select.isSelected(item.id) ? "border-red-300 bg-red-50/30" : "border-gray-100"}`}>
               {editId === item.id ? (
                 <div className="p-4 bg-blue-50 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1082,7 +1290,8 @@ function MeditationTab() {
                 </div>
               ) : (
                 <div className="p-4 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                  <input type="checkbox" checked={select.isSelected(item.id)} onChange={() => select.toggle(item.id)} className="rounded mt-1 shrink-0" aria-label={`${item.title} 선택`} />
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {idx === 0 && (
                         <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">최신</span>

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -24,6 +26,8 @@ export default function AdminHomeBannerPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(banners.map((b) => b.id));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const authHeader = useCallback((): HeadersInit => {
@@ -96,8 +100,33 @@ export default function AdminHomeBannerPage() {
       method: "DELETE",
       headers: authHeader(),
     });
-    if (res.ok) reloadAfterMutation();
+    if (res.ok) { select.remove(id); reloadAfterMutation(); }
     else setError("삭제 실패");
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 배너 ${ids.length}개를 삭제하시겠습니까?\n파일도 함께 삭제됩니다.`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/home-banners/${id}`, {
+              method: "DELETE", headers: authHeader(),
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) { select.removeMany(succeeded); await reloadAfterMutation(); }
+      if (failedCount > 0) setError(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const toggleActive = async (id: number) => {
@@ -193,6 +222,16 @@ export default function AdminHomeBannerPage() {
           )}
         </div>
 
+        <BulkActionBar
+          selectedCount={select.selectedCount}
+          total={select.total}
+          allSelected={select.allSelected}
+          someSelected={select.someSelected}
+          onToggleAll={select.toggleAll}
+          onDelete={handleBulkDelete}
+          deleting={bulkDeleting}
+        />
+
         {banners.length === 0 ? (
           <div className="text-center py-16 text-gray-400 border border-gray-200 rounded-xl bg-white">
             <p className="text-3xl mb-2">🖼️</p>
@@ -219,6 +258,18 @@ export default function AdminHomeBannerPage() {
                     alt={b.original_name}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
+                  <label
+                    className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 bg-white/90 rounded shadow-sm cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={select.isSelected(b.id)}
+                      onChange={() => select.toggle(b.id)}
+                      className="rounded"
+                      aria-label={`${b.original_name} 선택`}
+                    />
+                  </label>
                   {!b.is_active && (
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-gray-700 text-white text-[11px] rounded">
                       비활성

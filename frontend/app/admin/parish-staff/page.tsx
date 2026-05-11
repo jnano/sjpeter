@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -65,7 +67,9 @@ export default function AdminParishStaffPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [currentPhoto, setCurrentPhoto] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
+  const select = useBulkSelect(list.map((s) => s.id));
 
   const authHeader = useCallback((): HeadersInit => {
     const t = localStorage.getItem("admin_token");
@@ -196,7 +200,37 @@ export default function AdminParishStaffPage() {
       method: "DELETE",
       headers: authHeader(),
     });
-    if (r.ok) reload();
+    if (r.ok) { select.remove(id); reload(); }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    const targets = list.filter((s) => ids.includes(s.id));
+    const names = targets.map((s) => s.name).join(", ");
+    if (!confirm(`선택한 ${ids.length}명(${names})을 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const r = await fetch(`${API}/api/parish-staff/${id}`, {
+              method: "DELETE", headers: authHeader(),
+            });
+            return { id, ok: r.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        select.removeMany(succeeded);
+        await reload();
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const removePhoto = async () => {
@@ -551,20 +585,39 @@ export default function AdminParishStaffPage() {
 
       {/* 목록 */}
       <section>
-        <h2 className="font-semibold text-gray-900 mb-3">등록된 본당 가족 ({list.length})</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-900">등록된 본당 가족 ({list.length})</h2>
+        </div>
+        <BulkActionBar
+          selectedCount={select.selectedCount}
+          total={select.total}
+          allSelected={select.allSelected}
+          someSelected={select.someSelected}
+          onToggleAll={select.toggleAll}
+          onDelete={handleBulkDelete}
+          deleting={bulkDeleting}
+        />
         {list.length === 0 ? (
           <p className="text-sm text-gray-500">아직 등록된 항목이 없습니다.</p>
         ) : (
           <ul className="space-y-2">
             {list.map((s) => {
               const isEditing = editing.id === s.id;
+              const isChecked = select.isSelected(s.id);
               return (
                 <li key={s.id}>
                   <div
                     className={`flex items-center gap-4 bg-white border p-3 ${
-                      isEditing ? "rounded-t-lg border-amber-300 border-b-0" : "rounded-lg"
-                    } ${s.is_active ? "" : "opacity-60"} ${!isEditing && s.is_active ? "border-gray-200" : ""} ${!isEditing && !s.is_active ? "border-gray-200" : ""}`}
+                      isEditing ? "rounded-t-lg border-amber-300 border-b-0" : isChecked ? "rounded-lg border-red-300 bg-red-50/30" : "rounded-lg border-gray-200"
+                    } ${s.is_active ? "" : "opacity-60"}`}
                   >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => select.toggle(s.id)}
+                      className="rounded shrink-0"
+                      aria-label={`${s.name} 선택`}
+                    />
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
                       {s.photo_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */

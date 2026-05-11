@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -25,7 +27,9 @@ export default function GalleryAdminPage() {
   const [files, setFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const select = useBulkSelect(posts.map((p) => p.id));
 
   const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
   const authHeader = { Authorization: `Bearer ${token}` };
@@ -94,7 +98,37 @@ export default function GalleryAdminPage() {
     });
     if (res.ok) {
       setPosts((prev) => prev.filter((p) => p.id !== postId));
+      select.remove(postId);
       notify(DataEvent.PHOTO_POSTS);
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 항목 ${ids.length}개를 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/boards/${boardSlug}/posts/${id}`, {
+              method: "DELETE", headers: authHeader,
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        setPosts((prev) => prev.filter((p) => !succeeded.has(p.id)));
+        select.removeMany(succeeded);
+        notify(DataEvent.PHOTO_POSTS);
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -168,14 +202,25 @@ export default function GalleryAdminPage() {
       </form>
 
       {/* 갤러리 목록 */}
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
       {loading ? (
         <p className="text-sm text-[var(--color-text-muted)]">불러오는 중...</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)] text-center py-12">등록된 사진이 없습니다.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {posts.map((post) => (
-            <div key={post.id} className="group relative border border-[var(--color-border)] rounded-xl overflow-hidden bg-white">
+          {posts.map((post) => {
+            const isChecked = select.isSelected(post.id);
+            return (
+            <div key={post.id} className={`group relative border rounded-xl overflow-hidden bg-white ${isChecked ? "border-red-300 ring-1 ring-red-200" : "border-[var(--color-border)]"}`}>
               {post.thumbnail_url ? (
                 <img
                   src={`${API}${post.thumbnail_url}`}
@@ -193,6 +238,18 @@ export default function GalleryAdminPage() {
                   {new Date(post.created_at).toLocaleDateString("ko-KR")}
                 </p>
               </div>
+              <label
+                className="absolute top-2 left-2 inline-flex items-center justify-center w-6 h-6 bg-white/90 rounded shadow-sm cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => select.toggle(post.id)}
+                  className="rounded"
+                  aria-label={`${post.title} 선택`}
+                />
+              </label>
               <button
                 onClick={() => handleDelete(post.id)}
                 className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
@@ -201,7 +258,8 @@ export default function GalleryAdminPage() {
                 ✕
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

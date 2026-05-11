@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -21,6 +23,8 @@ export default function BulletinListPage() {
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(bulletins.map((b) => b.id));
 
   const fetchBulletins = useCallback(async () => {
     const token = localStorage.getItem("admin_token");
@@ -46,11 +50,41 @@ export default function BulletinListPage() {
       });
       if (res.ok) {
         setBulletins((prev) => prev.filter((b) => b.id !== id));
+        select.remove(id);
       } else {
         alert("삭제에 실패했습니다.");
       }
     } finally {
       setDeleting(null);
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 주보 ${ids.length}개를 삭제하시겠습니까?\nPDF 파일도 함께 삭제됩니다.`)) return;
+    const token = localStorage.getItem("admin_token");
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/bulletins/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        setBulletins((prev) => prev.filter((b) => !succeeded.has(b.id)));
+        select.removeMany(succeeded);
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -71,6 +105,16 @@ export default function BulletinListPage() {
         </Link>
       </div>
 
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
+
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-16 text-center text-[var(--color-text-muted)]">불러오는 중…</div>
@@ -88,18 +132,28 @@ export default function BulletinListPage() {
         ) : (
           <div className="overflow-x-auto">
           <div className="min-w-[480px] divide-y divide-[var(--color-border)]">
-            <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+            <div className="px-6 py-3 bg-[var(--color-surface-warm)] grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+              <span className="w-4"></span>
               <span>주보</span>
               <span>발행일</span>
               <span>PDF</span>
               <span>AI 결과</span>
               <span>관리</span>
             </div>
-            {bulletins.map((b) => (
+            {bulletins.map((b) => {
+              const isChecked = select.isSelected(b.id);
+              return (
               <div
                 key={b.id}
-                className="px-6 py-4 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center hover:bg-[var(--color-surface-warm)] transition-colors"
+                className={`px-6 py-4 grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 items-center transition-colors ${isChecked ? "bg-red-50/30" : "hover:bg-[var(--color-surface-warm)]"}`}
               >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => select.toggle(b.id)}
+                  className="rounded"
+                  aria-label={`${b.issue_number ? `제${b.issue_number}호` : `주보 ${b.id}`} 선택`}
+                />
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">
@@ -150,7 +204,8 @@ export default function BulletinListPage() {
                   {deleting === b.id ? "삭제 중…" : "삭제"}
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
           </div>
         )}

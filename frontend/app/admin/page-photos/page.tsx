@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -56,7 +58,9 @@ export default function AdminPagePhotosIndex() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const select = useBulkSelect(slugs.map((s) => s.id));
 
   function scrollToForm() {
     requestAnimationFrame(() => {
@@ -172,10 +176,42 @@ export default function AdminPagePhotosIndex() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) { await fetchSlugs(); notify(DataEvent.PAGE_PHOTOS); }
+    if (res.ok) { select.remove(s.id); await fetchSlugs(); notify(DataEvent.PAGE_PHOTOS); }
     else {
       const d = await res.json().catch(() => ({}));
       alert(d.detail || "삭제에 실패했습니다.");
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    const targets = slugs.filter((s) => ids.includes(s.id));
+    const labels = targets.map((s) => s.label).join(", ");
+    if (!confirm(`선택한 페이지 ${ids.length}개(${labels})를 삭제하시겠습니까?\n각 페이지의 등록된 사진과 설정도 모두 삭제됩니다.`)) return;
+    setBulkDeleting(true);
+    const token = getToken();
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/page-photos/slugs/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        select.removeMany(succeeded);
+        await fetchSlugs();
+        notify(DataEvent.PAGE_PHOTOS);
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -313,18 +349,38 @@ export default function AdminPagePhotosIndex() {
         <div className="mb-6">{renderForm()}</div>
       )}
 
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
+
       <ul className="space-y-2">
         {slugs.map((s) => {
           const stat = stats[s.slug];
           const isEditing = editingId === s.id;
+          const isChecked = select.isSelected(s.id);
           return (
             <li key={s.id}>
               <div className={`p-4 bg-white border transition-colors ${
                 isEditing
                   ? "rounded-t-xl border-amber-300 border-b-0"
+                  : isChecked
+                  ? "rounded-xl border-red-300 bg-red-50/30"
                   : "rounded-xl border-gray-200 hover:border-blue-200"
               }`}>
                 <div className="flex items-center justify-between gap-4">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => select.toggle(s.id)}
+                    className="rounded shrink-0"
+                    aria-label={`${s.label} 선택`}
+                  />
                   <Link
                     href={`/admin/page-photos/${s.slug}`}
                     className="flex-1 min-w-0"

@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 import { useRouter } from "next/navigation";
 
 const API = "http://localhost:8000";
@@ -44,6 +46,9 @@ export default function AdminMembersPage() {
   const [isSuper, setIsSuper] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const memberIds = useMemo(() => data?.items.map((m) => m.id) ?? [], [data]);
+  const select = useBulkSelect(memberIds);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
@@ -186,9 +191,44 @@ export default function AdminMembersPage() {
             ? { ...prev, items: prev.items.filter((m) => m.id !== member.id), total: prev.total - 1 }
             : prev
         );
+        select.remove(member.id);
       }
     } finally {
       setProcessing((p) => ({ ...p, [member.id]: false }));
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0 || !data) return;
+    const targets = data.items.filter((m) => ids.includes(m.id));
+    const totalPosts = targets.reduce((sum, m) => sum + (m.post_count ?? 0), 0);
+    if (!confirm(`선택한 회원 ${ids.length}명을 삭제하시겠습니까?\n작성한 게시글 총 ${totalPosts}건도 함께 삭제됩니다.`)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/members/admin/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        setData((prev) =>
+          prev
+            ? { ...prev, items: prev.items.filter((m) => !succeeded.has(m.id)), total: prev.total - succeeded.size }
+            : prev,
+        );
+        select.removeMany(succeeded);
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -307,6 +347,16 @@ export default function AdminMembersPage() {
           </div>
         </div>
 
+        <BulkActionBar
+          selectedCount={select.selectedCount}
+          total={select.total}
+          allSelected={select.allSelected}
+          someSelected={select.someSelected}
+          onToggleAll={select.toggleAll}
+          onDelete={handleBulkDelete}
+          deleting={bulkDeleting}
+        />
+
         {/* 목록 */}
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
           {loading ? (
@@ -318,7 +368,8 @@ export default function AdminMembersPage() {
           ) : (
             <>
               {/* 테이블 헤더 */}
-              <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-warm)]">
+              <div className="hidden md:grid grid-cols-[auto_2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-warm)]">
+                <span className="w-4"></span>
                 <span>회원</span>
                 <span>이메일</span>
                 <span>가입방법</span>
@@ -334,6 +385,8 @@ export default function AdminMembersPage() {
                     member={member}
                     processing={!!processing[member.id]}
                     isSuper={isSuper}
+                    isSelected={select.isSelected(member.id)}
+                    onSelect={() => select.toggle(member.id)}
                     onToggle={() => toggleActive(member)}
                     onToggleAdmin={() => toggleAdminRole(member)}
                     onResetPassword={() => resetPassword(member)}
@@ -388,6 +441,8 @@ function MemberRow({
   member,
   processing,
   isSuper,
+  isSelected,
+  onSelect,
   onToggle,
   onToggleAdmin,
   onResetPassword,
@@ -396,13 +451,22 @@ function MemberRow({
   member: Member;
   processing: boolean;
   isSuper: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
   onToggle: () => void;
   onToggleAdmin: () => void;
   onResetPassword: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 items-center hover:bg-[var(--color-surface-warm)] transition-colors">
+    <div className={`grid grid-cols-1 md:grid-cols-[auto_2fr_2fr_1fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 items-center transition-colors ${isSelected ? "bg-red-50/30" : "hover:bg-[var(--color-surface-warm)]"}`}>
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={onSelect}
+        className="rounded"
+        aria-label={`${member.nickname} 선택`}
+      />
       {/* 회원 */}
       <div className="flex items-center gap-3">
         {member.avatar_url ? (

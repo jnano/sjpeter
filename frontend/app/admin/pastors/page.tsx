@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useBulkSelect } from "@/components/useBulkSelect";
+import BulkActionBar from "@/components/BulkActionBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -37,6 +39,8 @@ export default function AdminPastorsPage() {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const select = useBulkSelect(pastors.map((p) => p.id));
 
   function scrollToForm() {
     requestAnimationFrame(() => {
@@ -129,7 +133,39 @@ export default function AdminPastorsPage() {
     await fetch(`${API}/api/archive/pastors/${id}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
+    select.remove(id);
     loadAfterMutation();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(select.selected);
+    if (ids.length === 0) return;
+    const targets = pastors.filter((p) => ids.includes(p.id));
+    const names = targets.map((p) => p.name).join(", ");
+    if (!confirm(`선택한 ${ids.length}명(${names})을 삭제하시겠습니까?`)) return;
+    setBulkDeleting(true);
+    const token = getToken();
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`${API}/api/archive/pastors/${id}`, {
+              method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            return { id, ok: res.ok };
+          } catch { return { id, ok: false }; }
+        }),
+      );
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failedCount = results.filter((r) => !r.ok).length;
+      if (succeeded.size > 0) {
+        select.removeMany(succeeded);
+        loadAfterMutation();
+      }
+      if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function handlePhoto(id: number, file: File) {
@@ -265,15 +301,33 @@ export default function AdminPastorsPage() {
         <div className="mb-6">{renderForm()}</div>
       )}
 
+      <BulkActionBar
+        selectedCount={select.selectedCount}
+        total={select.total}
+        allSelected={select.allSelected}
+        someSelected={select.someSelected}
+        onToggleAll={select.toggleAll}
+        onDelete={handleBulkDelete}
+        deleting={bulkDeleting}
+      />
+
       <div className="space-y-3">
         {pastors.length === 0 && <p className="text-center py-12 text-[var(--color-text-muted)] text-sm">등록된 사목자가 없습니다.</p>}
         {pastors.map((p) => {
           const isEditing = editId === p.id;
+          const isChecked = select.isSelected(p.id);
           return (
             <div key={p.id}>
               <div className={`flex items-center gap-4 bg-white border p-4 ${
-                isEditing ? "rounded-t-xl border-amber-300 border-b-0" : "rounded-xl border-[var(--color-border)]"
+                isEditing ? "rounded-t-xl border-amber-300 border-b-0" : isChecked ? "rounded-xl border-red-300 bg-red-50/30" : "rounded-xl border-[var(--color-border)]"
               }`}>
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => select.toggle(p.id)}
+                  className="rounded shrink-0"
+                  aria-label={`${p.name} 선택`}
+                />
                 {/* 사진 */}
                 <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center relative">
                   {p.photo_url ? (
