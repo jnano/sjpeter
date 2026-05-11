@@ -4,6 +4,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "행사 사진",
   description: "세종성베드로성당 공동체 행사 사진 모음",

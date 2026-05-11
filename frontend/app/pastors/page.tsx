@@ -3,6 +3,8 @@ import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "역대 신부님",
   description: "세종성베드로성당 역대 신부님 소개",

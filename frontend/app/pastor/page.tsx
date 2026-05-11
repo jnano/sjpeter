@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "주임신부님",
   description: "세종성베드로성당 본당 가족 — 주임신부, 보좌신부, 수녀, 사무장",

@@ -5,6 +5,9 @@ import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
 import HomeHero from "./HomeHero";
 
+// admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
+export const dynamic = "force-dynamic";
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const WEEKDAYS = ["월요일", "화요일", "수요일", "목요일", "금요일"];

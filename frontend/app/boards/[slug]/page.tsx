@@ -4,6 +4,9 @@ import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import PageHeader from "@/components/PageHeader";
 
+// admin에서 변경한 게시판/게시글이 새로고침 없이 반영되도록
+export const dynamic = "force-dynamic";
+
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {

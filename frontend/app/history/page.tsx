@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "우리의 역사",
   description: "세종성베드로성당 창립부터 현재까지의 연표",

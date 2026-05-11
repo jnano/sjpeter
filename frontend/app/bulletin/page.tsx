@@ -4,6 +4,7 @@ import BulletinClient from "./BulletinClient";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "주보",
   description: "세종성베드로성당 주보 — 이번 주 주보와 지난 주보 아카이브",

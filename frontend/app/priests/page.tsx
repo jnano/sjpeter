@@ -3,6 +3,9 @@ import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+// admin에서 변경한 데이터가 새로고침 없이 반영되도록 SSR 강제
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "본당 출신 사제",
   description: "세종성베드로성당에서 탄생한 사제들",

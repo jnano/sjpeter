@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "기도문",
   description: "세종성베드로성당 기도문",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "분과와 단체",
   description: "세종성베드로성당 각 분과 및 단체 소개",

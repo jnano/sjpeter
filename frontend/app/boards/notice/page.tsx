@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "공지·알림",
   description: "세종성베드로성당 공지사항",
