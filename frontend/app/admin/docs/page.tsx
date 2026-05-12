@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.9";
+export const CURRENT_VERSION = "1.5.10";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.10", date: "2026-05-12", tag: "기능",
+    items: [
+      "성당 건축 공사 일지 시스템 — 단계 마일스톤 + 한 줄 일지 + 정점 사진 슬라이드쇼 (/construction)",
+      "홈에 '공사 진행 현황' 위젯 — 등록된 단계가 있을 때만 자동 노출 (현재 단계·전체 진행률·최신 일지)",
+      "관리 페이지 /admin/construction — 단계 CRUD, 진행률 입력, 사진 업로드, 일지 작성",
+      "기술문서·소유권 탭 → 사용권 탭으로 재구성 (사용 허가·개발 주체·외부 API·호스팅 면책)",
+    ],
+  },
   {
     version: "1.5.9", date: "2026-05-12", tag: "기능",
     items: [

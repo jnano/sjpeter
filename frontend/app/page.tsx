@@ -4,6 +4,7 @@ import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
 import HomeHero from "./HomeHero";
+import HomeConstructionWidget, { fetchConstructionSummary } from "./HomeConstructionWidget";
 
 // admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
 export const dynamic = "force-dynamic";
@@ -141,12 +142,13 @@ const QUICK_LINKS = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, youthPosts] = await Promise.all([
+  const [parish, notices, gospel, upcomingEvents, youthPosts, constructionSummary] = await Promise.all([
     getParish(),
     getNotices(),
     getGospelToday(),
     getUpcomingEvents(),
     getBoardPosts("youth_council"),
+    fetchConstructionSummary(),
   ]);
 
   const entries = parish?.mass_schedule?.entries ?? [];
@@ -306,6 +308,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── 공사 진행 현황 (등록된 단계가 있을 때만 노출) ── */}
+      <HomeConstructionWidget summary={constructionSummary} containerClassName={CONTAINER} />
 
       {/* ── 게시판 탭(좌) + 미니 캘린더(우) ── */}
       <section>

@@ -27,6 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/parish", label: "성당 정보" },
       { href: "/admin/content", label: "페이지 콘텐츠" },
       { href: "/admin/pages", label: "동적 페이지" },
+      { href: "/admin/construction", label: "공사 일지" },
     ],
   },
   {

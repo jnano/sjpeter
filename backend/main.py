@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages
+from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -50,6 +50,7 @@ app.include_router(parish_staff.router, prefix="/api")
 app.include_router(page_photos.router, prefix="/api")
 app.include_router(menus.router, prefix="/api")
 app.include_router(pages.router, prefix="/api")
+app.include_router(construction.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -59,6 +60,7 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 def startup():
     from app.models import bulletin_extraction  # noqa: F401 — 테이블 등록
     from app.models import member_interest  # noqa: F401 — 회원 관심분과
+    from app.models import construction  # noqa: F401 — 성당 건축 공사 단계·일지
     create_tables()
     _migrate_add_columns()
     _seed_initial_data()
@@ -175,6 +177,42 @@ def _migrate_add_columns():
         ))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_member_community_interests_group ON member_community_interests(community_group_id)"
+        ))
+
+        # 성당 건축 공사 단계 (마일스톤)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS construction_phases (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                sort_order INTEGER DEFAULT 0 NOT NULL,
+                status VARCHAR(20) DEFAULT 'planned' NOT NULL,
+                progress_percent INTEGER DEFAULT 0 NOT NULL,
+                started_at DATE,
+                completed_at DATE,
+                expected_completion_date DATE,
+                photo_url VARCHAR(500),
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_construction_phases_sort ON construction_phases(sort_order)"
+        ))
+
+        # 성당 건축 한 줄 일지
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS construction_journal (
+                id SERIAL PRIMARY KEY,
+                entry_date DATE NOT NULL,
+                note TEXT NOT NULL,
+                photo_url VARCHAR(500),
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_construction_journal_date ON construction_journal(entry_date DESC)"
         ))
 
         # legacy 신부님 사진 테이블 / 컬럼 제거 (parish_staff로 이전됨)
@@ -791,9 +829,20 @@ def _seed_initial_data():
                               description="/groups 상단 히어로 이미지", sort_order=4),
                 PagePhotoSlug(slug="pastor", label="주임 신부", public_href="/pastor",
                               description="/pastor 상단 히어로 이미지", sort_order=5),
+                PagePhotoSlug(slug="construction", label="공사 일지", public_href="/construction",
+                              description="/construction 상단 히어로 이미지 (정점 사진 슬라이드쇼)", sort_order=6),
             ]
             db.add_all(slug_seed)
             db.commit()
+        else:
+            # 기존 환경: construction slug가 누락된 경우 보강
+            from sqlalchemy import select
+            if not db.execute(select(PagePhotoSlug).filter_by(slug="construction")).scalar_one_or_none():
+                db.add(PagePhotoSlug(
+                    slug="construction", label="공사 일지", public_href="/construction",
+                    description="/construction 상단 히어로 이미지 (정점 사진 슬라이드쇼)", sort_order=6,
+                ))
+                db.commit()
 
     finally:
         db.close()
