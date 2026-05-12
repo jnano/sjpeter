@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.22";
+export const CURRENT_VERSION = "1.5.23";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.23", date: "2026-05-12", tag: "기능",
+    items: [
+      "/calendar 헤더 년월 라벨을 클릭하면 빠른 선택 팝오버 — 년도 ‹›·12개월 그리드",
+      "빠른 점프 버튼: -10년 / -5년 / 작년 / 올해 — 과거 일정 빠르게 접근",
+      "오늘 위치 강조 + 현재 보고 있는 월 강조, 바깥 클릭 시 자동 닫힘",
+    ],
+  },
   {
     version: "1.5.22", date: "2026-05-12", tag: "수정",
     items: [

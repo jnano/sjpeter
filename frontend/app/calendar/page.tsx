@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -595,6 +595,21 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState<Event | null>(null);
   const [loading, setLoading] = useState(false);
   const [filterKind, setFilterKind] = useState("all");
+  // 빠른 년월 선택 팝오버
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState<number>(today.getFullYear());
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [pickerOpen]);
 
   // viewMode/cursor 변경 시 필요한 월 fetch
   useEffect(() => {
@@ -697,10 +712,109 @@ export default function CalendarPage() {
         title="행사·모임 일정"
         subtitle="본당 행사와 모임 일정을 확인하세요."
         action={
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none">‹</button>
-            <span className="text-sm font-semibold text-[var(--color-primary)] min-w-[130px] text-center">{navigationLabel()}</span>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none">›</button>
+          <div className="flex items-center gap-2 relative" ref={pickerRef}>
+            <button
+              onClick={() => navigate(-1)}
+              className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none"
+              aria-label="이전"
+            >‹</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!pickerOpen) setPickerYear(cursor.getFullYear());
+                setPickerOpen(v => !v);
+              }}
+              className="text-sm font-semibold text-[var(--color-primary)] min-w-[130px] text-center hover:bg-[var(--color-surface-warm)] rounded px-2 py-1 transition-colors"
+              title="년월 빠른 선택"
+            >
+              {navigationLabel()} ▾
+            </button>
+            <button
+              onClick={() => navigate(1)}
+              className="p-1.5 rounded hover:bg-[var(--color-surface-warm)] transition-colors text-[var(--color-text)] text-lg leading-none"
+              aria-label="다음"
+            >›</button>
+
+            {/* 년월 빠른 선택 팝오버 — 월/목록 모드에서만 활성 */}
+            {pickerOpen && (
+              <div className="absolute top-full right-0 mt-1 z-50 w-64 bg-white border border-[var(--color-border)] rounded-xl shadow-xl p-3">
+                {/* 년도 헤더 */}
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(y => y - 1)}
+                    className="px-2 py-1 rounded hover:bg-gray-100 text-[var(--color-text)]"
+                  >‹</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCursor(new Date());
+                      setPickerOpen(false);
+                    }}
+                    className="text-sm font-semibold text-[var(--color-primary)] hover:underline"
+                    title="오늘로"
+                  >
+                    {pickerYear}년
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(y => y + 1)}
+                    className="px-2 py-1 rounded hover:bg-gray-100 text-[var(--color-text)]"
+                  >›</button>
+                </div>
+
+                {/* 빠른 년도 점프 (-10, -5, 올해) */}
+                <div className="flex justify-between text-[11px] text-[var(--color-text-muted)] mb-3 px-1">
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(today.getFullYear() - 10)}
+                    className="hover:text-[var(--color-primary)]"
+                  >-10년</button>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(today.getFullYear() - 5)}
+                    className="hover:text-[var(--color-primary)]"
+                  >-5년</button>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(today.getFullYear() - 1)}
+                    className="hover:text-[var(--color-primary)]"
+                  >작년</button>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(today.getFullYear())}
+                    className="hover:text-[var(--color-primary)] font-medium"
+                  >올해</button>
+                </div>
+
+                {/* 12개월 그리드 */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                    const isCurrent = pickerYear === cursor.getFullYear() && m === cursor.getMonth() + 1;
+                    const isToday = pickerYear === today.getFullYear() && m === today.getMonth() + 1;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setCursor(new Date(pickerYear, m - 1, 1));
+                          setPickerOpen(false);
+                        }}
+                        className={`py-2 text-xs rounded transition-colors ${
+                          isCurrent
+                            ? "bg-[var(--color-primary)] text-white"
+                            : isToday
+                            ? "border border-[var(--color-primary)] text-[var(--color-primary)] bg-white"
+                            : "hover:bg-[var(--color-surface-warm)] text-[var(--color-text)]"
+                        }`}
+                      >
+                        {m}월
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         }
       />
