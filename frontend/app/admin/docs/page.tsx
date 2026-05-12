@@ -387,6 +387,93 @@ function GuideTab() {
         ))}
       </Accordion>
 
+      <Accordion icon="🧭" title="메뉴 관리" badge="/admin/menus">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          홈페이지 상단 헤더(드롭다운/메가메뉴)와 페이지 사이드바에 노출되는 모든 메뉴를 한 곳에서 관리합니다.
+          코드 수정 없이 메뉴 구성을 바꿀 수 있습니다.
+        </p>
+
+        <p className="mb-2 font-medium">기본 구조</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1 mb-4">
+          <li>• <strong>그룹</strong>(예: 본당 소개, 본당 가족) — 헤더의 큰 카테고리. 사이드바 최상위.</li>
+          <li>• <strong>항목</strong> — 그룹 안의 메뉴. 항목 아래 자식 항목까지 <strong>최대 2-deep</strong> 서브메뉴 가능</li>
+          <li>• 같은 그룹/항목 데이터가 헤더와 사이드바 양쪽에 동시에 사용됩니다</li>
+        </ul>
+
+        <p className="mb-2 font-medium">새 항목 만들기 — 3가지 연결 방식</p>
+        <div className="rounded-lg border border-[var(--color-border)] overflow-hidden mb-4">
+          {[
+            {
+              type: "정적 페이지",
+              code: "page",
+              desc: "내부 페이지 경로. 화이트리스트(/about, /history 등)에서 선택하거나 /groups/{slug} 같은 동적 경로 직접 입력. 같은 페이지는 한 메뉴 항목에만 연결 가능.",
+            },
+            {
+              type: "게시판",
+              code: "board",
+              desc: "드롭다운에서 게시판 선택. 라벨은 게시판 이름이 자동 매핑됨. 한 게시판은 한 메뉴 항목에만 연결.",
+            },
+            {
+              type: "외부 URL",
+              code: "external",
+              desc: "https://… 형태의 외부 링크. 새 탭으로 자동 열림. 중복 허용.",
+            },
+          ].map((row, i) => (
+            <div key={row.code} className={`px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-semibold text-[var(--color-primary)]">{row.type}</span>
+                <code className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[var(--color-text)]">{row.code}</code>
+              </div>
+              <p className="text-[var(--color-text-muted)]">{row.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mb-2 font-medium">라벨 자동 vs 직접 입력</p>
+        <Steps items={[
+          "기본은 자동 — 페이지/게시판 이름이 그대로 라벨로 표시됩니다",
+          "직접 다르게 표시하고 싶으면 'label_override' 체크 후 라벨 입력",
+          "원본(페이지·게시판) 이름이 바뀌면 자동 라벨은 자동 갱신, 직접 입력 라벨은 그대로 유지",
+        ]} />
+
+        <p className="mb-2 font-medium mt-4">사이드바 전용 설정 (그룹 단위)</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+          <li>• <strong>sidebar_image_url</strong> — 사이드바 상단에 표시되는 배너 이미지</li>
+          <li>• <strong>sidebar_width_px</strong> — 160~400px 범위. 모바일은 자동으로 가로 스크롤 칩으로 변환</li>
+          <li>• <strong>show_in_header</strong> 해제 시 헤더에서만 숨김 (사이드바에는 여전히 노출)</li>
+        </ul>
+
+        <p className="mb-2 font-medium mt-4">순서·이동·표시 제어</p>
+        <Steps items={[
+          "↑↓ 버튼으로 항목/그룹 순서 변경 (sort_order 자동 정규화)",
+          "항목의 '그룹 이동' 드롭다운으로 다른 그룹으로 이동 가능",
+          "is_active 해제 = 공개 메뉴에서 숨김. 관리자 페이지에서는 여전히 보임",
+        ]} />
+
+        <p className="mb-2 font-medium mt-4">자동 동기화 항목 (auto:*)</p>
+        <p className="text-xs text-[var(--color-text-muted)] mb-2">
+          새 게시판이나 분과(/admin/boards · /admin/content?tab=community)를 추가하면
+          해당 메뉴 항목이 <strong>자동으로 생성</strong>되어 적절한 그룹에 들어갑니다.
+          관리 화면에서 <code className="font-mono">auto:boards</code>, <code className="font-mono">auto:groups</code> 등의 뱃지로 표시됩니다.
+        </p>
+        <Tip>
+          원본(게시판·분과)을 삭제하면 자동 메뉴 항목도 함께 사라집니다.
+          자동 항목도 라벨·순서·그룹은 자유롭게 바꿀 수 있고, 그 설정은 보존됩니다.
+        </Tip>
+
+        <p className="mb-2 font-medium mt-4">자주 쓰는 흐름</p>
+        <Steps items={[
+          "정적 페이지 추가: /admin/pages 에서 페이지 생성 → 자동으로 메뉴 후보 등장 → /admin/menus에서 그룹 선택",
+          "외부 링크 추가: + 항목 추가 → link_type=외부 URL → https://… 입력 → 저장",
+          "그룹 새로 만들기: + 그룹 추가 → 키(영문)·라벨 입력 → 사이드바 이미지·폭 선택",
+          "메뉴에서 임시로 숨기기: 항목 행에서 is_active 체크 해제",
+        ]} />
+        <Warn>
+          한 페이지/게시판은 한 메뉴 항목에만 연결할 수 있습니다 (중복 등록 차단).
+          외부 URL은 같은 주소를 여러 곳에 두는 것이 허용됩니다.
+        </Warn>
+      </Accordion>
+
       <Accordion icon="🖼️" title="갤러리 관리" badge="/admin/gallery">
         <Steps items={[
           "상단에서 게시판 선택: 전례 사진(liturgy) 또는 행사 사진(photo)",
