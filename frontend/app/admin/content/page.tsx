@@ -46,6 +46,7 @@ interface CommunityGroup {
   activities: string | null;
   photo_urls: string[] | null;
   photo_display_mode: string | null;
+  representative_photo_url: string | null;
 }
 
 interface BoardOption { slug: string; name: string; }
@@ -667,7 +668,7 @@ function CommunityTab() {
               <option value="grid">사진 격자 (정적, 2열)</option>
             </select>
           </div>
-          <p className="text-xs text-gray-400">사진은 등록 후 수정 모드에서 추가하세요.</p>
+          <p className="text-xs text-gray-400">대표 이미지와 본문 사진은 추가 후 수정 모드에서 등록하세요.</p>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
       </section>
@@ -739,6 +740,7 @@ function CommunityTab() {
                     </select>
                   </div>
                 </div>
+                <CommunityRepPhotoManager group={g} onChange={load} />
                 <CommunityPhotoManager group={g} onChange={load} />
                 <div className="flex gap-2">
                   <button onClick={() => update(g.id)} disabled={loading} className={btnPrimary}>저장</button>
@@ -788,6 +790,74 @@ function CommunityTab() {
     </div>
   );
 }
+
+function CommunityRepPhotoManager({ group, onChange }: { group: CommunityGroup; onChange: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const rep = group.representative_photo_url;
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API}/api/content/community/${group.id}/representative-photo`, {
+        method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
+      });
+      if (res.ok) onChange();
+      else alert("대표사진 업로드 실패");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function remove() {
+    if (!confirm("대표사진을 삭제하시겠습니까?")) return;
+    const res = await fetch(`${API}/api/content/community/${group.id}/representative-photo`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) onChange();
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 bg-white">
+      <label className="block text-xs font-medium text-gray-600 mb-2">
+        대표 이미지 <span className="text-gray-400 font-normal">(/groups 목록의 원형 썸네일)</span>
+      </label>
+      <div className="flex items-start gap-3">
+        <div className="w-20 h-20 rounded-full border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+          {rep ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`${API}${rep}`} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-2xl text-gray-300">📷</span>
+          )}
+        </div>
+        <div className="flex-1 space-y-2">
+          <label className="inline-block px-3 py-1.5 text-xs border border-blue-300 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50">
+            {uploading ? "처리 중..." : rep ? "대표사진 변경" : "대표사진 등록"}
+            <input type="file" accept="image/*" onChange={upload} className="hidden" disabled={uploading} />
+          </label>
+          {rep && (
+            <button
+              type="button"
+              onClick={remove}
+              className="ml-2 px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg hover:bg-red-50"
+            >
+              삭제
+            </button>
+          )}
+          <p className="text-[11px] text-gray-400">
+            정사각형 사진 권장. 자동으로 원형 마스킹됩니다.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onChange: () => void }) {
   const [uploading, setUploading] = useState(false);

@@ -42,6 +42,7 @@ class CommunityGroup(Base):
     activities = Column(Text)            # 주요 활동 — 한 줄에 한 항목
     photo_urls = Column(ARRAY(Text))     # 분과 사진 URL 리스트
     photo_display_mode = Column(String(20), default="slideshow")  # 'slideshow' | 'grid'
+    representative_photo_url = Column(String(500), nullable=True)  # 카드 썸네일용 단일 대표 이미지
 
 
 class StaticPage(Base):

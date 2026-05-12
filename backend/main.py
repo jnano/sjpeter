@@ -155,6 +155,8 @@ def _migrate_add_columns():
             "ALTER TABLE visions ADD COLUMN IF NOT EXISTS body TEXT",
             # 성당 로고
             "ALTER TABLE parishes ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)",
+            # 분과/단체 대표 이미지 (카드 썸네일용)
+            "ALTER TABLE community_groups ADD COLUMN IF NOT EXISTS representative_photo_url VARCHAR(500)",
         ]:
             try:
                 conn.execute(text(ddl))

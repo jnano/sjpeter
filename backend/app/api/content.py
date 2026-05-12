@@ -162,6 +162,7 @@ class CommunityGroupOut(BaseModel):
     activities: Optional[str] = None
     photo_urls: Optional[list[str]] = None
     photo_display_mode: Optional[str] = "slideshow"
+    representative_photo_url: Optional[str] = None  # 카드 썸네일 (원형 이미지)
 
     class Config:
         from_attributes = True
@@ -219,6 +220,64 @@ def delete_community(group_id: int, db: Session = Depends(get_db), _: Admin = De
     db.delete(group)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/community/{group_id}/representative-photo", response_model=CommunityGroupOut)
+def upload_community_representative_photo(
+    group_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """단일 대표 이미지(카드 썸네일) 업로드. 기존 대표사진이 있으면 교체 + 파일 정리."""
+    group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+    folder = f"uploads/community/{group_id}"
+    os.makedirs(folder, exist_ok=True)
+    fname = f"rep_{uuid.uuid4().hex}{ext}"
+    path = os.path.join(folder, fname)
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+    # 기존 대표사진 파일 정리
+    old = group.representative_photo_url
+    if old and old.startswith("/uploads/"):
+        old_path = old.lstrip("/")
+        try:
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+        except Exception:
+            pass
+    group.representative_photo_url = f"/{path}"
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.delete("/community/{group_id}/representative-photo", response_model=CommunityGroupOut)
+def delete_community_representative_photo(
+    group_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    old = group.representative_photo_url
+    if old and old.startswith("/uploads/"):
+        old_path = old.lstrip("/")
+        try:
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+        except Exception:
+            pass
+    group.representative_photo_url = None
+    db.commit()
+    db.refresh(group)
+    return group
 
 
 @router.post("/community/{group_id}/photos", response_model=CommunityGroupOut)

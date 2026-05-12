@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.17";
+export const CURRENT_VERSION = "1.5.18";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.18", date: "2026-05-12", tag: "기능",
+    items: [
+      "분과·단체 대표 이미지 — community_groups.representative_photo_url 컬럼 + 업로드/삭제 API",
+      "/groups 카드 좌측에 원형 대표 이미지 표시 (없으면 ✝ 아이콘)",
+      "/admin/content?tab=community 수정 폼에 대표사진 업로드/변경/삭제 영역 추가",
+      "사이드바 hover popup 안정화 — 가로 스크롤 제거 + 동적 maxHeight로 viewport 끝단 접근 가능",
+    ],
+  },
   {
     version: "1.5.17", date: "2026-05-12", tag: "기능",
     items: [

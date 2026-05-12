@@ -16,6 +16,7 @@ export interface CommunityGroup {
   activities: string | null;
   photo_urls: string[] | null;
   photo_display_mode: string | null;
+  representative_photo_url: string | null;
 }
 
 export async function fetchGroups(): Promise<CommunityGroup[]> {

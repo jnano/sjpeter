@@ -5,6 +5,8 @@ import SectionLayout from "@/components/SectionLayout";
 import { fetchGroups } from "./GroupsLayout";
 import { fetchParishMin } from "@/lib/parish";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
@@ -29,27 +31,46 @@ export default async function GroupsPage() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
-            {topLevel.map((g) => (
-              <Link
-                key={g.id}
-                href={g.slug ? `/groups/${g.slug}` : "#"}
-                className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 hover:border-[var(--color-primary)] hover:shadow-sm transition-all block"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-[var(--color-accent)] text-xl mt-0.5">✝</span>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg mb-1">
-                      {g.name}
-                    </h3>
-                    {g.description && (
-                      <p className="text-sm text-[var(--color-text)] leading-relaxed">
-                        {g.description}
-                      </p>
-                    )}
+            {topLevel.map((g) => {
+              const repUrl = g.representative_photo_url
+                ? (g.representative_photo_url.startsWith("http")
+                    ? g.representative_photo_url
+                    : `${API}${g.representative_photo_url}`)
+                : null;
+              return (
+                <Link
+                  key={g.id}
+                  href={g.slug ? `/groups/${g.slug}` : "#"}
+                  className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 hover:border-[var(--color-primary)] hover:shadow-sm transition-all block"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* 원형 대표 이미지 (없으면 ✝ placeholder) */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center shrink-0">
+                      {repUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={repUrl}
+                          alt={g.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-[var(--color-accent)] text-2xl sm:text-3xl">✝</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-serif font-bold text-[var(--color-primary)] text-lg mb-1 truncate">
+                        {g.name}
+                      </h3>
+                      {g.description && (
+                        <p className="text-sm text-[var(--color-text)] leading-relaxed line-clamp-2">
+                          {g.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </SectionLayout>
