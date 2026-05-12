@@ -145,13 +145,30 @@ export default function OnboardingInterestsPage() {
         subtitle="관심 있는 분과·단체를 선택하면 해당 소식을 받아볼 수 있습니다."
       />
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-5 text-sm text-[var(--color-text)] leading-relaxed">
-          <p className="font-medium mb-1">
-            {isEditing ? "관심 분과·단체를 자유롭게 바꿔보세요" : "잠깐, 어디에 관심이 있으신가요?"}
-          </p>
-          <p className="text-[var(--color-text-muted)] text-xs">
-            단체를 선택하면 소속 분과는 자동으로 함께 등록됩니다. 언제든 마이페이지에서 다시 바꿀 수 있어요.
-          </p>
+        <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-5 text-sm text-[var(--color-text)] leading-relaxed flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium mb-1">
+              {isEditing ? "관심 분과·단체를 자유롭게 바꿔보세요" : "잠깐, 어디에 관심이 있으신가요?"}
+            </p>
+            <p className="text-[var(--color-text-muted)] text-xs">
+              단체를 선택하면 소속 분과는 자동으로 함께 등록됩니다. 언제든 마이페이지에서 다시 바꿀 수 있어요.
+            </p>
+            {!isEditing && (
+              <p className="text-[var(--color-text-muted)] text-xs mt-2">
+                이 창을 닫으시려면 관심분과를 선택하거나 “관심분과 선택 안함” 버튼을 누르세요.
+              </p>
+            )}
+          </div>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={submitting}
+              className="shrink-0 px-4 py-2 text-xs bg-white border border-[var(--color-border)] text-[var(--color-text-muted)] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              관심분과 선택 안함
+            </button>
+          )}
         </div>
 
         {tree.length === 0 ? (
