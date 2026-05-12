@@ -87,20 +87,22 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     const hasChildren = (item.children?.length ?? 0) > 0;
     const [hovered, setHovered] = React.useState(false);
     const [popupMaxH, setPopupMaxH] = React.useState<number>(440);
+    const [popupPos, setPopupPos] = React.useState<{ top: number; left: number } | null>(null);
     const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const liRef = React.useRef<HTMLLIElement>(null);
 
-    const recalcPopupHeight = () => {
+    const recalcPopupGeometry = () => {
       const rect = liRef.current?.getBoundingClientRect();
       if (!rect) return;
-      // popup이 항목 top 기준으로 펼쳐지므로, 그 위치에서 viewport 바닥까지의 높이로 제한
-      const available = window.innerHeight - rect.top - 24; // 하단 여유 24px
-      setPopupMaxH(Math.max(160, available));               // 최소 160px 보장
+      // popup은 fixed 좌표로 띄움 — 부모 sticky의 stacking context 영향 회피
+      setPopupPos({ top: rect.top, left: rect.right + 8 });
+      const available = window.innerHeight - rect.top - 24;
+      setPopupMaxH(Math.max(160, available));
     };
 
     const openPopup = () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-      recalcPopupHeight();
+      recalcPopupGeometry();
       setHovered(true);
     };
     const schedulePopupClose = () => {
@@ -136,10 +138,11 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
           {hasChildren && <span className="text-xs text-gray-400 shrink-0">▸</span>}
         </Link>
 
-        {/* hover 시 우측에 자식 레이어 띄우기 + 닫기 지연(200ms)으로 마우스 이동 가능 */}
-        {hasChildren && hovered && (
+        {/* hover 시 자식 레이어 — fixed로 띄워 부모 stacking context 영향 회피 */}
+        {hasChildren && hovered && popupPos && (
           <div
-            className="absolute top-0 left-full z-40 pl-2"
+            className="fixed z-[100]"
+            style={{ top: popupPos.top, left: popupPos.left }}
             onMouseEnter={openPopup}
             onMouseLeave={schedulePopupClose}
           >
