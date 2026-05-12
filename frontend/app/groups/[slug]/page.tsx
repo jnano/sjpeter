@@ -54,9 +54,19 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         <article className="space-y-8">
           {/* 분과명 + 설명 */}
           <header>
-            <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)] mb-3">
-              {group.name}
-            </h1>
+            <div className="flex items-center flex-wrap gap-3 mb-3">
+              <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)]">
+                {group.name}
+              </h1>
+              {group.board_slug && (
+                <Link
+                  href={`/boards/${group.board_slug}`}
+                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-full hover:bg-[var(--color-primary)]/5 transition-colors"
+                >
+                  게시판 보기 →
+                </Link>
+              )}
+            </div>
             {group.description && (
               <p className="text-sm text-[var(--color-text)] leading-relaxed whitespace-pre-line">
                 {group.description}
@@ -157,15 +167,6 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </section>
           )}
 
-          {/* 게시판 링크 */}
-          {group.board_slug && (
-            <Link
-              href={`/boards/${group.board_slug}`}
-              className="inline-flex items-center gap-1.5 text-sm px-4 py-2 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/5 transition-colors"
-            >
-              {group.name} 게시판 보기 →
-            </Link>
-          )}
         </article>
       </SectionLayout>
     </>
