@@ -47,9 +47,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: data.member.email,
           name: displayName,
           accessToken: data.access_token,
+          isAdmin: !!data.member.is_admin,
           remember,
           expiresIn: Number(data.expires_in) || 12 * 3600,
-        } as { id: string; email: string; name: string; accessToken: string; remember: boolean; expiresIn: number };
+        } as { id: string; email: string; name: string; accessToken: string; isAdmin: boolean; remember: boolean; expiresIn: number };
       },
     }),
   ],
@@ -78,6 +79,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             const data = await res.json();
             token.accessToken = data.access_token;
             token.memberId = data.member.id;
+            token.isAdmin = !!data.member.is_admin;
             token.name = data.member.name
               ? `${data.member.name}(${data.member.nickname})`
               : data.member.nickname;
@@ -94,9 +96,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       if (user && (user as { accessToken?: string }).accessToken) {
-        const u = user as { accessToken: string; remember?: boolean; expiresIn?: number };
+        const u = user as { accessToken: string; isAdmin?: boolean; remember?: boolean; expiresIn?: number };
         token.accessToken = u.accessToken;
         token.memberId = Number(user.id);
+        token.isAdmin = u.isAdmin ?? false;
         token.remember = u.remember ?? false;
         token.absoluteExpiry = Date.now() + (u.expiresIn ?? 12 * 3600) * 1000;
         return token;
@@ -116,6 +119,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.memberId = token.memberId as number;
+      (session as { isAdmin?: boolean }).isAdmin = (token.isAdmin as boolean) ?? false;
       (session as { remember?: boolean }).remember = (token.remember as boolean) ?? false;
       (session as { absoluteExpiry?: number }).absoluteExpiry =
         (token.absoluteExpiry as number) ?? 0;

@@ -110,13 +110,15 @@ export default function Header() {
                       >
                         마이페이지
                       </Link>
-                      <Link
-                        href="/admin"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] transition-colors"
-                      >
-                        관리페이지
-                      </Link>
+                      {(session as { isAdmin?: boolean })?.isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2.5 text-sm hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-primary)] transition-colors"
+                        >
+                          관리페이지
+                        </Link>
+                      )}
                     </div>
 
                     <div className="border-t border-[var(--color-border)]">
