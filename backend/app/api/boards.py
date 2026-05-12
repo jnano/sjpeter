@@ -303,7 +303,11 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     if not q:
         return SearchOut(results=[], content_results=[], total=0, page=page, limit=limit)
 
-    keyword = f"%{q}%"
+    # 공백 무시 매칭: 검색어와 검색 대상 모두 공백 제거 후 ILIKE
+    # → "구역 미사" 검색 시 "구역미사" 결과도, 반대도 매칭됨
+    q_compact = "".join(q.split())
+    keyword = f"%{q_compact}%"
+    NS = lambda col: func.replace(col, " ", "")  # noqa: E731
 
     # ── 게시글 검색 (paginated) ───────────────────────────
     base_query = (
@@ -313,7 +317,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
         .filter(Post.is_published == True)
-        .filter(or_(Post.title.ilike(keyword), Post.content.ilike(keyword)))
+        .filter(or_(NS(Post.title).ilike(keyword), NS(Post.content).ilike(keyword)))
         .order_by(desc(Post.created_at))
     )
     total = base_query.count()
@@ -345,7 +349,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     # 공지사항 (notices 별도 테이블) — 핀 우선·최신순
     for n in (
         db.query(Notice)
-        .filter(or_(Notice.title.ilike(keyword), Notice.content.ilike(keyword)))
+        .filter(or_(NS(Notice.title).ilike(keyword), NS(Notice.content).ilike(keyword)))
         .order_by(desc(Notice.is_pinned), desc(Notice.created_at))
         .all()
     ):
@@ -358,7 +362,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     for h in db.query(HistoryItem).filter(
-        or_(HistoryItem.event.ilike(keyword), HistoryItem.detail.ilike(keyword))
+        or_(NS(HistoryItem.event).ilike(keyword), NS(HistoryItem.detail).ilike(keyword))
     ).order_by(HistoryItem.sort_order).all():
         excerpt = _make_excerpt(h.detail or "", q) if h.detail else f"{h.year}년"
         content_results.append(ContentSearchItem(
@@ -368,7 +372,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             url="/history",
         ))
 
-    for v in db.query(Vision).filter(Vision.motto.ilike(keyword)).order_by(Vision.year.desc()).all():
+    for v in db.query(Vision).filter(NS(Vision.motto).ilike(keyword)).order_by(Vision.year.desc()).all():
         content_results.append(ContentSearchItem(
             type="vision", label="사목지표",
             title=v.motto,
@@ -377,7 +381,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     for g in db.query(CommunityGroup).filter(
-        or_(CommunityGroup.name.ilike(keyword), CommunityGroup.description.ilike(keyword))
+        or_(NS(CommunityGroup.name).ilike(keyword), NS(CommunityGroup.description).ilike(keyword))
     ).order_by(CommunityGroup.sort_order).all():
         content_results.append(ContentSearchItem(
             type="community", label="단체/분과",
@@ -391,7 +395,9 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         SELECT id, title, description, event_date, location, event_kind
         FROM events
         WHERE is_public = TRUE
-          AND (title ILIKE :kw OR description ILIKE :kw OR location ILIKE :kw)
+          AND (REPLACE(title, ' ', '') ILIKE :kw
+               OR REPLACE(COALESCE(description, ''), ' ', '') ILIKE :kw
+               OR REPLACE(COALESCE(location, ''), ' ', '') ILIKE :kw)
         ORDER BY event_date DESC
         LIMIT 50
     """), {"kw": keyword}).fetchall()
@@ -418,7 +424,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
         .filter(Board.members_only_read == False)
-        .filter(Comment.content.ilike(keyword))
+        .filter(NS(Comment.content).ilike(keyword))
         .order_by(desc(Comment.created_at))
         .limit(20)
         .all()

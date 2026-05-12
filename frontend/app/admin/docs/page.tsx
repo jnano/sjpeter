@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.23";
-export const LAST_UPDATED = "2026-05-12";
+export const CURRENT_VERSION = "1.5.24";
+export const LAST_UPDATED = "2026-05-13";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.24", date: "2026-05-13", tag: "수정",
+    items: [
+      "통합검색 공백 무시 매칭 — '구역 미사' = '구역미사' 동일 결과",
+      "검색어와 검색 대상 모두 공백 제거 후 ILIKE (posts/notices/history/vision/community/comments/events)",
+    ],
+  },
   {
     version: "1.5.23", date: "2026-05-12", tag: "기능",
     items: [
