@@ -386,6 +386,29 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             url=g.link_url or "/community",
         ))
 
+    # 행사·캘린더 (events는 raw SQL — ORM 모델 없음)
+    event_rows = db.execute(text("""
+        SELECT id, title, description, event_date, location, event_kind
+        FROM events
+        WHERE is_public = TRUE
+          AND (title ILIKE :kw OR description ILIKE :kw OR location ILIKE :kw)
+        ORDER BY event_date DESC
+        LIMIT 50
+    """), {"kw": keyword}).fetchall()
+    for ev in event_rows:
+        date_str = ev.event_date.strftime("%Y-%m-%d") if ev.event_date else ""
+        kind = ev.event_kind or "행사"
+        excerpt = _make_excerpt(ev.description or "", q) if ev.description else (ev.location or "")
+        title = f"[{kind}] {ev.title}"
+        if date_str:
+            title = f"{date_str} {title}"
+        content_results.append(ContentSearchItem(
+            type="event", label="행사·캘린더",
+            title=title,
+            excerpt=excerpt,
+            url="/calendar",
+        ))
+
     # ── 댓글 검색 ──────────────────────────────────────────
     comment_rows = (
         db.query(Comment)

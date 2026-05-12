@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.21";
+export const CURRENT_VERSION = "1.5.22";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.22", date: "2026-05-12", tag: "수정",
+    items: [
+      "통합검색에 행사·캘린더 결과 포함 — events 테이블의 title/description/location ILIKE 매칭",
+      "결과 라벨 '행사·캘린더' + 날짜·종류(행사/모임) 뱃지 표시, 클릭 시 /calendar 이동",
+    ],
+  },
   {
     version: "1.5.21", date: "2026-05-12", tag: "수정",
     items: [
