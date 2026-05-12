@@ -110,18 +110,18 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
           href={item.href}
           target={item.is_external ? "_blank" : undefined}
           rel={item.is_external ? "noopener noreferrer" : undefined}
-          className={`flex items-center justify-between py-2.5 text-sm transition-colors ${
+          className={`flex items-center justify-between gap-2 py-2.5 text-sm transition-colors ${
             active || childActive
               ? "text-[var(--color-primary)] font-bold"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
           }`}
           aria-current={active ? "page" : undefined}
         >
-          <span>
+          <span className="truncate min-w-0">
             {item.label}
             {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
           </span>
-          {hasChildren && <span className="text-xs text-gray-400">▸</span>}
+          {hasChildren && <span className="text-xs text-gray-400 shrink-0">▸</span>}
         </Link>
 
         {/* hover 시 우측에 자식 레이어 띄우기 + 닫기 지연(200ms)으로 마우스 이동 가능 */}
