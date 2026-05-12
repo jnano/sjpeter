@@ -362,19 +362,23 @@ export default function MypagePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!session?.accessToken) return;
-    const headers = { Authorization: `Bearer ${session.accessToken}` };
+    const token = session?.accessToken;
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}` };
+    const safeJson = async (r: Response) => (r.ok ? r.json() : null);
     Promise.all([
-      fetch(`${API}/api/members/me`, { headers }).then((r) => r.json()),
-      fetch(`${API}/api/members/me/posts`, { headers }).then((r) => r.json()),
-      fetch(`${API}/api/members/me/comments`, { headers }).then((r) => r.json()),
+      fetch(`${API}/api/members/me`, { headers }).then(safeJson).catch(() => null),
+      fetch(`${API}/api/members/me/posts`, { headers }).then(safeJson).catch(() => null),
+      fetch(`${API}/api/members/me/comments`, { headers }).then(safeJson).catch(() => null),
     ]).then(([memberData, postsData, commentsData]) => {
-      setMember(memberData);
+      if (memberData && typeof memberData === "object" && memberData.id) {
+        setMember(memberData);
+      }
       setPosts(Array.isArray(postsData) ? postsData : []);
       setComments(Array.isArray(commentsData) ? commentsData : []);
       setLoading(false);
     });
-  }, [session]);
+  }, [session?.accessToken]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -496,7 +500,7 @@ export default function MypagePage() {
                       className="w-20 h-20 rounded-full object-cover border-2 border-[var(--color-border)]" />
                   ) : (
                     <div className="w-20 h-20 rounded-full bg-[var(--color-primary)]/15 flex items-center justify-center text-3xl font-bold text-[var(--color-primary)]">
-                      {(member.name ?? member.nickname)[0]}
+                      {(member.name ?? member.nickname ?? "?").charAt(0)}
                     </div>
                   )}
                   <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
