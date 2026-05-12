@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -88,8 +89,11 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     const [hovered, setHovered] = React.useState(false);
     const [popupMaxH, setPopupMaxH] = React.useState<number>(440);
     const [popupPos, setPopupPos] = React.useState<{ top: number; left: number } | null>(null);
+    const [mounted, setMounted] = React.useState(false);
     const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const liRef = React.useRef<HTMLLIElement>(null);
+
+    React.useEffect(() => setMounted(true), []);
 
     const recalcPopupGeometry = () => {
       const rect = liRef.current?.getBoundingClientRect();
@@ -138,10 +142,10 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
           {hasChildren && <span className="text-xs text-gray-400 shrink-0">▸</span>}
         </Link>
 
-        {/* hover 시 자식 레이어 — fixed로 띄워 부모 stacking context 영향 회피 */}
-        {hasChildren && hovered && popupPos && (
+        {/* hover 시 자식 레이어 — React Portal로 body에 마운트해 부모 stacking context 완전 회피 */}
+        {hasChildren && hovered && popupPos && mounted && createPortal(
           <div
-            className="fixed z-[100]"
+            className="fixed z-[9999]"
             style={{ top: popupPos.top, left: popupPos.left }}
             onMouseEnter={openPopup}
             onMouseLeave={schedulePopupClose}
@@ -171,7 +175,8 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
               })}
             </ul>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </li>
     );
