@@ -5,31 +5,90 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.6.0";
+export const CURRENT_VERSION = "1.5.9";
 export const LAST_UPDATED = "2026-05-12";
 
+// 버전 규칙:
+// - 모든 변경은 patch +1로 누적 (기능/수정 무관)
+// - tag로 성격 구분: "기능" | "수정" | "디자인" | "인프라"
+// - minor bump (1.5 → 1.6)는 큰 마일스톤에서만
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
   {
-    version: "1.6.0", date: "2026-05-12", tag: "기능",
+    version: "1.5.9", date: "2026-05-12", tag: "기능",
     items: [
-      "회원 관심 분과·단체 시스템 — 가입 후 첫 로그인 시 /onboarding/interests 자동 안내, 마이페이지 섹션, /groups/[slug] 관심 등록 패널",
-      "단체 선택 시 부모 분과 자동 포함 (트리 워크업) + 분과 해제 시 등록된 소속단체 함께 해제 confirm",
-      "카톡 알림 수신 동의 토글 추가 (글로벌 1개, members.notify_kakao) — 발송은 채널 개설 후 활성화",
-      "위임 관리자 해제된 회원에게 헤더 '관리페이지' 링크 노출 차단 — SessionSync로 권한 변경 즉시 반영",
+      "회원 관심 분과·단체 시스템 — 가입 후 첫 로그인 시 /onboarding/interests 자동 안내",
+      "단체 선택 시 부모 분과 자동 포함, 분과 해제 시 등록된 소속단체 함께 해제 confirm",
+      "마이페이지 섹션 + /groups/[slug] 관심 등록 패널 + 카톡 알림 수신 동의 (발송은 채널 개설 후)",
+      "마이페이지 일시적 오류 수정 (SessionSync deps 무한 루프 → 429 → TypeError)",
+    ],
+  },
+  {
+    version: "1.5.8", date: "2026-05-12", tag: "기능",
+    items: [
       "세션 만료 정책 정비 — 기본 12시간 + idle 30분 자동 로그아웃, '로그인 상태 유지' 체크 시 7일",
-      "마이페이지 일시적 오류 수정 (SessionSync deps 무한 루프 + 429 후속 TypeError)",
+      "위임 관리자 해제된 회원에게 헤더 '관리페이지' 링크 노출 차단",
+      "SessionSync로 권한 변경 즉시 동기화 (재로그인 없이 반영)",
+    ],
+  },
+  {
+    version: "1.5.7", date: "2026-05-11", tag: "수정",
+    items: [
+      "데스크톱 사이드바 sticky 고정 + 페이지 로드 시 위치 즉시 고정",
+      "게시판 글 상세·동적 페이지에 SectionLayout 적용 — 사이드바 메뉴 자동 노출",
+    ],
+  },
+  {
+    version: "1.5.6", date: "2026-05-11", tag: "기능",
+    items: [
+      "동적 페이지 시스템 — 코드 없이 관리자에서 페이지 생성 + 레이아웃 선택",
+    ],
+  },
+  {
+    version: "1.5.5", date: "2026-05-10", tag: "수정",
+    items: [
+      "메뉴 시스템 안정화 — 한글 IME 조합 깨짐, sort_order 자동 정규화, reorder 엔드포인트 충돌",
+      "외부 링크 여부(is_external) href 편집 시 자동 동기화",
+      "삭제된 source의 auto menu_item 물리 삭제 + auto:* 뱃지 표시",
+      "boards-list 500 에러 해결, ai-extract 게시판 메뉴에서 숨김",
+    ],
+  },
+  {
+    version: "1.5.4", date: "2026-05-10", tag: "기능",
+    items: [
+      "메뉴 관리 시스템 — Header/Sidebar 동적 통합, 백엔드 메뉴 인프라 (/admin/menus)",
+      "3-deep 트리 메뉴 + 메가메뉴 + 2-row 모바일 칩",
+      "게시판/분과 자동 메뉴 동기화 (link_type 기반 3-way: 페이지·게시판·외부 URL)",
+      "SSR fetch + MenusProvider context로 FOUC 제거",
+    ],
+  },
+  {
+    version: "1.5.3", date: "2026-05-09", tag: "수정",
+    items: [
+      "분과 페이지 모바일 레이아웃 보정 — 사이드바 칩 변환, 사진 2열 유지, 칩 nav sticky 위치 정정",
+    ],
+  },
+  {
+    version: "1.5.2", date: "2026-05-09", tag: "기능",
+    items: [
+      "분과·단체 시스템 — 트리(분과 → 소속단체) + 상세 페이지 (/groups, /groups/[slug])",
+      "분과별 사진 표시 방식 선택 (슬라이드쇼 / 격자), 1장 업로드 시 가로 전체 16:9",
+    ],
+  },
+  {
+    version: "1.5.1", date: "2026-05-08", tag: "수정",
+    items: [
+      "9개 관리자 페이지 다중 선택 + 일괄 삭제 UI 모바일 보정",
     ],
   },
   {
     version: "1.5.0", date: "2026-05-08", tag: "기능",
     items: [
-      "본당 출신 사제 공개 페이지·관리 페이지 추가 (/priests, /admin/priests)",
-      "역대 사목자 관리 페이지 추가 (/admin/pastors)",
-      "갤러리 liturgy 게시판 DB 등록",
-      "주보 페이지 카카오 공유 버튼 추가",
-      "기술문서·도움말 페이지 추가 (/admin/docs — 현재 페이지)",
+      "본당 인물 아카이브 — 역대 사목자(/admin/pastors), 본당 출신 사제(/priests, /admin/priests)",
+      "9개 관리자 페이지에 다중 선택·일괄 삭제 패턴 통일",
+      "게시판별 게시글 인라인 다중 선택·일괄 삭제",
+      "주보 페이지 카카오 공유 버튼 + 기술문서·도움말 페이지 (/admin/docs)",
     ],
   },
   {
@@ -665,9 +724,17 @@ function ChangelogTab() {
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-[var(--color-text-muted)] mb-4">
-        새 버전 배포 시 <code className="font-mono">frontend/app/admin/docs/page.tsx</code> 상단의 <code className="font-mono">CHANGELOG</code> 배열에 항목을 추가하세요.
-      </p>
+      <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-3 text-xs text-[var(--color-text)] space-y-1">
+        <p className="font-semibold text-[var(--color-primary)]">버전 규칙</p>
+        <ul className="space-y-0.5 text-[var(--color-text-muted)]">
+          <li>· 모든 변경은 <strong>patch +1</strong>로 누적합니다 (기능·수정 모두)</li>
+          <li>· <span className="inline-block px-1 rounded bg-blue-100 text-blue-700">기능</span> / <span className="inline-block px-1 rounded bg-red-100 text-red-700">수정</span> 태그로 성격 구분</li>
+          <li>· minor bump(1.5 → 1.6)는 큰 마일스톤에서만</li>
+        </ul>
+        <p className="text-[var(--color-text-muted)] pt-1 border-t border-[var(--color-border)] mt-1">
+          새 항목은 <code className="font-mono">frontend/app/admin/docs/page.tsx</code> 상단 <code className="font-mono">CHANGELOG</code> 배열 맨 앞에 추가하세요.
+        </p>
+      </div>
       {CHANGELOG.map((v, i) => (
         <div key={v.version} className="flex gap-4">
           {/* 타임라인 선 */}
