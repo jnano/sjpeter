@@ -59,6 +59,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (trigger === "update") {
         if (session?.picture !== undefined) token.picture = session.picture;
         if (session?.name !== undefined) token.name = session.name;
+        // 보안: 클라이언트는 동기화 요청만 보내고, 실제 is_admin은 백엔드에 재조회한다
+        if (session?.refreshAdmin === true && token.accessToken) {
+          try {
+            const res = await fetch(`${API}/api/members/me`, {
+              headers: { Authorization: `Bearer ${token.accessToken as string}` },
+            });
+            if (res.ok) {
+              const m = await res.json();
+              token.isAdmin = !!m.is_admin;
+            } else if (res.status === 401 || res.status === 403) {
+              token.isAdmin = false;
+            }
+          } catch {}
+        }
         return token;
       }
 

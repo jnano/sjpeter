@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SessionProvider from "@/components/SessionProvider";
 import SessionTimeout from "@/components/SessionTimeout";
+import SessionSync from "@/components/SessionSync";
 import { MenusProvider } from "@/components/MenusProvider";
 import { fetchServerMenus } from "@/components/fetchServerMenus";
 
@@ -58,6 +59,7 @@ export default async function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <SessionTimeout />
+            <SessionSync />
           </MenusProvider>
         </SessionProvider>
       </body>
