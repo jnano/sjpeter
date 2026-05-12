@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { fetchParishMin } from "@/lib/parish";
 
-export const metadata: Metadata = {
-  title: "사이트맵",
-  description: "세종성베드로성당 홈페이지 전체 페이지 안내",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "사이트맵", description: `${p.name} 홈페이지 전체 페이지 안내` };
+}
 
 const sections = [
   {
@@ -66,12 +67,13 @@ const sections = [
   },
 ];
 
-export default function SitemapPage() {
+export default async function SitemapPage() {
+  const p = await fetchParishMin();
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-10">
         <p className="text-xs tracking-wide text-[var(--color-text-muted)] mb-3">
-          세종성베드로성당
+          {p.name}
           <span className="mx-1.5 opacity-40">›</span>
           사이트맵
         </p>

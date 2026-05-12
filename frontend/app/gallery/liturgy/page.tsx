@@ -3,12 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "전례 사진",
-  description: "세종성베드로성당 전례 사진 모음",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "전례 사진", description: `${p.name} 전례 사진 모음` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const BOARD_SLUG = "liturgy";

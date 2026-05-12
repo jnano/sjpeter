@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
-export const metadata: Metadata = {
-  title: "사목평의회",
-  description: "세종성베드로성당 사목평의회 조직도 및 구성원 소개",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "사목평의회", description: `${p.name} 사목평의회 조직도 및 구성원 소개` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 

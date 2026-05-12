@@ -9,7 +9,14 @@ import { useNavigation } from "./useNavigation";
 
 interface Breadcrumb { group: string; title: string }
 
-export default function Header() {
+interface HeaderProps {
+  parishName?: string;
+  logoUrl?: string | null;
+}
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export default function Header({ parishName = "세종성베드로성당", logoUrl = null }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -166,10 +173,18 @@ export default function Header() {
           {/* 로고 + 스크롤 breadcrumb */}
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-              <span className="text-[var(--color-accent)] text-2xl leading-none">✝</span>
+              {logoUrl ? (
+                <img
+                  src={logoUrl.startsWith("http") ? logoUrl : `${API}${logoUrl}`}
+                  alt={parishName}
+                  className="h-8 w-8 object-contain"
+                />
+              ) : (
+                <span className="text-[var(--color-accent)] text-2xl leading-none">✝</span>
+              )}
               <div>
                 <div className="font-serif font-bold text-lg leading-tight tracking-tight text-[var(--color-primary)]">
-                  세종성베드로성당
+                  {parishName}
                 </div>
                 {/* 모바일: 스크롤 시 서브타이틀 → 페이지 제목으로 전환 */}
                 <div className="relative text-xs leading-none h-[1.1em] overflow-hidden">

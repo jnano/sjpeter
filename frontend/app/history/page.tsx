@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "우리의 역사",
-  description: "세종성베드로성당 창립부터 현재까지의 연표",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "우리의 역사", description: `${p.name} 창립부터 현재까지의 연표` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -31,11 +32,11 @@ async function getHistory(): Promise<HistoryItem[]> {
 }
 
 export default async function HistoryPage() {
-  const historyItems = await getHistory();
+  const [historyItems, p] = await Promise.all([getHistory(), fetchParishMin()]);
 
   return (
     <>
-      <PageHeader group="성당 소개" title="본당 연혁" subtitle="현재부터 창립까지 — 세종성베드로성당의 역사" />
+      <PageHeader group="성당 소개" title="본당 연혁" subtitle={`현재부터 창립까지 — ${p.name}의 역사`} />
       <SectionLayout group="about">
 
       <div className="relative">

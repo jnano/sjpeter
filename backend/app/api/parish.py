@@ -57,6 +57,7 @@ class ParishOut(BaseModel):
     cafe_url: Optional[str]
     band_url: Optional[str]
     description: Optional[str]
+    logo_url: Optional[str] = None
     member_count: Optional[int]
     founded_at: Optional[date]
     about_photo_url: Optional[str]
@@ -95,6 +96,7 @@ def _parish_to_out(parish: Parish) -> ParishOut:
         member_count=parish.member_count,
         founded_at=parish.founded_at,
         about_photo_url=parish.about_photo_url,
+        logo_url=parish.logo_url,
         mass_schedule=schedule,
     )
 
@@ -185,4 +187,59 @@ def delete_about_photo(
     db.commit()
     db.refresh(parish)
 
+    return _parish_to_out(parish)
+
+
+# ──────────────────────────── 성당 로고 ────────────────────────────
+
+@router.post("/logo/upload", response_model=ParishOut)
+async def upload_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in PHOTO_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+    data = await file.read()
+    if len(data) > PHOTO_MAX_SIZE:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
+
+    logo_dir = os.path.join(settings.UPLOAD_DIR, "logos")
+    os.makedirs(logo_dir, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    with open(os.path.join(logo_dir, filename), "wb") as f:
+        f.write(data)
+
+    parish = _get_parish(db)
+    if parish.logo_url and parish.logo_url.startswith("/uploads/logos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.logo_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    parish.logo_url = f"/uploads/logos/{filename}"
+    db.commit()
+    db.refresh(parish)
+    return _parish_to_out(parish)
+
+
+@router.delete("/logo", response_model=ParishOut)
+def delete_logo(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    parish = _get_parish(db)
+    if parish.logo_url and parish.logo_url.startswith("/uploads/logos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.logo_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    parish.logo_url = None
+    db.commit()
+    db.refresh(parish)
     return _parish_to_out(parish)

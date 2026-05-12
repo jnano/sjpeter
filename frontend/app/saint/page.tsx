@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
-export const metadata: Metadata = {
-  title: "성 베드로",
-  description: "세종성베드로성당의 주보성인 성 베드로 사도의 생애",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "성 베드로", description: `${p.name}의 주보성인 성 베드로 사도의 생애` };
+}
 
 interface Bubble { who: string; text: string; }
 interface Scene {
@@ -121,13 +122,14 @@ const scenes: Scene[] = [
   },
 ];
 
-export default function SaintPage() {
+export default async function SaintPage() {
+  const p = await fetchParishMin();
   return (
     <>
       <PageHeader
         group="성당 소개"
         title="성 베드로"
-        subtitle="세종성베드로성당의 주보성인 — 시몬 베드로의 일대기"
+        subtitle={`${p.name}의 주보성인 — 시몬 베드로의 일대기`}
       />
 
       <SectionLayout group="about">

@@ -17,6 +17,7 @@ class Parish(Base):
     description = Column(Text)
     member_count = Column(Integer, nullable=True)            # 신자 수
     about_photo_url = Column(String(500))  # /about 페이지 안내 옆 사진
+    logo_url = Column(String(500))         # 헤더·푸터·메타 로고
     mass_schedule = Column(Text)  # JSON 문자열로 저장
     fax = Column(String(20))
     cafe_url = Column(String(500))

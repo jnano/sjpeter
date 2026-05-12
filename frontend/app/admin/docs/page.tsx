@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.14";
+export const CURRENT_VERSION = "1.5.15";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.15", date: "2026-05-12", tag: "기능",
+    items: [
+      "성당 기본 정보 동적화 — /admin/parish에 성당명 입력 폼 + 로고 업로드/삭제 폼 추가",
+      "parishes.logo_url 컬럼 + POST/DELETE /api/parish/logo 엔드포인트",
+      "Header 로고/성당명 동적화 — 로고 등록 시 ✝ 자리에 이미지, 텍스트는 parish.name",
+      "lib/parish.ts 공통 헬퍼(React cache) — Header·Footer·layout·22개 페이지가 동일 데이터 공유",
+      "layout.tsx + 22개 페이지를 generateMetadata로 전환 — 성당명 변경 시 모든 메타/본문 즉시 반영",
+      "PageHeader subtitle 하드코딩 일괄 정리 (saint/history/sisters/priests/pastors/info)",
+      "주보 카카오 공유 제목·about alt·info 버스 안내도 동적 성당명 사용",
+    ],
+  },
   {
     version: "1.5.14", date: "2026-05-12", tag: "기능",
     items: [

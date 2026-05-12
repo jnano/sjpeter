@@ -30,6 +30,7 @@ interface ParishInfo {
   cafe_url: string | null;
   band_url: string | null;
   about_photo_url: string | null;
+  logo_url: string | null;
   mass_schedule: MassSchedule | null;
 }
 
@@ -61,6 +62,8 @@ export default function AdminParishPage() {
 
   const [aboutPhotoLoading, setAboutPhotoLoading] = useState(false);
   const aboutFileInputRef = useRef<HTMLInputElement>(null);
+  const [logoLoading, setLogoLoading] = useState(false);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`${API}/api/parish/`).then((r) => r.json()).then((data: ParishInfo) => {
@@ -90,6 +93,52 @@ export default function AdminParishPage() {
       await fetch("/api/revalidate?tag=parish", { method: "POST" });
     } finally {
       setAboutPhotoLoading(false);
+    }
+  }
+
+  async function uploadLogo(file: File) {
+    setLogoLoading(true);
+    setError("");
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`${API}/api/parish/logo/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || "로고 업로드에 실패했습니다.");
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setLogoLoading(false);
+    }
+  }
+
+  async function deleteLogo() {
+    if (!confirm("성당 로고를 삭제하시겠습니까? 헤더에는 기본 ✝ 아이콘이 표시됩니다.")) return;
+    setLogoLoading(true);
+    setError("");
+    const token = getToken();
+    try {
+      const res = await fetch(`${API}/api/parish/logo`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || "삭제에 실패했습니다.");
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setLogoLoading(false);
     }
   }
 
@@ -218,6 +267,75 @@ export default function AdminParishPage() {
         {/* 기본 정보 */}
         <section className="p-6 bg-white border border-gray-200 rounded-xl space-y-4">
           <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">기본 정보</h2>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">성당명</label>
+            <input
+              value={info.name ?? ""}
+              onChange={(e) => setInfo((p) => p && ({ ...p, name: e.target.value }))}
+              className={`w-full ${inputCls}`}
+              placeholder="세종성베드로성당"
+              required
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              헤더 로고 옆 이름, 푸터, 페이지 제목·메타데이터에 표시됩니다.
+            </p>
+          </div>
+
+          {/* 로고 */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/40">
+            <label className="block text-sm font-medium mb-2">성당 로고</label>
+            <div className="flex items-start gap-4">
+              <div className="w-20 h-20 rounded-xl border border-gray-200 bg-white flex items-center justify-center overflow-hidden shrink-0">
+                {info.logo_url ? (
+                  <img
+                    src={info.logo_url.startsWith("http") ? info.logo_url : `${API}${info.logo_url}`}
+                    alt="로고"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-3xl text-gray-300">✝</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  ref={logoFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadLogo(f);
+                    if (logoFileInputRef.current) logoFileInputRef.current.value = "";
+                  }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    disabled={logoLoading}
+                    className="px-3 py-1.5 text-sm border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    {logoLoading ? "처리 중..." : info.logo_url ? "로고 변경" : "로고 등록"}
+                  </button>
+                  {info.logo_url && (
+                    <button
+                      type="button"
+                      onClick={deleteLogo}
+                      disabled={logoLoading}
+                      className="px-3 py-1.5 text-sm border border-red-300 text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  권장: 정사각형 PNG/SVG, 1MB 이하. 헤더와 푸터에 자동으로 표시됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">주소</label>
             <input

@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 // admin에서 변경한 데이터가 새로고침 없이 반영되도록 SSR 강제
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "본당 출신 사제",
-  description: "세종성베드로성당에서 탄생한 사제들",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "본당 출신 사제", description: `${p.name}에서 탄생한 사제들` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -37,11 +38,11 @@ function formatDate(iso: string): string {
 }
 
 export default async function PriestsPage() {
-  const priests = await getPriests();
+  const [priests, p] = await Promise.all([getPriests(), fetchParishMin()]);
 
   return (
     <>
-      <PageHeader group="성당 소개" title="본당 출신 사제" subtitle="세종성베드로성당에서 성소의 씨앗이 자라난 분들" />
+      <PageHeader group="성당 소개" title="본당 출신 사제" subtitle={`${p.name}에서 성소의 씨앗이 자라난 분들`} />
       <SectionLayout group="about">
         {priests.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">

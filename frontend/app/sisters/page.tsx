@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "역대 수녀님",
-  description: "세종성베드로성당을 거쳐 가신 수녀님들",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "역대 수녀님", description: `${p.name}을 거쳐 가신 수녀님들` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -42,11 +43,11 @@ function formatPeriod(appointed: string | null, resigned: string | null): string
 }
 
 export default async function SistersPage() {
-  const sisters = await getSisters();
+  const [sisters, p] = await Promise.all([getSisters(), fetchParishMin()]);
 
   return (
     <>
-      <PageHeader group="성당 소개" title="역대 수녀님" subtitle="세종성베드로성당을 거쳐 가신 수녀님들" />
+      <PageHeader group="성당 소개" title="역대 수녀님" subtitle={`${p.name}을 거쳐 가신 수녀님들`} />
       <SectionLayout group="about">
         {sisters.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">

@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import MarkdownContent from "@/components/MarkdownContent";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "사목지표",
-  description: "세종성베드로성당 역대 사목지표",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "사목지표", description: `${p.name} 역대 사목지표` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 

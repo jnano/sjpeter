@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import KakaoMap from "./KakaoMap";
+import { fetchParishMin } from "@/lib/parish";
 
-export const metadata: Metadata = {
-  title: "오시는 길",
-  description: "세종성베드로성당 찾아오시는 길 — 주소, 연락처, 지도",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "오시는 길", description: `${p.name} 찾아오시는 길 — 주소, 연락처, 지도` };
+}
 
 // 좌표가 바뀌면 바로 반영돼야 하므로 캐시하지 않는다
 export const dynamic = "force-dynamic";
@@ -69,7 +70,7 @@ export default async function InfoPage() {
 
   return (
     <>
-      <PageHeader group="성당 소개" title="찾아오시는 길" subtitle="세종성베드로성당을 찾아오시는 방법" />
+      <PageHeader group="성당 소개" title="찾아오시는 길" subtitle={`${name}을 찾아오시는 방법`} />
       <SectionLayout group="about">
 
       <div className="mb-6">
@@ -217,7 +218,7 @@ export default async function InfoPage() {
             <div>
               <p className="font-medium mb-1">🚌 버스</p>
               <p className="text-[var(--color-text-muted)] leading-relaxed">
-                ○○번, ○○번 이용 → 세종성베드로성당 정류장 하차
+                ○○번, ○○번 이용 → {name} 정류장 하차
               </p>
             </div>
             <div>

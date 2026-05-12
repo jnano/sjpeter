@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "성당 소개",
-  description: "세종성베드로성당 소개 — 세종시 최초 본당",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "성당 소개", description: `${p.name} 소개 — 세종시 최초 본당` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -106,7 +107,7 @@ export default async function AboutPage() {
         <div className="md:col-span-2 relative w-full aspect-[4/3] md:aspect-auto md:min-h-[280px] rounded-xl overflow-hidden">
           <Image
             src={parish?.about_photo_url ? `${API}${parish.about_photo_url}` : "/yakhoun.jpg"}
-            alt="세종성베드로성당"
+            alt={parish?.name ?? "세종성베드로성당"}
             fill
             className="object-cover"
             style={{ objectPosition: "center 30%" }}

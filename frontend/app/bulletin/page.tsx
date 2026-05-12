@@ -3,12 +3,13 @@ import type { Bulletin } from "@/lib/api";
 import BulletinClient from "./BulletinClient";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "주보",
-  description: "세종성베드로성당 주보 — 이번 주 주보와 지난 주보 아카이브",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "주보", description: `${p.name} 주보 — 이번 주 주보와 지난 주보 아카이브` };
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -36,12 +37,12 @@ async function getKakaoKey(): Promise<string> {
 }
 
 export default async function BulletinPage() {
-  const [bulletins, kakaoKey] = await Promise.all([getBulletins(), getKakaoKey()]);
+  const [bulletins, kakaoKey, p] = await Promise.all([getBulletins(), getKakaoKey(), fetchParishMin()]);
   return (
     <>
       <PageHeader group="말씀과 기도" title="주보 아카이브" subtitle="이번 주 주보와 지난 주보를 한 자리에서 만납니다" />
       <SectionLayout group="word">
-        <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} />
+        <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} parishName={p.name} />
       </SectionLayout>
     </>
   );

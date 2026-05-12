@@ -3,12 +3,13 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import { fetchGroups } from "./GroupsLayout";
+import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "분과와 단체",
-  description: "세종성베드로성당 각 분과 및 단체 소개",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const p = await fetchParishMin();
+  return { title: "분과와 단체", description: `${p.name} 각 분과 및 단체 소개` };
+}
 
 export default async function GroupsPage() {
   const groups = await fetchGroups();

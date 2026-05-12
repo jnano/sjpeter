@@ -153,6 +153,8 @@ def _migrate_add_columns():
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",
             # 사목지표 본문 (모토 + 상세 설명)
             "ALTER TABLE visions ADD COLUMN IF NOT EXISTS body TEXT",
+            # 성당 로고
+            "ALTER TABLE parishes ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)",
         ]:
             try:
                 conn.execute(text(ddl))

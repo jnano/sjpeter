@@ -7,6 +7,7 @@ import SectionLayout from "@/components/SectionLayout";
 import { fetchGroups, type CommunityGroup } from "../GroupsLayout";
 import CommunitySlideshow from "./CommunitySlideshow";
 import GroupInterestSection from "./GroupInterestSection";
+import { fetchParishMin } from "@/lib/parish";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -24,10 +25,10 @@ async function fetchGroupBySlug(slug: string): Promise<CommunityGroup | null> {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const g = await fetchGroupBySlug(slug);
+  const [g, p] = await Promise.all([fetchGroupBySlug(slug), fetchParishMin()]);
   return {
     title: g ? `${g.name} | 분과와 단체` : "분과와 단체",
-    description: g?.description ?? "세종성베드로성당 분과 소개",
+    description: g?.description ?? `${p.name} 분과 소개`,
   };
 }
 

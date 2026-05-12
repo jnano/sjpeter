@@ -18,14 +18,14 @@ const SAMPLE_BULLETINS: Bulletin[] = [
   },
 ];
 
-function shareToKakao(b: Bulletin, kakaoKey: string) {
+function shareToKakao(b: Bulletin, kakaoKey: string, parishName: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const kakao = (window as any).Kakao;
   if (!kakao?.isInitialized()) return;
   kakao.Share.sendDefault({
     objectType: "feed",
     content: {
-      title: b.issue_number ? `세종성베드로성당 주보 제${b.issue_number}호` : "세종성베드로성당 주보",
+      title: b.issue_number ? `${parishName} 주보 제${b.issue_number}호` : `${parishName} 주보`,
       description: [b.liturgical_season, b.gospel_reference].filter(Boolean).join(" · ") || "이번 주 주보를 확인하세요",
       imageUrl: "https://t1.kakaocdn.net/kakao_js_sdk/1.1/kakao_thumbnail.png",
       link: { mobileWebUrl: window.location.href, webUrl: window.location.href },
@@ -36,7 +36,15 @@ function shareToKakao(b: Bulletin, kakaoKey: string) {
   });
 }
 
-export default function BulletinClient({ bulletins, kakaoKey = "" }: { bulletins: Bulletin[]; kakaoKey?: string }) {
+export default function BulletinClient({
+  bulletins,
+  kakaoKey = "",
+  parishName = "세종성베드로성당",
+}: {
+  bulletins: Bulletin[];
+  kakaoKey?: string;
+  parishName?: string;
+}) {
   const list = bulletins.length > 0 ? bulletins : SAMPLE_BULLETINS;
   const latest = list[0];
 
@@ -126,7 +134,7 @@ export default function BulletinClient({ bulletins, kakaoKey = "" }: { bulletins
               </a>
               {kakaoKey && (
                 <button
-                  onClick={() => shareToKakao(latest, kakaoKey)}
+                  onClick={() => shareToKakao(latest, kakaoKey, parishName)}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   style={{ backgroundColor: "#FEE500", color: "#3C1E1E" }}
                 >
