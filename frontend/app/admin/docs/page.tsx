@@ -1041,7 +1041,8 @@ function OwnershipTab() {
         </p>
         <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
           본 소프트웨어가 사용하는 <strong>외부 API·서비스</strong>(카카오, AWS Bedrock(Claude) 등)의
-          정책 변경·중단·요금 변동에 따른 동작 보장 및 유지보수 의무는 개발자에게 없습니다.
+          정책 변경·중단·요금 변동, 그리고 <strong>호스팅·서버 관리 및 장애 대응</strong>에 대한
+          동작 보장 및 유지보수 의무는 개발자에게 없습니다.
         </p>
       </div>
 
@@ -1077,7 +1078,7 @@ const TABS = [
   { id: "tech",       label: "기술 스택",   icon: "⚙️" },
   { id: "api",        label: "API",         icon: "🔌" },
   { id: "changelog",  label: "변경 이력",   icon: "📝" },
-  { id: "ownership",  label: "소유권",      icon: "©️"  },
+  { id: "ownership",  label: "사용권",      icon: "©️"  },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
