@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.19";
+export const CURRENT_VERSION = "1.5.20";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.20", date: "2026-05-12", tag: "수정",
+    items: [
+      "주보 수동 재분석(/analyze)도 자동 라우팅까지 수행 — 공지 → notices INSERT, 행사·모임 → events INSERT, 나머지 → ai-extract 게시판",
+      "라우팅 로직을 _route_and_save_events 헬퍼로 분리해 자동 분석·수동 분석 양쪽이 동일 동작",
+      "이전 manual /analyze는 status='pending'만 만들고 라우팅 누락 — UI '등록 완료' 라벨과 실제 DB 상태가 불일치하던 버그 해결",
+    ],
+  },
   {
     version: "1.5.19", date: "2026-05-12", tag: "수정",
     items: [

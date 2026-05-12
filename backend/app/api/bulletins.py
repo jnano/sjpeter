@@ -223,8 +223,35 @@ def analyze_bulletin(
     if not events:
         return []
 
-    # 중복 감지 + DB 저장
-    new_extractions = []
+    # 추출된 events를 _auto_process_bulletin과 동일한 라우팅 로직으로 처리:
+    # 공지 → notices INSERT / 행사·모임 + 날짜 → events INSERT / 나머지 → ai-extract 게시판 임시저장.
+    new_extractions = _route_and_save_events(db, bulletin, events, bulletin_id)
+    db.commit()
+    for e in new_extractions:
+        db.refresh(e)
+    return new_extractions
+
+
+def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], bulletin_id: int) -> list[BulletinExtraction]:
+    """events 리스트를 BulletinExtraction에 저장하고 자동 라우팅.
+    - 공지 → notices INSERT, status='auto_drafted'
+    - 행사/모임 + 날짜 → events INSERT, status='auto_drafted'
+    - 나머지 → ai-extract 게시판 임시저장 (또는 pending)
+    """
+    from sqlalchemy import text as _text
+    if not events:
+        return []
+
+    parish_row = db.execute(_text("SELECT id FROM parishes LIMIT 1")).fetchone()
+    parish_id = parish_row[0] if parish_row else 1
+    ai_board = db.query(Board).filter(Board.slug == "ai-extract", Board.is_active == True).first()
+    issue_label = (
+        f"제{bulletin.issue_number}호"
+        if bulletin.issue_number
+        else bulletin.published_date.strftime("%Y.%m.%d")
+    )
+
+    new_extractions: list[BulletinExtraction] = []
     for ev in events:
         fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"))
         exists = db.query(BulletinExtraction).filter(
@@ -238,23 +265,82 @@ def analyze_bulletin(
         if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date):
             continue
 
-        ext = BulletinExtraction(
-            bulletin_id=bulletin_id,
-            title=ev.get("title", ""),
-            content=ev.get("content"),
-            group_name=ev.get("group_name"),
-            event_date=_parse_date(ev.get("event_date")),
-            location=ev.get("location"),
-            event_type=ev.get("event_type"),
-            fingerprint=fp,
-            status="pending",
-        )
+        event_type = ev.get("event_type") or "모임"
+        title = ev.get("title", "")
+        content_text = ev.get("content")
+
+        # 공지 → notices 바로 등록
+        if event_type == "공지":
+            db.execute(
+                _text(
+                    "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
+                    "VALUES (:pid, :title, :content, FALSE, TRUE, NOW())"
+                ),
+                {"pid": parish_id, "title": title, "content": content_text},
+            )
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="auto_drafted",
+            )
+            db.add(ext)
+            new_extractions.append(ext)
+            continue
+
+        # 행사/모임 + 날짜 → 캘린더 바로 등록
+        if event_type in ("행사", "모임") and parsed_date:
+            category = "community" if event_type == "모임" else "general"
+            parsed_end = _parse_date(ev.get("end_date"))
+            db.execute(
+                _text(
+                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind) "
+                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind)"
+                ),
+                {
+                    "title": title, "desc": content_text,
+                    "edate": parsed_date,
+                    "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
+                    "loc": ev.get("location"), "cat": category, "kind": event_type,
+                },
+            )
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="auto_drafted",
+            )
+            db.add(ext)
+            new_extractions.append(ext)
+            continue
+
+        # 나머지 (날짜 없는 행사·모임) → ai-extract 게시판 임시저장
+        if ai_board:
+            post = Post(
+                board_id=ai_board.id, member_id=None,
+                title=f"[{issue_label}] {title}",
+                content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
+                is_published=False,
+            )
+            db.add(post)
+            db.flush()
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="auto_drafted",
+                target_board_id=ai_board.id, created_post_id=post.id,
+            )
+        else:
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="pending",
+            )
         db.add(ext)
         new_extractions.append(ext)
 
-    db.commit()
-    for e in new_extractions:
-        db.refresh(e)
     return new_extractions
 
 
@@ -371,131 +457,9 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
         if not events:
             return
 
-        parish_row = db.execute(_text("SELECT id FROM parishes LIMIT 1")).fetchone()
-        parish_id = parish_row[0] if parish_row else 1
-
-        ai_board = db.query(Board).filter(Board.slug == "ai-extract", Board.is_active == True).first()
-
-        issue_label = (
-            f"제{bulletin.issue_number}호"
-            if bulletin.issue_number
-            else bulletin.published_date.strftime("%Y.%m.%d")
-        )
-
-        for ev in events:
-            fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"))
-            exists = db.query(BulletinExtraction).filter(
-                BulletinExtraction.fingerprint == fp,
-                BulletinExtraction.status != "rejected",
-            ).first()
-            if exists:
-                continue
-
-            parsed_date = _parse_date(ev.get("event_date"))
-            if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date):
-                continue
-
-            event_type = ev.get("event_type") or "모임"
-            title = ev.get("title", "")
-            content_text = ev.get("content")
-
-            # ① 공지 → notices 바로 등록
-            if event_type == "공지":
-                db.execute(
-                    _text(
-                        "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
-                        "VALUES (:pid, :title, :content, FALSE, TRUE, NOW())"
-                    ),
-                    {"pid": parish_id, "title": title, "content": content_text},
-                )
-                ext = BulletinExtraction(
-                    bulletin_id=bulletin_id,
-                    title=title,
-                    content=content_text,
-                    group_name=ev.get("group_name"),
-                    event_date=parsed_date,
-                    location=ev.get("location"),
-                    event_type=event_type,
-                    fingerprint=fp,
-                    status="auto_drafted",
-                )
-                db.add(ext)
-                continue
-
-            # ② 행사/모임 + 날짜 → 캘린더 바로 등록 (event_kind로 구분)
-            if event_type in ("행사", "모임") and parsed_date:
-                category = "community" if event_type == "모임" else "general"
-                parsed_end = _parse_date(ev.get("end_date"))
-                db.execute(
-                    _text(
-                        "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind) "
-                        "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind)"
-                    ),
-                    {
-                        "title": title,
-                        "desc": content_text,
-                        "edate": parsed_date,
-                        "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
-                        "loc": ev.get("location"),
-                        "cat": category,
-                        "kind": event_type,
-                    },
-                )
-                ext = BulletinExtraction(
-                    bulletin_id=bulletin_id,
-                    title=title,
-                    content=content_text,
-                    group_name=ev.get("group_name"),
-                    event_date=parsed_date,
-                    location=ev.get("location"),
-                    event_type=event_type,
-                    fingerprint=fp,
-                    status="auto_drafted",
-                )
-                db.add(ext)
-                continue
-
-            # ③ 나머지 → AI 추출 게시판 임시저장 (제호 라벨로 검색·모아보기 지원)
-            if ai_board:
-                post = Post(
-                    board_id=ai_board.id,
-                    member_id=None,
-                    title=f"[{issue_label}] {title}",
-                    content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
-                    is_published=False,
-                )
-                db.add(post)
-                db.flush()
-
-                ext = BulletinExtraction(
-                    bulletin_id=bulletin_id,
-                    title=title,
-                    content=content_text,
-                    group_name=ev.get("group_name"),
-                    event_date=parsed_date,
-                    location=ev.get("location"),
-                    event_type=event_type,
-                    fingerprint=fp,
-                    status="auto_drafted",
-                    target_board_id=ai_board.id,
-                    created_post_id=post.id,
-                )
-            else:
-                ext = BulletinExtraction(
-                    bulletin_id=bulletin_id,
-                    title=title,
-                    content=content_text,
-                    group_name=ev.get("group_name"),
-                    event_date=parsed_date,
-                    location=ev.get("location"),
-                    event_type=event_type,
-                    fingerprint=fp,
-                    status="pending",
-                )
-            db.add(ext)
-
+        new_extractions = _route_and_save_events(db, bulletin, events, bulletin_id)
         db.commit()
-        logger.info("[bulletin %d] 자동 처리 완료", bulletin_id)
+        logger.info("[bulletin %d] 자동 처리 완료 — %d건 라우팅", bulletin_id, len(new_extractions))
     except Exception as exc:
         logger.exception("[bulletin %d] 자동 처리 실패: %s", bulletin_id, exc)
         db.rollback()
