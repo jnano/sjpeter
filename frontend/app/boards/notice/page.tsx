@@ -19,11 +19,13 @@ interface Notice {
   content: string | null;
   is_pinned: boolean;
   created_at: string;
+  attachments?: { id: number }[];
 }
 
 async function getNotices(): Promise<Notice[] | null> {
   try {
-    const res = await fetch(`${API}/api/notices/`, { next: { revalidate: 300 } });
+    // admin에서 사진/날짜 수정 시 즉시 반영되도록 캐시 비활성
+    const res = await fetch(`${API}/api/notices/`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -63,6 +65,11 @@ export default async function NoticePage() {
                 <span className="font-semibold text-[var(--color-primary)] truncate group-hover:underline">
                   {n.title}
                 </span>
+                {!!n.attachments?.length && (
+                  <span className="text-xs text-[var(--color-text-muted)] shrink-0" title={`사진 ${n.attachments.length}장`}>
+                    📷 {n.attachments.length}
+                  </span>
+                )}
               </div>
               <span className="text-xs text-[var(--color-text-muted)] shrink-0">
                 {new Date(n.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")}
@@ -79,6 +86,11 @@ export default async function NoticePage() {
               <span className="flex-1 font-medium text-[var(--color-text)] truncate group-hover:text-[var(--color-primary)]">
                 {n.title}
               </span>
+              {!!n.attachments?.length && (
+                <span className="text-xs text-[var(--color-text-muted)] shrink-0" title={`사진 ${n.attachments.length}장`}>
+                  📷 {n.attachments.length}
+                </span>
+              )}
               <span className="text-xs text-[var(--color-text-muted)] shrink-0">
                 {new Date(n.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")}
               </span>

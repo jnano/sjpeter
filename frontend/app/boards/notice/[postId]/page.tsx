@@ -5,12 +5,19 @@ import SectionLayout from "@/components/SectionLayout";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+interface NoticeAttachment {
+  id: number;
+  file_url: string;
+  original_name: string | null;
+}
+
 interface Notice {
   id: number;
   title: string;
   content: string | null;
   is_pinned: boolean;
   created_at: string;
+  attachments?: NoticeAttachment[];
 }
 
 async function getNotice(id: string): Promise<Notice | null> {
@@ -76,11 +83,40 @@ export default async function NoticeDetailPage({
       </div>
 
       {/* 본문 */}
-      <div className="min-h-32 text-[var(--color-text)] text-sm leading-relaxed whitespace-pre-wrap">
-        {notice.content ?? (
-          <span className="text-[var(--color-text-muted)] italic">내용이 없습니다.</span>
-        )}
-      </div>
+      {notice.content ? (
+        <div className="min-h-16 text-[var(--color-text)] text-sm leading-relaxed whitespace-pre-wrap">
+          {notice.content}
+        </div>
+      ) : (
+        !notice.attachments?.length && (
+          <div className="text-[var(--color-text-muted)] italic text-sm">내용이 없습니다.</div>
+        )
+      )}
+
+      {/* 사진 (있을 때) */}
+      {notice.attachments && notice.attachments.length > 0 && (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {notice.attachments.map((a) => {
+            const src = a.file_url.startsWith("http") ? a.file_url : `${API}${a.file_url}`;
+            return (
+              <a
+                key={a.id}
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl overflow-hidden border border-[var(--color-border)] bg-white hover:shadow-md transition-shadow"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={a.original_name ?? "공지 사진"}
+                  className="w-full h-auto object-contain"
+                />
+              </a>
+            );
+          })}
+        </div>
+      )}
 
       {/* 하단 목록 이동 */}
       <div className="mt-12 pt-6 border-t border-[var(--color-border)]">

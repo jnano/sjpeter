@@ -1,16 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin
-from app.models.notice import Notice
+from app.core.config import settings
+from app.models.notice import Notice, NoticeAttachment
 from app.models.parish import Parish
 from app.models.admin import Admin
 
 router = APIRouter(prefix="/notices", tags=["notices"])
+
+ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+SUBDIR = "notice_attachments"
 
 
 class NoticeIn(BaseModel):
@@ -20,6 +27,18 @@ class NoticeIn(BaseModel):
     created_at: Optional[datetime] = None  # 지정 시 그 날짜로 저장. None이면 현재 시각 자동 적용.
 
 
+class NoticeAttachmentOut(BaseModel):
+    id: int
+    file_url: str
+    original_name: Optional[str] = None
+    file_size: int = 0
+    sort_order: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class NoticeOut(BaseModel):
     id: int
     title: str
@@ -27,6 +46,7 @@ class NoticeOut(BaseModel):
     is_pinned: bool
     is_ai_generated: bool = False
     created_at: datetime
+    attachments: List[NoticeAttachmentOut] = []
 
     class Config:
         from_attributes = True
@@ -43,6 +63,7 @@ def _get_parish(db: Session) -> Parish:
 def list_notices(db: Session = Depends(get_db)):
     return (
         db.query(Notice)
+        .options(joinedload(Notice.attachments))
         .order_by(desc(Notice.is_pinned), desc(Notice.created_at))
         .all()
     )
@@ -50,7 +71,12 @@ def list_notices(db: Session = Depends(get_db)):
 
 @router.get("/{notice_id}", response_model=NoticeOut)
 def get_notice(notice_id: int, db: Session = Depends(get_db)):
-    notice = db.query(Notice).filter(Notice.id == notice_id).first()
+    notice = (
+        db.query(Notice)
+        .options(joinedload(Notice.attachments))
+        .filter(Notice.id == notice_id)
+        .first()
+    )
     if not notice:
         raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
     return notice
@@ -101,8 +127,105 @@ def delete_notice(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ):
+    notice = (
+        db.query(Notice)
+        .options(joinedload(Notice.attachments))
+        .filter(Notice.id == notice_id)
+        .first()
+    )
+    if not notice:
+        raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
+    # 파일 시스템에서 첨부 파일 제거
+    for att in notice.attachments:
+        _remove_file(att.file_url)
+    db.delete(notice)
+    db.commit()
+
+
+# ── 첨부 (사진) ─────────────────────────────────────
+
+def _remove_file(file_url: Optional[str]) -> None:
+    if not file_url:
+        return
+    try:
+        rel = file_url.lstrip("/").replace("uploads/", "", 1)
+        path = os.path.join(settings.UPLOAD_DIR, rel)
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+@router.post("/{notice_id}/attachments", response_model=List[NoticeAttachmentOut], status_code=201)
+async def upload_notice_attachments(
+    notice_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """공지에 사진을 다중 업로드. 기존 사진은 유지되고 끝에 추가됨."""
     notice = db.query(Notice).filter(Notice.id == notice_id).first()
     if not notice:
         raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
-    db.delete(notice)
+    if not files:
+        raise HTTPException(status_code=400, detail="파일이 없습니다.")
+
+    save_dir = os.path.join(settings.UPLOAD_DIR, SUBDIR)
+    os.makedirs(save_dir, exist_ok=True)
+
+    max_existing = (
+        db.query(NoticeAttachment.sort_order)
+        .filter(NoticeAttachment.notice_id == notice_id)
+        .order_by(NoticeAttachment.sort_order.desc())
+        .first()
+    )
+    next_order = (max_existing[0] + 1) if max_existing else 0
+
+    saved: List[NoticeAttachment] = []
+    for upload in files:
+        original = upload.filename or "image"
+        ext = os.path.splitext(original)[1].lower()
+        if ext not in ALLOWED_IMAGE_EXTS:
+            raise HTTPException(status_code=400, detail=f"이미지 파일만 업로드할 수 있습니다: {ext}")
+        content = await upload.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail=f"파일 크기는 10MB 이하여야 합니다: {original}")
+        stored = f"{uuid.uuid4().hex}{ext}"
+        path = os.path.join(save_dir, stored)
+        with open(path, "wb") as f:
+            f.write(content)
+        att = NoticeAttachment(
+            notice_id=notice_id,
+            file_url=f"/uploads/{SUBDIR}/{stored}",
+            original_name=original,
+            file_size=len(content),
+            sort_order=next_order,
+        )
+        db.add(att)
+        saved.append(att)
+        next_order += 1
+
     db.commit()
+    for a in saved:
+        db.refresh(a)
+    return saved
+
+
+@router.delete("/{notice_id}/attachments/{attachment_id}", status_code=204)
+def delete_notice_attachment(
+    notice_id: int,
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    att = (
+        db.query(NoticeAttachment)
+        .filter(NoticeAttachment.id == attachment_id, NoticeAttachment.notice_id == notice_id)
+        .first()
+    )
+    if not att:
+        raise HTTPException(status_code=404, detail="첨부를 찾을 수 없습니다.")
+    _remove_file(att.file_url)
+    db.delete(att)
+    db.commit()
+    return None

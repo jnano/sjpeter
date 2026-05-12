@@ -11,6 +11,14 @@ function AiBadge() {
   );
 }
 
+interface NoticeAttachment {
+  id: number;
+  file_url: string;
+  original_name: string | null;
+  file_size: number;
+  sort_order: number;
+}
+
 interface Notice {
   id: number;
   title: string;
@@ -18,6 +26,7 @@ interface Notice {
   is_pinned: boolean;
   is_ai_generated: boolean;
   created_at: string;
+  attachments?: NoticeAttachment[];
 }
 
 function getToken() {
@@ -29,17 +38,24 @@ const EMPTY_FORM = { title: "", content: "", is_pinned: false, created_at: "" };
 
 function NoticeForm({
   initial,
+  initialAttachments = [],
   onSave,
   onCancel,
+  onDeleteAttachment,
 }: {
   initial: typeof EMPTY_FORM;
-  onSave: (data: typeof EMPTY_FORM) => Promise<void>;
+  initialAttachments?: NoticeAttachment[];
+  onSave: (data: typeof EMPTY_FORM, newFiles: File[]) => Promise<void>;
   onCancel: () => void;
+  onDeleteAttachment?: (attachmentId: number) => Promise<void>;
 }) {
   const [form, setForm] = useState(initial);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [existingAtts, setExistingAtts] = useState<NoticeAttachment[]>(initialAttachments);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -49,8 +65,31 @@ function NoticeForm({
     e.preventDefault();
     if (!form.title.trim()) { setError("제목을 입력해 주세요."); return; }
     setError(""); setLoading(true);
-    try { await onSave(form); } catch { setError("저장에 실패했습니다."); }
+    try { await onSave(form, newFiles); }
+    catch { setError("저장에 실패했습니다."); }
     finally { setLoading(false); }
+  }
+
+  function pickFiles(files: FileList | null) {
+    if (!files) return;
+    const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (imgs.length === 0) {
+      setError("이미지 파일만 선택할 수 있습니다.");
+      return;
+    }
+    setError("");
+    setNewFiles((prev) => [...prev, ...imgs]);
+  }
+
+  async function handleDeleteExisting(id: number) {
+    if (!onDeleteAttachment) return;
+    if (!confirm("사진을 삭제하시겠습니까?")) return;
+    await onDeleteAttachment(id);
+    setExistingAtts((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  function removeNewFile(idx: number) {
+    setNewFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
   return (
@@ -92,6 +131,68 @@ function NoticeForm({
           />
           <p className="text-xs text-gray-400 mt-1">과거 공지를 등록할 때 그 날짜로 지정하세요.</p>
         </div>
+        {/* 사진 */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            사진 <span className="text-xs text-gray-400 font-normal">(여러 장 가능, 10MB 이하)</span>
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              pickFiles(e.target.files);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3 py-1.5 text-sm border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/5"
+          >
+            + 사진 추가
+          </button>
+          {(existingAtts.length > 0 || newFiles.length > 0) && (
+            <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {/* 기존 첨부 */}
+              {existingAtts.map((a) => (
+                <div key={`exist-${a.id}`} className="relative group aspect-square rounded-lg overflow-hidden border border-[var(--color-border)] bg-white">
+                  <img
+                    src={a.file_url.startsWith("http") ? a.file_url : `${API}${a.file_url}`}
+                    alt={a.original_name ?? ""}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExisting(a.id)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    aria-label="삭제"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {/* 새로 추가한 파일 (미리보기) */}
+              {newFiles.map((f, i) => (
+                <div key={`new-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border border-blue-300 bg-blue-50">
+                  <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeNewFile(i)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    aria-label="제거"
+                  >
+                    ✕
+                  </button>
+                  <span className="absolute bottom-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] text-center py-0.5">새로 추가</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -220,28 +321,66 @@ export default function AdminNoticesPage() {
     return payload;
   }
 
-  async function handleCreate(form: typeof EMPTY_FORM) {
+  async function uploadAttachments(noticeId: number, files: File[]) {
+    if (files.length === 0) return;
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    await fetch(`${API}/api/notices/${noticeId}/attachments`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+    });
+  }
+
+  async function deleteAttachment(noticeId: number, attachmentId: number) {
+    await fetch(`${API}/api/notices/${noticeId}/attachments/${attachmentId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    // 목록 state 갱신
+    setNotices((prev) =>
+      prev.map((n) =>
+        n.id === noticeId
+          ? { ...n, attachments: (n.attachments ?? []).filter((a) => a.id !== attachmentId) }
+          : n
+      )
+    );
+  }
+
+  async function refetchNotice(id: number): Promise<Notice | null> {
+    const r = await fetch(`${API}/api/notices/${id}`);
+    return r.ok ? r.json() : null;
+  }
+
+  async function handleCreate(form: typeof EMPTY_FORM, files: File[]) {
     const res = await fetch(`${API}/api/notices/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify(buildPayload(form)),
     });
     if (!res.ok) throw new Error();
-    const data = await res.json();
-    setNotices((prev) => [data, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at)));
+    const created = await res.json();
+    if (files.length > 0) {
+      await uploadAttachments(created.id, files);
+    }
+    const fresh = (await refetchNotice(created.id)) ?? created;
+    setNotices((prev) => [fresh, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     setShowCreate(false);
   }
 
-  async function handleEdit(id: number, form: typeof EMPTY_FORM) {
+  async function handleEdit(id: number, form: typeof EMPTY_FORM, files: File[]) {
     const res = await fetch(`${API}/api/notices/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify(buildPayload(form)),
     });
     if (!res.ok) throw new Error();
-    const data = await res.json();
+    if (files.length > 0) {
+      await uploadAttachments(id, files);
+    }
+    const fresh = await refetchNotice(id);
     setNotices((prev) =>
-      prev.map((n) => (n.id === id ? data : n)).sort((a, b) => b.created_at.localeCompare(a.created_at))
+      prev.map((n) => (n.id === id ? (fresh ?? n) : n)).sort((a, b) => b.created_at.localeCompare(a.created_at))
     );
     setEditId(null);
   }
@@ -418,8 +557,10 @@ export default function AdminNoticesPage() {
                     is_pinned: n.is_pinned,
                     created_at: n.created_at ? n.created_at.slice(0, 10) : "",
                   }}
-                  onSave={(form) => handleEdit(n.id, form)}
+                  initialAttachments={n.attachments ?? []}
+                  onSave={(form, files) => handleEdit(n.id, form, files)}
                   onCancel={() => setEditId(null)}
+                  onDeleteAttachment={(aid) => deleteAttachment(n.id, aid)}
                 />
               </div>
             )}

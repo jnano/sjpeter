@@ -209,6 +209,22 @@ def _migrate_add_columns():
             "CREATE INDEX IF NOT EXISTS ix_construction_phases_sort ON construction_phases(sort_order)"
         ))
 
+        # 공지 사진 첨부 (다중)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS notice_attachments (
+                id SERIAL PRIMARY KEY,
+                notice_id INTEGER NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
+                file_url VARCHAR(500) NOT NULL,
+                original_name VARCHAR(300),
+                file_size INTEGER DEFAULT 0,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_notice_attachments_notice ON notice_attachments(notice_id)"
+        ))
+
         # 한 줄 게시판 추천(공감) — 회원 1인 1회 토글
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS post_likes (

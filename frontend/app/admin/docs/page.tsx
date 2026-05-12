@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.16";
+export const CURRENT_VERSION = "1.5.17";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.17", date: "2026-05-12", tag: "기능",
+    items: [
+      "공지에 사진 등록 가능 — 여러 장 업로드, 미리보기, 개별 삭제 (notice_attachments 테이블)",
+      "공지 공개 상세 페이지에 사진 갤러리 + 클릭 시 원본 보기",
+      "공지 목록에서 사진 첨부 여부를 📷 N 뱃지로 표시",
+      "POST/DELETE /api/notices/{id}/attachments — 다중 업로드, 공지 삭제 시 파일 자동 정리",
+    ],
+  },
   {
     version: "1.5.16", date: "2026-05-12", tag: "기능",
     items: [
