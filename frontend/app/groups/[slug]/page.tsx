@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import { fetchGroups, type CommunityGroup } from "../GroupsLayout";
 import CommunitySlideshow from "./CommunitySlideshow";
+import GroupInterestSection from "./GroupInterestSection";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -66,6 +67,19 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
               </p>
             )}
           </header>
+
+          {/* 관심 등록 패널 (분과 + 소속단체 토글) */}
+          <GroupInterestSection
+            parentId={group.id}
+            parentName={group.name}
+            subGroups={subGroups.map((sg) => ({
+              id: sg.id,
+              name: sg.name,
+              parent_id: sg.parent_id ?? null,
+              board_slug: sg.board_slug ?? null,
+              link_url: sg.link_url ?? null,
+            }))}
+          />
 
           {/* 주요 활동 + 소속단체 (2열) */}
           {(activityLines.length > 0 || subGroups.length > 0) && (
