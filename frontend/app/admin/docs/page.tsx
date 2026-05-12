@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.18";
+export const CURRENT_VERSION = "1.5.19";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.19", date: "2026-05-12", tag: "수정",
+    items: [
+      "주보 AI 추출 0건 문제 해결 — 네이버 카페 등에서 인쇄한 PDF(본문이 이미지인 경우) 자동 인식",
+      "is_text_sparse 강화 — URL·페이지번호·시간도장 제거 후 의미 있는 글자 수 카운트",
+      "텍스트 분석 0건이면 Vision fallback 자동 — 본문이 이미지인 PDF도 정상 추출",
+      "claude_analyzer 진단 로그 추가 — Bedrock 응답 길이/시작 + 파싱 결과 로그",
+    ],
+  },
   {
     version: "1.5.18", date: "2026-05-12", tag: "기능",
     items: [

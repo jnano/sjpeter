@@ -203,13 +203,22 @@ def analyze_bulletin(
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="PDF 파일을 찾을 수 없습니다.")
 
-    # 텍스트 추출 시도 → 희박하면 Vision으로 폴백
+    # 텍스트 추출 시도 → 희박하면 Vision으로, 텍스트 분석 결과 0건이면 Vision으로 재시도
     text = extract_text(pdf_path)
     if is_text_sparse(text):
         images = pdf_to_images_b64(pdf_path)
         events = analyze_bulletin_images(bulletin.published_date, images)
     else:
         events = analyze_bulletin_text(bulletin.published_date, text)
+        if not events:
+            # 텍스트가 충분해 보였지만 의미 있는 행사·공지를 못 뽑은 경우(예: 본문이 이미지)
+            # 한 번 더 Vision으로 시도 — 토큰 비용은 늘지만 정확도 우선
+            import logging
+            logging.getLogger(__name__).info(
+                "[bulletin %d] 텍스트 분석 0건 → Vision fallback", bulletin_id
+            )
+            images = pdf_to_images_b64(pdf_path)
+            events = analyze_bulletin_images(bulletin.published_date, images)
 
     if not events:
         return []
@@ -353,6 +362,10 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
         else:
             logger.info("[bulletin %d] 텍스트 분석 경로 (%d자)", bulletin_id, len(text_content))
             events = analyze_bulletin_text(bulletin.published_date, text_content)
+            if not events:
+                logger.info("[bulletin %d] 텍스트 분석 0건 → Vision fallback", bulletin_id)
+                images = pdf_to_images_b64(pdf_path)
+                events = analyze_bulletin_images(bulletin.published_date, images)
 
         logger.info("[bulletin %d] 추출된 항목 %d건", bulletin_id, len(events) if events else 0)
         if not events:

@@ -1,4 +1,5 @@
 import base64
+import re
 import pdfplumber
 import fitz  # PyMuPDF
 
@@ -25,5 +26,22 @@ def pdf_to_images_b64(pdf_path: str, max_pages: int = 6) -> list[str]:
     return result
 
 
+_URL_RE = re.compile(r"https?://\S+")
+_PAGE_NO_RE = re.compile(r"\d+\s*/\s*\d+")               # 1/5, 2/5 같은 페이지 번호
+_DATE_TIME_RE = re.compile(r"\d{2,4}\.\s*\d+\.\s*\d+\.?(\s*오전|\s*오후)?\s*\d+:\d+")  # "26. 5. 12. 오후 7:03"
+
+
+def _meaningful_chars(text: str) -> int:
+    """URL·페이지 번호·시간 도장 같은 메타데이터를 제거한 의미 있는 글자 수.
+    네이버 카페·구글 드라이브 등에서 인쇄한 PDF는 본문이 이미지여도 URL/푸터 텍스트가 많아
+    단순 길이 검사로 텍스트가 충분하다고 오판되는 문제를 보완한다.
+    """
+    cleaned = _URL_RE.sub("", text)
+    cleaned = _DATE_TIME_RE.sub("", cleaned)
+    cleaned = _PAGE_NO_RE.sub("", cleaned)
+    cleaned = re.sub(r"\s+", "", cleaned)
+    return len(cleaned)
+
+
 def is_text_sparse(text: str, min_chars: int = 200) -> bool:
-    return len(text.replace(" ", "").replace("\n", "")) < min_chars
+    return _meaningful_chars(text) < min_chars

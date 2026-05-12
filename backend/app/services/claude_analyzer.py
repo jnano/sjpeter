@@ -73,9 +73,14 @@ def _invoke(model_id: str, messages: list[dict]) -> str:
     try:
         resp = _get_client().invoke_model(modelId=model_id, body=body)
         result = json.loads(resp["body"].read())
-        return result["content"][0]["text"]
+        raw_text = result["content"][0]["text"]
+        logger.info("[bedrock %s] 응답 %d자, 시작: %r", model_id, len(raw_text), raw_text[:200])
+        return raw_text
     except ClientError as e:
         logger.error("Bedrock invoke_model 실패: %s", e)
+        raise
+    except Exception as e:
+        logger.error("Bedrock invoke 알 수 없는 오류: %s", e, exc_info=True)
         raise
 
 
@@ -108,6 +113,9 @@ def _parse_response(raw: str) -> list[dict]:
             if text.startswith("json"):
                 text = text[4:]
         data = json.loads(text.strip())
-        return data.get("events", [])
-    except Exception:
+        events = data.get("events", [])
+        logger.info("[parse] events 추출 %d건", len(events))
+        return events
+    except Exception as e:
+        logger.warning("[parse] 응답 JSON 파싱 실패: %s — raw[:500]=%r", e, raw[:500])
         return []
