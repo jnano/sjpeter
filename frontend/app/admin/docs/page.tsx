@@ -862,16 +862,30 @@ function PhilosophyTab() {
   return (
     <div className="space-y-10 text-sm max-w-2xl mx-auto py-4">
 
-      {/* 도입 */}
-      <div className="text-center space-y-3">
-        <p className="font-serif text-2xl font-bold text-[var(--color-primary)] tracking-wide">세파스는</p>
-        <p className="text-[var(--color-text-muted)] leading-relaxed">
-          기술로 만든 소프트웨어이지만, 그 목적은 기술에 있지 않습니다.<br />
-          세파스가 존재하는 이유는 단 하나입니다.
-        </p>
-        <p className="font-serif text-lg text-[var(--color-primary)] italic">
+      {/* 헤더 — 소유권 탭과 동일한 Cephas 카드 + 핵심 문구 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-6 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">소프트웨어 이름</p>
+        <p className="font-serif text-4xl font-bold tracking-widest text-[var(--color-primary)] mb-1">Cephas</p>
+        <p className="text-lg text-[var(--color-text-muted)] mb-4">세파스</p>
+        <div className="mx-auto max-w-lg border-t border-[var(--color-border)] pt-4 space-y-1.5 text-xs text-[var(--color-text-muted)] leading-relaxed">
+          <p>
+            아람어 <span className="font-semibold text-[var(--color-text)]">כֵּיפָא (Kēpā)</span>에서 온 말로
+            <span className="font-semibold text-[var(--color-text)]"> &ldquo;반석&rdquo;</span>을 뜻합니다.
+            요한복음 1,42에서 예수님이 시몬에게 직접 붙여주신 이름으로,
+            그리스어 Petros(페트로스), 한국어 베드로에 해당합니다.
+          </p>
+          <p className="italic text-[var(--color-text-muted)]">
+            &ldquo;너는 베드로이다. 내가 이 반석 위에 내 교회를 세울 것이다.&rdquo; — 마태오 16,18
+          </p>
+        </div>
+        <p className="mt-5 font-serif text-base text-[var(--color-primary)] italic leading-relaxed">
           &ldquo;우리 성당이 무엇을 소중히 여기는가&rdquo;를 기록하는 것.
         </p>
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-1.5 text-xs text-[var(--color-text-muted)]">
+          <span className="font-mono font-semibold text-[var(--color-primary)]">v{CURRENT_VERSION}</span>
+          <span>·</span>
+          <span>세종 성베드로 성당 본당 홈페이지 소프트웨어</span>
+        </div>
       </div>
 
       <hr className="border-[var(--color-border)]" />
