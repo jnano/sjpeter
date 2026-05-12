@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.24";
+export const CURRENT_VERSION = "1.5.25";
 export const LAST_UPDATED = "2026-05-13";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-13";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.25", date: "2026-05-13", tag: "수정",
+    items: [
+      "AI 추출 항목 누락 버그 — _fingerprint에 title 추가",
+      "이전: (group_name, event_date, event_type)만 사용 → 날짜·그룹 없는 항목이 같은 event_type이면 한 fp로 뭉쳐 첫 건만 저장됨",
+      "75호 사례: 성모 신심미사·성체 강복·병자(영성체)·유아세례 4건이 1건으로 합쳐졌던 문제. 재분석 시 10건 모두 정상 등록",
+    ],
+  },
   {
     version: "1.5.24", date: "2026-05-13", tag: "수정",
     items: [

@@ -256,7 +256,7 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
 
     new_extractions: list[BulletinExtraction] = []
     for ev in events:
-        fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"))
+        fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"), ev.get("title"))
         exists = db.query(BulletinExtraction).filter(
             BulletinExtraction.fingerprint == fp,
             BulletinExtraction.status != "rejected",
@@ -524,8 +524,11 @@ def reject_extraction(
 # ── 헬퍼 ──────────────────────────────────────────────────
 
 
-def _fingerprint(group: str | None, event_date: str | None, event_type: str | None) -> str:
-    raw = f"{group or ''}|{event_date or ''}|{event_type or ''}"
+def _fingerprint(group: str | None, event_date: str | None, event_type: str | None, title: str | None = "") -> str:
+    """추출 항목 식별용 fingerprint. event_date/group이 null인 항목들이 한 fp로 뭉치는 문제를
+    방지하기 위해 title도 포함한다 (공백 정규화 후)."""
+    title_key = "".join((title or "").split())
+    raw = f"{group or ''}|{event_date or ''}|{event_type or ''}|{title_key}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
