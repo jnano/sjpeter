@@ -25,7 +25,7 @@ function getToken() {
   return localStorage.getItem("admin_token");
 }
 
-const EMPTY_FORM = { title: "", content: "", is_pinned: false };
+const EMPTY_FORM = { title: "", content: "", is_pinned: false, created_at: "" };
 
 function NoticeForm({
   initial,
@@ -79,6 +79,18 @@ function NoticeForm({
             className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none bg-white"
             placeholder="공지 내용 (선택)"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            등록 날짜 <span className="text-xs text-gray-400 font-normal">(비워두면 오늘 날짜로 저장)</span>
+          </label>
+          <input
+            type="date"
+            value={form.created_at}
+            onChange={(e) => setForm((p) => ({ ...p, created_at: e.target.value }))}
+            className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
+          />
+          <p className="text-xs text-gray-400 mt-1">과거 공지를 등록할 때 그 날짜로 지정하세요.</p>
         </div>
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
@@ -189,15 +201,34 @@ export default function AdminNoticesPage() {
     }
   }
 
+  function buildPayload(form: typeof EMPTY_FORM) {
+    // created_at이 빈 문자열이면 백엔드에 보내지 않음 (자동/유지)
+    // 날짜만 받으면 본당 정오(12:00) 시각으로 저장 — 정렬 시 자정 경계 모호함 회피
+    const payload: {
+      title: string;
+      content: string;
+      is_pinned: boolean;
+      created_at?: string;
+    } = {
+      title: form.title,
+      content: form.content,
+      is_pinned: form.is_pinned,
+    };
+    if (form.created_at) {
+      payload.created_at = `${form.created_at}T12:00:00`;
+    }
+    return payload;
+  }
+
   async function handleCreate(form: typeof EMPTY_FORM) {
     const res = await fetch(`${API}/api/notices/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(form),
+      body: JSON.stringify(buildPayload(form)),
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
-    setNotices((prev) => [data, ...prev]);
+    setNotices((prev) => [data, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     setShowCreate(false);
   }
 
@@ -205,11 +236,13 @@ export default function AdminNoticesPage() {
     const res = await fetch(`${API}/api/notices/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(form),
+      body: JSON.stringify(buildPayload(form)),
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
-    setNotices((prev) => prev.map((n) => (n.id === id ? data : n)));
+    setNotices((prev) =>
+      prev.map((n) => (n.id === id ? data : n)).sort((a, b) => b.created_at.localeCompare(a.created_at))
+    );
     setEditId(null);
   }
 
@@ -379,7 +412,12 @@ export default function AdminNoticesPage() {
             {editId === n.id && (
               <div className="border border-t-0 border-[var(--color-primary)] rounded-b-xl overflow-hidden">
                 <NoticeForm
-                  initial={{ title: n.title, content: n.content ?? "", is_pinned: n.is_pinned }}
+                  initial={{
+                    title: n.title,
+                    content: n.content ?? "",
+                    is_pinned: n.is_pinned,
+                    created_at: n.created_at ? n.created_at.slice(0, 10) : "",
+                  }}
                   onSave={(form) => handleEdit(n.id, form)}
                   onCancel={() => setEditId(null)}
                 />

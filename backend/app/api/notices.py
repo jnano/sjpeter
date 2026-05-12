@@ -17,6 +17,7 @@ class NoticeIn(BaseModel):
     title: str
     content: Optional[str] = None
     is_pinned: bool = False
+    created_at: Optional[datetime] = None  # 지정 시 그 날짜로 저장. None이면 현재 시각 자동 적용.
 
 
 class NoticeOut(BaseModel):
@@ -62,7 +63,11 @@ def create_notice(
     _: Admin = Depends(get_current_admin),
 ):
     parish = _get_parish(db)
-    notice = Notice(parish_id=parish.id, **body.model_dump())
+    data = body.model_dump()
+    # 명시되지 않으면 모델 default(datetime.utcnow)에 위임
+    if data.get("created_at") is None:
+        data.pop("created_at", None)
+    notice = Notice(parish_id=parish.id, **data)
     db.add(notice)
     db.commit()
     db.refresh(notice)
@@ -79,7 +84,11 @@ def update_notice(
     notice = db.query(Notice).filter(Notice.id == notice_id).first()
     if not notice:
         raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
-    for k, v in body.model_dump().items():
+    data = body.model_dump()
+    # 빈 값(None)이면 기존 날짜 유지. 명시한 경우만 변경.
+    if data.get("created_at") is None:
+        data.pop("created_at", None)
+    for k, v in data.items():
         setattr(notice, k, v)
     db.commit()
     db.refresh(notice)

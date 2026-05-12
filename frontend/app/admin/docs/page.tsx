@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.15";
+export const CURRENT_VERSION = "1.5.16";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.16", date: "2026-05-12", tag: "기능",
+    items: [
+      "공지사항 등록 날짜 강제 지정 — 과거 공지를 그 날짜로 등록 가능",
+      "날짜 미지정 시 현재 시각 자동 적용, 수정 시 빈 값이면 기존 날짜 유지",
+      "NoticeIn.created_at(Optional) + admin 폼에 날짜 입력 추가 (정오 12:00 저장으로 정렬 안정화)",
+    ],
+  },
   {
     version: "1.5.15", date: "2026-05-12", tag: "기능",
     items: [
