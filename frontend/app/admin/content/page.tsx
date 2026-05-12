@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -387,14 +388,14 @@ function VisionTab() {
             <input value={form.motto} onChange={(e) => setForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} placeholder="예: 거룩한 향기의 해" required />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">본문 <span className="text-gray-400">(선택, 줄바꿈 보존)</span></label>
-            <textarea
-              value={form.body}
-              onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
-              className={`${inputCls} min-h-[140px] resize-y leading-relaxed`}
-              placeholder={"신부님의 한 해 사목 방향과 의도, 신자들에게 전하는 말씀을 입력하세요.\n\n빈 줄을 두면 단락이 구분됩니다."}
-              rows={6}
-            />
+            <label className="block text-xs font-medium text-gray-600 mb-1">본문 <span className="text-gray-400">(선택, 마크다운)</span></label>
+            <MarkdownEditor value={form.body} onChange={(v) => setForm((p) => ({ ...p, body: v }))} height={320} />
+            <p className="mt-1.5 text-[11px] text-gray-500 leading-relaxed">
+              · 제목: <code className="bg-gray-100 px-1 rounded">## 1. 성전 봉헌</code>
+              {" / "}작은 제목: <code className="bg-gray-100 px-1 rounded">### </code>
+              {" / "}카드 섹션: <code className="bg-gray-100 px-1 rounded">{`> 본문`}</code>
+              {" / "}구분선: <code className="bg-gray-100 px-1 rounded">---</code>
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.is_current} onChange={(e) => setForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
@@ -427,13 +428,12 @@ function VisionTab() {
               <div key={v.id} className="p-4 bg-blue-50 space-y-3">
                 <input type="number" value={editForm.year} onChange={(e) => setEditForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
                 <input value={editForm.motto} onChange={(e) => setEditForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} placeholder="지표 (슬로건)" />
-                <textarea
-                  value={editForm.body}
-                  onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))}
-                  className={`${inputCls} min-h-[140px] resize-y leading-relaxed`}
-                  placeholder="본문 (선택, 줄바꿈 보존)"
-                  rows={6}
-                />
+                <MarkdownEditor value={editForm.body} onChange={(v) => setEditForm((p) => ({ ...p, body: v }))} height={320} />
+                <p className="text-[11px] text-gray-500">
+                  · <code className="bg-white border border-gray-200 px-1 rounded">## 제목</code>
+                  {" / "}<code className="bg-white border border-gray-200 px-1 rounded">{`> 카드`}</code>
+                  {" / "}<code className="bg-white border border-gray-200 px-1 rounded">---</code> 구분선
+                </p>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={editForm.is_current} onChange={(e) => setEditForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
                   올해 지표

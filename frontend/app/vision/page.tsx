@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import MarkdownContent from "@/components/MarkdownContent";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -63,9 +64,7 @@ export default async function VisionPage() {
 
       {current?.body && (
         <article className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8 mb-8">
-          <p className="text-sm text-[var(--color-text)] leading-loose whitespace-pre-line">
-            {current.body}
-          </p>
+          <MarkdownContent content={current.body} />
         </article>
       )}
 

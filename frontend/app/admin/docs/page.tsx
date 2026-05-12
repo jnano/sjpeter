@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.13";
+export const CURRENT_VERSION = "1.5.14";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.14", date: "2026-05-12", tag: "기능",
+    items: [
+      "사목지표 본문에 마크다운 에디터(MarkdownEditor) 적용 — 제목(##)·작은 제목(###)·카드 섹션(>)·구분선(---) 지원",
+      "/vision 공개 페이지에 MarkdownContent 렌더 — 줄바꿈·단락·카드 박스 자동 시각화",
+      "MarkdownContent의 blockquote 스타일 강화 — 좌측 강조 보더 + 따뜻한 배경 + 라운드. 게시판·동적 페이지 인용에도 일관 적용",
+    ],
+  },
   {
     version: "1.5.13", date: "2026-05-12", tag: "기능",
     items: [
