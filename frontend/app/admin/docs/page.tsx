@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.25";
+export const CURRENT_VERSION = "1.5.26";
 export const LAST_UPDATED = "2026-05-13";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-13";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.26", date: "2026-05-13", tag: "기능",
+    items: [
+      "주보 AI 추출 카테고리 확장 — '묵상' / '지표' 추가",
+      "묵상은 주보 발행일로 meditations에 자동 INSERT (scripture 필드 포함)",
+      "사목지표는 추출만 pending 상태로 보관, admin이 visions에 수동 등록",
+      "Bedrock client read_timeout 60→300초, max_tokens 4096→8192 (긴 묵상 본문 잘림 방지)",
+    ],
+  },
   {
     version: "1.5.25", date: "2026-05-13", tag: "수정",
     items: [

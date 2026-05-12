@@ -272,6 +272,42 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         title = ev.get("title", "")
         content_text = ev.get("content")
 
+        # 묵상 → meditations 바로 등록 (published_date는 주보 발행일)
+        if event_type == "묵상":
+            scripture = (ev.get("scripture") or "").strip() or None
+            db.execute(
+                _text(
+                    "INSERT INTO meditations (title, scripture, body, published_date, is_published, created_at, updated_at) "
+                    "VALUES (:title, :scr, :body, :pdate, TRUE, :ts, :ts)"
+                ),
+                {
+                    "title": title, "scr": scripture,
+                    "body": content_text or "",
+                    "pdate": bulletin.published_date, "ts": published_ts,
+                },
+            )
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="auto_drafted",
+            )
+            db.add(ext)
+            new_extractions.append(ext)
+            continue
+
+        # 사목지표 → 추출만 (BulletinExtraction pending). admin이 visions에 수동 등록
+        if event_type == "지표":
+            ext = BulletinExtraction(
+                bulletin_id=bulletin_id, title=title, content=content_text,
+                group_name=ev.get("group_name"), event_date=parsed_date,
+                location=ev.get("location"), event_type=event_type,
+                fingerprint=fp, status="pending",
+            )
+            db.add(ext)
+            new_extractions.append(ext)
+            continue
+
         # 공지 → notices 바로 등록 (created_at은 주보 발행일)
         if event_type == "공지":
             db.execute(
