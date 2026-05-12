@@ -165,14 +165,13 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   return (
     <aside
       ref={asideRef}
-      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:self-start md:overflow-y-auto md:overflow-x-visible"
+      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:self-start"
       style={{
         ["--sidebar-w" as string]: `${widthPx}px`,
         top: stickyTopPx !== null ? `${stickyTopPx}px` : "5rem",
-        maxHeight: stickyTopPx !== null ? `calc(100vh - ${stickyTopPx}px)` : "calc(100vh - 5rem)",
-        // CSS 사양상 overflow-y:auto이면 overflow-x도 auto가 되어 가로 스크롤바가 생김.
-        // overflow-x:clip은 자식 popup(left-full)을 잘라먹지 않고도 스크롤바를 막는다.
-        overflowX: "clip",
+        // overflow를 잡지 않음 — 자식 popup(absolute left-full)이 사이드바 박스를
+        // 넘쳐 표시되므로 overflow-y:auto를 두면 가로/세로 양쪽 스크롤바가 생긴다.
+        // 사이드바 컨텐츠 자체는 짧아 viewport 안에 들어가므로 sticky만으로 충분.
       } as React.CSSProperties}
     >
       {/* 모바일: 2-row 칩 (Header 아래 sticky) */}
