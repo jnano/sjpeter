@@ -6,28 +6,96 @@ import { useSession, signOut } from "next-auth/react";
 const INACTIVE_MS = 25 * 60 * 1000; // 25분 → 경고
 const WARN_MS     =  5 * 60 * 1000; // 경고 후 5분 → 로그아웃
 const THROTTLE_MS =  1_000;          // 활동 감지 최소 간격
+const ABSOLUTE_CHECK_MS = 60 * 1000; // 절대 만료 체크 주기 (1분)
 
 function clearAdminSession() {
   localStorage.removeItem("admin_token");
   localStorage.removeItem("admin_display_name");
   localStorage.removeItem("admin_role");
   localStorage.removeItem("admin_is_super");
+  localStorage.removeItem("admin_token_exp");
+  localStorage.removeItem("admin_remember");
   document.cookie = "admin_authed=; path=/; max-age=0";
 }
 
+function clearMemberMarkers() {
+  localStorage.removeItem("member_remember");
+}
+
+function hasAdminSession(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!localStorage.getItem("admin_token");
+}
+
+function getAdminAbsoluteExpiry(): number {
+  if (typeof window === "undefined") return 0;
+  const v = localStorage.getItem("admin_token_exp");
+  return v ? Number(v) : 0;
+}
+
+function isAdminRemember(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("admin_remember") === "1";
+}
+
+function isMemberRemember(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("member_remember") === "1";
+}
+
+type SessionWithExtras = {
+  remember?: boolean;
+  absoluteExpiry?: number;
+};
+
 export default function SessionTimeout() {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [warning, setWarning] = useState(false);
   const [remaining, setRemaining] = useState(WARN_MS / 1000); // 초
 
   const inactiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warnTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const absoluteTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity  = useRef(0);
 
+  // 관리자 로그인 상태 폴링 (localStorage 변화 감지)
+  useEffect(() => {
+    const check = () => setAdminLoggedIn(hasAdminSession());
+    check();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "admin_token") check();
+    };
+    window.addEventListener("storage", onStorage);
+    const id = setInterval(check, 5_000);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(id);
+    };
+  }, []);
+
+  const memberAuthed = status === "authenticated";
+  const isAuthed = memberAuthed || adminLoggedIn;
+  const memberRemember = memberAuthed
+    ? ((session as SessionWithExtras | null)?.remember ?? isMemberRemember())
+    : false;
+  const adminRemember = adminLoggedIn ? isAdminRemember() : false;
+  // 두 세션 중 하나라도 "로그인 유지"가 아니면 idle 타이머 작동
+  const idleEnabled = isAuthed && !(
+    (memberAuthed ? memberRemember : true) &&
+    (adminLoggedIn ? adminRemember : true)
+  );
+
   function logout() {
-    clearAdminSession();
-    signOut({ callbackUrl: "/" });
+    if (adminLoggedIn) clearAdminSession();
+    if (memberAuthed) {
+      clearMemberMarkers();
+      signOut({ callbackUrl: "/" });
+    } else if (adminLoggedIn) {
+      // 관리자만 로그아웃 → 관리자 로그인 페이지로
+      window.location.href = "/admin";
+    }
   }
 
   function clearWarn() {
@@ -47,7 +115,6 @@ export default function SessionTimeout() {
       setWarning(true);
       setRemaining(WARN_MS / 1000);
 
-      // 카운트다운
       countTimer.current = setInterval(() => {
         setRemaining((s) => {
           if (s <= 1) {
@@ -58,13 +125,45 @@ export default function SessionTimeout() {
         });
       }, 1000);
 
-      // 5분 후 자동 로그아웃
       warnTimer.current = setTimeout(logout, WARN_MS);
     }, INACTIVE_MS);
   }
 
+  // 절대 만료 감시 (remember 여부와 무관하게 작동)
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (!isAuthed) {
+      if (absoluteTimer.current) clearInterval(absoluteTimer.current);
+      absoluteTimer.current = null;
+      return;
+    }
+    const check = () => {
+      const now = Date.now();
+      const memberExp = memberAuthed
+        ? (session as SessionWithExtras | null)?.absoluteExpiry ?? 0
+        : 0;
+      const adminExp = adminLoggedIn ? getAdminAbsoluteExpiry() : 0;
+      const memberExpired = memberAuthed && memberExp > 0 && now >= memberExp;
+      const adminExpired = adminLoggedIn && adminExp > 0 && now >= adminExp;
+      if (memberExpired || adminExpired) {
+        logout();
+      }
+    };
+    check();
+    absoluteTimer.current = setInterval(check, ABSOLUTE_CHECK_MS);
+    return () => {
+      if (absoluteTimer.current) clearInterval(absoluteTimer.current);
+      absoluteTimer.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthed, memberAuthed, adminLoggedIn, session]);
+
+  // idle 타이머
+  useEffect(() => {
+    if (!idleEnabled) {
+      if (inactiveTimer.current) clearTimeout(inactiveTimer.current);
+      clearWarn();
+      return;
+    }
 
     const onActivity = () => {
       const now = Date.now();
@@ -83,7 +182,7 @@ export default function SessionTimeout() {
       clearWarn();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [idleEnabled]);
 
   if (!warning) return null;
 

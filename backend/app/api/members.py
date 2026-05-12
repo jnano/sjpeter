@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.core.database import get_db
-from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin
+from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin, token_expires_in_seconds
 from app.core.config import settings
 from app.core.site_settings import get_setting
 from app.core.admin_log import log_action, get_admin_identifier
@@ -52,6 +52,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    remember: bool = False  # "로그인 상태 유지" 체크 시 토큰 만료 7일
 
 
 class SocialLoginRequest(BaseModel):
@@ -115,6 +116,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     member: MemberOut
+    expires_in: int = 12 * 3600  # 토큰 유효 시간(초) — 기본 12시간
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -205,6 +207,7 @@ def register(request: Request, body: RegisterRequest, db: Session = Depends(get_
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),
         member=_member_out(member),
+        expires_in=token_expires_in_seconds(False),
     )
 
 
@@ -219,8 +222,9 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     if not member.is_active:
         raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
     return TokenResponse(
-        access_token=create_access_token(str(member.id), role="member"),
+        access_token=create_access_token(str(member.id), role="member", remember=body.remember),
         member=_member_out(member),
+        expires_in=token_expires_in_seconds(body.remember),
     )
 
 
@@ -261,6 +265,7 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),
         member=_member_out(member),
+        expires_in=token_expires_in_seconds(False),
     )
 
 

@@ -11,6 +11,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<"google" | "kakao" | null>(null);
@@ -20,9 +21,15 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
+    // SessionTimeout이 idle 타이머 비활성/활성을 결정할 때 사용
+    if (typeof window !== "undefined") {
+      localStorage.setItem("member_remember", remember ? "1" : "0");
+    }
+
     const result = await signIn("credentials", {
       email,
       password,
+      remember: remember ? "1" : "0",
       redirect: false,
     });
 
@@ -36,6 +43,9 @@ function LoginForm() {
   }
 
   async function handleSocial(provider: "google" | "kakao") {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("member_remember", remember ? "1" : "0");
+    }
     setSocialLoading(provider);
     await signIn(provider, { callbackUrl });
   }
@@ -104,7 +114,16 @@ function LoginForm() {
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <label className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[var(--color-primary)]"
+            />
+            로그인 상태 유지 (7일)
+          </label>
           <Link
             href="/members/forgot-password"
             className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"

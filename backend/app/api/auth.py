@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.core.database import get_db
-from app.core.auth import verify_password, create_access_token, _decode_token
+from app.core.auth import verify_password, create_access_token, _decode_token, token_expires_in_seconds
 from app.models.admin import Admin
 
 limiter = Limiter(key_func=get_remote_address)
@@ -27,6 +27,7 @@ class LoginResponse(BaseModel):
 class AdminLoginRequest(BaseModel):
     identifier: str   # admin 아이디 또는 위임 관리자 이메일
     password: str
+    remember: bool = False  # "로그인 상태 유지" 체크 시 토큰 만료 7일
 
 
 class AdminLoginResponse(BaseModel):
@@ -35,6 +36,7 @@ class AdminLoginResponse(BaseModel):
     role: str           # "admin" | "member"
     display_name: str
     is_super_admin: bool
+    expires_in: int     # 토큰 유효 시간(초) — 클라이언트 절대 만료 계산용
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -59,7 +61,7 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
     # 1. Admin 테이블에서 username 조회
     admin = db.query(Admin).filter(Admin.username == body.identifier).first()
     if admin and verify_password(body.password, admin.hashed_password):
-        token = create_access_token(sub=admin.username, role="admin")
+        token = create_access_token(sub=admin.username, role="admin", remember=body.remember)
         from app.core.admin_log import log_action
         log_action(db, admin.username, "admin_login", detail="슈퍼관리자 로그인")
         return AdminLoginResponse(
@@ -67,6 +69,7 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
             role="admin",
             display_name=admin.username,
             is_super_admin=True,
+            expires_in=token_expires_in_seconds(body.remember),
         )
 
     # 2. Member 테이블에서 이메일 조회 (is_admin=True 회원만)
@@ -76,12 +79,13 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
         Member.is_active == True,
     ).first()
     if member and member.hashed_password and verify_password(body.password, member.hashed_password):
-        token = create_access_token(sub=str(member.id), role="member")
+        token = create_access_token(sub=str(member.id), role="member", remember=body.remember)
         return AdminLoginResponse(
             access_token=token,
             role="member",
             display_name=member.nickname,
             is_super_admin=False,
+            expires_in=token_expires_in_seconds(body.remember),
         )
 
     raise HTTPException(
@@ -116,6 +120,7 @@ def exchange_member_token_for_admin(
         role="member",
         display_name=member.nickname,
         is_super_admin=False,
+        expires_in=token_expires_in_seconds(False),
     )
 
 

@@ -22,14 +22,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "이메일", type: "email" },
         password: { label: "비밀번호", type: "password" },
+        remember: { label: "로그인 상태 유지", type: "text" },
       },
       async authorize(credentials) {
+        const remember = credentials.remember === "1" || credentials.remember === true;
         const res = await fetch(`${API}/api/members/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: credentials.email,
             password: credentials.password,
+            remember,
           }),
         });
 
@@ -44,7 +47,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: data.member.email,
           name: displayName,
           accessToken: data.access_token,
-        };
+          remember,
+          expiresIn: Number(data.expires_in) || 12 * 3600,
+        } as { id: string; email: string; name: string; accessToken: string; remember: boolean; expiresIn: number };
       },
     }),
   ],
@@ -80,14 +85,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.picture = av
               ? av.startsWith("/") ? `${API}${av}` : av
               : (user?.image ?? null);
+            const exp = Number(data.expires_in) || 12 * 3600;
+            token.absoluteExpiry = Date.now() + exp * 1000;
+            token.remember = false; // 소셜 로그인은 기본 세션 길이
           }
         } catch {}
         return token;
       }
 
       if (user && (user as { accessToken?: string }).accessToken) {
-        token.accessToken = (user as { accessToken: string }).accessToken;
+        const u = user as { accessToken: string; remember?: boolean; expiresIn?: number };
+        token.accessToken = u.accessToken;
         token.memberId = Number(user.id);
+        token.remember = u.remember ?? false;
+        token.absoluteExpiry = Date.now() + (u.expiresIn ?? 12 * 3600) * 1000;
         return token;
       }
 
@@ -105,6 +116,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.memberId = token.memberId as number;
+      (session as { remember?: boolean }).remember = (token.remember as boolean) ?? false;
+      (session as { absoluteExpiry?: number }).absoluteExpiry =
+        (token.absoluteExpiry as number) ?? 0;
       if (token.name) session.user.name = token.name as string;
       if (token.picture !== undefined) {
         session.user.image = token.picture as string | null;
@@ -115,5 +129,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/members/login",
   },
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60,  // 쿠키 최대 수명 7일 (실제 만료는 SessionTimeout이 absoluteExpiry로 강제)
+    updateAge: 30 * 60,         // 활동 시 30분마다 세션 갱신 (rolling)
+  },
 });

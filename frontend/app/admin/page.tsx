@@ -11,14 +11,27 @@ function LoginForm() {
   const nextPath = searchParams.get("next") ?? "/admin/dashboard";
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 이미 로그인된 경우 대시보드로 이동
+  // 이미 로그인된 경우 대시보드로 이동 — 단, 절대 만료가 지난 토큰은 정리
   useEffect(() => {
-    if (localStorage.getItem("admin_token")) {
-      router.replace("/admin/dashboard");
+    const token = localStorage.getItem("admin_token");
+    if (!token) return;
+    const expStr = localStorage.getItem("admin_token_exp");
+    const exp = expStr ? Number(expStr) : 0;
+    if (!exp || Date.now() >= exp) {
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_display_name");
+      localStorage.removeItem("admin_role");
+      localStorage.removeItem("admin_is_super");
+      localStorage.removeItem("admin_token_exp");
+      localStorage.removeItem("admin_remember");
+      document.cookie = "admin_authed=; path=/; max-age=0";
+      return;
     }
+    router.replace("/admin/dashboard");
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +43,7 @@ function LoginForm() {
       const res = await fetch(`${API}/api/auth/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ identifier, password, remember }),
       });
 
       if (!res.ok) {
@@ -39,11 +52,16 @@ function LoginForm() {
       }
 
       const data = await res.json();
+      const expiresIn = Number(data.expires_in) || 12 * 3600;
+      const absoluteExpiry = Date.now() + expiresIn * 1000;
+
       localStorage.setItem("admin_token", data.access_token);
       localStorage.setItem("admin_display_name", data.display_name);
       localStorage.setItem("admin_role", data.role);
       localStorage.setItem("admin_is_super", String(data.is_super_admin));
-      document.cookie = `admin_authed=1; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+      localStorage.setItem("admin_token_exp", String(absoluteExpiry));
+      localStorage.setItem("admin_remember", remember ? "1" : "0");
+      document.cookie = `admin_authed=1; path=/; max-age=${expiresIn}; SameSite=Lax`;
       router.push(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
@@ -102,6 +120,16 @@ function LoginForm() {
               className="w-full border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="w-4 h-4 accent-[var(--color-primary)]"
+            />
+            로그인 상태 유지 (7일)
+          </label>
 
           <button
             type="submit"

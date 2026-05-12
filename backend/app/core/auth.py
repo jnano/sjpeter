@@ -13,7 +13,8 @@ bearer_scheme = HTTPBearer()
 optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7일
+SESSION_TOKEN_HOURS = 12          # 기본 세션: 12시간 (브라우저 닫아도 다음날 만료)
+REMEMBER_TOKEN_DAYS = 7           # "로그인 상태 유지" 체크 시: 7일
 
 
 def hash_password(password: str) -> str:
@@ -24,14 +25,25 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(sub: str, role: str = "admin") -> str:
-    """role: 'admin' | 'member'"""
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+def create_access_token(sub: str, role: str = "admin", remember: bool = False) -> str:
+    """role: 'admin' | 'member'
+    remember=False → 12시간, remember=True → 7일."""
+    if remember:
+        expire = datetime.utcnow() + timedelta(days=REMEMBER_TOKEN_DAYS)
+    else:
+        expire = datetime.utcnow() + timedelta(hours=SESSION_TOKEN_HOURS)
     return jwt.encode(
         {"sub": sub, "role": role, "exp": expire},
         settings.SECRET_KEY,
         algorithm=ALGORITHM,
     )
+
+
+def token_expires_in_seconds(remember: bool = False) -> int:
+    """클라이언트가 absolute 만료 시각을 계산할 수 있도록 초 단위 반환."""
+    if remember:
+        return REMEMBER_TOKEN_DAYS * 24 * 3600
+    return SESSION_TOKEN_HOURS * 3600
 
 
 def _decode_token(token: str) -> dict:
