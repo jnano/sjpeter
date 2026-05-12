@@ -7,8 +7,8 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "공사 일지 | 본당 가족",
-  description: "세종 성베드로 성당 건축 공사의 진행 상황과 한 줄 일지",
+  title: "성전 건축 현황 | 성전건축",
+  description: "세종 성베드로 성당 새 성전 건축의 진행 상황과 공사 일지",
 };
 
 interface Phase {
@@ -66,9 +66,9 @@ export default async function ConstructionPage() {
   return (
     <>
       <PageHeader
-        group="본당 가족"
-        title="공사 일지"
-        subtitle="세종 성베드로 성당이 자라나는 과정을 함께 보아주세요."
+        group="성전건축"
+        title="성전 건축 현황"
+        subtitle="세종 성베드로 성당의 새 성전이 자라나는 과정을 함께 보아주세요."
       />
       <SectionLayout autoHero>
         <article className="space-y-10">
@@ -125,7 +125,7 @@ export default async function ConstructionPage() {
           {/* 한 줄 일지 */}
           {journal.length > 0 && (
             <section>
-              <h2 className="font-serif text-lg font-bold text-[var(--color-primary)] mb-4">최근 공사 일지</h2>
+              <h2 className="font-serif text-lg font-bold text-[var(--color-primary)] mb-4">최근 일지</h2>
               <ul className="space-y-3">
                 {journal.map((e) => (
                   <li key={e.id} className="bg-white border border-[var(--color-border)] rounded-xl p-4 flex gap-3">

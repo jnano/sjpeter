@@ -168,9 +168,9 @@ export default function AdminConstructionPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)]">공사 일지 관리</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-primary)]">성전 건축 관리</h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          성당 건축 공사 단계와 한 줄 일지를 관리합니다. 정점 사진(슬라이드쇼)은 <code className="font-mono text-xs">/admin/page-photos</code>에서 <code className="font-mono text-xs">construction</code> slug로 별도 업로드하세요.
+          새 성전 건축 단계와 한 줄 일지를 관리합니다. 정점 사진(슬라이드쇼)은 <code className="font-mono text-xs">/admin/page-photos</code>에서 <code className="font-mono text-xs">construction</code> slug로 별도 업로드하세요.
         </p>
       </div>
 

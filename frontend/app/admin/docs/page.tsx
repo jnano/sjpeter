@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.10";
+export const CURRENT_VERSION = "1.5.11";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.11", date: "2026-05-12", tag: "기능",
+    items: [
+      "헤더 메뉴 그룹 '성전건축' 신설 — 성전 건축 현황 / 한줄 봉헌 / 성전 사진 3개 항목",
+      "게시판 2개 신설: '한줄 봉헌'(/boards/build_offering), '성전 사진'(/boards/build_photo)",
+      "공사 일지 → '성전 건축 현황'으로 라벨 일관 통일 (페이지/위젯/관리자 사이드바)",
+      "홈 위젯 헤더 '새 성당 짓는 중' → '새 성전 건축'",
+    ],
+  },
   {
     version: "1.5.10", date: "2026-05-12", tag: "기능",
     items: [

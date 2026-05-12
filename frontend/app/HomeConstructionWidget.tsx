@@ -52,13 +52,13 @@ export default function HomeConstructionWidget({ summary, containerClassName }: 
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
               <span className="text-[var(--color-accent)]">🏗️</span>
-              새 성당 짓는 중
+              새 성전 건축
             </h2>
             <Link
               href="/construction"
               className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
             >
-              공사 일지 →
+              건축 현황 →
             </Link>
           </div>
 
