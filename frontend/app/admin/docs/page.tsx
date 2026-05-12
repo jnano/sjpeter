@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.11";
+export const CURRENT_VERSION = "1.5.12";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.12", date: "2026-05-12", tag: "기능",
+    items: [
+      "한 줄 게시판 시스템 — boards.kind('default'|'line') 도입, 게시판 생성/수정 시 형식 선택 가능",
+      "한 줄 게시판 전용 UI — 카드 그리드, 종류(위령/감사/청원/기타)·대상·메시지 입력 폼, 페이지네이션",
+      "'함께 기도합니다' 추천 토글 — 회원당 1회, 낙관적 UI 업데이트, post_likes 테이블 + UNIQUE 제약",
+      "'한줄 봉헌'(/boards/build_offering) 게시판을 line 형식으로 전환 — 메뉴 그룹 '성전건축' 안에서 즉시 활용",
+    ],
+  },
   {
     version: "1.5.11", date: "2026-05-12", tag: "기능",
     items: [

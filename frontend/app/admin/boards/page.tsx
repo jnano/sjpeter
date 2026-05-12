@@ -37,6 +37,7 @@ interface Board {
   exclude_from_search: boolean;
   show_in_menu: boolean;
   post_count: number;
+  kind: string;  // 'default' | 'line'
   moderator: Moderator | null;
   allowed_members: AllowedMember[];
 }
@@ -174,6 +175,7 @@ export default function AdminBoardsPage() {
     posts_per_page: 12,
     exclude_from_search: false,
     moderator_id: null as number | null,
+    kind: "default",
   });
   const [formModerator, setFormModerator] = useState<Moderator | null>(null);
   const [error, setError] = useState("");
@@ -235,7 +237,7 @@ export default function AdminBoardsPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.detail || "게시판 생성에 실패했습니다."); return; }
       setBoards((prev) => [...prev, data]);
-      setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 12, exclude_from_search: false, moderator_id: null });
+      setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 12, exclude_from_search: false, moderator_id: null, kind: "default" });
       setFormModerator(null);
       setShowForm(false);
     } finally {
@@ -418,7 +420,23 @@ export default function AdminBoardsPage() {
               />
               개
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              형식
+              <select
+                value={form.kind}
+                onChange={(e) => setForm((p) => ({ ...p, kind: e.target.value }))}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="default">일반 (제목+본문)</option>
+                <option value="line">한 줄 (메시지 + 추천)</option>
+              </select>
+            </label>
           </div>
+          {form.kind === "line" && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 -mt-1">
+              ⓘ 한 줄 게시판: 회원이 짧은 메시지(예: 봉헌, 기도 청원)와 종류·대상을 남기며, 다른 회원이 "함께 기도합니다" 버튼으로 공감할 수 있습니다.
+            </p>
+          )}
 
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={() => setShowForm(false)}

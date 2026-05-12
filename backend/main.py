@@ -146,6 +146,11 @@ def _migrate_add_columns():
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_selected BOOLEAN DEFAULT FALSE",
             # 메뉴 자동 노출 토글 (default TRUE — 새 게시판은 자동, 기존은 별도 UPDATE로 false)
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_in_menu BOOLEAN DEFAULT TRUE",
+            # 게시판 형식: 'default'(일반) | 'line'(한 줄 메시지)
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS kind VARCHAR(20) DEFAULT 'default' NOT NULL",
+            # posts 한 줄 메시지용 메타 필드
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_kind VARCHAR(20)",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",
         ]:
             try:
                 conn.execute(text(ddl))
@@ -198,6 +203,23 @@ def _migrate_add_columns():
         """))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_construction_phases_sort ON construction_phases(sort_order)"
+        ))
+
+        # 한 줄 게시판 추천(공감) — 회원 1인 1회 토글
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS post_likes (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                UNIQUE (post_id, member_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_post_likes_post ON post_likes(post_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_post_likes_member ON post_likes(member_id)"
         ))
 
         # 성당 건축 한 줄 일지

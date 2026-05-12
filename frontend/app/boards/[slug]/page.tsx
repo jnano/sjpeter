@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
+import LineBoard from "./LineBoard";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
@@ -41,11 +42,13 @@ interface Board {
   moderator_only_write: boolean;
   moderator_id: number | null;
   posts_per_page: number;
+  kind: string;
 }
 
 async function getBoard(slug: string): Promise<Board | null> {
   try {
-    const res = await fetch(`${API}/api/boards/${slug}`, { next: { revalidate: 3600 } });
+    // admin에서 kind/제목 등 변경 시 즉시 반영되도록 캐시 비활성
+    const res = await fetch(`${API}/api/boards/${slug}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -134,11 +137,33 @@ export default async function BoardPage({
 
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const memberId = (session as { memberId?: number } | null)?.memberId ?? null;
-  const postList = await getPosts(slug, page, token);
-  const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
   const canWrite = board.moderator_only_write
     ? memberId !== null && memberId === board.moderator_id
     : !board.members_only_write || !!session;
+
+  // 한 줄 메시지 게시판은 별도 UI로 분기 (목록·작성·추천을 카드 그리드로 노출)
+  if (board.kind === "line") {
+    return (
+      <>
+        <PageHeader
+          group="알림과 게시판"
+          title={board.name}
+          subtitle={board.description || ""}
+        />
+        <SectionLayout autoHero={false}>
+          <LineBoard
+            slug={slug}
+            canWrite={canWrite}
+            membersOnlyWrite={board.members_only_write}
+            description=""
+          />
+        </SectionLayout>
+      </>
+    );
+  }
+
+  const postList = await getPosts(slug, page, token);
+  const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
 
   return (
     <>

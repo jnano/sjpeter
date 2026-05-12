@@ -9,7 +9,7 @@ from datetime import datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin, get_current_member, get_current_author, get_optional_member
 from app.core.config import settings
-from app.models.board import Board, Post, Comment, BoardAllowedMember
+from app.models.board import Board, Post, Comment, BoardAllowedMember, PostLike
 from app.models.attachment import Attachment
 from app.models.member import Member
 from app.models.admin import Admin
@@ -46,6 +46,7 @@ class BoardIn(BaseModel):
     exclude_from_search: bool = False
     show_in_menu: bool = True
     moderator_id: Optional[int] = None
+    kind: str = "default"  # 'default' | 'line'
 
 
 class BoardUpdate(BaseModel):
@@ -61,6 +62,7 @@ class BoardUpdate(BaseModel):
     exclude_from_search: Optional[bool] = None
     show_in_menu: Optional[bool] = None
     moderator_id: Optional[int] = None
+    kind: Optional[str] = None
 
 
 class AllowedMemberOut(BaseModel):
@@ -87,6 +89,7 @@ class BoardOut(BaseModel):
     post_count: int = 0
     exclude_from_search: bool = False
     show_in_menu: bool = True
+    kind: str = "default"
     moderator: Optional[ModeratorOut] = None
     moderator_id: Optional[int] = None
     allowed_members: list[AllowedMemberOut] = []
@@ -97,7 +100,9 @@ class BoardOut(BaseModel):
 
 class PostIn(BaseModel):
     title: str
-    content: str
+    content: str = ""               # 한 줄 게시판은 빈 본문 허용
+    intention_kind: Optional[str] = None
+    intention_for: Optional[str] = None
 
 
 class AuthorOut(BaseModel):
@@ -158,6 +163,10 @@ class PostOut(BaseModel):
     view_count: int
     created_at: datetime
     updated_at: datetime
+    intention_kind: Optional[str] = None
+    intention_for: Optional[str] = None
+    like_count: int = 0
+    liked_by_me: bool = False
     member: Optional[AuthorOut] = None
     comments: list[CommentOut] = []
     attachments: list[AttachmentOut] = []
@@ -174,6 +183,10 @@ class PostSummary(BaseModel):
     created_at: datetime
     comment_count: int = 0
     thumbnail_url: Optional[str] = None
+    intention_kind: Optional[str] = None
+    intention_for: Optional[str] = None
+    like_count: int = 0
+    liked_by_me: bool = False
     member: Optional[AuthorOut] = None
 
     class Config:
@@ -741,10 +754,26 @@ def list_posts(slug: str, page: int = 1, db: Session = Depends(get_db), viewer: 
         .group_by(Comment.post_id)
         .all()
     ) if post_ids else {}
+    like_counts = dict(
+        db.query(PostLike.post_id, func.count(PostLike.id))
+        .filter(PostLike.post_id.in_(post_ids))
+        .group_by(PostLike.post_id)
+        .all()
+    ) if post_ids else {}
+    my_likes: set[int] = set()
+    if viewer and post_ids:
+        my_likes = {
+            r[0] for r in db.query(PostLike.post_id).filter(
+                PostLike.post_id.in_(post_ids),
+                PostLike.member_id == viewer.id,
+            ).all()
+        }
     result = []
     for p in posts:
         s = PostSummary.model_validate(p)
         s.comment_count = comment_counts.get(p.id, 0)
+        s.like_count = like_counts.get(p.id, 0)
+        s.liked_by_me = p.id in my_likes
         first_img = next((a for a in p.attachments if a.is_image), None)
         s.thumbnail_url = first_img.file_url if first_img else None
         result.append(s)
@@ -799,7 +828,47 @@ def get_post(slug: str, post_id: int, db: Session = Depends(get_db), viewer: Opt
     # 최상위 댓글(parent_id=None)만 PostOut에 포함; 대댓글은 replies에 있음
     if post_obj:
         post_obj.comments = [c for c in post_obj.comments if c.parent_id is None]
-    return post_obj
+    out = PostOut.model_validate(post_obj)
+    out.like_count = db.query(func.count(PostLike.id)).filter(PostLike.post_id == post_id).scalar() or 0
+    out.liked_by_me = bool(viewer and db.query(PostLike).filter(
+        PostLike.post_id == post_id, PostLike.member_id == viewer.id
+    ).first())
+    return out
+
+
+@router.post("/api/boards/{slug}/posts/{post_id}/like", response_model=PostOut)
+def toggle_post_like(
+    slug: str,
+    post_id: int,
+    db: Session = Depends(get_db),
+    current: Member = Depends(get_current_member),
+):
+    """추천 토글 — 회원만, 이미 추천했으면 취소. UNIQUE 제약으로 중복 방지."""
+    board = _get_board_or_404(slug, db)
+    if board.members_only_read:
+        # 같은 정책 — 읽기 제한 회원이면 추천도 가능
+        pass
+    post = db.query(Post).filter(Post.id == post_id, Post.board_id == board.id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    existing = db.query(PostLike).filter(
+        PostLike.post_id == post_id, PostLike.member_id == current.id
+    ).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(PostLike(post_id=post_id, member_id=current.id))
+    db.commit()
+    post_obj = (
+        db.query(Post)
+        .options(joinedload(Post.member), joinedload(Post.attachments), joinedload(Post.board))
+        .filter(Post.id == post_id)
+        .first()
+    )
+    out = PostOut.model_validate(post_obj)
+    out.like_count = db.query(func.count(PostLike.id)).filter(PostLike.post_id == post_id).scalar() or 0
+    out.liked_by_me = not bool(existing)
+    return out
 
 
 @router.put("/api/boards/{slug}/posts/{post_id}", response_model=PostOut)
@@ -816,6 +885,8 @@ def update_post(
         raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
     post.title = body.title
     post.content = body.content
+    post.intention_kind = body.intention_kind
+    post.intention_for = body.intention_for
     db.commit()
     return (
         db.query(Post)
