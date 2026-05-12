@@ -1023,21 +1023,25 @@ function OwnershipTab() {
           본당·교구·수도회 단위로 자체 운영하실 수 있으며 별도의 사용료가 발생하지 않습니다.
         </p>
         <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
-          가톨릭 교회 외 기관(타 종교 단체, 일반 기업 등)의 사용은 별도 협의가 필요합니다.
+          단, <strong>상업적 용도</strong>로는 사용할 수 없습니다.
         </p>
       </div>
 
-      {/* 2. 개발·배포 주체 (1과 배치되지 않음) */}
+      {/* 2. 개발·배포 주체 */}
       <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-5">
         <h2 className="font-bold text-[var(--color-primary)] mb-3">개발·배포 주체</h2>
         <p className="leading-relaxed text-[var(--color-text)]">
-          본 소프트웨어의 개발과 배포 주체는 <strong>강태훈 야고보(hunskang@gmail.com)</strong>입니다.
-          설계·구현·유지보수의 책임을 지며, 가톨릭 교회의 무료 사용 권리와는 별개로
+          본 소프트웨어의 설계·구현·유지보수 책임은 개발자에게 있습니다.
+          가톨릭 교회의 무료 사용 권리와는 별개로,
           소프트웨어 자체의 저작자(authorship) 권리는 개발자에게 있습니다.
         </p>
         <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
           본 시스템을 통해 등록·관리되는 모든 데이터(주보·사진·게시글·회원 정보 등)의 소유권은
           이를 운영하는 본당 — 본 사이트의 경우 <strong>세종 성베드로 성당</strong> — 에 있습니다.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
+          본 소프트웨어가 사용하는 <strong>외부 API·서비스</strong>(카카오, AWS Bedrock(Claude) 등)의
+          정책 변경·중단·요금 변동에 따른 동작 보장 및 유지보수 의무는 개발자에게 없습니다.
         </p>
       </div>
 
@@ -1052,18 +1056,14 @@ function OwnershipTab() {
         </p>
       </div>
 
-      {/* 4. 하단 © */}
-      <div className="border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)] space-y-1 text-center">
-        <p>
-          <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span>
-          &nbsp;© 강태훈 야고보 (hunskang@gmail.com)
-        </p>
-        <p>
-          <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span>
-          &nbsp;© 세종 성베드로 성당
-        </p>
-        <p className="pt-1">최초 작성: 2026-5</p>
-      </div>
+      {/* 4. 하단 © — 한 줄 */}
+      <p className="border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)] text-center">
+        <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span> © 강태훈 야고보 (hunskang@gmail.com)
+        <span className="mx-2 text-[var(--color-border-dark)]">·</span>
+        <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span> © 세종 성베드로 성당
+        <span className="mx-2 text-[var(--color-border-dark)]">·</span>
+        최초 작성: 2026-5
+      </p>
 
     </div>
   );
