@@ -86,10 +86,21 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname));
     const hasChildren = (item.children?.length ?? 0) > 0;
     const [hovered, setHovered] = React.useState(false);
+    const [popupMaxH, setPopupMaxH] = React.useState<number>(440);
     const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const liRef = React.useRef<HTMLLIElement>(null);
+
+    const recalcPopupHeight = () => {
+      const rect = liRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      // popup이 항목 top 기준으로 펼쳐지므로, 그 위치에서 viewport 바닥까지의 높이로 제한
+      const available = window.innerHeight - rect.top - 24; // 하단 여유 24px
+      setPopupMaxH(Math.max(160, available));               // 최소 160px 보장
+    };
 
     const openPopup = () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      recalcPopupHeight();
       setHovered(true);
     };
     const schedulePopupClose = () => {
@@ -102,6 +113,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
 
     return (
       <li
+        ref={liRef}
         className="border-b border-[var(--color-border)] last:border-b-0 relative"
         onMouseEnter={openPopup}
         onMouseLeave={schedulePopupClose}
@@ -132,7 +144,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             onMouseLeave={schedulePopupClose}
           >
             <div className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden" style={{ minWidth: "200px" }}>
-            <ul className="py-1 max-h-[440px] overflow-y-auto">
+            <ul className="py-1 overflow-y-auto overscroll-contain" style={{ maxHeight: `${popupMaxH}px` }}>
               {item.children!.map((c) => {
                 const cActive = pathname === c.href;
                 return (
