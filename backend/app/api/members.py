@@ -21,6 +21,8 @@ from app.core.admin_log import log_action, get_admin_identifier
 from app.models.member import Member
 from app.models.admin import Admin
 from app.models.board import Post
+from app.models.content import CommunityGroup
+from app.models.member_interest import MemberCommunityInterest
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -83,6 +85,8 @@ class MemberOut(BaseModel):
     has_password: bool = True
     is_admin: bool = False
     is_email_verified: bool = False
+    interest_prompt_completed: bool = False
+    notify_kakao: bool = False
     created_at: datetime
 
     class Config:
@@ -282,6 +286,8 @@ def _member_out(member: Member) -> MemberOut:
         has_password=member.hashed_password is not None,
         is_admin=bool(member.is_admin),
         is_email_verified=bool(member.is_email_verified),
+        interest_prompt_completed=bool(getattr(member, "interest_prompt_completed", False)),
+        notify_kakao=bool(getattr(member, "notify_kakao", False)),
         created_at=member.created_at,
     )
 
@@ -289,6 +295,108 @@ def _member_out(member: Member) -> MemberOut:
 @router.get("/me", response_model=MemberOut)
 def get_me(current: Member = Depends(get_current_member)):
     return _member_out(current)
+
+
+# ── 관심 분과/단체 ────────────────────────────────────────
+
+class InterestGroupOut(BaseModel):
+    id: int
+    name: str
+    parent_id: Optional[int] = None
+    slug: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MyInterestsOut(BaseModel):
+    groups: list[InterestGroupOut]
+    notify_kakao: bool
+    interest_prompt_completed: bool
+
+
+class UpdateInterestsRequest(BaseModel):
+    community_ids: list[int] = []
+    notify_kakao: bool = False
+
+
+def _expand_with_ancestors(db: Session, ids: list[int]) -> list[int]:
+    """선택된 community_group id들에 대해 부모(분과)를 자동 포함하여 반환.
+    트리는 최대 2계층(분과 → 소속단체)이지만 안전상 N계층까지 따라간다."""
+    if not ids:
+        return []
+    result: set[int] = set()
+    pending = list(set(ids))
+    # 한 쿼리에 모든 노드 조회 (간단)
+    visited: set[int] = set()
+    while pending:
+        rows = db.query(CommunityGroup.id, CommunityGroup.parent_id).filter(
+            CommunityGroup.id.in_(pending)
+        ).all()
+        next_round: list[int] = []
+        for gid, parent_id in rows:
+            if gid in visited:
+                continue
+            visited.add(gid)
+            result.add(gid)
+            if parent_id and parent_id not in visited:
+                next_round.append(parent_id)
+        pending = next_round
+    return sorted(result)
+
+
+@router.get("/me/interests", response_model=MyInterestsOut)
+def get_my_interests(
+    db: Session = Depends(get_db),
+    current: Member = Depends(get_current_member),
+):
+    rows = (
+        db.query(CommunityGroup)
+        .join(MemberCommunityInterest, MemberCommunityInterest.community_group_id == CommunityGroup.id)
+        .filter(MemberCommunityInterest.member_id == current.id)
+        .order_by(CommunityGroup.sort_order, CommunityGroup.id)
+        .all()
+    )
+    return MyInterestsOut(
+        groups=[InterestGroupOut.model_validate(g) for g in rows],
+        notify_kakao=bool(getattr(current, "notify_kakao", False)),
+        interest_prompt_completed=bool(getattr(current, "interest_prompt_completed", False)),
+    )
+
+
+@router.put("/me/interests", response_model=MyInterestsOut)
+def update_my_interests(
+    body: UpdateInterestsRequest,
+    db: Session = Depends(get_db),
+    current: Member = Depends(get_current_member),
+):
+    """관심분과 일괄 덮어쓰기. 단체만 선택해도 부모 분과 자동 포함하여 저장."""
+    expanded = _expand_with_ancestors(db, body.community_ids)
+    # 존재 검증 — 잘못된 id는 무시 (보안: 외부 입력 신뢰 안 함)
+    valid_ids = [
+        r[0] for r in db.query(CommunityGroup.id).filter(CommunityGroup.id.in_(expanded)).all()
+    ] if expanded else []
+    db.query(MemberCommunityInterest).filter(
+        MemberCommunityInterest.member_id == current.id
+    ).delete(synchronize_session=False)
+    for gid in valid_ids:
+        db.add(MemberCommunityInterest(member_id=current.id, community_group_id=gid))
+    current.notify_kakao = bool(body.notify_kakao)
+    current.interest_prompt_completed = True
+    db.commit()
+    db.refresh(current)
+    return get_my_interests(db=db, current=current)
+
+
+@router.post("/me/interests/skip", status_code=204)
+def skip_interest_prompt(
+    db: Session = Depends(get_db),
+    current: Member = Depends(get_current_member),
+):
+    """'관심분과 선택 안함' — onboarding 응답만 마킹하고 관심·알림 설정은 비워둔다."""
+    current.interest_prompt_completed = True
+    db.commit()
+    return None
 
 
 @router.put("/me", response_model=MemberOut)

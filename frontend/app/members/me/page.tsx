@@ -52,6 +52,13 @@ interface MemberInfo {
   created_at: string;
 }
 
+interface InterestGroup {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  slug: string | null;
+}
+
 // ── 이름/세례명 편집 폼 ────────────────────────────────────
 function NicknameForm({ member, token, onSaved }: {
   member: MemberInfo;
@@ -359,6 +366,9 @@ export default function MypagePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [interests, setInterests] = useState<InterestGroup[]>([]);
+  const [notifyKakao, setNotifyKakao] = useState(false);
+  const [savingNotify, setSavingNotify] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -370,15 +380,44 @@ export default function MypagePage() {
       fetch(`${API}/api/members/me`, { headers }).then(safeJson).catch(() => null),
       fetch(`${API}/api/members/me/posts`, { headers }).then(safeJson).catch(() => null),
       fetch(`${API}/api/members/me/comments`, { headers }).then(safeJson).catch(() => null),
-    ]).then(([memberData, postsData, commentsData]) => {
+      fetch(`${API}/api/members/me/interests`, { headers }).then(safeJson).catch(() => null),
+    ]).then(([memberData, postsData, commentsData, interestsData]) => {
       if (memberData && typeof memberData === "object" && memberData.id) {
         setMember(memberData);
       }
       setPosts(Array.isArray(postsData) ? postsData : []);
       setComments(Array.isArray(commentsData) ? commentsData : []);
+      if (interestsData && Array.isArray(interestsData.groups)) {
+        setInterests(interestsData.groups);
+      }
+      if (interestsData && typeof interestsData.notify_kakao === "boolean") {
+        setNotifyKakao(interestsData.notify_kakao);
+      }
       setLoading(false);
     });
   }, [session?.accessToken]);
+
+  async function toggleNotifyKakao() {
+    const token = session?.accessToken;
+    if (!token || savingNotify) return;
+    setSavingNotify(true);
+    try {
+      const res = await fetch(`${API}/api/members/me/interests`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          community_ids: interests.map((g) => g.id),
+          notify_kakao: !notifyKakao,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifyKakao(!!data.notify_kakao);
+      }
+    } finally {
+      setSavingNotify(false);
+    }
+  }
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -642,6 +681,56 @@ export default function MypagePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* 내 관심 분과·단체 */}
+      {member && (
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-[var(--color-primary)]">내 관심 분과·단체</h2>
+            <Link
+              href="/onboarding/interests"
+              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              {interests.length === 0 ? "내 관심분과/단체 설정하기" : "수정"}
+            </Link>
+          </div>
+          {interests.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              아직 설정된 관심 분과·단체가 없습니다. 설정하시면 새 글·행사 소식을 카톡으로 받아볼 수 있습니다.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {interests.map((g) => (
+                  <span
+                    key={g.id}
+                    className={`px-3 py-1 rounded-full text-xs border ${
+                      g.parent_id
+                        ? "bg-white border-[var(--color-border)] text-[var(--color-text)]"
+                        : "bg-[var(--color-primary)]/8 border-[var(--color-primary)]/30 text-[var(--color-primary)] font-medium"
+                    }`}
+                  >
+                    {g.name}
+                  </span>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none pt-2 border-t border-[var(--color-border)]">
+                <input
+                  type="checkbox"
+                  checked={notifyKakao}
+                  disabled={savingNotify}
+                  onChange={toggleNotifyKakao}
+                  className="w-4 h-4 accent-[var(--color-primary)]"
+                />
+                <span className="text-sm">
+                  카카오톡 알림 받기{" "}
+                  <span className="text-xs text-[var(--color-text-muted)]">(채널 개설 후 활성화)</span>
+                </span>
+              </label>
+            </>
+          )}
+        </div>
       )}
 
       {/* 활동 탭 */}

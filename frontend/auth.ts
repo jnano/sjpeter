@@ -48,9 +48,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: displayName,
           accessToken: data.access_token,
           isAdmin: !!data.member.is_admin,
+          interestPromptCompleted: !!data.member.interest_prompt_completed,
           remember,
           expiresIn: Number(data.expires_in) || 12 * 3600,
-        } as { id: string; email: string; name: string; accessToken: string; isAdmin: boolean; remember: boolean; expiresIn: number };
+        } as { id: string; email: string; name: string; accessToken: string; isAdmin: boolean; interestPromptCompleted: boolean; remember: boolean; expiresIn: number };
       },
     }),
   ],
@@ -68,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (res.ok) {
               const m = await res.json();
               token.isAdmin = !!m.is_admin;
+              token.interestPromptCompleted = !!m.interest_prompt_completed;
             } else if (res.status === 401 || res.status === 403) {
               token.isAdmin = false;
             }
@@ -94,6 +96,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.accessToken = data.access_token;
             token.memberId = data.member.id;
             token.isAdmin = !!data.member.is_admin;
+            token.interestPromptCompleted = !!data.member.interest_prompt_completed;
             token.name = data.member.name
               ? `${data.member.name}(${data.member.nickname})`
               : data.member.nickname;
@@ -110,10 +113,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       if (user && (user as { accessToken?: string }).accessToken) {
-        const u = user as { accessToken: string; isAdmin?: boolean; remember?: boolean; expiresIn?: number };
+        const u = user as { accessToken: string; isAdmin?: boolean; interestPromptCompleted?: boolean; remember?: boolean; expiresIn?: number };
         token.accessToken = u.accessToken;
         token.memberId = Number(user.id);
         token.isAdmin = u.isAdmin ?? false;
+        token.interestPromptCompleted = u.interestPromptCompleted ?? false;
         token.remember = u.remember ?? false;
         token.absoluteExpiry = Date.now() + (u.expiresIn ?? 12 * 3600) * 1000;
         return token;
@@ -134,6 +138,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.accessToken = token.accessToken as string;
       session.memberId = token.memberId as number;
       (session as { isAdmin?: boolean }).isAdmin = (token.isAdmin as boolean) ?? false;
+      (session as { interestPromptCompleted?: boolean }).interestPromptCompleted =
+        (token.interestPromptCompleted as boolean) ?? false;
       (session as { remember?: boolean }).remember = (token.remember as boolean) ?? false;
       (session as { absoluteExpiry?: number }).absoluteExpiry =
         (token.absoluteExpiry as number) ?? 0;

@@ -58,6 +58,7 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 @app.on_event("startup")
 def startup():
     from app.models import bulletin_extraction  # noqa: F401 — 테이블 등록
+    from app.models import member_interest  # noqa: F401 — 회원 관심분과
     create_tables()
     _migrate_add_columns()
     _seed_initial_data()
@@ -95,6 +96,8 @@ def _migrate_add_columns():
             ("social_id", "VARCHAR(200)"),
             ("avatar_url", "VARCHAR(500)"),
             ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("interest_prompt_completed", "BOOLEAN DEFAULT FALSE NOT NULL"),
+            ("notify_kakao", "BOOLEAN DEFAULT FALSE NOT NULL"),
         ]:
             try:
                 conn.execute(text(
@@ -156,6 +159,23 @@ def _migrate_add_columns():
                 UNIQUE (board_id, member_id)
             )
         """))
+
+        # 회원 관심 분과/단체 — 첫 로그인 온보딩 + 향후 카톡 알림 대상
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS member_community_interests (
+                id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                community_group_id INTEGER NOT NULL REFERENCES community_groups(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                UNIQUE (member_id, community_group_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_member_community_interests_member ON member_community_interests(member_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_member_community_interests_group ON member_community_interests(community_group_id)"
+        ))
 
         # legacy 신부님 사진 테이블 / 컬럼 제거 (parish_staff로 이전됨)
         conn.execute(text("DROP TABLE IF EXISTS pastor_photos"))

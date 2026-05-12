@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import SessionProvider from "@/components/SessionProvider";
 import SessionTimeout from "@/components/SessionTimeout";
 import SessionSync from "@/components/SessionSync";
+import OnboardingGate from "@/components/OnboardingGate";
 import { MenusProvider } from "@/components/MenusProvider";
 import { fetchServerMenus } from "@/components/fetchServerMenus";
 
@@ -60,6 +61,7 @@ export default async function RootLayout({
             <Footer />
             <SessionTimeout />
             <SessionSync />
+            <OnboardingGate />
           </MenusProvider>
         </SessionProvider>
       </body>
