@@ -104,7 +104,6 @@ function LoginForm() {
               required
               autoFocus
               className="w-full border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
-              placeholder="admin 또는 이메일"
             />
           </div>
 
