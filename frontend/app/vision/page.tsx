@@ -14,12 +14,14 @@ interface VisionOut {
   id: number;
   year: number;
   motto: string;
+  body: string | null;
   is_current: boolean;
 }
 
 async function getVisions(): Promise<VisionOut[]> {
   try {
-    const res = await fetch(`${API}/api/content/visions`, { next: { revalidate: 3600 } });
+    // admin에서 본문 수정 시 즉시 반영되도록 캐시 비활성
+    const res = await fetch(`${API}/api/content/visions`, { cache: "no-store" });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -57,6 +59,14 @@ export default async function VisionPage() {
             <p className="text-white/60 text-sm mt-4">주임신부 {pastorName}</p>
           )}
         </div>
+      )}
+
+      {current?.body && (
+        <article className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8 mb-8">
+          <p className="text-sm text-[var(--color-text)] leading-loose whitespace-pre-line">
+            {current.body}
+          </p>
+        </article>
       )}
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">

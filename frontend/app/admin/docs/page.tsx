@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.12";
+export const CURRENT_VERSION = "1.5.13";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.13", date: "2026-05-12", tag: "기능",
+    items: [
+      "사목지표에 본문(body) 입력 추가 — 슬로건 외에 신부님의 한 해 사목 방향·말씀을 단락으로 기록 가능",
+      "/vision 공개 페이지에 올해 지표 본문 카드 노출 (줄바꿈 보존)",
+      "/admin/content?tab=vision 생성/수정 폼에 textarea 추가, no-store로 즉시 반영",
+    ],
+  },
   {
     version: "1.5.12", date: "2026-05-12", tag: "기능",
     items: [

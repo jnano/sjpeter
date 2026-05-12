@@ -83,6 +83,7 @@ def delete_history(item_id: int, db: Session = Depends(get_db), _: Admin = Depen
 class VisionIn(BaseModel):
     year: int
     motto: str
+    body: Optional[str] = None
     is_current: bool = False
 
 
@@ -90,6 +91,7 @@ class VisionOut(BaseModel):
     id: int
     year: int
     motto: str
+    body: Optional[str] = None
     is_current: bool
 
     class Config:

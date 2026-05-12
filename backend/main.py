@@ -151,6 +151,8 @@ def _migrate_add_columns():
             # posts 한 줄 메시지용 메타 필드
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_kind VARCHAR(20)",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",
+            # 사목지표 본문 (모토 + 상세 설명)
+            "ALTER TABLE visions ADD COLUMN IF NOT EXISTS body TEXT",
         ]:
             try:
                 conn.execute(text(ddl))

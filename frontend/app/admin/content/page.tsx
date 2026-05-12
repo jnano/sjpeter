@@ -28,6 +28,7 @@ interface Vision {
   id: number;
   year: number;
   motto: string;
+  body: string | null;
   is_current: boolean;
 }
 
@@ -280,9 +281,9 @@ function HistoryTab() {
 
 function VisionTab() {
   const [items, setItems] = useState<Vision[]>([]);
-  const [form, setForm] = useState({ year: new Date().getFullYear(), motto: "", is_current: false });
+  const [form, setForm] = useState({ year: new Date().getFullYear(), motto: "", body: "", is_current: false });
   const [editId, setEditId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ year: 0, motto: "", is_current: false });
+  const [editForm, setEditForm] = useState({ year: 0, motto: "", body: "", is_current: false });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -306,7 +307,7 @@ function VisionTab() {
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", is_current: false }); setShowCreate(false); load(); }
+    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", body: "", is_current: false }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -385,6 +386,16 @@ function VisionTab() {
             <label className="block text-xs font-medium text-gray-600 mb-1">지표 (슬로건)</label>
             <input value={form.motto} onChange={(e) => setForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} placeholder="예: 거룩한 향기의 해" required />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">본문 <span className="text-gray-400">(선택, 줄바꿈 보존)</span></label>
+            <textarea
+              value={form.body}
+              onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
+              className={`${inputCls} min-h-[140px] resize-y leading-relaxed`}
+              placeholder={"신부님의 한 해 사목 방향과 의도, 신자들에게 전하는 말씀을 입력하세요.\n\n빈 줄을 두면 단락이 구분됩니다."}
+              rows={6}
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.is_current} onChange={(e) => setForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
             올해 지표로 표시
@@ -415,7 +426,14 @@ function VisionTab() {
             editId === v.id ? (
               <div key={v.id} className="p-4 bg-blue-50 space-y-3">
                 <input type="number" value={editForm.year} onChange={(e) => setEditForm((p) => ({ ...p, year: +e.target.value }))} className={inputCls} />
-                <input value={editForm.motto} onChange={(e) => setEditForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} />
+                <input value={editForm.motto} onChange={(e) => setEditForm((p) => ({ ...p, motto: e.target.value }))} className={inputCls} placeholder="지표 (슬로건)" />
+                <textarea
+                  value={editForm.body}
+                  onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))}
+                  className={`${inputCls} min-h-[140px] resize-y leading-relaxed`}
+                  placeholder="본문 (선택, 줄바꿈 보존)"
+                  rows={6}
+                />
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={editForm.is_current} onChange={(e) => setEditForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
                   올해 지표
@@ -434,7 +452,7 @@ function VisionTab() {
                   {v.is_current && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">올해</span>}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => { setEditId(v.id); setEditForm({ year: v.year, motto: v.motto, is_current: v.is_current }); }} className={btnEdit}>수정</button>
+                  <button onClick={() => { setEditId(v.id); setEditForm({ year: v.year, motto: v.motto, body: v.body ?? "", is_current: v.is_current }); }} className={btnEdit}>수정</button>
                   <button onClick={() => remove(v.id)} className={btnDanger}>삭제</button>
                 </div>
               </div>

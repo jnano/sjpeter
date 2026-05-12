@@ -21,7 +21,8 @@ class Vision(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     year = Column(Integer, nullable=False)
-    motto = Column(String(300), nullable=False)
+    motto = Column(String(300), nullable=False)        # 한 줄 슬로건
+    body = Column(Text, nullable=True)                  # 상세 본문 (선택, 줄바꿈 보존)
     is_current = Column(Boolean, default=False)
 
 
