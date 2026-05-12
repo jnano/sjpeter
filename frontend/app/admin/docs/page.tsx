@@ -5,12 +5,23 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.0";
-export const LAST_UPDATED = "2026-05-08";
+export const CURRENT_VERSION = "1.6.0";
+export const LAST_UPDATED = "2026-05-12";
 
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.6.0", date: "2026-05-12", tag: "기능",
+    items: [
+      "회원 관심 분과·단체 시스템 — 가입 후 첫 로그인 시 /onboarding/interests 자동 안내, 마이페이지 섹션, /groups/[slug] 관심 등록 패널",
+      "단체 선택 시 부모 분과 자동 포함 (트리 워크업) + 분과 해제 시 등록된 소속단체 함께 해제 confirm",
+      "카톡 알림 수신 동의 토글 추가 (글로벌 1개, members.notify_kakao) — 발송은 채널 개설 후 활성화",
+      "위임 관리자 해제된 회원에게 헤더 '관리페이지' 링크 노출 차단 — SessionSync로 권한 변경 즉시 반영",
+      "세션 만료 정책 정비 — 기본 12시간 + idle 30분 자동 로그아웃, '로그인 상태 유지' 체크 시 7일",
+      "마이페이지 일시적 오류 수정 (SessionSync deps 무한 루프 + 429 후속 TypeError)",
+    ],
+  },
   {
     version: "1.5.0", date: "2026-05-08", tag: "기능",
     items: [
@@ -346,6 +357,60 @@ function GuideTab() {
         <Tip>사진은 등록 후 목록에서 '사진' 버튼으로 별도 업로드합니다.</Tip>
       </Accordion>
 
+      <Accordion icon="💚" title="회원 관심 분과·단체" badge="자동 온보딩 + 카톡 알림 대상">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          회원이 관심 있는 분과·단체를 선택해두면, 향후 그 분과의 새 글·행사 알림을 카톡으로 받을 수 있습니다.
+          카톡 발송 자체는 채널 개설 후 활성화 예정입니다.
+        </p>
+        <p className="mb-2 font-medium">동작 흐름</p>
+        <Steps items={[
+          "신규 회원 첫 로그인 → OnboardingGate가 /onboarding/interests로 자동 redirect",
+          "분과(parent) 또는 소속단체(child)를 자유롭게 선택. 단체만 선택해도 백엔드가 부모 분과를 자동 INSERT",
+          "응답('완료' 또는 '선택 안함') 시 interest_prompt_completed=true 마킹 → 다음 로그인부터 묻지 않음",
+          "이후 마이페이지 '내 관심 분과·단체' 섹션에서 언제든 수정",
+          "/groups/[slug] 분과 상세 페이지에서도 단건 등록·해제 가능",
+        ]} />
+        <p className="mb-2 mt-4 font-medium">데이터 모델</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+          <li>• <code>members.interest_prompt_completed</code> (bool) — 온보딩 응답 여부</li>
+          <li>• <code>members.notify_kakao</code> (bool) — 카톡 알림 수신 동의 (글로벌)</li>
+          <li>• <code>member_community_interests(member_id, community_group_id, UNIQUE)</code> — 다대다</li>
+        </ul>
+        <Tip>
+          분과 해제 시 등록된 소속단체가 있으면 <strong>confirm</strong> 후 함께 해제됩니다.
+          백엔드 부모 자동 포함 정책과 충돌 방지를 위함입니다.
+        </Tip>
+        <Warn>
+          카톡 발송 로직은 미구현(stub)입니다. 카카오 비즈니스 채널 개설 후 어댑터를 연결해 활성화합니다.
+        </Warn>
+      </Accordion>
+
+      <Accordion icon="🔒" title="세션 만료 정책" badge="12h 기본 / 7d 옵션">
+        <p className="mb-3 text-[var(--color-text-muted)]">관리자·회원 공통 정책입니다.</p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="rounded-lg border border-[var(--color-border)] p-3">
+            <p className="font-semibold text-sm mb-1">기본 (체크 안 함)</p>
+            <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+              <li>• 토큰 만료: <strong>12시간</strong></li>
+              <li>• <strong>30분 무활동</strong> 시 경고 + 5분 카운트 후 자동 로그아웃</li>
+              <li>• 재부팅 후 다음날 접속 시 만료</li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-[var(--color-border)] p-3">
+            <p className="font-semibold text-sm mb-1">로그인 상태 유지 체크</p>
+            <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+              <li>• 토큰 만료: <strong>7일</strong></li>
+              <li>• idle 타이머 비활성</li>
+              <li>• 명시적으로 선택한 경우만</li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] mt-3">
+          관리자 admin_authed 쿠키 max-age와 localStorage admin_token_exp가 동시에 토큰 만료에 맞춰 설정됩니다.
+          페이지 로드 시 만료된 토큰은 자동 정리됩니다.
+        </p>
+      </Accordion>
+
       <Accordion icon="📋" title="활동 로그" badge="/admin/logs">
         <p className="text-[var(--color-text-muted)] mb-2">관리자가 수행한 모든 주요 행동이 자동으로 기록됩니다.</p>
         <p className="font-medium mb-2">기록되는 항목</p>
@@ -374,7 +439,7 @@ function TechTab() {
           {[
             {
               label: "Frontend", icon: "🖥️",
-              items: ["Next.js 15 (App Router)", "TypeScript", "Tailwind CSS 3", "NextAuth.js 5", "Kakao Maps/Share JS SDK"],
+              items: ["Next.js 16 (App Router · Turbopack)", "TypeScript", "Tailwind CSS", "NextAuth.js 5", "Kakao Maps/Share JS SDK"],
             },
             {
               label: "Backend", icon: "⚙️",
@@ -394,7 +459,7 @@ function TechTab() {
             },
             {
               label: "인증", icon: "🔑",
-              items: ["관리자: FastAPI JWT (localStorage)", "회원: NextAuth HTTP-only cookie", "이메일 인증 토큰", "소셜 로그인 준비"],
+              items: ["관리자: FastAPI JWT (localStorage)", "회원: NextAuth HTTP-only cookie", "세션: 기본 12h + idle 30분 / 유지 옵션 7일", "권한 변경 즉시 동기화 (SessionSync)", "이메일 인증 토큰 · Google·Kakao 소셜 로그인"],
             },
           ].map((stack) => (
             <div key={stack.label} className="rounded-xl border border-[var(--color-border)] p-4 bg-white">
@@ -466,11 +531,13 @@ function TechTab() {
             <p>│&nbsp;&nbsp; ├── admin/        # 관리자 패널</p>
             <p>│&nbsp;&nbsp; ├── boards/       # 게시판·게시글</p>
             <p>│&nbsp;&nbsp; ├── gallery/      # 갤러리</p>
-            <p>│&nbsp;&nbsp; ├── members/      # 회원 인증</p>
+            <p>│&nbsp;&nbsp; ├── groups/       # 분과·단체 + 관심 등록</p>
+            <p>│&nbsp;&nbsp; ├── members/      # 회원 인증·마이페이지</p>
+            <p>│&nbsp;&nbsp; ├── onboarding/   # 관심분과 첫 선택</p>
             <p>│&nbsp;&nbsp; └── ...           # 공개 페이지</p>
-            <p>├── components/       # 공용 컴포넌트</p>
+            <p>├── components/       # SessionSync·OnboardingGate 등</p>
             <p>├── lib/              # API 타입·유틸</p>
-            <p>└── auth.ts           # NextAuth 설정</p>
+            <p>└── auth.ts           # NextAuth (isAdmin·interestPromptCompleted)</p>
           </div>
           <div className="rounded-xl border border-[var(--color-border)] bg-gray-950 text-green-300 p-4 font-mono text-xs leading-6">
             <p className="text-gray-500 mb-2"># Backend</p>
@@ -523,10 +590,13 @@ function ApiTab() {
       <div>
         <h3 className="font-semibold text-[var(--color-primary)] mb-2">회원 (Members)</h3>
         <ApiTable>
-          <ApiRow method="GET"  path="/members/me" desc="내 프로필" auth="회원" />
+          <ApiRow method="GET"  path="/members/me" desc="내 프로필 (interest_prompt_completed, notify_kakao 포함)" auth="회원" />
           <ApiRow method="PUT"  path="/members/me" desc="프로필 수정 (name, nickname, phone, password)" auth="회원" />
           <ApiRow method="DELETE" path="/members/me" desc="계정 삭제" auth="회원" />
           <ApiRow method="POST" path="/members/me/avatar" desc="아바타 업로드" auth="회원" />
+          <ApiRow method="GET"  path="/members/me/interests" desc="내 관심 분과·단체 + 카톡 알림 설정" auth="회원" />
+          <ApiRow method="PUT"  path="/members/me/interests" desc="관심분과 덮어쓰기 (단체 선택 시 부모 자동 포함)" auth="회원" />
+          <ApiRow method="POST" path="/members/me/interests/skip" desc="'관심분과 선택 안함' 온보딩 응답 마킹" auth="회원" />
           <ApiRow method="GET"  path="/members/admin/stats" desc="대시보드 통계" auth="관리자" />
           <ApiRow method="GET"  path="/members/admin/list" desc="회원 목록 (page, q, is_active)" auth="관리자" />
           <ApiRow method="PUT"  path="/members/admin/{id}/activate" desc="회원 활성화" auth="관리자" />
