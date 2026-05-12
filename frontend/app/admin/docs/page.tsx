@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.20";
+export const CURRENT_VERSION = "1.5.21";
 export const LAST_UPDATED = "2026-05-12";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-12";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.21", date: "2026-05-12", tag: "수정",
+    items: [
+      "AI 생성 공지·행사의 created_at을 등록 시각이 아닌 주보 발행일로 설정",
+      "과거 주보(예: 2025-11-30)를 오늘 업로드해도 게시판/캘린더에서 해당 날짜로 자연 정렬",
+      "기존에 오늘 날짜로 잘못 등록된 AI 데이터(notices 10건·events 6건) 발행일로 보정",
+    ],
+  },
   {
     version: "1.5.20", date: "2026-05-12", tag: "수정",
     items: [

@@ -2,7 +2,7 @@ import hashlib
 import logging
 import os
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 from difflib import SequenceMatcher
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
@@ -250,6 +250,9 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         if bulletin.issue_number
         else bulletin.published_date.strftime("%Y.%m.%d")
     )
+    # AI 자동 등록 항목은 등록 시각이 아닌 주보 발행일을 기준으로 created_at 설정
+    # (과거 주보 일괄 처리 시 게시판/캘린더에서 발행일순으로 자연 정렬되도록)
+    published_ts = datetime.combine(bulletin.published_date, time(12, 0))
 
     new_extractions: list[BulletinExtraction] = []
     for ev in events:
@@ -269,14 +272,14 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         title = ev.get("title", "")
         content_text = ev.get("content")
 
-        # 공지 → notices 바로 등록
+        # 공지 → notices 바로 등록 (created_at은 주보 발행일)
         if event_type == "공지":
             db.execute(
                 _text(
                     "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
-                    "VALUES (:pid, :title, :content, FALSE, TRUE, NOW())"
+                    "VALUES (:pid, :title, :content, FALSE, TRUE, :created)"
                 ),
-                {"pid": parish_id, "title": title, "content": content_text},
+                {"pid": parish_id, "title": title, "content": content_text, "created": published_ts},
             )
             ext = BulletinExtraction(
                 bulletin_id=bulletin_id, title=title, content=content_text,
@@ -288,20 +291,21 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             new_extractions.append(ext)
             continue
 
-        # 행사/모임 + 날짜 → 캘린더 바로 등록
+        # 행사/모임 + 날짜 → 캘린더 바로 등록 (created_at은 주보 발행일)
         if event_type in ("행사", "모임") and parsed_date:
             category = "community" if event_type == "모임" else "general"
             parsed_end = _parse_date(ev.get("end_date"))
             db.execute(
                 _text(
-                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind) "
-                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind)"
+                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
+                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created)"
                 ),
                 {
                     "title": title, "desc": content_text,
                     "edate": parsed_date,
                     "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
                     "loc": ev.get("location"), "cat": category, "kind": event_type,
+                    "created": published_ts,
                 },
             )
             ext = BulletinExtraction(
