@@ -1012,160 +1012,57 @@ function PhilosophyTab() {
 
 function OwnershipTab() {
   return (
-    <div className="space-y-6 text-sm">
+    <div className="space-y-6 text-sm max-w-2xl mx-auto">
 
-      {/* 소프트웨어 이름 */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-6 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">소프트웨어 이름</p>
-        <p className="font-serif text-4xl font-bold tracking-widest text-[var(--color-primary)] mb-1">Cephas</p>
-        <p className="text-lg text-[var(--color-text-muted)] mb-4">세파스</p>
-        <div className="mx-auto max-w-lg border-t border-[var(--color-border)] pt-4 space-y-1.5 text-xs text-[var(--color-text-muted)] leading-relaxed">
-          <p>
-            아람어 <span className="font-semibold text-[var(--color-text)]">כֵּיפָא (Kēpā)</span>에서 온 말로
-            <span className="font-semibold text-[var(--color-text)]"> &ldquo;반석&rdquo;</span>을 뜻합니다.
-            요한복음 1,42에서 예수님이 시몬에게 직접 붙여주신 이름으로,
-            그리스어 Petros(페트로스), 한국어 베드로에 해당합니다.
-          </p>
-          <p className="italic text-[var(--color-text-muted)]">
-            &ldquo;너는 베드로이다. 내가 이 반석 위에 내 교회를 세울 것이다.&rdquo; — 마태오 16,18
-          </p>
-        </div>
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-1.5 text-xs text-[var(--color-text-muted)]">
-          <span className="font-mono font-semibold text-[var(--color-primary)]">v{CURRENT_VERSION}</span>
-          <span>·</span>
-          <span>세종 성베드로 성당 본당 홈페이지 소프트웨어</span>
-        </div>
-      </div>
-
-      {/* 소프트웨어 소유권 */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
-          <h2 className="font-bold text-[var(--color-primary)]">소프트웨어 소유권</h2>
-        </div>
-        <div className="px-6 py-5 space-y-4 leading-relaxed text-[var(--color-text)]">
-          <p>
-            본 웹사이트를 구성하는 <strong>소프트웨어 전체</strong>—프론트엔드(Next.js), 백엔드(FastAPI),
-            데이터베이스 스키마 설계, API 구조, UI/UX 설계 및 구현 코드—에 대한
-            저작권 및 지식재산권은 <strong>강태훈(hunskang@gmail.com)</strong>에게 있습니다.
-          </p>
-          <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-            {[
-              { label: "프론트엔드 구현", value: "Next.js 15 App Router 기반 UI/UX 설계 및 컴포넌트 구현" },
-              { label: "백엔드 구현", value: "FastAPI 기반 REST API 설계, 비즈니스 로직, 인증 체계" },
-              { label: "데이터베이스 설계", value: "PostgreSQL 스키마 설계, 테이블 관계 정의, 마이그레이션 관리" },
-              { label: "AI 연동 설계", value: "Claude API를 활용한 주보 분석 파이프라인 설계 및 구현" },
-              { label: "시스템 아키텍처", value: "서비스 구조, 배포 환경, 보안 정책 설계" },
-            ].map((row, i) => (
-              <div key={row.label} className={`flex gap-4 px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
-                <span className="w-36 shrink-0 font-semibold text-[var(--color-primary)]">{row.label}</span>
-                <span className="text-[var(--color-text-muted)]">{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            소프트웨어의 복제·수정·재배포·상업적 이용은 소유자의 명시적 동의 없이 허용되지 않습니다.
-          </p>
-        </div>
-      </div>
-
-      {/* 데이터 소유권 */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
-          <h2 className="font-bold text-[var(--color-primary)]">데이터 · 콘텐츠 소유권</h2>
-        </div>
-        <div className="px-6 py-5 space-y-4 leading-relaxed text-[var(--color-text)]">
-          <p>
-            본 소프트웨어를 통해 생산·등록·관리되는 모든 <strong>파일 및 데이터</strong>의
-            소유권은 <strong>세종 성베드로 성당</strong>에 있습니다.
-          </p>
-          <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-            {[
-              { label: "주보 PDF", value: "업로드된 주보 원본 파일 및 메타데이터" },
-              { label: "사진·이미지", value: "갤러리, 사목자·사제 프로필, 신부님 사진 등 모든 업로드 이미지" },
-              { label: "게시글·댓글", value: "회원이 작성한 게시글, 댓글 등 커뮤니티 콘텐츠" },
-              { label: "본당 정보", value: "미사 시간, 사목 방향, 성당 역사, 단체 정보 등 본당 기본 정보" },
-              { label: "공지·알림", value: "관리자가 작성한 공지사항 및 알림" },
-              { label: "행사 기록", value: "캘린더에 등록된 행사 및 AI 추출 결과로 승인된 콘텐츠" },
-              { label: "회원 정보", value: "본당 신자 가입 정보 및 활동 이력 (개인정보보호법 적용)" },
-            ].map((row, i) => (
-              <div key={row.label} className={`flex gap-4 px-4 py-3 text-xs ${i % 2 === 0 ? "bg-white" : "bg-[var(--color-surface-warm)]"}`}>
-                <span className="w-36 shrink-0 font-semibold text-[var(--color-primary)]">{row.label}</span>
-                <span className="text-[var(--color-text-muted)]">{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 역할 구분 */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
-          <h2 className="font-bold text-[var(--color-primary)]">역할 및 책임 구분</h2>
-        </div>
-        <div className="px-6 py-5">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">소프트웨어 개발자 (강태훈)</p>
-              <ul className="space-y-2">
-                {[
-                  "시스템 유지·보수 및 기능 개선",
-                  "보안 취약점 패치 및 업데이트",
-                  "서버 인프라 설정 및 배포",
-                  "기술 문서 작성 및 관리",
-                  "데이터 마이그레이션 지원",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
-                    <span className="mt-1 text-[var(--color-primary)]">▸</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2 uppercase tracking-wide">데이터 관리 주체 (세종 성베드로 성당)</p>
-              <ul className="space-y-2">
-                {[
-                  "콘텐츠 등록·수정·삭제 및 관리",
-                  "회원 가입 승인 및 권한 관리",
-                  "개인정보 처리 및 보호 책임",
-                  "데이터 백업 정책 수립 및 이행",
-                  "서비스 운영 방침 결정",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-xs text-[var(--color-text)]">
-                    <span className="mt-1 text-[var(--color-primary)]">▸</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 고지 */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-4">
-        <p className="text-xs font-semibold text-amber-700 mb-1">개인정보 처리 고지</p>
-        <p className="text-xs text-amber-800 leading-relaxed">
-          본 시스템은 회원 가입 시 이름·이메일·연락처 등 개인정보를 수집합니다.
-          수집된 개인정보는 본당 서비스 제공 목적으로만 사용되며,
-          「개인정보 보호법」에 따라 세종 성베드로 성당이 처리 책임을 집니다.
-          개인정보 관련 문의: 본당 사무실 또는 관리자 이메일로 연락하시기 바랍니다.
+      {/* 1. 가톨릭 교회 무료 사용 */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-5">
+        <h2 className="font-bold text-[var(--color-primary)] mb-3">사용 허가</h2>
+        <p className="leading-relaxed text-[var(--color-text)]">
+          본 소프트웨어 <strong>세파스(Cephas)</strong>는 <strong>가톨릭 교회</strong>에 한하여
+          누구나 <strong>무료</strong>로 사용할 수 있습니다.
+          본당·교구·수도회 단위로 자체 운영하실 수 있으며 별도의 사용료가 발생하지 않습니다.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
+          가톨릭 교회 외 기관(타 종교 단체, 일반 기업 등)의 사용은 별도 협의가 필요합니다.
         </p>
       </div>
 
-      {/* 소유권 요약 (하단) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)]">
-        <div className="flex flex-wrap gap-4">
-          <span>
-            <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span>
-            &nbsp;© 강태훈 (hunskang@gmail.com)
-          </span>
-          <span>
-            <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span>
-            &nbsp;© 세종 성베드로 성당
-          </span>
-        </div>
-        <span>최초 작성: 2026-05-08</span>
+      {/* 2. 개발·배포 주체 (1과 배치되지 않음) */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white px-6 py-5">
+        <h2 className="font-bold text-[var(--color-primary)] mb-3">개발·배포 주체</h2>
+        <p className="leading-relaxed text-[var(--color-text)]">
+          본 소프트웨어의 개발과 배포 주체는 <strong>강태훈 야고보(hunskang@gmail.com)</strong>입니다.
+          설계·구현·유지보수의 책임을 지며, 가톨릭 교회의 무료 사용 권리와는 별개로
+          소프트웨어 자체의 저작자(authorship) 권리는 개발자에게 있습니다.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
+          본 시스템을 통해 등록·관리되는 모든 데이터(주보·사진·게시글·회원 정보 등)의 소유권은
+          이를 운영하는 본당 — 본 사이트의 경우 <strong>세종 성베드로 성당</strong> — 에 있습니다.
+        </p>
+      </div>
+
+      {/* 3. 개인정보 처리 고지 */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-5">
+        <h2 className="font-bold text-amber-800 mb-2">개인정보 처리 고지</h2>
+        <p className="text-amber-800 leading-relaxed">
+          본 시스템은 회원 가입 시 이름·이메일·연락처 등 개인정보를 수집합니다.
+          수집된 개인정보는 본당 서비스 제공 목적으로만 사용되며,
+          「개인정보 보호법」에 따라 <strong>세종 성베드로 성당</strong>이 처리 책임을 집니다.
+          개인정보 관련 문의는 본당 사무실 또는 관리자 이메일로 연락하시기 바랍니다.
+        </p>
+      </div>
+
+      {/* 4. 하단 © */}
+      <div className="border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)] space-y-1 text-center">
+        <p>
+          <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span>
+          &nbsp;© 강태훈 야고보 (hunskang@gmail.com)
+        </p>
+        <p>
+          <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span>
+          &nbsp;© 세종 성베드로 성당
+        </p>
+        <p className="pt-1">최초 작성: 2026-5</p>
       </div>
 
     </div>
