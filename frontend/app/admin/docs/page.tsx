@@ -1057,14 +1057,15 @@ function OwnershipTab() {
         </p>
       </div>
 
-      {/* 4. 하단 © — 한 줄 */}
-      <p className="border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)] text-center">
-        <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span> © 강태훈 야고보 (hunskang@gmail.com · 010-5099-9979)
-        <span className="mx-2 text-[var(--color-border-dark)]">·</span>
-        <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span> © 세종 성베드로 성당
-        <span className="mx-2 text-[var(--color-border-dark)]">·</span>
-        최초 작성: 2026-5
-      </p>
+      {/* 4. 하단 © */}
+      <div className="border-t border-[var(--color-border)] pt-4 text-xs text-[var(--color-text-muted)] text-center space-y-1">
+        <p>
+          <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span> © 강태훈 야고보 (hunskang@gmail.com · 010-5099-9979)
+          <span className="mx-2 text-[var(--color-border-dark)]">·</span>
+          <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span> © 세종 성베드로 성당
+        </p>
+        <p>최초 작성: 2026-5</p>
+      </div>
 
     </div>
   );
