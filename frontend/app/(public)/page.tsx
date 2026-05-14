@@ -99,10 +99,9 @@ async function getSiteConfig(): Promise<Record<string, string>> {
 }
 
 function formatTime(t: string): string {
+  // 24시간 형식 — "8시 30분" / "17시" / "19시 30분"
   const [h, m] = t.split(":").map(Number);
-  const period = h < 12 ? "오전" : "오후";
-  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return m === 0 ? `${period} ${hour}시` : `${period} ${hour}시 ${String(m).padStart(2, "0")}분`;
+  return m === 0 ? `${h}시` : `${h}시 ${String(m).padStart(2, "0")}분`;
 }
 
 function formatTimesRow(times: string[]): string {
