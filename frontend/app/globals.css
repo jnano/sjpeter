@@ -27,6 +27,15 @@
   --font-serif: var(--font-noto-serif-kr), "Apple SD Gothic Neo", Georgia, serif;
 }
 
+/* ── 스킨 토큰 오버라이드 자리 ──
+   (admin)/layout.tsx가 data-skin="admin"으로 감싸므로, 이 셀렉터 안에
+   --color-* 등을 재정의하면 admin 영역 전체에 자동 적용된다.
+   현재는 공개 사이트와 동일 톤을 유지(빈 블록). 추후 시즈널 스킨이나
+   다크 admin 등이 필요해지면 여기서 변수만 갈아끼우면 된다. */
+[data-skin="admin"] {
+  /* 비워둠 — 의도된 인프라용 셀렉터 */
+}
+
 /* ── 디자인 확장 변수 ── */
 :root {
   --navy-deep: #0d1b33;
