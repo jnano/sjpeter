@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import PostDetail from "@/app/boards/[slug]/[postId]/PostDetail";
+import PostDetail from "@/app/(public)/boards/[slug]/[postId]/PostDetail";
 import PageHeader from "@/components/PageHeader";
 import { auth } from "@/auth";
 

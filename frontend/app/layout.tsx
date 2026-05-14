@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SessionProvider from "@/components/SessionProvider";
 import SessionTimeout from "@/components/SessionTimeout";
 import SessionSync from "@/components/SessionSync";
@@ -51,21 +49,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [initialMenus, parish] = await Promise.all([
-    fetchServerMenus(),
-    fetchParishMin(),
-  ]);
+  const initialMenus = await fetchServerMenus();
   return (
     <html
       lang="ko"
       className={`${notoSansKR.variable} ${notoSerifKR.variable} ${playfairDisplay.variable}`}
     >
-      <body className="min-h-screen flex flex-col bg-[var(--color-background)]">
+      <body className="bg-[var(--color-background)]">
         <SessionProvider>
           <MenusProvider initial={initialMenus}>
-            <Header parishName={parish.name} logoUrl={parish.logo_url} />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            {children}
             <SessionTimeout />
             <SessionSync />
             <OnboardingGate />
