@@ -105,6 +105,7 @@ class PostIn(BaseModel):
     content: str = ""               # 한 줄 게시판은 빈 본문 허용
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
+    category: Optional[str] = None
 
 
 class AuthorOut(BaseModel):
@@ -167,6 +168,7 @@ class PostOut(BaseModel):
     updated_at: datetime
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
+    category: Optional[str] = None
     like_count: int = 0
     liked_by_me: bool = False
     member: Optional[AuthorOut] = None
@@ -187,6 +189,7 @@ class PostSummary(BaseModel):
     thumbnail_url: Optional[str] = None
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
+    category: Optional[str] = None
     like_count: int = 0
     liked_by_me: bool = False
     member: Optional[AuthorOut] = None
@@ -1109,17 +1112,36 @@ def delete_board(slug: str, db: Session = Depends(get_db), _: Admin = Depends(ge
 
 # ── 게시글 ────────────────────────────────────────────────
 
+@router.get("/api/boards/{slug}/categories", response_model=list[str])
+def list_board_categories(slug: str, db: Session = Depends(get_db)):
+    """해당 게시판에 등록된 distinct 카테고리 목록(빈 값 제외)."""
+    board = _get_board_or_404(slug, db)
+    rows = (
+        db.query(Post.category)
+        .filter(
+            Post.board_id == board.id,
+            Post.is_published == True,
+            Post.category.isnot(None),
+            Post.category != "",
+        )
+        .distinct()
+        .all()
+    )
+    return sorted({r[0] for r in rows if r[0]})
+
+
 @router.get("/api/boards/{slug}/posts", response_model=PostListOut)
 def list_posts(
     slug: str,
     page: int = 1,
     q: str = "",
     sort: str = "latest",
+    category: str = "",
     db: Session = Depends(get_db),
     viewer: Optional[Member] = Depends(get_optional_member),
 ):
     """sort: latest(최신순) | views(조회순) | likes(추천순) | comments(댓글순).
-    q: 제목·본문 ILIKE 자체 검색. 공백 무시."""
+    q: 제목·본문 ILIKE 자체 검색. category: 정확 일치 필터."""
     board = _get_board_or_404(slug, db)
     if board.members_only_read and not viewer:
         raise HTTPException(status_code=403, detail="회원만 볼 수 있는 게시판입니다.")
@@ -1128,6 +1150,8 @@ def list_posts(
     skip = (max(1, page) - 1) * per_page
 
     base = db.query(Post).filter(Post.board_id == board.id, Post.is_published == True)
+    if category:
+        base = base.filter(Post.category == category)
     kw = q.strip()
     if kw:
         # 공백 무시 ILIKE — replace 후 양쪽 매칭
@@ -1375,6 +1399,7 @@ def update_post(
     post.content = body.content
     post.intention_kind = body.intention_kind
     post.intention_for = body.intention_for
+    post.category = body.category
     db.commit()
     return (
         db.query(Post)

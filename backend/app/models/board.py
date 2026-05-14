@@ -50,6 +50,8 @@ class Post(Base):
     content = Column(Text, nullable=False)
     is_published = Column(Boolean, default=True)  # False: 임시저장 (AI 자동 생성)
     is_pinned = Column(Boolean, default=False, nullable=False)  # 게시판 상단 고정
+    # 자유 입력 카테고리. 값이 있으면 목록에서 칩으로 필터 가능.
+    category = Column(String(50), nullable=True)
     view_count = Column(Integer, default=0)
     # 한 줄 게시판(kind='line')용 메타 — 일반 게시판은 null
     intention_kind = Column(String(20), nullable=True)   # '위령' | '감사' | '청원' | '기타' 등

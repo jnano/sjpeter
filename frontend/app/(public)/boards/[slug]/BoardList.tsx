@@ -34,12 +34,14 @@ interface Props {
   currentView: "list" | "photo";
   currentQ?: string;
   currentSort?: string;
+  currentCategory?: string;
 }
 
-function pageUrl(slug: string, page: number, view: string, q?: string, sort?: string) {
+function pageUrl(slug: string, page: number, view: string, q?: string, sort?: string, category?: string) {
   const qp = new URLSearchParams({ page: String(page), view });
   if (q) qp.set("q", q);
   if (sort && sort !== "latest") qp.set("sort", sort);
+  if (category) qp.set("category", category);
   return `/boards/${slug}?${qp}`;
 }
 
@@ -55,7 +57,7 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default function BoardList({ posts, slug, currentPage, totalPages, currentView, currentQ, currentSort }: Props) {
+export default function BoardList({ posts, slug, currentPage, totalPages, currentView, currentQ, currentSort, currentCategory }: Props) {
   return (
     <>
       {posts.length === 0 ? (
@@ -76,6 +78,7 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
           view={currentView}
           q={currentQ}
           sort={currentSort}
+          category={currentCategory}
         />
       )}
     </>
@@ -178,6 +181,7 @@ function Pagination({
   view,
   q,
   sort,
+  category,
 }: {
   slug: string;
   currentPage: number;
@@ -185,13 +189,14 @@ function Pagination({
   view: string;
   q?: string;
   sort?: string;
+  category?: string;
 }) {
   const pages = getPaginationRange(currentPage, totalPages);
 
   return (
     <div className="flex items-center justify-center gap-1 mt-8">
       <Link
-        href={pageUrl(slug, Math.max(1, currentPage - 1), view, q, sort)}
+        href={pageUrl(slug, Math.max(1, currentPage - 1), view, q, sort, category)}
         aria-disabled={currentPage === 1}
         className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
           currentPage === 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
@@ -208,7 +213,7 @@ function Pagination({
         ) : (
           <Link
             key={p}
-            href={pageUrl(slug, p, view, q, sort)}
+            href={pageUrl(slug, p, view, q, sort, category)}
             className={`w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors ${
               p === currentPage
                 ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -221,7 +226,7 @@ function Pagination({
       )}
 
       <Link
-        href={pageUrl(slug, Math.min(totalPages, currentPage + 1), view, q, sort)}
+        href={pageUrl(slug, Math.min(totalPages, currentPage + 1), view, q, sort, category)}
         aria-disabled={currentPage === totalPages}
         className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
           currentPage === totalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-50"

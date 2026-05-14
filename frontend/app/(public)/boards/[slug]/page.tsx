@@ -61,6 +61,7 @@ async function getPosts(
   page: number,
   q: string,
   sort: string,
+  category: string,
   token?: string,
 ): Promise<PostListOut> {
   try {
@@ -68,6 +69,7 @@ async function getPosts(
     const qp = new URLSearchParams({ page: String(page) });
     if (q) qp.set("q", q);
     if (sort && sort !== "latest") qp.set("sort", sort);
+    if (category) qp.set("category", category);
     const res = await fetch(`${API}/api/boards/${slug}/posts?${qp}`, {
       cache: "no-store",
       headers,
@@ -76,6 +78,16 @@ async function getPosts(
     return res.json();
   } catch {
     return { posts: [], total: 0, posts_per_page: 20 };
+  }
+}
+
+async function getCategories(slug: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${API}/api/boards/${slug}/categories`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
   }
 }
 
@@ -118,7 +130,7 @@ export default async function BoardPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string; view?: string; q?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; view?: string; q?: string; sort?: string; category?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -126,6 +138,7 @@ export default async function BoardPage({
   const currentView = sp.view === "photo" ? "photo" : "list";
   const q = (sp.q ?? "").trim();
   const sort = SORT_OPTIONS.some((o) => o.value === sp.sort) ? sp.sort! : "latest";
+  const category = (sp.category ?? "").trim();
 
   const [board, session] = await Promise.all([getBoard(slug), auth()]);
 
@@ -180,7 +193,10 @@ export default async function BoardPage({
     );
   }
 
-  const postList = await getPosts(slug, page, q, sort, token);
+  const [postList, categories] = await Promise.all([
+    getPosts(slug, page, q, sort, category, token),
+    getCategories(slug),
+  ]);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
 
   return (
@@ -204,11 +220,57 @@ export default async function BoardPage({
         }
       />
       <SectionLayout autoHero={false}>
+        {/* 카테고리 필터 칩 (등록된 카테고리가 있을 때만) */}
+        {categories.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {(() => {
+              const baseQp = new URLSearchParams();
+              if (q) baseQp.set("q", q);
+              if (sort !== "latest") baseQp.set("sort", sort);
+              if (currentView !== "list") baseQp.set("view", currentView);
+              const allHref = `/boards/${slug}${baseQp.toString() ? `?${baseQp}` : ""}`;
+              return (
+                <>
+                  <Link
+                    href={allHref}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      !category
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                    }`}
+                  >
+                    전체
+                  </Link>
+                  {categories.map((c) => {
+                    const qp = new URLSearchParams(baseQp);
+                    qp.set("category", c);
+                    const active = category === c;
+                    return (
+                      <Link
+                        key={c}
+                        href={`/boards/${slug}?${qp}`}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                          active
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                        }`}
+                      >
+                        {c}
+                      </Link>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        )}
+
         {/* 게시판 자체 검색 + 정렬 */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
             {currentView !== "list" && <input type="hidden" name="view" value={currentView} />}
             {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
+            {category && <input type="hidden" name="category" value={category} />}
             <input
               type="search"
               name="q"
@@ -236,6 +298,7 @@ export default async function BoardPage({
               const qp = new URLSearchParams();
               if (q) qp.set("q", q);
               if (currentView !== "list") qp.set("view", currentView);
+              if (category) qp.set("category", category);
               if (o.value !== "latest") qp.set("sort", o.value);
               const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
               const active = sort === o.value;
@@ -271,6 +334,7 @@ export default async function BoardPage({
           currentView={currentView}
           currentQ={q}
           currentSort={sort}
+          currentCategory={category}
         />
       </SectionLayout>
     </>

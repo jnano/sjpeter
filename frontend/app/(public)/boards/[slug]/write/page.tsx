@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -33,9 +33,20 @@ export default function WritePage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("");
+  const [knownCategories, setKnownCategories] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 게시판의 distinct 카테고리 — datalist 자동완성용
+  useEffect(() => {
+    if (!slug) return;
+    fetch(`${API}/api/boards/${slug}/categories`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: string[]) => setKnownCategories(Array.isArray(data) ? data : []))
+      .catch(() => setKnownCategories([]));
+  }, [slug]);
 
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
@@ -81,7 +92,7 @@ export default function WritePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, category: category.trim() || null }),
       });
       const postData = await postRes.json();
       if (!postRes.ok) {
@@ -139,6 +150,22 @@ export default function WritePage() {
           required
           className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-lg"
         />
+
+        {/* 카테고리 (선택) — 기존 카테고리 자동완성 */}
+        <input
+          type="text"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          list="board-categories"
+          placeholder="카테고리 (선택)"
+          maxLength={50}
+          className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+        />
+        <datalist id="board-categories">
+          {knownCategories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
 
         <MarkdownEditor value={content} onChange={setContent} height={350} />
 
