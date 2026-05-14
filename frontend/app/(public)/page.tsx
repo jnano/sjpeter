@@ -89,6 +89,14 @@ async function getGospelToday(): Promise<GospelToday | null> {
   } catch { return null; }
 }
 
+async function getSiteConfig(): Promise<Record<string, string>> {
+  try {
+    const r = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
+    if (!r.ok) return {};
+    return (await r.json()) as Record<string, string>;
+  } catch { return {}; }
+}
+
 function formatTime(t: string): string {
   const [h, m] = t.split(":").map(Number);
   const period = h < 12 ? "오전" : "오후";
@@ -142,14 +150,21 @@ const QUICK_LINKS = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, youthPosts, constructionSummary] = await Promise.all([
-    getParish(),
-    getNotices(),
-    getGospelToday(),
-    getUpcomingEvents(),
-    getBoardPosts("youth_council"),
-    fetchConstructionSummary(),
-  ]);
+  const [parish, notices, gospel, upcomingEvents, youthPosts, constructionSummary, siteConfig] =
+    await Promise.all([
+      getParish(),
+      getNotices(),
+      getGospelToday(),
+      getUpcomingEvents(),
+      getBoardPosts("youth_council"),
+      fetchConstructionSummary(),
+      getSiteConfig(),
+    ]);
+
+  // 홈 메인 레이아웃: wide (사진 큼 + 우측 2단 스택, 기본) | even (3등분)
+  const heroLayout = siteConfig.HOME_HERO_LAYOUT === "even" ? "even" : "wide";
+  const gridColsClass =
+    heroLayout === "even" ? "md:grid-cols-3" : "md:grid-cols-[2fr_1fr]";
 
   const entries = parish?.mass_schedule?.entries ?? [];
   const massRows = buildMassRows(entries);
@@ -195,13 +210,14 @@ export default async function HomePage() {
       {/* ── 메인 3단 ── */}
       <section>
         <div className={`${CONTAINER} py-5 sm:py-7`}>
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+          <div className={`grid grid-cols-1 ${gridColsClass} gap-4`}>
 
             {/* 큰 사진 (관리자 등록 배너 크로스페이드, 없으면 yakhoun.jpg) */}
             <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
 
-            {/* 우측 컬럼 — 오늘의 복음 + 미사 시간 2단 스택 */}
-            <div className="flex flex-col gap-4 min-w-0">
+            {/* 우측 영역 — wide 모드: 컬럼으로 2단 스택 / even 모드: display:contents 로
+                grid 의 직접 자식처럼 동작해 3등분 배치 유지. */}
+            <div className={heroLayout === "wide" ? "flex flex-col gap-4 min-w-0" : "contents"}>
 
             {/* 오늘의 복음 */}
             <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">

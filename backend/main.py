@@ -641,6 +641,22 @@ def _migrate_add_columns():
             """))
         except Exception:
             pass
+        # 홈 메인 레이아웃 (사진+복음+미사 배치)
+        try:
+            conn.execute(text("""
+                INSERT INTO site_settings (key, value, label, description, is_secret, group_name)
+                VALUES (
+                    'HOME_HERO_LAYOUT',
+                    'wide',
+                    '홈 메인 레이아웃',
+                    '"wide" = 사진 크게 + 우측에 복음·미사 2단 스택. "even" = 사진·복음·미사 3등분.',
+                    FALSE,
+                    '사이트'
+                )
+                ON CONFLICT (key) DO NOTHING
+            """))
+        except Exception:
+            pass
 
         # 이메일 인증 컬럼
         try:
