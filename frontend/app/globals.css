@@ -25,6 +25,10 @@
   /* 폰트 */
   --font-sans: var(--font-noto-sans-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-serif: var(--font-noto-serif-kr), "Apple SD Gothic Neo", Georgia, serif;
+
+  /* Breakpoint — md 만 기본값(48rem=768px)에서 10% 줄여
+     데스크톱 레이아웃이 더 좁은 폭까지 유지되도록 함. */
+  --breakpoint-md: 43.2rem;
 }
 
 /* ── 스킨 토큰 오버라이드 자리 ──
