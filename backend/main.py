@@ -444,10 +444,13 @@ def _migrate_add_columns():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
-        # 신규 DB 안전망: legacy 컬럼이 남아있다면 제거 — 2026-05-11
+        # 신규 DB 안전망: legacy 컬럼이 남아있다면 제거
+        # - source_type/source_id: 2026-05-11 폐기
+        # - label_override: 2026-05-14 폐기 (메뉴 라벨이 사이트 전역 단일 진실 소스가 됨)
         for stmt in [
             "ALTER TABLE menu_items DROP COLUMN IF EXISTS source_type",
             "ALTER TABLE menu_items DROP COLUMN IF EXISTS source_id",
+            "ALTER TABLE menu_items DROP COLUMN IF EXISTS label_override",
         ]:
             try:
                 conn.execute(text(stmt))
@@ -471,7 +474,6 @@ def _migrate_add_columns():
             "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS static_page_slug VARCHAR(100)",
             "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS board_id INTEGER REFERENCES boards(id) ON DELETE CASCADE",
             "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS external_url VARCHAR(500)",
-            "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS label_override BOOLEAN DEFAULT TRUE",
             # unique 부분 인덱스: source 중복 방지 (NULL은 unique 검사에서 제외됨)
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_menu_items_board_unique ON menu_items (board_id) WHERE board_id IS NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_menu_items_page_unique ON menu_items (static_page_slug) WHERE static_page_slug IS NOT NULL",

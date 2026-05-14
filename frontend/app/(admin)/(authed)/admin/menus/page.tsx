@@ -13,7 +13,6 @@ interface MenuItem {
   group_id: number;
   parent_id: number | null;
   label: string;
-  label_override: boolean;
   sort_order: number;
   is_active: boolean;
   link_type: LinkType;
@@ -194,7 +193,6 @@ export default function AdminMenusPage() {
   async function saveItem(body: Partial<MenuItem>, item: MenuItem | null, groupId: number): Promise<boolean> {
     const payload = {
       label: body.label ?? "",
-      label_override: body.label_override ?? true,
       sort_order: item?.sort_order ?? 0,
       is_active: body.is_active ?? true,
       parent_id: body.parent_id ?? item?.parent_id ?? null,
@@ -585,7 +583,6 @@ function ItemEditor({
 }) {
   const [linkType, setLinkType] = useState<LinkType>(item?.link_type ?? "page");
   const [label, setLabel] = useState(item?.label ?? "");
-  const [labelOverride, setLabelOverride] = useState(item?.label_override ?? true);
   const [isActive, setIsActive] = useState(item?.is_active ?? true);
   const [parentId, setParentId] = useState<number | null>(item?.parent_id ?? null);
   const [staticSlug, setStaticSlug] = useState(item?.static_page_slug ?? "");
@@ -599,32 +596,11 @@ function ItemEditor({
   const pagesByCat: Record<string, StaticPage[]> = {};
   for (const p of staticPages) (pagesByCat[p.category] ??= []).push(p);
 
-  function autoLabel(): string {
-    if (linkType === "page") {
-      const p = staticPages.find((x) => x.slug === staticSlug);
-      return p?.label ?? "";
-    }
-    if (linkType === "board") {
-      const b = boards.find((x) => x.id === boardId);
-      return b?.name ?? "";
-    }
-    return "";
-  }
-
-  function handleLinkTypeChange(newType: LinkType) {
-    setLinkType(newType);
-    // 라벨이 비어있거나 auto면 새 타입의 auto-label로 갱신
-    if (!labelOverride || !label.trim()) {
-      // 다음 렌더 후 autoLabel을 다시 계산
-    }
-  }
-
   async function submit() {
-    const finalLabel = labelOverride ? label.trim() : (autoLabel() || label.trim());
-    if (!finalLabel) { alert("라벨을 입력하거나, 자동 라벨을 위해 페이지/게시판을 먼저 선택하세요."); return; }
+    const finalLabel = label.trim();
+    if (!finalLabel) { alert("메뉴 라벨을 입력하세요."); return; }
     const body: Partial<MenuItem> = {
       label: finalLabel,
-      label_override: labelOverride,
       is_active: isActive,
       parent_id: parentId,
       link_type: linkType,
@@ -655,7 +631,7 @@ function ItemEditor({
                 <button
                   key={t}
                   type="button"
-                  onClick={() => handleLinkTypeChange(t)}
+                  onClick={() => setLinkType(t)}
                   className={`px-3 py-2 text-sm rounded border transition-colors ${
                     linkType === t
                       ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -747,29 +723,18 @@ function ItemEditor({
             </div>
           )}
 
-          {/* 라벨 */}
+          {/* 라벨 — 사이트 전역 단일 진실 소스 */}
           <div className="border-t border-gray-100 pt-4">
             <label className="block text-xs font-semibold text-gray-700 mb-2">메뉴 라벨</label>
-            <div className="flex items-center gap-2 mb-2">
-              <label className="inline-flex items-center gap-1.5 text-xs text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={labelOverride}
-                  onChange={(e) => setLabelOverride(e.target.checked)}
-                />
-                직접 입력 (체크 해제 시 {linkType === "page" ? "페이지" : linkType === "board" ? "게시판" : "URL"} 이름 자동 사용)
-              </label>
-            </div>
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder={labelOverride ? "메뉴에 표시할 이름" : autoLabel() || "자동: 참조 항목 이름"}
-              disabled={!labelOverride}
+              placeholder="메뉴에 표시할 이름 (헤더·사이드바·페이지 제목·사이트맵에 일괄 적용)"
               className={inputCls}
             />
-            {!labelOverride && autoLabel() && (
-              <p className="text-xs text-gray-500 mt-1">자동 라벨: {autoLabel()}</p>
-            )}
+            <p className="text-xs text-gray-400 mt-1">
+              이 라벨이 헤더 네비, 그룹 사이드바, 페이지 제목, 사이트맵에 그대로 노출됩니다.
+            </p>
           </div>
 
           {/* 상위 항목 (서브메뉴 만들기) */}

@@ -11,7 +11,7 @@ from app.core.auth import get_current_admin
 from app.models.admin import Admin
 from app.models.menu import MenuGroup, MenuItem
 from app.models.board import Board
-from app.core.static_pages import STATIC_PAGES, STATIC_PAGE_SLUGS, get_label_for_slug
+from app.core.static_pages import STATIC_PAGES, STATIC_PAGE_SLUGS
 
 router = APIRouter(prefix="/menus", tags=["menus"])
 
@@ -28,28 +28,10 @@ def _compute_href(item: MenuItem, db: Session) -> str:
     return item.href or ""
 
 
-def _compute_label(item: MenuItem, db: Session) -> str:
-    """label_override=True면 admin 저장값. False면 source에서 자동."""
-    if item.label_override or not item.label or item.label.strip() == "":
-        if item.label and item.label.strip():
-            return item.label
-    # auto 라벨
-    if item.link_type == "board" and item.board_id:
-        b = db.query(Board).filter(Board.id == item.board_id).first()
-        if b:
-            return b.name
-    if item.link_type == "page" and item.static_page_slug:
-        lab = get_label_for_slug(item.static_page_slug)
-        if lab:
-            return lab
-    return item.label or ""
-
-
 # ─── Schemas ──────────────────────────────────────────────
 
 class MenuItemIn(BaseModel):
     label: str
-    label_override: bool = True
     sort_order: int = 0
     is_active: bool = True
     parent_id: Optional[int] = None
@@ -65,7 +47,6 @@ class MenuItemOut(BaseModel):
     group_id: int
     parent_id: Optional[int] = None
     label: str
-    label_override: bool = True
     sort_order: int = 0
     is_active: bool = True
     link_type: str = "external"
@@ -138,9 +119,11 @@ def _validate_and_apply_link(body: "MenuItemIn", db: Session, item_id: Optional[
         # external은 중복 허용 (같은 외부 사이트를 여러 위치에서 가리킬 수 있음)
         href = external_url
 
+    label = (body.label or "").strip()
+    if not label:
+        raise HTTPException(status_code=400, detail="메뉴 라벨은 필수입니다.")
     return {
-        "label": body.label,
-        "label_override": body.label_override,
+        "label": label,
         "sort_order": body.sort_order,
         "is_active": body.is_active,
         "parent_id": body.parent_id,
@@ -154,11 +137,10 @@ def _validate_and_apply_link(body: "MenuItemIn", db: Session, item_id: Optional[
 
 
 def _build_item_out(item: MenuItem, db: Session) -> MenuItemOut:
-    """MenuItem → MenuItemOut, href/is_external/label 자동 계산."""
+    """MenuItem → MenuItemOut, href/is_external 자동 계산. label은 admin 저장값 그대로."""
     out = MenuItemOut.model_validate(item)
     out.href = _compute_href(item, db)
     out.is_external = item.link_type == "external"
-    out.label = _compute_label(item, db)
     return out
 
 

@@ -33,10 +33,5 @@ STATIC_PAGES: list[dict] = [
 ]
 
 STATIC_PAGE_SLUGS = {p["slug"] for p in STATIC_PAGES}
-
-def get_label_for_slug(slug: str) -> str | None:
-    """slug에 대응하는 기본 라벨. 동적 경로(/groups/{slug})는 None 반환."""
-    for p in STATIC_PAGES:
-        if p["slug"] == slug:
-            return p["label"]
-    return None
+# 주: STATIC_PAGES.label 은 admin 메뉴 picker UI에서 슬러그 고를 때 옆에 보이는
+# 힌트 텍스트로만 쓰임. 실제 사이트 노출 라벨은 menu_items.label 이 단일 진실 소스.

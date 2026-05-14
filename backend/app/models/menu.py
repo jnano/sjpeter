@@ -25,8 +25,7 @@ class MenuItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("menu_groups.id", ondelete="CASCADE"), nullable=False)
     parent_id = Column(Integer, ForeignKey("menu_items.id", ondelete="CASCADE"), nullable=True)
-    label = Column(String(100), nullable=False)
-    label_override = Column(Boolean, default=True)               # True: admin이 수동 입력, False: source에서 자동
+    label = Column(String(100), nullable=False)                  # admin 입력 — 사이트 전역(헤더·사이드바·page title·sitemap)에 그대로 적용
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)

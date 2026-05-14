@@ -1,6 +1,17 @@
 import Link from "next/link";
+import { fetchServerMenus } from "./fetchServerMenus";
+import type { MenuItem } from "./useNavigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function flattenServer(items: MenuItem[]): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const it of items) {
+    out.push(it);
+    if (it.children?.length) out.push(...flattenServer(it.children));
+  }
+  return out;
+}
 
 interface MassEntry { day: string; time: string; note: string; }
 interface Parish {
@@ -73,19 +84,28 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
   return rows;
 }
 
-const QUICK_LINKS = [
-  { href: "/bulletin", label: "주보" },
-  { href: "/about",   label: "성당 소개" },
-  { href: "/pastor",  label: "주임신부님" },
-  { href: "/history", label: "본당 연혁" },
-  { href: "/word",    label: "오늘의 복음" },
-  { href: "/info",    label: "찾아오시는 길" },
+/** Footer "바로가기"는 의도된 큐레이션(전체가 아닌 6개)이라 href는 고정.
+    label은 메뉴 라벨에서 resolve — 메뉴에 없는 경우만 fallback 사용. */
+const QUICK_LINKS: { href: string; fallback: string }[] = [
+  { href: "/bulletin", fallback: "주보" },
+  { href: "/about",   fallback: "성당 소개" },
+  { href: "/pastor",  fallback: "주임신부님" },
+  { href: "/history", fallback: "본당 연혁" },
+  { href: "/word",    fallback: "오늘의 복음" },
+  { href: "/info",    fallback: "찾아오시는 길" },
 ];
 
 export default async function Footer() {
-  const parish = await getParish();
+  const [parish, menus] = await Promise.all([getParish(), fetchServerMenus()]);
   const entries = parish?.mass_schedule?.entries ?? [];
   const massRows = buildMassRows(entries);
+
+  // 메뉴 라벨이 단일 진실 소스. 메뉴에 등록 안 된 href만 fallback 사용.
+  const allItems = menus.flatMap((g) => flattenServer(g.items));
+  const quickLinks = QUICK_LINKS.map((q) => ({
+    href: q.href,
+    label: allItems.find((it) => it.href === q.href)?.label ?? q.fallback,
+  }));
 
   return (
     <footer className="bg-white border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
@@ -141,7 +161,7 @@ export default async function Footer() {
           <div>
             <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">바로가기</h3>
             <nav className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              {QUICK_LINKS.map((item) => (
+              {quickLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
