@@ -84,10 +84,10 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
 
   return (
     <header className="bg-white text-[var(--color-text)] border-b border-[var(--color-border)] sticky top-0 z-50">
-      {/* 상단 정보 바 — 로그인/사용자 메뉴 */}
+      {/* 상단 정보 바 — 전례 시기 칩(좌) / 로그인·사용자 메뉴(우) */}
       <div className="border-b border-[var(--color-border)]/60 text-sm">
-        <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-end items-center">
-          <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
+        <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center gap-3">
+          <div className="flex items-center text-[var(--color-text-muted)] min-w-0">
             {season && (
               <span
                 className="flex items-center gap-1.5 text-xs"
@@ -101,6 +101,8 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                 <span>{SEASON_LABELS_KO[season]}</span>
               </span>
             )}
+          </div>
+          <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
             {session ? (
               <div
                 className="relative"
