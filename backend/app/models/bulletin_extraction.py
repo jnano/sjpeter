@@ -21,7 +21,10 @@ class BulletinExtraction(Base):
 
     status = Column(String(20), default="pending")  # pending / approved / rejected
     target_board_id = Column(Integer, ForeignKey("boards.id"), nullable=True)
-    created_post_id = Column(Integer, nullable=True)   # 승인 후 생성된 게시글 id
+    created_post_id = Column(Integer, nullable=True)        # 게시글 id (임시저장 또는 승인 후)
+    created_notice_id = Column(Integer, nullable=True)      # 공지로 등록됐을 때 notices.id
+    created_event_id = Column(Integer, nullable=True)       # 캘린더로 등록됐을 때 events.id
+    created_meditation_id = Column(Integer, nullable=True)  # 묵상으로 등록됐을 때 meditations.id
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

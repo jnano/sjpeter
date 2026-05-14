@@ -642,6 +642,61 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # 묵상 대표 지정 + 배경 이미지 설정
+        for col_sql in [
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_image_url VARCHAR(500)",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_repeat BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_position VARCHAR(20) NOT NULL DEFAULT 'top-left'",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_blur INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_opacity INTEGER NOT NULL DEFAULT 100",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_gradient VARCHAR(10) NOT NULL DEFAULT 'none'",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_gradient_size INTEGER NOT NULL DEFAULT 100",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS body_font_size_px INTEGER NOT NULL DEFAULT 15",
+        ]:
+            try:
+                conn.execute(text(col_sql))
+            except Exception:
+                pass
+
+        # 주보 AI 분석 진행 상태 (UI 폴링용)
+        for col_sql in [
+            "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS ai_status VARCHAR(20) DEFAULT 'pending'",
+            "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS ai_started_at TIMESTAMP",
+            "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS ai_finished_at TIMESTAMP",
+            "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS ai_error TEXT",
+            # 통합검색용: 주보 PDF 본문 추출 텍스트
+            "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS body_text TEXT",
+            # 추출 항목 → 라우팅된 대상 ID (result 페이지에서 '수정' 링크 만들기 위함)
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS created_notice_id INTEGER",
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS created_event_id INTEGER",
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS created_meditation_id INTEGER",
+        ]:
+            try:
+                conn.execute(text(col_sql))
+            except Exception:
+                pass
+
+        # 통합검색 성능: pg_trgm 확장 + GIN trigram 인덱스
+        # ILIKE '%키워드%' + similarity() 매칭이 빨라지고 오타·부분 매칭 견딤
+        try:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+        except Exception:
+            pass
+        for idx_sql in [
+            "CREATE INDEX IF NOT EXISTS idx_posts_title_trgm  ON posts    USING gin (title   gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_posts_content_trgm ON posts    USING gin (content gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_notices_title_trgm   ON notices  USING gin (title   gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_notices_content_trgm ON notices  USING gin (content gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_events_title_trgm  ON events   USING gin (title   gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_events_desc_trgm   ON events   USING gin (description gin_trgm_ops)",
+            "CREATE INDEX IF NOT EXISTS idx_bulletins_body_trgm ON bulletins USING gin (body_text gin_trgm_ops)",
+        ]:
+            try:
+                conn.execute(text(idx_sql))
+            except Exception:
+                pass
+
         # 공지사항 게시판 신설 (주보 AI 추출 기본 대상)
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,

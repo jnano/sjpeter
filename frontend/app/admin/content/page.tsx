@@ -5,6 +5,7 @@ import { DataEvent, notify } from "@/components/dataEvents";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
 import MarkdownEditor from "@/components/MarkdownEditor";
+import { useFocusItem, FOCUS_RING_CLASS } from "@/components/useFocusItem";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -1275,7 +1276,37 @@ interface Meditation {
   author: string | null;
   published_date: string;
   is_published: boolean;
+  is_current?: boolean;
+  background_image_url?: string | null;
+  background_repeat?: boolean;
+  background_position?: string;
+  background_blur?: number;
+  background_opacity?: number;
+  background_gradient?: string;
+  background_gradient_size?: number;
+  body_font_size_px?: number;
 }
+
+type BackgroundPosition =
+  | "top-left" | "top-center" | "top-right"
+  | "bottom-left" | "bottom-center" | "bottom-right";
+const BG_POSITIONS: { value: BackgroundPosition; label: string }[] = [
+  { value: "top-left",      label: "↖ 좌상" },
+  { value: "top-center",    label: "↑ 상중" },
+  { value: "top-right",     label: "↗ 우상" },
+  { value: "bottom-left",   label: "↙ 좌하" },
+  { value: "bottom-center", label: "↓ 하중" },
+  { value: "bottom-right",  label: "↘ 우하" },
+];
+
+type BackgroundGradient = "none" | "top" | "bottom" | "left" | "right";
+const BG_GRADIENTS: { value: BackgroundGradient; label: string }[] = [
+  { value: "none",   label: "✕ 없음" },
+  { value: "top",    label: "↓ 위→아래" },
+  { value: "bottom", label: "↑ 아래→위" },
+  { value: "left",   label: "→ 좌→우" },
+  { value: "right",  label: "← 우→좌" },
+];
 
 const emptyMedForm = {
   title: "",
@@ -1287,6 +1318,7 @@ const emptyMedForm = {
 };
 
 function MeditationTab() {
+  const focusId = useFocusItem();
   const [items, setItems] = useState<Meditation[]>([]);
   const [total, setTotal] = useState(0);
   const [form, setForm] = useState({ ...emptyMedForm });
@@ -1404,6 +1436,65 @@ function MeditationTab() {
     });
   }
 
+  // ── 대표 지정 ──────────────────────────────────────────
+  async function setCurrent(id: number) {
+    const res = await fetch(`${API}/api/content/meditations/${id}/set-current`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) { flash("대표 묵상으로 지정되었습니다."); load(); notify(DataEvent.MEDITATION_CURRENT); }
+  }
+
+  async function clearCurrent() {
+    const res = await fetch(`${API}/api/content/meditations/clear-current`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) { flash("대표 지정이 해제되었습니다. 최신 글이 자동으로 표시됩니다."); load(); notify(DataEvent.MEDITATION_CURRENT); }
+  }
+
+  // ── 배경 옵션 (반복/위치/흐림/투명도/그라데이션/폰트크기) ─
+  async function saveBackgroundOptions(item: Meditation, patch: Partial<Meditation>) {
+    const merged = {
+      background_repeat: item.background_repeat ?? false,
+      background_position: item.background_position ?? "top-left",
+      background_blur: item.background_blur ?? 0,
+      background_opacity: item.background_opacity ?? 100,
+      background_gradient: item.background_gradient ?? "none",
+      background_gradient_size: item.background_gradient_size ?? 100,
+      body_font_size_px: item.body_font_size_px ?? 15,
+      ...patch,
+    };
+    const res = await fetch(`${API}/api/content/meditations/${item.id}/background`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(merged),
+    });
+    if (res.ok) { load(); notify(DataEvent.MEDITATION_CURRENT); }
+  }
+
+  // ── 배경 이미지 업로드/삭제 ──────────────────────────
+  async function uploadBackground(id: number, file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API}/api/content/meditations/${id}/background-image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+    });
+    if (res.ok) { flash("배경 이미지가 업로드되었습니다."); load(); notify(DataEvent.MEDITATION_CURRENT); }
+    else { flash("업로드에 실패했습니다."); }
+  }
+
+  async function removeBackground(id: number) {
+    if (!confirm("배경 이미지를 제거하시겠습니까?")) return;
+    const res = await fetch(`${API}/api/content/meditations/${id}/background-image`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) { flash("배경 이미지가 제거되었습니다."); load(); notify(DataEvent.MEDITATION_CURRENT); }
+  }
+
   return (
     <div className="space-y-6">
       {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
@@ -1459,14 +1550,14 @@ function MeditationTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">본문 <span className="text-red-400">*</span></label>
-            <textarea
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              본문 <span className="text-red-400">*</span>
+              <span className="ml-2 font-normal text-gray-400">마크다운 지원 — **굵게**, *기울임*, 표·목록 등</span>
+            </label>
+            <MarkdownEditor
               value={form.body}
-              onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
-              rows={8}
-              className={`${inputCls} resize-y`}
-              placeholder="묵상 내용을 입력하세요. 줄바꿈이 그대로 표시됩니다."
-              required
+              onChange={(v) => setForm((p) => ({ ...p, body: v }))}
+              height={320}
             />
           </div>
           <div className="flex items-center gap-4">
@@ -1494,6 +1585,27 @@ function MeditationTab() {
       </section>
       )}
 
+      {/* 대표 묵상 안내 */}
+      <section className="bg-violet-50/60 border border-violet-200 rounded-xl px-5 py-3 flex items-start gap-3 text-sm">
+        <span className="text-violet-700 mt-0.5">📌</span>
+        <div className="flex-1 text-violet-900 leading-relaxed">
+          <p className="font-medium">대표 묵상</p>
+          <p className="text-xs text-violet-700 mt-0.5">
+            아래 목록의 <strong>대표로 지정</strong> 버튼을 누르면 그 묵상이 홈·묵상 페이지에 우선 표시됩니다.
+            지정하지 않으면 <strong>가장 최신 묵상</strong>이 자동으로 노출됩니다.
+          </p>
+          {items.some((i) => i.is_current) && (
+            <button
+              type="button"
+              onClick={clearCurrent}
+              className="mt-1 text-xs text-violet-700 underline hover:text-violet-900"
+            >
+              대표 지정 해제 (최신으로 자동 노출)
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* 목록 */}
       <section className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">
@@ -1511,7 +1623,17 @@ function MeditationTab() {
         <div className="space-y-3">
           {items.length === 0 && <p className="text-sm text-gray-400 text-center py-8">등록된 묵상이 없습니다.</p>}
           {items.map((item, idx) => (
-            <div key={item.id} className={`border rounded-lg overflow-hidden ${select.isSelected(item.id) ? "border-red-300 bg-red-50/30" : "border-gray-100"}`}>
+            <div
+              key={item.id}
+              data-focus-id={item.id}
+              className={`border rounded-lg overflow-hidden ${
+                select.isSelected(item.id)
+                  ? "border-red-300 bg-red-50/30"
+                  : focusId === item.id
+                  ? FOCUS_RING_CLASS
+                  : "border-gray-100"
+              }`}
+            >
               {editId === item.id ? (
                 <div className="p-4 bg-blue-50 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1529,8 +1651,15 @@ function MeditationTab() {
                     <input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">본문</label>
-                    <textarea value={editForm.body} onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))} rows={8} className={`${inputCls} resize-y`} />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      본문
+                      <span className="ml-2 font-normal text-gray-400">마크다운 지원</span>
+                    </label>
+                    <MarkdownEditor
+                      value={editForm.body}
+                      onChange={(v) => setEditForm((p) => ({ ...p, body: v }))}
+                      height={320}
+                    />
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex-1">
@@ -1548,35 +1677,295 @@ function MeditationTab() {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 flex items-start justify-between gap-4">
-                  <input type="checkbox" checked={select.isSelected(item.id)} onChange={() => select.toggle(item.id)} className="rounded mt-1 shrink-0" aria-label={`${item.title} 선택`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      {idx === 0 && (
-                        <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">최신</span>
-                      )}
-                      {!item.is_published && (
-                        <span className="text-[10px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">비공개</span>
-                      )}
-                      <span className="text-xs text-gray-400">{item.published_date}</span>
-                      {item.scripture && (
-                        <span className="text-xs text-[var(--color-accent)]">{item.scripture}</span>
+                <div>
+                  <div className="p-4 flex items-start justify-between gap-4">
+                    <input type="checkbox" checked={select.isSelected(item.id)} onChange={() => select.toggle(item.id)} className="rounded mt-1 shrink-0" aria-label={`${item.title} 선택`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        {item.is_current && (
+                          <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded">📌 대표</span>
+                        )}
+                        {idx === 0 && !item.is_current && (
+                          <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">최신</span>
+                        )}
+                        {!item.is_published && (
+                          <span className="text-[10px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">비공개</span>
+                        )}
+                        <span className="text-xs text-gray-400">{item.published_date}</span>
+                        {item.scripture && (
+                          <span className="text-xs text-[var(--color-accent)]">{item.scripture}</span>
+                        )}
+                      </div>
+                      <p className="font-medium text-sm text-gray-800">{item.title}</p>
+                      {item.author && <p className="text-xs text-gray-400 mt-0.5">{item.author}</p>}
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.body.slice(0, 100)}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0 items-end">
+                      <div className="flex gap-3">
+                        <button onClick={() => startEdit(item)} className={btnEdit}>수정</button>
+                        <button onClick={() => remove(item.id)} className={btnDanger}>삭제</button>
+                      </div>
+                      {!item.is_current && (
+                        <button
+                          onClick={() => setCurrent(item.id)}
+                          className="text-xs px-2.5 py-1 rounded-md border border-violet-300 text-violet-700 hover:bg-violet-50 font-medium"
+                        >
+                          📌 대표로 지정
+                        </button>
                       )}
                     </div>
-                    <p className="font-medium text-sm text-gray-800">{item.title}</p>
-                    {item.author && <p className="text-xs text-gray-400 mt-0.5">{item.author}</p>}
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.body.slice(0, 100)}</p>
                   </div>
-                  <div className="flex gap-3 shrink-0">
-                    <button onClick={() => startEdit(item)} className={btnEdit}>수정</button>
-                    <button onClick={() => remove(item.id)} className={btnDanger}>삭제</button>
-                  </div>
+
+                  {/* 배경 이미지·옵션 패널 (대표일 때 강조) */}
+                  <BackgroundPanel
+                    item={item}
+                    onUpload={(file) => uploadBackground(item.id, file)}
+                    onRemove={() => removeBackground(item.id)}
+                    onOptionsChange={(patch) => saveBackgroundOptions(item, patch)}
+                  />
                 </div>
               )}
             </div>
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ─── Meditation Background Panel ──────────────────────────
+
+function BackgroundPanel({
+  item,
+  onUpload,
+  onRemove,
+  onOptionsChange,
+}: {
+  item: Meditation;
+  onUpload: (file: File) => void | Promise<void>;
+  onRemove: () => void | Promise<void>;
+  onOptionsChange: (patch: Partial<Meditation>) => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const repeat = !!item.background_repeat;
+  const position = (item.background_position as BackgroundPosition) || "top-left";
+  const blur = item.background_blur ?? 0;
+  const opacity = item.background_opacity ?? 100;
+  const gradient = (item.background_gradient as BackgroundGradient) || "none";
+  const gradientSize = item.background_gradient_size ?? 100;
+  const fontSize = item.body_font_size_px ?? 15;
+  const bgUrl = item.background_image_url
+    ? (item.background_image_url.startsWith("http")
+        ? item.background_image_url
+        : `${API}${item.background_image_url}`)
+    : null;
+
+  const summaryParts: string[] = [];
+  if (bgUrl) summaryParts.push("이미지 ✓");
+  summaryParts.push(repeat ? "반복" : (BG_POSITIONS.find((p) => p.value === position)?.label ?? position));
+  if (blur > 0) summaryParts.push(`흐림 ${blur}px`);
+  if (opacity < 100) summaryParts.push(`투명도 ${opacity}%`);
+  if (gradient !== "none") {
+    const gLabel = BG_GRADIENTS.find((g) => g.value === gradient)?.label ?? gradient;
+    summaryParts.push(`그라데이션 ${gLabel}${gradientSize !== 100 ? ` (${gradientSize}%)` : ""}`);
+  }
+  if (fontSize !== 15) summaryParts.push(`글자 ${fontSize}px`);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try { await onUpload(file); }
+    finally { setUploading(false); e.target.value = ""; }
+  }
+
+  return (
+    <div className={`border-t border-gray-100 ${item.is_current ? "bg-violet-50/30" : "bg-gray-50/50"}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 py-2 flex items-center justify-between text-xs text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <span>🎨 배경 설정</span>
+          {!open && (
+            <span className="text-gray-400">— {summaryParts.join(" · ")}</span>
+          )}
+        </span>
+        <span className="text-gray-400">{open ? "닫기 ▲" : "펼치기 ▼"}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* 이미지 영역 */}
+          <div className="flex items-start gap-3">
+            <div
+              className="w-24 h-16 rounded-md border border-gray-200 bg-white flex items-center justify-center text-[10px] text-gray-400 overflow-hidden shrink-0"
+              style={bgUrl ? { backgroundImage: `url("${bgUrl}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+            >
+              {!bgUrl && "이미지 없음"}
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="inline-flex items-center gap-2 text-xs">
+                <span className="px-2.5 py-1 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                  {uploading ? "업로드 중…" : bgUrl ? "이미지 교체" : "이미지 업로드"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFile}
+                  className="sr-only"
+                  disabled={uploading}
+                />
+              </label>
+              {bgUrl && (
+                <button
+                  type="button"
+                  onClick={() => onRemove()}
+                  className="self-start text-[11px] text-red-600 hover:underline"
+                >
+                  이미지 제거
+                </button>
+              )}
+              <p className="text-[10px] text-gray-400">권장: 가로 1600px 이상 PNG/JPG</p>
+            </div>
+          </div>
+
+          {/* 옵션 영역 */}
+          <div className="space-y-2.5 text-xs">
+            {/* 반복 */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={repeat}
+                onChange={(e) => onOptionsChange({ background_repeat: e.target.checked })}
+                className="rounded"
+              />
+              <span className="font-medium text-gray-700">배경 반복</span>
+              <span className="text-gray-400">(체크 해제 시 한 번만 표시)</span>
+            </label>
+
+            {/* 시작점 (반복 아닐 때만) — 3열 × 2행 */}
+            <div className={repeat ? "opacity-40 pointer-events-none" : ""}>
+              <p className="text-gray-700 font-medium mb-1">시작 위치</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {BG_POSITIONS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => onOptionsChange({ background_position: p.value })}
+                    className={`px-2 py-1.5 rounded-md border text-xs transition-colors ${
+                      position === p.value
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 흐림 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-gray-700 font-medium">흐림 정도</span>
+                <span className="text-gray-500 tabular-nums">{blur}px</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={1}
+                value={blur}
+                onChange={(e) => onOptionsChange({ background_blur: Number(e.target.value) })}
+                className="w-full accent-violet-600"
+              />
+            </div>
+
+            {/* 투명도 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-gray-700 font-medium">투명도</span>
+                <span className="text-gray-500 tabular-nums">{opacity}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={opacity}
+                onChange={(e) => onOptionsChange({ background_opacity: Number(e.target.value) })}
+                className="w-full accent-violet-600"
+              />
+              <p className="text-[10px] text-gray-400 mt-0.5">100% = 선명, 0% = 보이지 않음</p>
+            </div>
+
+            {/* 그라데이션 */}
+            <div>
+              <p className="text-gray-700 font-medium mb-1">
+                그라데이션 페이드
+                <span className="ml-2 font-normal text-gray-400 text-[10px]">선택한 방향으로 점차 사라짐</span>
+              </p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {BG_GRADIENTS.map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => onOptionsChange({ background_gradient: g.value })}
+                    className={`px-1.5 py-1.5 rounded-md border text-[11px] transition-colors ${
+                      gradient === g.value
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 그라데이션 크기 — 'none' 일 땐 비활성 */}
+              <div className={`mt-2 ${gradient === "none" ? "opacity-40 pointer-events-none" : ""}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gray-600 text-[11px]">그라데이션 크기</span>
+                  <span className="text-gray-500 tabular-nums text-[11px]">{gradientSize}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={gradientSize}
+                  onChange={(e) => onOptionsChange({ background_gradient_size: Number(e.target.value) })}
+                  className="w-full accent-violet-600"
+                />
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  100% = 박스 전체에 걸쳐 부드럽게 · 작을수록 한쪽 끝에만 좁게 페이드
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 본문 글자 크기 (배경과 별개지만 같은 패널 안에서 함께 조정) */}
+          <div className="pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-gray-700 font-medium text-xs">본문 글자 크기</span>
+              <span className="text-gray-500 tabular-nums text-xs">{fontSize}px</span>
+            </div>
+            <input
+              type="range"
+              min={12}
+              max={32}
+              step={1}
+              value={fontSize}
+              onChange={(e) => onOptionsChange({ body_font_size_px: Number(e.target.value) })}
+              className="w-full accent-violet-600"
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">기본 15px · 권장 14~22px</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

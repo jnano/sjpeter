@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { useFocusItem, FOCUS_RING_CLASS } from "@/components/useFocusItem";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -674,6 +675,7 @@ function DayGrid({
 // ── 메인 페이지 ──────────────────────────
 
 export default function AdminCalendarPage() {
+  const focusId = useFocusItem();
   const today = new Date();
   const todayStr = dateToStr(today);
 
@@ -987,13 +989,15 @@ export default function AdminCalendarPage() {
           ) : (
             <div className="space-y-2">
               {listVisible.map((ev) => (
-                <div key={ev.id}>
+                <div key={ev.id} data-focus-id={ev.id}>
                   <div
                     className={`p-4 bg-[var(--color-surface)] border rounded-xl transition-colors ${
                       editId === ev.id
                         ? "border-[var(--color-primary)] rounded-b-none border-b-0"
                         : selected.has(ev.id)
                         ? "border-[var(--color-primary)] bg-blue-50/20"
+                        : focusId === ev.id
+                        ? FOCUS_RING_CLASS
                         : "border-[var(--color-border)]"
                     }`}
                   >

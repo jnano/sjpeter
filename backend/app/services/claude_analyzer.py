@@ -1,5 +1,8 @@
 import json
 import logging
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 import boto3
@@ -31,7 +34,9 @@ def _get_client():
 _SYSTEM = (
     "당신은 천주교 성당 주보에서 공지·행사·모임·묵상·사목지표를 추출하는 전문가입니다. "
     "주보의 모든 안내·일정·모임·말씀 묵상·사목 방향 항목을 찾아 JSON으로만 응답하세요. "
-    "설명 없이 JSON만 반환하세요."
+    "설명 없이 JSON만 반환하세요. "
+    "중요: content 안에 줄바꿈이 필요하면 반드시 \\n으로 escape 하고, "
+    "따옴표는 \\\" 로 escape 하세요. 응답 전체는 반드시 valid JSON이어야 합니다."
 )
 
 
@@ -99,31 +104,219 @@ def analyze_bulletin_text(published_date: date, text: str) -> list[dict]:
     return _parse_response(raw)
 
 
-def analyze_bulletin_images(published_date: date, images_b64: list[str]) -> list[dict]:
-    """이미지(스캔본) 기반 분석 — Bedrock Vision 사용."""
+# Bedrock Vision 동시 호출 수 — 너무 크게 잡으면 throttling, 5~6이 안전한 기본값
+_VISION_MAX_WORKERS = 6
+
+
+def _analyze_single_page(
+    page_idx: int, total: int, img_b64: str, published_date: date
+) -> tuple[int, list[dict]]:
+    """단일 페이지를 Vision 으로 분석. (페이지 번호, events 리스트) 반환.
+
+    페이지 하나가 실패해도 다른 페이지에 영향을 주지 않도록 안에서 예외를 흡수한다.
+    """
+    prompt = _build_prompt(
+        published_date,
+        f"(이미지를 직접 읽으세요. 이것은 {total}페이지 중 {page_idx}번째 페이지입니다.)",
+    )
     content: list[dict] = [
-        {"type": "text", "text": _build_prompt(published_date, "(이미지를 직접 읽으세요)")}
+        {"type": "text", "text": prompt},
+        {"type": "image",
+         "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64}},
     ]
-    for img in images_b64:
-        content.append({
-            "type": "image",
-            "source": {"type": "base64", "media_type": "image/jpeg", "data": img},
-        })
-    raw = _invoke(VISION_MODEL, [{"role": "user", "content": content}])
-    return _parse_response(raw)
+    started = time.monotonic()
+    try:
+        raw = _invoke(VISION_MODEL, [{"role": "user", "content": content}])
+        events = _parse_response(raw)
+        logger.info(
+            "[vision page %d/%d] %d건 (%.1fs)",
+            page_idx, total, len(events), time.monotonic() - started,
+        )
+        return page_idx, events
+    except Exception as exc:
+        logger.warning(
+            "[vision page %d/%d] 호출 실패: %s — 건너뜀 (%.1fs)",
+            page_idx, total, exc, time.monotonic() - started,
+        )
+        return page_idx, []
+
+
+def analyze_bulletin_images(published_date: date, images_b64: list[str]) -> list[dict]:
+    """이미지(스캔본) 기반 분석 — Bedrock Vision (페이지별 **병렬 호출**).
+
+    각 페이지를 따로 호출해 응답을 짧게 유지하면서, ThreadPoolExecutor 로
+    동시에 처리해 총 소요시간을 페이지 수와 무관하게 1~2회 호출 수준으로 줄인다.
+
+    페이지 하나가 실패해도 나머지는 정상 수집됨. 페이지 간 단순 dedup 만 하고,
+    정밀한 중복 제거는 _route_and_save_events 의 fingerprint/fuzzy 가 처리.
+    """
+    if not images_b64:
+        return []
+
+    total = len(images_b64)
+    workers = min(_VISION_MAX_WORKERS, total)
+    started = time.monotonic()
+    logger.info(
+        "[vision] %d페이지 병렬 분석 시작 (workers=%d)", total, workers,
+    )
+
+    # 페이지 번호 보존을 위해 dict 로 모음
+    results: dict[int, list[dict]] = {}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [
+            pool.submit(_analyze_single_page, i, total, img, published_date)
+            for i, img in enumerate(images_b64, start=1)
+        ]
+        for fut in as_completed(futures):
+            page_idx, events = fut.result()
+            results[page_idx] = events
+
+    # 페이지 순서대로 합치고 페이지 간 단순 dedup
+    all_events: list[dict] = []
+    seen_titles: set[str] = set()
+    for i in range(1, total + 1):
+        for ev in results.get(i, []):
+            title_key = "".join((ev.get("title") or "").split())
+            if title_key and title_key in seen_titles:
+                continue
+            seen_titles.add(title_key)
+            all_events.append(ev)
+
+    elapsed = time.monotonic() - started
+    logger.info(
+        "[vision] 총 %d건 (페이지 %d장, 병렬 %d, %.1fs)",
+        len(all_events), total, workers, elapsed,
+    )
+    return all_events
 
 
 def _parse_response(raw: str) -> list[dict]:
+    """AI 응답을 events 배열로 파싱.
+
+    Bedrock Vision 응답은 content 본문에 escape되지 않은 줄바꿈·따옴표를
+    종종 포함해 json.loads가 중간에 깨지는 경우가 잦다. 깨지더라도 그 이전까지
+    완성된 항목은 모두 살리기 위해 단계적으로 시도한다.
+        1) 그대로 json.loads
+        2) 코드펜스 제거 + 사소한 정규화 후 json.loads
+        3) events 배열에서 완성된 {…} 객체를 하나씩 partial 파싱
+    """
+    text = _strip_code_fence(raw).strip()
+
+    # 1) strict
     try:
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        data = json.loads(text.strip())
-        events = data.get("events", [])
-        logger.info("[parse] events 추출 %d건", len(events))
+        data = json.loads(text)
+        events = data.get("events", []) if isinstance(data, dict) else []
+        logger.info("[parse] strict 파싱 성공 — events %d건", len(events))
         return events
-    except Exception as e:
-        logger.warning("[parse] 응답 JSON 파싱 실패: %s — raw[:500]=%r", e, raw[:500])
+    except Exception:
+        pass
+
+    # 2) trailing comma 같은 사소한 오류 정리 후 재시도
+    normalized = re.sub(r",\s*([}\]])", r"\1", text)
+    try:
+        data = json.loads(normalized)
+        events = data.get("events", []) if isinstance(data, dict) else []
+        logger.info("[parse] normalize 후 파싱 성공 — events %d건", len(events))
+        return events
+    except Exception:
+        pass
+
+    # 3) partial — events 배열을 객체 단위로 잘라 하나씩 파싱
+    events = _partial_parse_events(text)
+    if events:
+        logger.warning(
+            "[parse] strict 실패 → partial로 %d건 복구 (raw %d자)",
+            len(events),
+            len(raw),
+        )
+        return events
+
+    logger.warning(
+        "[parse] 모든 파싱 실패 — raw[:300]=%r", raw[:300]
+    )
+    return []
+
+
+def _strip_code_fence(text: str) -> str:
+    """```json … ``` 코드펜스 제거."""
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    # 첫 ``` 뒤부터 마지막 ``` 앞까지
+    body = stripped[3:]
+    if body.startswith("json"):
+        body = body[4:]
+    elif body.startswith("\n"):
+        body = body[1:]
+    if body.endswith("```"):
+        body = body[:-3]
+    return body
+
+
+def _partial_parse_events(text: str) -> list[dict]:
+    """events 배열에서 균형 잡힌 {…} 객체를 하나씩 추출해 각각 json.loads.
+
+    AI가 어떤 한 항목의 본문에서 escape를 빠뜨려도, 그 이전까지의 정상 항목과
+    이후 정상 항목은 모두 살려낸다. JSON 객체 안의 문자열까지 인식해
+    문자열 안의 `{` `}` 는 깊이 카운트에서 제외한다.
+    """
+    start = text.find('"events"')
+    if start == -1:
         return []
+    bracket_start = text.find("[", start)
+    if bracket_start == -1:
+        return []
+
+    results: list[dict] = []
+    i = bracket_start + 1
+    n = len(text)
+    while i < n:
+        # 다음 객체 시작 위치
+        while i < n and text[i] != "{":
+            if text[i] == "]":
+                return results
+            i += 1
+        if i >= n:
+            break
+
+        obj_start = i
+        depth = 0
+        in_str = False
+        escape = False
+        end = -1
+        while i < n:
+            ch = text[i]
+            if in_str:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_str = False
+            else:
+                if ch == '"':
+                    in_str = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+            i += 1
+
+        if end == -1:
+            # 마지막 객체가 닫히지 않음 — 버린다
+            break
+
+        chunk = text[obj_start : end + 1]
+        try:
+            obj = json.loads(chunk)
+            if isinstance(obj, dict):
+                results.append(obj)
+        except Exception:
+            # 이 객체만 깨짐 — 건너뛰고 다음으로
+            pass
+        i = end + 1
+
+    return results

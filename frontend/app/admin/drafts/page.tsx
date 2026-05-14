@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
+import { useFocusItem, FOCUS_RING_CLASS } from "@/components/useFocusItem";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -12,6 +13,7 @@ interface Board { id: number; name: string; slug: string; is_active: boolean; }
 
 export default function DraftsPage() {
   const router = useRouter();
+  const focusId = useFocusItem();
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,9 @@ export default function DraftsPage() {
   const [publishingId, setPublishingId] = useState<number | null>(null);
   const [extraBoards, setExtraBoards] = useState<Record<number, Set<string>>>({});
   const [addCalendar, setAddCalendar] = useState<Record<number, boolean>>({});
+  const [eventDate, setEventDate] = useState<Record<number, string>>({});
+  const [eventKind, setEventKind] = useState<Record<number, "행사" | "모임">>({});
+  const [eventLocation, setEventLocation] = useState<Record<number, string>>({});
 
   const authHeaders = () => {
     const token = localStorage.getItem("admin_token");
@@ -87,12 +92,28 @@ export default function DraftsPage() {
   async function handlePublishMulti(draft: Draft) {
     const additional = Array.from(extraBoards[draft.id] ?? []);
     const calendar = addCalendar[draft.id] ?? false;
+    const date = eventDate[draft.id] ?? "";
+    const kind = eventKind[draft.id] ?? "행사";
+    const location = eventLocation[draft.id] ?? "";
+
+    // 캘린더 등록 체크했는데 날짜가 비었으면 서버 호출 전에 막음
+    if (calendar && !date) {
+      alert("행사일정에 등록하려면 날짜를 입력해 주세요.");
+      return;
+    }
+
     setProcessing((p) => ({ ...p, [draft.id]: true }));
     try {
       const res = await fetch(`${API}/api/boards/drafts/${draft.id}/publish-multi`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ additional_board_slugs: additional, add_calendar: calendar }),
+        body: JSON.stringify({
+          additional_board_slugs: additional,
+          add_calendar: calendar,
+          event_date: calendar ? date : null,
+          event_kind: calendar ? kind : null,
+          event_location: calendar && location ? location : null,
+        }),
       });
       if (res.ok) {
         setDrafts((d) => d.filter((x) => x.id !== draft.id));
@@ -100,8 +121,15 @@ export default function DraftsPage() {
         setPublishingId(null);
         notify(DataEvent.DRAFTS_COUNT);
       } else {
-        alert("게시 처리에 실패했습니다.");
+        let detail = "게시 처리에 실패했습니다.";
+        try {
+          const data = await res.json();
+          if (data?.detail) detail = data.detail;
+        } catch {}
+        alert(detail);
       }
+    } catch (e) {
+      alert(e instanceof Error ? `네트워크 오류: ${e.message}` : "게시 요청에 실패했습니다.");
     } finally {
       setProcessing((p) => ({ ...p, [draft.id]: false }));
     }
@@ -370,9 +398,12 @@ export default function DraftsPage() {
               return (
                 <div
                   key={draft.id}
+                  data-focus-id={draft.id}
                   className={`bg-[var(--color-surface)] border rounded-xl overflow-hidden transition-colors ${
                     selected.has(draft.id)
                       ? "border-[var(--color-primary)] bg-blue-50/30"
+                      : focusId === draft.id
+                      ? FOCUS_RING_CLASS
                       : "border-[var(--color-border)]"
                   }`}
                 >
@@ -500,6 +531,52 @@ export default function DraftsPage() {
                           />
                           <span className="text-sm">📅 행사일정</span>
                         </label>
+
+                        {/* 행사일정 체크 시: 날짜·구분·장소 입력 (날짜 필수) */}
+                        {(addCalendar[draft.id] ?? false) && (
+                          <div className="pl-7 pr-1 py-2 -mt-1 space-y-2 border-l-2 border-[var(--color-primary)]/30">
+                            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                              <label className="text-xs text-[var(--color-text-muted)]">날짜 <span className="text-red-500">*</span></label>
+                              <input
+                                type="date"
+                                value={eventDate[draft.id] ?? ""}
+                                onChange={(e) => setEventDate((prev) => ({ ...prev, [draft.id]: e.target.value }))}
+                                className="border border-[var(--color-border)] rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:border-[var(--color-primary)]"
+                                required
+                              />
+
+                              <label className="text-xs text-[var(--color-text-muted)]">구분</label>
+                              <div className="flex gap-1.5">
+                                {(["행사", "모임"] as const).map((k) => {
+                                  const cur = eventKind[draft.id] ?? "행사";
+                                  return (
+                                    <button
+                                      key={k}
+                                      type="button"
+                                      onClick={() => setEventKind((prev) => ({ ...prev, [draft.id]: k }))}
+                                      className={`px-3 py-1 rounded-md border text-xs transition-colors ${
+                                        cur === k
+                                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                                          : "bg-white border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)]"
+                                      }`}
+                                    >
+                                      {k}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <label className="text-xs text-[var(--color-text-muted)]">장소</label>
+                              <input
+                                type="text"
+                                value={eventLocation[draft.id] ?? ""}
+                                onChange={(e) => setEventLocation((prev) => ({ ...prev, [draft.id]: e.target.value }))}
+                                placeholder="(선택)"
+                                className="border border-[var(--color-border)] rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:border-[var(--color-primary)]"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex justify-end gap-2 mt-4">

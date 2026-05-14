@@ -80,5 +80,21 @@ class Meditation(Base):
     author = Column(String(100), nullable=True)      # 작성자 이름 (선택)
     published_date = Column(Date, nullable=False)    # 발행일
     is_published = Column(Boolean, default=True)
+    # 대표 묵상 지정 (TRUE 인 항목이 홈/공개 페이지에 우선 노출. 없으면 최신)
+    is_current = Column(Boolean, default=False, nullable=False)
+    # 배경 이미지 설정 (대표 묵상에서만 의미를 가짐)
+    background_image_url = Column(String(500), nullable=True)
+    background_repeat = Column(Boolean, default=False, nullable=False)
+    # 'top-left'·'top-center'·'top-right'·'bottom-left'·'bottom-center'·'bottom-right'
+    # (반복일 때는 무시됨)
+    background_position = Column(String(20), default="top-left", nullable=False)
+    background_blur = Column(Integer, default=0, nullable=False)       # 0~40 px
+    background_opacity = Column(Integer, default=100, nullable=False)  # 0~100 (배경 이미지 불투명도)
+    # 'none' | 'top' | 'bottom' | 'left' | 'right' — 배경이 한쪽에서 진해지고 반대쪽으로 페이드
+    background_gradient = Column(String(10), default="none", nullable=False)
+    # 그라데이션 페이드 범위 (% ). 100=박스 전체, 작을수록 좁은 영역만 페이드
+    background_gradient_size = Column(Integer, default=100, nullable=False)
+    # 본문 폰트 크기 (px). 14 ~ 28 권장.
+    body_font_size_px = Column(Integer, default=15, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

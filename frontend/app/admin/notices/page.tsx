@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useFocusItem, FOCUS_RING_CLASS } from "@/components/useFocusItem";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -227,6 +228,7 @@ function monthLabel(key: string) {
 }
 
 export default function AdminNoticesPage() {
+  const focusId = useFocusItem();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [editId, setEditId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -487,13 +489,15 @@ export default function AdminNoticesPage() {
           </p>
         )}
         {filtered.map((n) => (
-          <div key={n.id}>
+          <div key={n.id} data-focus-id={n.id}>
             <div
               className={`p-4 bg-[var(--color-surface)] border rounded-xl transition-colors ${
                 editId === n.id
                   ? "border-[var(--color-primary)] rounded-b-none border-b-0"
                   : selected.has(n.id)
                   ? "border-[var(--color-primary)] bg-blue-50/20"
+                  : focusId === n.id
+                  ? FOCUS_RING_CLASS
                   : "border-[var(--color-border)]"
               }`}
             >

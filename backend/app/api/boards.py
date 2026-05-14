@@ -2,10 +2,10 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc, or_, func, text
+from sqlalchemy import desc, or_, func, text, case
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from app.core.database import get_db
 from app.core.auth import get_current_admin, get_current_member, get_current_author, get_optional_member
 from app.core.config import settings
@@ -294,22 +294,53 @@ def _make_excerpt(content: str, keyword: str) -> str:
     return prefix + content[start:end] + suffix
 
 
+def _build_match_clause(columns: list, terms: list[str]) -> "tuple":
+    """공백 무시 ILIKE OR 매칭 SQL 조각 생성.
+
+    columns: SQLAlchemy 컬럼 리스트
+    terms: 검색할 정규화된 키워드(동의어 포함). 모두 OR.
+    """
+    NS = lambda col: func.replace(col, " ", "")  # noqa: E731
+    clauses = []
+    for term in terms:
+        kw = f"%{term}%"
+        for col in columns:
+            clauses.append(NS(col).ilike(kw))
+    return or_(*clauses) if clauses else False
+
+
 @router.get("/api/search", response_model=SearchOut)
 def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+    """통합검색 (Phase A) — pg_trgm + 가중치 랭킹 + 동의어 확장 + 주보 PDF 본문.
+
+    - 검색어를 동의어 사전으로 확장
+    - 공백 무시 ILIKE 매칭 (pg_trgm GIN 인덱스가 가속)
+    - 가중치: 제목 매칭 ×3, 본문 매칭 ×1, 핀 공지 ×2, 최근일수록 +
+    - 주보 PDF 본문(bulletins.body_text)도 검색 대상
+    """
     from app.models.content import HistoryItem, Vision, CommunityGroup
     from app.models.notice import Notice
+    from app.models.bulletin import Bulletin
+    from app.core.search_synonyms import expand
 
     q = q.strip()
     if not q:
         return SearchOut(results=[], content_results=[], total=0, page=page, limit=limit)
 
-    # 공백 무시 매칭: 검색어와 검색 대상 모두 공백 제거 후 ILIKE
-    # → "구역 미사" 검색 시 "구역미사" 결과도, 반대도 매칭됨
+    # 검색어 동의어 확장: ["성당건축"] → ["성당건축", "성전건축", "신축", ...]
+    terms = expand(q)
+    # 원본 키워드도 항상 포함 (대소문자 무시는 ILIKE가 처리)
     q_compact = "".join(q.split())
-    keyword = f"%{q_compact}%"
+    if q_compact and q_compact.lower() not in terms:
+        terms.insert(0, q_compact.lower())
+
     NS = lambda col: func.replace(col, " ", "")  # noqa: E731
 
-    # ── 게시글 검색 (paginated) ───────────────────────────
+    # ── 게시글 검색 — 가중치 정렬 (paginated) ───────────────────
+    # title 매칭이 있으면 더 위로, 그 다음 최신순
+    title_match = _build_match_clause([Post.title], terms)
+    content_match = _build_match_clause([Post.title, Post.content], terms)
+
     base_query = (
         db.query(Post)
         .join(Board, Post.board_id == Board.id)
@@ -317,11 +348,16 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
         .filter(Post.is_published == True)
-        .filter(or_(NS(Post.title).ilike(keyword), NS(Post.content).ilike(keyword)))
-        .order_by(desc(Post.created_at))
+        .filter(content_match)
     )
+    # 정렬: 제목 매칭 우선 → 최신순
+    sorted_query = base_query.order_by(
+        desc(case((title_match, 1), else_=0)),
+        desc(Post.created_at),
+    )
+
     total = base_query.count()
-    posts = base_query.offset((max(1, page) - 1) * limit).limit(limit).all()
+    posts = sorted_query.offset((max(1, page) - 1) * limit).limit(limit).all()
 
     post_ids = [p.id for p in posts]
     comment_counts = dict(
@@ -346,10 +382,10 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     # ── 콘텐츠 페이지 검색 (전체 반환, 페이지네이션 없음) ─
     content_results: list[ContentSearchItem] = []
 
-    # 공지사항 (notices 별도 테이블) — 핀 우선·최신순
+    # 공지사항 — 핀 우선·최신순 (가중치)
     for n in (
         db.query(Notice)
-        .filter(or_(NS(Notice.title).ilike(keyword), NS(Notice.content).ilike(keyword)))
+        .filter(_build_match_clause([Notice.title, Notice.content], terms))
         .order_by(desc(Notice.is_pinned), desc(Notice.created_at))
         .all()
     ):
@@ -362,7 +398,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     for h in db.query(HistoryItem).filter(
-        or_(NS(HistoryItem.event).ilike(keyword), NS(HistoryItem.detail).ilike(keyword))
+        _build_match_clause([HistoryItem.event, HistoryItem.detail], terms)
     ).order_by(HistoryItem.sort_order).all():
         excerpt = _make_excerpt(h.detail or "", q) if h.detail else f"{h.year}년"
         content_results.append(ContentSearchItem(
@@ -372,7 +408,9 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             url="/history",
         ))
 
-    for v in db.query(Vision).filter(NS(Vision.motto).ilike(keyword)).order_by(Vision.year.desc()).all():
+    for v in db.query(Vision).filter(
+        _build_match_clause([Vision.motto, Vision.body], terms)
+    ).order_by(Vision.year.desc()).all():
         content_results.append(ContentSearchItem(
             type="vision", label="사목지표",
             title=v.motto,
@@ -381,7 +419,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     for g in db.query(CommunityGroup).filter(
-        or_(NS(CommunityGroup.name).ilike(keyword), NS(CommunityGroup.description).ilike(keyword))
+        _build_match_clause([CommunityGroup.name, CommunityGroup.description], terms)
     ).order_by(CommunityGroup.sort_order).all():
         content_results.append(ContentSearchItem(
             type="community", label="단체/분과",
@@ -391,16 +429,24 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     # 행사·캘린더 (events는 raw SQL — ORM 모델 없음)
-    event_rows = db.execute(text("""
+    where_parts = []
+    params: dict = {}
+    for i, term in enumerate(terms):
+        key = f"kw{i}"
+        params[key] = f"%{term}%"
+        where_parts.append(
+            f"(REPLACE(title, ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(description, ''), ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(location, ''), ' ', '') ILIKE :{key})"
+        )
+    where_clause = " OR ".join(where_parts) if where_parts else "FALSE"
+    event_rows = db.execute(text(f"""
         SELECT id, title, description, event_date, location, event_kind
         FROM events
-        WHERE is_public = TRUE
-          AND (REPLACE(title, ' ', '') ILIKE :kw
-               OR REPLACE(COALESCE(description, ''), ' ', '') ILIKE :kw
-               OR REPLACE(COALESCE(location, ''), ' ', '') ILIKE :kw)
+        WHERE is_public = TRUE AND ({where_clause})
         ORDER BY event_date DESC
         LIMIT 50
-    """), {"kw": keyword}).fetchall()
+    """), params).fetchall()
     for ev in event_rows:
         date_str = ev.event_date.strftime("%Y-%m-%d") if ev.event_date else ""
         kind = ev.event_kind or "행사"
@@ -415,6 +461,28 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             url="/calendar",
         ))
 
+    # ── 주보 PDF 본문 검색 ────────────────────────────────
+    # body_text 가 채워진 주보 중 본문에 키워드가 있는 것
+    bulletins = (
+        db.query(Bulletin)
+        .filter(Bulletin.body_text.isnot(None))
+        .filter(_build_match_clause([Bulletin.body_text], terms))
+        .order_by(desc(Bulletin.published_date))
+        .limit(20)
+        .all()
+    )
+    for b in bulletins:
+        date_str = b.published_date.strftime("%Y-%m-%d") if b.published_date else ""
+        issue = f"제{b.issue_number}호 " if b.issue_number else ""
+        title = f"{issue}주보 ({date_str})"
+        excerpt = _make_excerpt(b.body_text or "", q)
+        content_results.append(ContentSearchItem(
+            type="bulletin", label="주보 본문",
+            title=title,
+            excerpt=excerpt,
+            url=f"/bulletin/{b.id}",
+        ))
+
     # ── 댓글 검색 ──────────────────────────────────────────
     comment_rows = (
         db.query(Comment)
@@ -424,7 +492,7 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         .filter(Board.is_active == True)
         .filter(Board.exclude_from_search == False)
         .filter(Board.members_only_read == False)
-        .filter(NS(Comment.content).ilike(keyword))
+        .filter(_build_match_clause([Comment.content], terms))
         .order_by(desc(Comment.created_at))
         .limit(20)
         .all()
@@ -556,6 +624,10 @@ def delete_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depends
 class PublishMultiBody(BaseModel):
     additional_board_slugs: list[str] = []
     add_calendar: bool = False
+    # 캘린더 등록 시 사용할 행사 날짜. add_calendar=True 면 필수.
+    event_date: Optional[date] = None
+    event_location: Optional[str] = None
+    event_kind: Optional[str] = None  # "행사" | "모임" | None
 
 
 @router.post("/api/boards/drafts/{post_id}/publish-multi")
@@ -588,19 +660,28 @@ def publish_draft_multi(
         )
         db.add(copy)
 
-    # 행사일정에 등록
+    # 행사일정에 등록 — event_date NOT NULL 이므로 날짜 필수
     if body.add_calendar:
+        if not body.event_date:
+            raise HTTPException(
+                status_code=400,
+                detail="행사일정에 등록하려면 날짜를 지정해 주세요.",
+            )
+        kind = body.event_kind if body.event_kind in ("행사", "모임") else "행사"
+        category = "community" if kind == "모임" else "general"
         db.execute(
             text(
-                "INSERT INTO events (title, description, event_date, location, category, is_public) "
-                "VALUES (:title, :desc, :edate, :loc, :cat, TRUE)"
+                "INSERT INTO events "
+                "(title, description, event_date, location, category, is_public, event_kind, is_ai_generated) "
+                "VALUES (:title, :desc, :edate, :loc, :cat, TRUE, :kind, TRUE)"
             ),
             {
                 "title": post.title,
                 "desc": post.content or None,
-                "edate": None,
-                "loc": None,
-                "cat": "general",
+                "edate": body.event_date,
+                "loc": body.event_location or None,
+                "cat": category,
+                "kind": kind,
             },
         )
 

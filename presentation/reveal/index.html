@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>세종성베드로성당 공식 홈페이지 소개</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+<style>
+  :root {
+    --ink: #1f2a44;
+    --ink-soft: #3a4358;
+    --muted: #6b7280;
+    --gold: #c9a862;
+    --gold-dark: #8c6f2e;
+    --cream: #f8f6f1;
+    --line: #e5e1d6;
+    --bg: #ffffff;
+  }
+  html, body { background: var(--bg); }
+  .reveal {
+    font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    color: var(--ink-soft);
+    background: var(--bg);
+  }
+  .reveal .slides { text-align: left; }
+  .reveal h1, .reveal h2, .reveal h3 {
+    font-family: inherit;
+    text-transform: none;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .reveal h1 {
+    font-size: 1.7em;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    font-weight: 700;
+  }
+  .reveal h2 { color: var(--ink); font-size: 1.1em; font-weight: 600; }
+  .reveal strong { color: var(--gold-dark); font-weight: 600; }
+  .reveal ul, .reveal ol { line-height: 1.75; }
+  .reveal li { margin: 6px 0; }
+  .reveal blockquote {
+    border-left: 3px solid var(--gold);
+    background: #faf8f2;
+    color: #5a4a28;
+    padding: 14px 22px;
+    box-shadow: none;
+    font-style: normal;
+    width: auto;
+  }
+  .reveal table { font-size: 0.75em; border-collapse: collapse; width: 100%; }
+  .reveal table th {
+    background: var(--cream);
+    color: var(--ink);
+    border-bottom: 2px solid var(--gold);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .reveal table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #eeece5;
+  }
+  .reveal code {
+    background: #f3f0e6;
+    color: var(--gold-dark);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+
+  /* 표지 */
+  section.title-slide {
+    text-align: center;
+    background: var(--bg);
+  }
+  section.title-slide h1 {
+    color: var(--ink);
+    font-size: 2.8em;
+    border: none;
+    font-weight: 700;
+    margin-bottom: 0.2em;
+  }
+  section.title-slide h2 {
+    color: var(--gold-dark);
+    font-weight: 400;
+    font-size: 1.1em;
+    letter-spacing: 0.04em;
+  }
+  section.title-slide .divider {
+    width: 60px; height: 3px;
+    background: var(--gold);
+    margin: 30px auto 30px;
+  }
+  section.title-slide .sub {
+    color: var(--muted);
+    font-size: 0.85em;
+  }
+  section.title-slide .meta {
+    color: #9ca3b0;
+    font-size: 0.55em;
+    margin-top: 60px;
+  }
+
+  /* 섹션 표지 */
+  section.section-cover {
+    text-align: center;
+    background: var(--cream);
+  }
+  section.section-cover h1 {
+    color: var(--ink);
+    font-size: 2.4em;
+    border: none;
+    font-weight: 700;
+  }
+  section.section-cover .divider {
+    width: 60px; height: 3px;
+    background: var(--gold);
+    margin: 24px auto;
+  }
+  section.section-cover .sub {
+    color: var(--muted);
+    font-size: 0.7em;
+    margin-top: 8px;
+  }
+
+  /* 스텝 배지 */
+  .step {
+    display: inline-block;
+    background: var(--ink);
+    color: #ffffff;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 0.55em;
+    font-weight: 600;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+
+  /* 단계 그리드 */
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .flow-grid .item {
+    background: var(--cream);
+    border-radius: 8px;
+    padding: 14px 12px;
+    text-align: center;
+    font-size: 0.65em;
+    color: var(--muted);
+    border-top: 3px solid var(--line);
+    line-height: 1.4;
+  }
+  .flow-grid .item.active {
+    background: #fbf6e6;
+    border-top-color: var(--gold);
+    color: var(--ink);
+    font-weight: 700;
+    box-shadow: 0 4px 14px -8px rgba(140,111,46,0.4);
+  }
+
+  /* 6 기능 카드 */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .feature-grid .card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    box-shadow: 0 2px 10px -6px rgba(31,42,68,0.1);
+  }
+  .feature-grid .card .num {
+    color: var(--gold);
+    font-size: 0.55em;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .feature-grid .card .name {
+    color: var(--ink);
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .feature-grid .card .desc {
+    color: var(--muted);
+    font-size: 0.5em;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* 스크린샷 — 파일 있으면 표시, 없으면 자동 점선 플레이스홀더 */
+  .screenshot {
+    margin: 18px 0 0;
+    text-align: center;
+    border-radius: 8px;
+  }
+  .screenshot img {
+    max-width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: 0 4px 18px -10px rgba(31,42,68,0.2);
+  }
+  .screenshot.missing {
+    border: 1.5px dashed var(--gold);
+    background: #fbf9f2;
+    padding: 28px 20px;
+  }
+  .screenshot.missing::after {
+    content: '📷 ' attr(data-path) ' (파일 없음)';
+    color: var(--gold-dark);
+    font-size: 0.65em;
+    font-weight: 600;
+  }
+
+  .reveal .small { color: var(--muted); font-size: 0.65em; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1: 표지 -->
+<section class="title-slide">
+  <h1>세종성베드로성당</h1>
+  <h2>공식 홈페이지 소개</h2>
+  <div class="divider"></div>
+  <p class="sub">본당 사목과 운영을 돕는 보조 수단</p>
+  <p class="meta">2026</p>
+</section>
+
+<!-- 2: 들어가며 -->
+<section>
+  <h1>들어가며</h1>
+  <p>홈페이지는 본당 사목과 운영을 <strong>돕는 보조 수단</strong>입니다.</p>
+  <p>본당의 일들이 일어나는 곳은 성전과 공동체 안이고, 홈페이지는 그것을 <strong>알리고 기록하고 다시 찾을 수 있게</strong> 거드는 자리에 있습니다.</p>
+  <p>오늘 이 자료에서는 <strong>현재 홈페이지가 실제로 하고 있는 일</strong>을 정리해 말씀드립니다.</p>
+</section>
+
+<!-- 3: 승 표지 (kicker·sub 모두 없음) -->
+<section class="section-cover">
+  <h1>현재 운영 중인 여섯 가지 기능</h1>
+  <div class="divider"></div>
+</section>
+
+<!-- 4: 여섯 기능 한눈에 -->
+<section>
+  <h1>여섯 가지 기능 한눈에</h1>
+  <div class="feature-grid">
+    <div class="card"><div class="num">01</div><div class="name">오늘의 말씀 + 묵상</div><div class="desc">매일의 복음을 첫 화면에서</div></div>
+    <div class="card"><div class="num">02</div><div class="name">성전건축 일지</div><div class="desc">단계별 기록과 사진</div></div>
+    <div class="card"><div class="num">03</div><div class="name">내 관심 단체·모임</div><div class="desc">선택한 활동의 소식</div></div>
+    <div class="card"><div class="num">04</div><div class="name">주보 AI 추출</div><div class="desc">공지·행사·모임 자동 정리</div></div>
+    <div class="card"><div class="num">05</div><div class="name">본당 역사 저장소</div><div class="desc">한자리에 누적되는 기록</div></div>
+    <div class="card"><div class="num">06</div><div class="name">보안성</div><div class="desc">암호화·백업·인증된 관리</div></div>
+  </div>
+  <p class="small" style="margin-top: 16px;">추가로 <strong>카카오 채널 연동</strong>을 준비하고 있습니다.</p>
+</section>
+
+<!-- 5: ① 오늘의 말씀 -->
+<section>
+  <h1>① 오늘의 말씀 + 묵상</h1>
+  <ul>
+    <li>매일의 복음 말씀을 홈페이지 첫 화면에서 바로 만날 수 있습니다.</li>
+    <li>묵상 글이 일정 주기로 자동으로 바뀌며, 따로 찾지 않아도 자연스레 눈에 들어옵니다.</li>
+    <li>본당에 방문하지 못한 날에도 말씀 한 구절을 만나도록 돕는 자리입니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/01-word-meditation.png">
+    <img src="../screenshots/01-word-meditation.png" alt="오늘의 말씀" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 6: ② 성전건축 -->
+<section>
+  <h1>② 성전건축 일지</h1>
+  <ul>
+    <li>성전건축의 진행 과정을 <strong>단계별 기록</strong>과 <strong>사진</strong>으로 남깁니다.</li>
+    <li>일지를 한 줄씩 누적해 시간이 지나도 그 흐름을 다시 따라갈 수 있습니다.</li>
+    <li>본당 전체가 함께한 시간을 자료로 보관하는 자리입니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/02-construction-log.png">
+    <img src="../screenshots/02-construction-log.png" alt="성전건축 일지" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 7: ③ 내 관심 단체 -->
+<section>
+  <h1>③ 내 관심 단체·모임</h1>
+  <ul>
+    <li>회원이 홈페이지에서 관심 있는 <strong>단체와 모임</strong>을 직접 선택할 수 있습니다.</li>
+    <li>선택한 단체·모임의 공지와 일정이 본인에게 닿도록 연결됩니다.</li>
+    <li>알림은 카카오 채널 연동을 통해 받게 됩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/03-member-interests.png">
+    <img src="../screenshots/03-member-interests.png" alt="내 관심 단체" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 8: ④ 주보 AI 추출 -->
+<section>
+  <h1>④ 주보 AI 추출</h1>
+  <ul>
+    <li>매주 발행되는 <strong>주보 PDF</strong>를 업로드하면, 본문 내용을 AI가 자동으로 살펴봅니다.</li>
+    <li>공지·행사·모임 항목이 자동으로 분류되어 홈페이지의 해당 자리로 이동합니다.</li>
+    <li>분류된 결과는 관리자가 다시 확인한 뒤 공개합니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/04-bulletin-upload.png">
+    <img src="../screenshots/04-bulletin-upload.png" alt="주보 AI 추출" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 9: ⑤ 본당 역사 저장소 -->
+<section>
+  <h1>⑤ 본당 역사 저장소 역할</h1>
+  <ul>
+    <li>주보·공지·행사·사진이 홈페이지 안에 <strong>연도별로 누적</strong>됩니다.</li>
+    <li>시간이 지난 뒤에도 그 시기의 본당 활동을 다시 찾아볼 수 있습니다.</li>
+    <li>흩어지기 쉬운 기록을 <strong>한자리에 보관</strong>하는 자리입니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/05-archive.png">
+    <img src="../screenshots/05-archive.png" alt="본당 역사 저장소" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 10: ⑥ 보안성 -->
+<section>
+  <h1>⑥ 보안성</h1>
+  <ul>
+    <li>회원 정보는 안전하게 <strong>암호화</strong>되어 저장됩니다.</li>
+    <li>관리자 페이지는 인증된 사용자만 접근할 수 있습니다.</li>
+    <li>본당 기록은 정기적으로 <strong>백업</strong>되어 보존됩니다.</li>
+  </ul>
+  <p>홈페이지에 남겨지는 정보가 안심하고 맡겨질 수 있는 환경을 유지합니다.</p>
+</section>
+
+<!-- 11: + 카카오 채널 -->
+<section>
+  <h1>카카오 채널 연동</h1>
+  <ul>
+    <li>본당 <strong>카카오 채널</strong>을 통해 알림을 받을 수 있도록 준비하고 있습니다.</li>
+    <li>회원이 관심 단체·모임을 선택해 두면, 해당 공지와 일정이 채널로 안내됩니다.</li>
+    <li>카카오 채널 개설 절차가 마무리되는 대로 적용됩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/06-kakao.png">
+    <img src="../screenshots/06-kakao.png" alt="카카오 채널" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 12: 전 표지 (kicker 없음) -->
+<section class="section-cover">
+  <h1>두 가지 실제 흐름</h1>
+  <div class="divider"></div>
+  <p class="sub">홈페이지가 실제로 어떻게 동작하는지 단계별로 살펴봅니다</p>
+</section>
+
+<!-- 13: 흐름 1 개요 -->
+<section>
+  <h1>흐름 1. 알림 수신</h1>
+  <p>회원이 홈페이지에 가입한 순간부터 카카오 알림을 받기까지의 네 단계입니다.</p>
+  <div class="flow-grid">
+    <div class="item">① 회원가입</div>
+    <div class="item">② 첫 로그인</div>
+    <div class="item">③ 관심 단체·모임 선택</div>
+    <div class="item">④ 카카오 알림 수신</div>
+  </div>
+</section>
+
+<!-- 14: 흐름1 STEP1 -->
+<section>
+  <h1><span class="step">STEP 1</span>회원가입</h1>
+  <div class="flow-grid">
+    <div class="item active">① 회원가입</div>
+    <div class="item">② 첫 로그인</div>
+    <div class="item">③ 관심 단체·모임 선택</div>
+    <div class="item">④ 카카오 알림 수신</div>
+  </div>
+  <ul>
+    <li>홈페이지에서 <strong>회원가입</strong>을 진행합니다.</li>
+    <li>이메일 인증을 거쳐 본인 확인을 마칩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow1-step1.png">
+    <img src="../screenshots/flow1-step1.png" alt="회원가입" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 15: 흐름1 STEP2 -->
+<section>
+  <h1><span class="step">STEP 2</span>첫 로그인</h1>
+  <div class="flow-grid">
+    <div class="item">① 회원가입</div>
+    <div class="item active">② 첫 로그인</div>
+    <div class="item">③ 관심 단체·모임 선택</div>
+    <div class="item">④ 카카오 알림 수신</div>
+  </div>
+  <ul>
+    <li>인증을 마친 계정으로 <strong>첫 로그인</strong>을 합니다.</li>
+    <li>로그인과 함께 관심 단체·모임을 선택할 수 있는 안내가 나타납니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow1-step2.png">
+    <img src="../screenshots/flow1-step2.png" alt="첫 로그인" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 16: 흐름1 STEP3 -->
+<section>
+  <h1><span class="step">STEP 3</span>관심 단체·모임 선택</h1>
+  <div class="flow-grid">
+    <div class="item">① 회원가입</div>
+    <div class="item">② 첫 로그인</div>
+    <div class="item active">③ 관심 단체·모임 선택</div>
+    <div class="item">④ 카카오 알림 수신</div>
+  </div>
+  <ul>
+    <li>본당의 <strong>단체와 모임 목록</strong>에서 관심 있는 것을 선택합니다.</li>
+    <li>선택한 단체가 속한 <strong>분과는 자동으로 함께 포함</strong>됩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow1-step3.png">
+    <img src="../screenshots/flow1-step3.png" alt="관심 단체 선택" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 17: 흐름1 STEP4 -->
+<section>
+  <h1><span class="step">STEP 4</span>카카오 알림 수신</h1>
+  <div class="flow-grid">
+    <div class="item">① 회원가입</div>
+    <div class="item">② 첫 로그인</div>
+    <div class="item">③ 관심 단체·모임 선택</div>
+    <div class="item active">④ 카카오 알림 수신</div>
+  </div>
+  <ul>
+    <li>선택한 단체·모임의 공지와 일정이 등록되면, 본당 <strong>카카오 채널</strong>을 통해 알림이 전달됩니다.</li>
+    <li>글로벌 알림 토글로 받기/받지 않기를 직접 조절할 수 있습니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow1-step4.png">
+    <img src="../screenshots/flow1-step4.png" alt="카카오 알림 수신" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 18: 흐름 2 개요 -->
+<section>
+  <h1>흐름 2. 주보 AI 추출</h1>
+  <p>업로드한 주보 한 부가 홈페이지의 여러 자리로 정리되어 들어가는 네 단계입니다.</p>
+  <div class="flow-grid">
+    <div class="item">① 주보 PDF 입력</div>
+    <div class="item">② AI 분석</div>
+    <div class="item">③ 자동 분류·이동</div>
+    <div class="item">④ 관리자 검수·공개</div>
+  </div>
+</section>
+
+<!-- 19: 흐름2 STEP1 -->
+<section>
+  <h1><span class="step">STEP 1</span>주보 PDF 입력</h1>
+  <div class="flow-grid">
+    <div class="item active">① 주보 PDF 입력</div>
+    <div class="item">② AI 분석</div>
+    <div class="item">③ 자동 분류·이동</div>
+    <div class="item">④ 관리자 검수·공개</div>
+  </div>
+  <ul>
+    <li>매주 발행되는 <strong>주보 PDF</strong>를 관리자 페이지에 업로드합니다.</li>
+    <li>PDF 원본은 그대로 보관되어 언제든 다시 열어볼 수 있습니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow2-step1.png">
+    <img src="../screenshots/flow2-step1.png" alt="주보 PDF 입력" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 20: 흐름2 STEP2 -->
+<section>
+  <h1><span class="step">STEP 2</span>AI 분석</h1>
+  <div class="flow-grid">
+    <div class="item">① 주보 PDF 입력</div>
+    <div class="item active">② AI 분석</div>
+    <div class="item">③ 자동 분류·이동</div>
+    <div class="item">④ 관리자 검수·공개</div>
+  </div>
+  <ul>
+    <li>업로드된 주보를 <strong>AI가 한 장씩 읽어</strong> 본문과 표 내용을 정리합니다.</li>
+    <li>텍스트와 이미지 정보 모두 분석 대상이 됩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow2-step2.png">
+    <img src="../screenshots/flow2-step2.png" alt="AI 분석" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 21: 흐름2 STEP3 -->
+<section>
+  <h1><span class="step">STEP 3</span>자동 분류·이동</h1>
+  <div class="flow-grid">
+    <div class="item">① 주보 PDF 입력</div>
+    <div class="item">② AI 분석</div>
+    <div class="item active">③ 자동 분류·이동</div>
+    <div class="item">④ 관리자 검수·공개</div>
+  </div>
+  <ul>
+    <li>분석 결과는 <strong>공지 / 행사 / 모임</strong> 세 갈래로 자동 분류됩니다.</li>
+    <li>각 항목은 홈페이지 안의 알맞은 자리로 이동합니다.</li>
+    <li>날짜 정보가 부족한 항목은 별도 <strong>임시 보관함</strong>으로 분리됩니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow2-step3.png">
+    <img src="../screenshots/flow2-step3.png" alt="자동 분류" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 22: 흐름2 STEP4 -->
+<section>
+  <h1><span class="step">STEP 4</span>관리자 검수·공개</h1>
+  <div class="flow-grid">
+    <div class="item">① 주보 PDF 입력</div>
+    <div class="item">② AI 분석</div>
+    <div class="item">③ 자동 분류·이동</div>
+    <div class="item active">④ 관리자 검수·공개</div>
+  </div>
+  <ul>
+    <li>자동 등록된 항목들은 <strong>관리자 화면</strong>에서 한 번 더 확인합니다.</li>
+    <li>내용이 맞으면 그대로 공개하고, 수정이 필요하면 손을 본 뒤 공개합니다.</li>
+    <li>AI가 만든 항목임을 표시하는 <strong>별도 표지</strong>가 함께 붙습니다.</li>
+  </ul>
+  <figure class="screenshot" data-path="screenshots/flow2-step4.png">
+    <img src="../screenshots/flow2-step4.png" alt="관리자 검수·공개" onerror="this.remove(); this.parentElement.classList.add('missing');">
+  </figure>
+</section>
+
+<!-- 23: 결 표지 (kicker 없음) -->
+<section class="section-cover">
+  <h1>본당의 시간을 보관하는 자리</h1>
+  <div class="divider"></div>
+  <p class="sub">홈페이지는 본당 사목과 운영을 거드는 한 자리입니다</p>
+</section>
+
+<!-- 24: 한 자리에 모이는 기록 -->
+<section>
+  <h1>한 자리에 모이는 기록</h1>
+  <ul>
+    <li>매주의 <strong>주보</strong>, 그 안의 <strong>공지·행사·모임</strong></li>
+    <li>매일의 <strong>말씀과 묵상</strong></li>
+    <li><strong>성전건축</strong>의 단계별 일지</li>
+    <li>단체·모임의 <strong>공지와 사진</strong></li>
+  </ul>
+  <p>이 모든 것이 홈페이지 안에서 <strong>연도별로 정돈</strong>되어 보관됩니다.</p>
+</section>
+
+<!-- 25: 정리 -->
+<section>
+  <h1>정리</h1>
+  <table>
+    <thead><tr><th style="width: 20%;">구분</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>매일</td><td>오늘의 말씀 + 묵상</td></tr>
+      <tr><td>매주</td><td>주보 AI 추출 → 공지·행사·모임 자동 정리</td></tr>
+      <tr><td>회원</td><td>관심 단체·모임 선택 → 카카오 채널 알림</td></tr>
+      <tr><td>기록</td><td>성전건축 일지 · 본당 역사 저장소</td></tr>
+      <tr><td>운영</td><td>회원 정보 암호화 · 정기 백업 · 인증된 관리</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    plugins: [ RevealNotes ]
+  });
+</script>
+</body>
+</html>

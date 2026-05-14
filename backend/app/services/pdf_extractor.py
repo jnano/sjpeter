@@ -1,27 +1,34 @@
 import base64
 import re
-import pdfplumber
 import fitz  # PyMuPDF
 
 
 def extract_text(pdf_path: str) -> str:
-    with pdfplumber.open(pdf_path) as pdf:
-        pages = [page.extract_text() or "" for page in pdf.pages]
+    """PyMuPDF로 페이지 텍스트 추출.
+
+    이전엔 pdfplumber를 썼지만 페이지당 1~3초가 걸리고 pdfminer가 FontBBox
+    경고를 수십 줄 뱉어 로그를 흐림. PyMuPDF는 동일 PDF에서 거의 즉시 끝나고
+    한글 본문 추출 품질도 충분하다.
+    """
+    with fitz.open(pdf_path) as doc:
+        pages = [page.get_text("text") or "" for page in doc]
     return "\n".join(pages).strip()
 
 
-def pdf_to_images_b64(pdf_path: str, max_pages: int = 6) -> list[str]:
-    """각 페이지를 JPEG base64로 변환 (Bedrock 5MB 제한 준수)."""
+def pdf_to_images_b64(pdf_path: str, max_pages: int = 12) -> list[str]:
+    """각 페이지를 JPEG base64로 변환 (Bedrock 5MB 제한 준수).
+
+    모든 페이지를 분리된 이미지로 반환한다 (분석은 페이지별 분할 호출).
+    상한 12장은 안전장치 — 일반 주보는 4~6장.
+    """
     doc = fitz.open(pdf_path)
     result = []
     for page in list(doc)[:max_pages]:
-        # 1.5x 해상도 + 품질 75로 5MB 이하 유지
-        pixmap = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
-        jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=75)
-        # 여전히 크면 1x로 재시도
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(1.3, 1.3))
+        jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=72)
         if len(jpeg_bytes) > 4 * 1024 * 1024:
             pixmap = page.get_pixmap(matrix=fitz.Matrix(1, 1))
-            jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=70)
+            jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=68)
         result.append(base64.b64encode(jpeg_bytes).decode())
     return result
 

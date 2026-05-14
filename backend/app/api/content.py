@@ -379,6 +379,13 @@ def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_
 
 # ─── Meditation ────────────────────────────────────────────
 
+_VALID_BG_POSITIONS = {
+    "top-left", "top-center", "top-right",
+    "bottom-left", "bottom-center", "bottom-right",
+}
+_VALID_BG_GRADIENTS = {"none", "top", "bottom", "left", "right"}
+
+
 class MeditationIn(BaseModel):
     title: str
     scripture: Optional[str] = None
@@ -396,6 +403,15 @@ class MeditationOut(BaseModel):
     author: Optional[str]
     published_date: date
     is_published: bool
+    is_current: bool = False
+    background_image_url: Optional[str] = None
+    background_repeat: bool = False
+    background_position: str = "top-left"
+    background_blur: int = 0
+    background_opacity: int = 100
+    background_gradient: str = "none"
+    background_gradient_size: int = 100
+    body_font_size_px: int = 15
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -408,15 +424,38 @@ class MeditationListOut(BaseModel):
     total: int
 
 
+class MeditationBackgroundIn(BaseModel):
+    """배경·표시 옵션 업데이트 (이미지 URL 제외 — 업로드 엔드포인트로 처리)."""
+    background_repeat: bool = False
+    background_position: str = "top-left"
+    background_blur: int = 0
+    background_opacity: int = 100
+    background_gradient: str = "none"
+    background_gradient_size: int = 100
+    body_font_size_px: int = 15
+
+
 @router.get("/meditations/current", response_model=Optional[MeditationOut])
 def get_current_meditation(db: Session = Depends(get_db)):
+    """공개용 대표 묵상.
+
+    - is_current=TRUE 인 항목이 있으면 그것을 반환
+    - 없으면 발행일이 가장 최신인 공개 묵상을 반환 (백업 동작)
+    """
     item = (
+        db.query(Meditation)
+        .filter(Meditation.is_published == True, Meditation.is_current == True)
+        .order_by(desc(Meditation.id))
+        .first()
+    )
+    if item:
+        return item
+    return (
         db.query(Meditation)
         .filter(Meditation.is_published == True)
         .order_by(desc(Meditation.published_date), desc(Meditation.id))
         .first()
     )
-    return item
 
 
 @router.get("/meditations", response_model=MeditationListOut)
@@ -445,6 +484,23 @@ def list_meditations_admin(page: int = 1, limit: int = 20, db: Session = Depends
     return {"items": items, "total": total}
 
 
+@router.get("/meditations/{item_id}", response_model=MeditationOut)
+def get_meditation(item_id: int, db: Session = Depends(get_db)):
+    """공개 단일 묵상 조회 (아카이브 상세용).
+
+    이 라우트는 /current, /admin 같은 정적 경로 뒤에 등록되어야 한다 — 그래야
+    "/meditations/current" 요청이 item_id=current 로 매칭되어 422 에러가 나지 않음.
+    """
+    item = (
+        db.query(Meditation)
+        .filter(Meditation.id == item_id, Meditation.is_published == True)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상 글을 찾을 수 없습니다.")
+    return item
+
+
 @router.post("/meditations", response_model=MeditationOut, status_code=201)
 def create_meditation(body: MeditationIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     item = Meditation(**body.model_dump())
@@ -461,6 +517,117 @@ def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
     for k, v in body.model_dump().items():
         setattr(item, k, v)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.post("/meditations/{item_id}/set-current", response_model=MeditationOut)
+def set_current_meditation(
+    item_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """이 묵상을 대표로 지정. 기존 is_current=TRUE 항목은 자동 해제."""
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    # 같은 시점에 단 하나만 대표
+    db.query(Meditation).filter(
+        Meditation.id != item_id, Meditation.is_current == True,
+    ).update({Meditation.is_current: False}, synchronize_session=False)
+    item.is_current = True
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.post("/meditations/clear-current", status_code=204)
+def clear_current_meditation(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """대표 지정 해제 — 모든 is_current 를 FALSE 로. 이후 자동으로 최신이 노출됨."""
+    db.query(Meditation).filter(Meditation.is_current == True).update(
+        {Meditation.is_current: False}, synchronize_session=False,
+    )
+    db.commit()
+    return None
+
+
+@router.put("/meditations/{item_id}/background", response_model=MeditationOut)
+def update_meditation_background_options(
+    item_id: int,
+    body: MeditationBackgroundIn,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """배경 반복·시작점·흐림 옵션만 갱신 (이미지 파일은 별도 업로드 엔드포인트)."""
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    if body.background_position not in _VALID_BG_POSITIONS:
+        raise HTTPException(status_code=400, detail="잘못된 배경 위치 값입니다.")
+    if body.background_gradient not in _VALID_BG_GRADIENTS:
+        raise HTTPException(status_code=400, detail="잘못된 그라데이션 값입니다.")
+    blur = max(0, min(40, int(body.background_blur)))
+    opacity = max(0, min(100, int(body.background_opacity)))
+    gradient_size = max(10, min(100, int(body.background_gradient_size)))
+    font_size = max(12, min(32, int(body.body_font_size_px)))
+    item.background_repeat = body.background_repeat
+    item.background_position = body.background_position
+    item.background_blur = blur
+    item.background_opacity = opacity
+    item.background_gradient = body.background_gradient
+    item.background_gradient_size = gradient_size
+    item.body_font_size_px = font_size
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.post("/meditations/{item_id}/background-image", response_model=MeditationOut)
+def upload_meditation_background(
+    item_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """배경 이미지 파일 업로드. 기존 파일이 있으면 덮어쓰지 않고 새 파일을 둔다."""
+    from app.core.config import settings as app_settings
+    import os, uuid
+
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+
+    ext = os.path.splitext(file.filename or "bg")[1].lower() or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    save_dir = os.path.join(app_settings.UPLOAD_DIR, "meditation-bg")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+    with open(save_path, "wb") as f:
+        f.write(file.file.read())
+
+    item.background_image_url = f"/uploads/meditation-bg/{filename}"
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/meditations/{item_id}/background-image", response_model=MeditationOut)
+def delete_meditation_background(
+    item_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """배경 이미지 제거 (DB 의 URL 만 비움 — 파일은 정리하지 않음)."""
+    item = db.query(Meditation).filter(Meditation.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    item.background_image_url = None
     db.commit()
     db.refresh(item)
     return item

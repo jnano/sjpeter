@@ -35,6 +35,10 @@ class BulletinOut(BaseModel):
     gospel_reference: str | None
     pdf_url: str | None
     ai_summary: str | None
+    ai_status: str | None = None
+    ai_started_at: datetime | None = None
+    ai_finished_at: datetime | None = None
+    ai_error: str | None = None
 
     class Config:
         from_attributes = True
@@ -109,6 +113,7 @@ async def upload_bulletin(
         gospel_reference=gospel_reference,
         pdf_url=pdf_url,
         is_published=True,
+        ai_status="processing",  # 업로드 직후 폴링 UI가 곧바로 진행 상태로 보이도록
     )
     db.add(bulletin)
     db.commit()
@@ -138,6 +143,28 @@ async def upload_bulletin(
     background_tasks.add_task(_auto_process_bulletin, bulletin.id)
 
     return bulletin
+
+
+@router.post("/{bulletin_id}/reanalyze")
+def reanalyze_bulletin(
+    bulletin_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """기존 주보를 다시 AI 분석. 파서 개선 후 0건 처리된 주보를 살리는 용도."""
+    bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
+    if not bulletin:
+        raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
+
+    bulletin.ai_status = "processing"
+    bulletin.ai_started_at = datetime.utcnow()
+    bulletin.ai_finished_at = None
+    bulletin.ai_error = None
+    db.commit()
+
+    background_tasks.add_task(_auto_process_bulletin, bulletin_id)
+    return {"ok": True, "ai_status": "processing"}
 
 
 @router.delete("/{bulletin_id}")
@@ -178,6 +205,9 @@ class ExtractionOut(BaseModel):
     status: str
     target_board_id: Optional[int]
     created_post_id: Optional[int]
+    created_notice_id: Optional[int] = None
+    created_event_id: Optional[int] = None
+    created_meditation_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -256,7 +286,13 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
 
     new_extractions: list[BulletinExtraction] = []
     for ev in events:
-        fp = _fingerprint(ev.get("group_name"), ev.get("event_date"), ev.get("event_type"), ev.get("title"))
+        fp = _fingerprint(
+            ev.get("group_name"),
+            ev.get("event_date"),
+            ev.get("event_type"),
+            ev.get("title"),
+            bulletin_id=bulletin_id,
+        )
         exists = db.query(BulletinExtraction).filter(
             BulletinExtraction.fingerprint == fp,
             BulletinExtraction.status != "rejected",
@@ -265,7 +301,7 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             continue
 
         parsed_date = _parse_date(ev.get("event_date"))
-        if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date):
+        if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date, bulletin_id=bulletin_id):
             continue
 
         event_type = ev.get("event_type") or "모임"
@@ -275,28 +311,32 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         # 묵상 → meditations 바로 등록 (published_date는 주보 발행일)
         if event_type == "묵상":
             scripture = (ev.get("scripture") or "").strip() or None
-            db.execute(
+            row = db.execute(
                 _text(
                     "INSERT INTO meditations (title, scripture, body, published_date, is_published, created_at, updated_at) "
-                    "VALUES (:title, :scr, :body, :pdate, TRUE, :ts, :ts)"
+                    "VALUES (:title, :scr, :body, :pdate, TRUE, :ts, :ts) RETURNING id"
                 ),
                 {
                     "title": title, "scr": scripture,
                     "body": content_text or "",
                     "pdate": bulletin.published_date, "ts": published_ts,
                 },
-            )
+            ).first()
             ext = BulletinExtraction(
                 bulletin_id=bulletin_id, title=title, content=content_text,
                 group_name=ev.get("group_name"), event_date=parsed_date,
                 location=ev.get("location"), event_type=event_type,
                 fingerprint=fp, status="auto_drafted",
+                created_meditation_id=row[0] if row else None,
             )
             db.add(ext)
             new_extractions.append(ext)
             continue
 
-        # 사목지표 → 추출만 (BulletinExtraction pending). admin이 visions에 수동 등록
+        # 사목지표 → 반드시 관리자 검토 필수. visions 테이블에 자동 INSERT 절대 금지.
+        # (사목지표는 본당 한 해 사목 방향이라 AI 추출 그대로 등록 시 오해의 소지 큼)
+        # BulletinExtraction 에만 status='pending' 으로 저장 → 관리자가 result/extractions
+        # 페이지에서 approve-as-vision 엔드포인트로 직접 등록해야만 visions 에 반영됨.
         if event_type == "지표":
             ext = BulletinExtraction(
                 bulletin_id=bulletin_id, title=title, content=content_text,
@@ -310,18 +350,19 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
 
         # 공지 → notices 바로 등록 (created_at은 주보 발행일)
         if event_type == "공지":
-            db.execute(
+            row = db.execute(
                 _text(
                     "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
-                    "VALUES (:pid, :title, :content, FALSE, TRUE, :created)"
+                    "VALUES (:pid, :title, :content, FALSE, TRUE, :created) RETURNING id"
                 ),
                 {"pid": parish_id, "title": title, "content": content_text, "created": published_ts},
-            )
+            ).first()
             ext = BulletinExtraction(
                 bulletin_id=bulletin_id, title=title, content=content_text,
                 group_name=ev.get("group_name"), event_date=parsed_date,
                 location=ev.get("location"), event_type=event_type,
                 fingerprint=fp, status="auto_drafted",
+                created_notice_id=row[0] if row else None,
             )
             db.add(ext)
             new_extractions.append(ext)
@@ -331,10 +372,10 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         if event_type in ("행사", "모임") and parsed_date:
             category = "community" if event_type == "모임" else "general"
             parsed_end = _parse_date(ev.get("end_date"))
-            db.execute(
+            row = db.execute(
                 _text(
                     "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
-                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created)"
+                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
                 ),
                 {
                     "title": title, "desc": content_text,
@@ -343,12 +384,13 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
                     "loc": ev.get("location"), "cat": category, "kind": event_type,
                     "created": published_ts,
                 },
-            )
+            ).first()
             ext = BulletinExtraction(
                 bulletin_id=bulletin_id, title=title, content=content_text,
                 group_name=ev.get("group_name"), event_date=parsed_date,
                 location=ev.get("location"), event_type=event_type,
                 fingerprint=fp, status="auto_drafted",
+                created_event_id=row[0] if row else None,
             )
             db.add(ext)
             new_extractions.append(ext)
@@ -395,6 +437,32 @@ def list_pending_extractions(
         .order_by(desc(BulletinExtraction.created_at))
         .all()
     )
+
+
+@router.get("/extractions/pending/count")
+def count_pending_extractions(
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """사이드바 뱃지용 — 검토 대기 추출 항목 수.
+
+    - total: 전체 pending 건수
+    - vision: 그 중 사목지표('지표') 건수. 0 보다 크면 반드시 관리자 검토 필요.
+    """
+    total = (
+        db.query(BulletinExtraction)
+        .filter(BulletinExtraction.status == "pending")
+        .count()
+    )
+    vision = (
+        db.query(BulletinExtraction)
+        .filter(
+            BulletinExtraction.status == "pending",
+            BulletinExtraction.event_type == "지표",
+        )
+        .count()
+    )
+    return {"total": total, "vision": vision}
 
 
 @router.get("/{bulletin_id}/extractions", response_model=list[ExtractionOut])
@@ -464,23 +532,41 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
     공지  → notices 바로 등록 (관리자 검토 불필요)
     행사 + 날짜 → events 캘린더 바로 등록
     나머지 (모임, 날짜 없는 행사) → 'ai-extract' 게시판 임시저장
+
+    진행 상태는 bulletins.ai_status 컬럼으로 노출 (processing → done|failed).
     """
     from app.core.database import SessionLocal
     from app.services.pdf_extractor import extract_text, is_text_sparse, pdf_to_images_b64
     from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images
-    from sqlalchemy import text as _text
 
     db = SessionLocal()
+    started = datetime.utcnow()
     try:
         bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
         if not bulletin or not bulletin.pdf_url:
             return
 
+        # 분석 시작 표시 (UI 폴링용)
+        bulletin.ai_status = "processing"
+        bulletin.ai_started_at = started
+        bulletin.ai_finished_at = None
+        bulletin.ai_error = None
+        db.commit()
+
         pdf_path = bulletin.pdf_url.lstrip("/")
         if not os.path.exists(pdf_path):
+            bulletin.ai_status = "failed"
+            bulletin.ai_error = "PDF 파일을 찾을 수 없습니다."
+            bulletin.ai_finished_at = datetime.utcnow()
+            db.commit()
             return
 
         text_content = extract_text(pdf_path)
+        # 통합검색용 PDF 본문 저장 — 텍스트가 충분히 추출됐을 때만
+        # (희박해도 일단 저장하면 "본문 없음" 케이스와 구분이 어려워 검색 노이즈가 됨)
+        if text_content and len(text_content) >= 50:
+            bulletin.body_text = text_content
+            db.commit()
         if is_text_sparse(text_content):
             logger.info("[bulletin %d] 텍스트 희박 → Vision 분석 경로", bulletin_id)
             images = pdf_to_images_b64(pdf_path)
@@ -494,17 +580,89 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
                 events = analyze_bulletin_images(bulletin.published_date, images)
 
         logger.info("[bulletin %d] 추출된 항목 %d건", bulletin_id, len(events) if events else 0)
-        if not events:
-            return
 
-        new_extractions = _route_and_save_events(db, bulletin, events, bulletin_id)
+        new_extractions = _route_and_save_events(db, bulletin, events or [], bulletin_id)
+        bulletin.ai_status = "done"
+        bulletin.ai_finished_at = datetime.utcnow()
         db.commit()
-        logger.info("[bulletin %d] 자동 처리 완료 — %d건 라우팅", bulletin_id, len(new_extractions))
+        logger.info(
+            "[bulletin %d] 자동 처리 완료 — %d건 라우팅 (소요 %.1fs)",
+            bulletin_id,
+            len(new_extractions),
+            (bulletin.ai_finished_at - started).total_seconds(),
+        )
     except Exception as exc:
         logger.exception("[bulletin %d] 자동 처리 실패: %s", bulletin_id, exc)
         db.rollback()
+        # 실패 상태 기록 — rollback 이후 새 트랜잭션
+        try:
+            b = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
+            if b:
+                b.ai_status = "failed"
+                b.ai_finished_at = datetime.utcnow()
+                b.ai_error = str(exc)[:500]
+                db.commit()
+        except Exception:
+            db.rollback()
     finally:
         db.close()
+
+
+class ApproveAsVisionBody(BaseModel):
+    year: int | None = None
+    motto: str | None = None
+    body: str | None = None
+    is_current: bool = False
+
+
+@router.post("/extractions/{extraction_id}/approve-as-vision", response_model=ExtractionOut)
+def approve_extraction_as_vision(
+    extraction_id: int,
+    body: ApproveAsVisionBody,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """AI가 뽑은 '지표' 추출 항목을 visions 테이블에 등록.
+
+    - motto / body / year 는 body 로 받되, 비어 있으면 extraction 에서 자동 채움
+    - is_current=True 면 같은 해의 기존 current 항목들을 자동으로 False 로 내림
+    """
+    ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
+    if not ext:
+        raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
+    if ext.status != "pending":
+        raise HTTPException(status_code=400, detail="이미 처리된 항목입니다.")
+
+    bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
+    default_year = bulletin.published_date.year if bulletin else date.today().year
+
+    year = body.year or default_year
+    motto = (body.motto or ext.title or "").strip()
+    if not motto:
+        raise HTTPException(status_code=400, detail="motto(슬로건)는 비울 수 없습니다.")
+    # visions.motto 는 VARCHAR(300) — 너무 길면 잘라서 저장
+    motto = motto[:300]
+    vision_body = body.body if body.body is not None else (ext.content or None)
+
+    # is_current=True 면 같은 해의 기존 current 를 False 로 내림
+    if body.is_current:
+        db.execute(
+            text("UPDATE visions SET is_current = FALSE WHERE year = :y AND is_current = TRUE"),
+            {"y": year},
+        )
+
+    db.execute(
+        text(
+            "INSERT INTO visions (year, motto, body, is_current) "
+            "VALUES (:year, :motto, :body, :is_current)"
+        ),
+        {"year": year, "motto": motto, "body": vision_body, "is_current": body.is_current},
+    )
+
+    ext.status = "approved"
+    db.commit()
+    db.refresh(ext)
+    return ext
 
 
 @router.post("/extractions/{extraction_id}/approve-as-event", response_model=ExtractionOut)
@@ -560,30 +718,61 @@ def reject_extraction(
 # ── 헬퍼 ──────────────────────────────────────────────────
 
 
-def _fingerprint(group: str | None, event_date: str | None, event_type: str | None, title: str | None = "") -> str:
-    """추출 항목 식별용 fingerprint. event_date/group이 null인 항목들이 한 fp로 뭉치는 문제를
-    방지하기 위해 title도 포함한다 (공백 정규화 후)."""
+def _fingerprint(
+    group: str | None,
+    event_date: str | None,
+    event_type: str | None,
+    title: str | None = "",
+    bulletin_id: int | None = None,
+) -> str:
+    """추출 항목 식별용 fingerprint.
+
+    - bulletin_id 를 포함해 **주보별 독립** 처리. 같은 주보 안에서만 중복이
+      차단되고, 다른 주보의 동명 항목(예: 매주 반복되는 '주일 말씀 묵상과 실천')
+      은 자연스럽게 통과한다.
+    - bulletin_id 없이 호출되면(혹시 모를 다른 경로) title·type 기반 fp 로 폴백.
+    - 다른 주보 간 같은 행사·공지 중복은 _is_fuzzy_duplicate 가 별도 처리.
+    """
     title_key = "".join((title or "").split())
-    raw = f"{group or ''}|{event_date or ''}|{event_type or ''}|{title_key}"
+    bid = "" if bulletin_id is None else str(bulletin_id)
+    raw = f"{bid}|{group or ''}|{event_date or ''}|{event_type or ''}|{title_key}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
-def _is_fuzzy_duplicate(db: Session, title: str, event_date: "date | None") -> bool:
-    """같은 날짜의 기존 추출 항목 중 제목 유사도 80% 이상이면 중복으로 판단."""
-    if not event_date or not title:
+def _is_fuzzy_duplicate(
+    db: Session,
+    title: str,
+    event_date: "date | None",
+    bulletin_id: int | None = None,
+) -> bool:
+    """제목 유사도 80% 이상이면 중복으로 판단.
+
+    비교 범위:
+    - event_date 가 있으면: 같은 날짜의 모든 기존 항목과 비교 (다른 주보 포함)
+    - event_date 가 없으면: **같은 bulletin_id 안에서만** 비교
+      (다른 주보의 비슷한 공지/묵상까지 막아버리면 매주 반복되는 공지가 사라지므로)
+    """
+    if not title:
         return False
-    existing_titles = (
-        db.query(BulletinExtraction.title)
-        .filter(
-            BulletinExtraction.event_date == event_date,
-            BulletinExtraction.status != "rejected",
-        )
-        .all()
+
+    query = db.query(BulletinExtraction.title).filter(
+        BulletinExtraction.status != "rejected",
     )
-    for (existing_title,) in existing_titles:
+    if event_date:
+        query = query.filter(BulletinExtraction.event_date == event_date)
+    elif bulletin_id is not None:
+        query = query.filter(BulletinExtraction.bulletin_id == bulletin_id)
+    else:
+        return False
+
+    for (existing_title,) in query.all():
         ratio = SequenceMatcher(None, title, existing_title).ratio()
         if ratio >= 0.80:
-            logger.info("[중복 감지] '%s' ↔ '%s' (유사도 %.0f%%)", title, existing_title, ratio * 100)
+            logger.info(
+                "[중복 감지] '%s' ↔ '%s' (유사도 %.0f%%, 범위=%s)",
+                title, existing_title, ratio * 100,
+                f"date={event_date}" if event_date else f"bulletin={bulletin_id}",
+            )
             return True
     return False
 

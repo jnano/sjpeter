@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import type { Bulletin } from "@/lib/api";
 
@@ -45,8 +47,44 @@ export default function BulletinClient({
   kakaoKey?: string;
   parishName?: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const list = bulletins.length > 0 ? bulletins : SAMPLE_BULLETINS;
   const latest = list[0];
+
+  // 선택된 주보: URL ?id=N → 일치하는 항목, 없으면 latest
+  const idParam = searchParams.get("id");
+  const initialSelected =
+    idParam ? (list.find((b) => String(b.id) === idParam) ?? latest) : latest;
+  const [selected, setSelected] = useState<Bulletin>(initialSelected);
+
+  // URL 쿼리 변경 → 선택 동기화 (뒤로가기 등)
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) {
+      if (selected.id !== latest.id) setSelected(latest);
+      return;
+    }
+    const found = list.find((b) => String(b.id) === id);
+    if (found && found.id !== selected.id) setSelected(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  function selectBulletin(b: Bulletin) {
+    setSelected(b);
+    const params = new URLSearchParams(searchParams.toString());
+    if (b.id === latest.id) {
+      params.delete("id");
+    } else {
+      params.set("id", String(b.id));
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/bulletin?${qs}` : "/bulletin", { scroll: false });
+    // 모바일에서 좌측 메인 영역이 위에 있으므로 부드럽게 스크롤
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   // 연도별 그룹핑
   const byYear = list.reduce<Record<number, Bulletin[]>>((acc, b) => {
@@ -79,27 +117,29 @@ export default function BulletinClient({
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             <div className="bg-[var(--color-primary)] text-white px-6 py-4 flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm">이번 주 주보</p>
+                <p className="text-white/70 text-sm">
+                  {selected.id === latest.id ? "이번 주 주보" : "지난 주보"}
+                </p>
                 <h2 className="font-serif text-xl font-bold mt-0.5">
-                  {latest.issue_number ? `제${latest.issue_number}호` : "주보"}
+                  {selected.issue_number ? `제${selected.issue_number}호` : "주보"}
                 </h2>
               </div>
               <div className="text-right text-sm text-white/70">
-                <p>{new Date(latest.published_date).getFullYear()}년 {formatDate(latest.published_date)}</p>
-                {latest.liturgical_season && (
+                <p>{new Date(selected.published_date).getFullYear()}년 {formatDate(selected.published_date)}</p>
+                {selected.liturgical_season && (
                   <p className="text-[var(--color-accent-light)] font-medium mt-0.5">
-                    {latest.liturgical_season}
+                    {selected.liturgical_season}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="bg-[var(--color-surface-warm)] flex flex-col items-center justify-center min-h-96 p-12 text-center">
-              {latest.pdf_url ? (
+              {selected.pdf_url ? (
                 <iframe
-                  src={`${API}${latest.pdf_url}`}
+                  src={`${API}${selected.pdf_url}`}
                   className="w-full h-[600px] rounded border border-[var(--color-border)]"
-                  title={`주보 ${latest.issue_number ? `제${latest.issue_number}호` : ""}`}
+                  title={`주보 ${selected.issue_number ? `제${selected.issue_number}호` : ""}`}
                 />
               ) : (
                 <div>
@@ -114,10 +154,10 @@ export default function BulletinClient({
 
             <div className="px-6 py-4 border-t border-[var(--color-border)] flex gap-3">
               <a
-                href={latest.pdf_url ? `${API}${latest.pdf_url}` : "#"}
+                href={selected.pdf_url ? `${API}${selected.pdf_url}` : "#"}
                 download
                 className={`flex-1 text-center py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  latest.pdf_url
+                  selected.pdf_url
                     ? "bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white"
                     : "bg-[var(--color-surface-warm)] text-[var(--color-text-muted)] cursor-not-allowed"
                 }`}
@@ -125,7 +165,7 @@ export default function BulletinClient({
                 ↓ PDF 내려받기
               </a>
               <a
-                href={latest.pdf_url ? `${API}${latest.pdf_url}` : "#"}
+                href={selected.pdf_url ? `${API}${selected.pdf_url}` : "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] py-2.5 rounded-lg text-sm font-medium transition-colors"
@@ -134,7 +174,7 @@ export default function BulletinClient({
               </a>
               {kakaoKey && (
                 <button
-                  onClick={() => shareToKakao(latest, kakaoKey, parishName)}
+                  onClick={() => shareToKakao(selected, kakaoKey, parishName)}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   style={{ backgroundColor: "#FEE500", color: "#3C1E1E" }}
                 >
@@ -160,36 +200,46 @@ export default function BulletinClient({
                   <div className="px-5 py-2.5 bg-[var(--color-surface-warm)] text-sm font-bold text-[var(--color-text-muted)]">
                     {year}년
                   </div>
-                  {byYear[year].map((b) => (
-                    <div
-                      key={b.id}
-                      className={`px-5 py-3 flex items-center justify-between hover:bg-[var(--color-surface-warm)] transition-colors ${
-                        b.id === latest.id ? "bg-blue-50 border-l-4 border-l-[var(--color-primary)]" : ""
-                      }`}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">
-                          {b.issue_number ? `제${b.issue_number}호` : formatDate(b.published_date)}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                          {formatDate(b.published_date)}
-                          {b.liturgical_season && ` · ${b.liturgical_season}`}
-                        </p>
-                      </div>
-                      {b.pdf_url ? (
-                        <a
-                          href={`${API}${b.pdf_url}`}
-                          className="text-xs text-[var(--color-primary)] hover:underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          보기
-                        </a>
-                      ) : (
-                        <span className="text-xs text-[var(--color-border-dark)]">준비 중</span>
-                      )}
-                    </div>
-                  ))}
+                  {byYear[year].map((b) => {
+                    const isSelected = b.id === selected.id;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => selectBulletin(b)}
+                        aria-pressed={isSelected}
+                        aria-label={`${b.issue_number ? `제${b.issue_number}호` : formatDate(b.published_date)} 주보 보기`}
+                        className={`w-full text-left px-5 py-3 flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50 border-l-4 border-l-[var(--color-primary)]"
+                            : "hover:bg-[var(--color-surface-warm)]"
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium">
+                            {b.issue_number ? `제${b.issue_number}호` : formatDate(b.published_date)}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {formatDate(b.published_date)}
+                            {b.liturgical_season && ` · ${b.liturgical_season}`}
+                          </p>
+                        </div>
+                        {b.pdf_url ? (
+                          <span
+                            className={`text-xs font-medium ${
+                              isSelected
+                                ? "text-[var(--color-primary)]"
+                                : "text-[var(--color-text-muted)]"
+                            }`}
+                          >
+                            {isSelected ? "✓ 보는 중" : "보기"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--color-border-dark)]">준비 중</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
             </div>

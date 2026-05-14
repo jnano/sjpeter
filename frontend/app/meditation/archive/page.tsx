@@ -83,11 +83,12 @@ export default async function MeditationArchivePage({
             {items.map((item, idx) => {
               const isLatest = page === 1 && idx === 0;
               return (
-                <div
+                <Link
                   key={item.id}
-                  className={`bg-[var(--color-surface)] border rounded-xl p-6 ${
+                  href={`/meditation/archive/${item.id}`}
+                  className={`block bg-[var(--color-surface)] border rounded-xl p-6 transition-colors hover:bg-[var(--color-surface-warm)] ${
                     isLatest
-                      ? "border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.02]"
+                      ? "border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.02] hover:bg-[var(--color-primary)]/[0.05]"
                       : "border-[var(--color-border)]"
                   }`}
                 >
@@ -119,7 +120,7 @@ export default async function MeditationArchivePage({
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

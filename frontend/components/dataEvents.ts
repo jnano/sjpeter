@@ -18,6 +18,8 @@ export const DataEvent = {
   ARCHIVE_COUNTS: "data:archive-counts",
   /** AI 추출 임시저장 글 수 변경 (AdminSidebar 뱃지) */
   DRAFTS_COUNT: "data:drafts-count",
+  /** AI 추출 pending 항목 수 변경 (AdminSidebar 뱃지 — 사목지표 검토 누락 방지) */
+  EXTRACTIONS_COUNT: "data:extractions-count",
   /** 홈 메인 배너 변경 (HomeHero) */
   HOME_BANNERS: "data:home-banners",
   /** photo·liturgy 게시판 사진 변경 (홈 PhotoSlider) */

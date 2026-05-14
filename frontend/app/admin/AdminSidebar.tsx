@@ -10,7 +10,9 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 interface NavItem {
   href: string;
   label: string;
-  badgeKey?: "drafts";
+  badgeKey?: "drafts" | "extractions" | "vision";
+  // vision 뱃지는 빨강 (사목지표 자동 등록 안 되므로 누락 방지 강조)
+  badgeTone?: "amber" | "violet" | "red";
 }
 
 interface NavGroup {
@@ -44,7 +46,8 @@ const NAV_GROUPS: NavGroup[] = [
     icon: "📰",
     items: [
       { href: "/admin/bulletin", label: "주보 관리" },
-      { href: "/admin/drafts", label: "임시저장", badgeKey: "drafts" },
+      { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet" },
+      { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber" },
       { href: "/admin/notices", label: "공지 관리" },
       { href: "/admin/calendar", label: "행사 캘린더" },
     ],
@@ -87,6 +90,8 @@ interface Props {
 export default function AdminSidebar({ open, onClose }: Props) {
   const pathname = usePathname();
   const [draftCount, setDraftCount] = useState(0);
+  const [extractionCount, setExtractionCount] = useState(0);
+  const [visionCount, setVisionCount] = useState(0);
 
   const fetchDraftCount = useCallback(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
@@ -97,10 +102,50 @@ export default function AdminSidebar({ open, onClose }: Props) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchDraftCount(); }, [pathname, fetchDraftCount]);
+  const fetchExtractionCount = useCallback(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+    if (!token) return;
+    fetch(`${API}/api/bulletins/extractions/pending/count`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) {
+          setExtractionCount(d.total ?? 0);
+          setVisionCount(d.vision ?? 0);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchDraftCount();
+    fetchExtractionCount();
+  }, [pathname, fetchDraftCount, fetchExtractionCount]);
   useInvalidationListener(DataEvent.DRAFTS_COUNT, fetchDraftCount);
+  useInvalidationListener(DataEvent.EXTRACTIONS_COUNT, fetchExtractionCount);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+  function badgeFor(item: NavItem): { count: number; tone: string } | null {
+    let count = 0;
+    if (item.badgeKey === "drafts") count = draftCount;
+    else if (item.badgeKey === "extractions") count = extractionCount;
+    else if (item.badgeKey === "vision") count = visionCount;
+    if (count <= 0) return null;
+
+    // 사목지표 미처리가 섞여 있으면 빨강(놓치면 안 되는 일), 그 외는 지정 톤
+    const hasVisionInside = item.badgeKey === "extractions" && visionCount > 0;
+    const tone = hasVisionInside ? "red" : item.badgeTone ?? "amber";
+
+    return { count, tone };
+  }
+
+  const toneClass: Record<string, string> = {
+    amber: "bg-amber-500 text-white",
+    violet: "bg-violet-600 text-white",
+    red: "bg-red-600 text-white",
+  };
 
   return (
     <>
@@ -157,7 +202,7 @@ export default function AdminSidebar({ open, onClose }: Props) {
               <ul>
                 {g.items.map((it) => {
                   const active = isActive(it.href);
-                  const badge = it.badgeKey === "drafts" ? draftCount : 0;
+                  const badge = badgeFor(it);
                   return (
                     <li key={it.href}>
                       <Link
@@ -170,9 +215,11 @@ export default function AdminSidebar({ open, onClose }: Props) {
                         }`}
                       >
                         <span>{it.label}</span>
-                        {badge > 0 && (
-                          <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                            {badge}
+                        {badge && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${toneClass[badge.tone] ?? toneClass.amber}`}
+                          >
+                            {badge.count}
                           </span>
                         )}
                       </Link>
