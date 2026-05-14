@@ -22,7 +22,7 @@ _INTERNAL_KEYS = [
     "KAKAO_CLIENT_ID", "KAKAO_CLIENT_SECRET",
     "AUTH_SECRET",
 ]
-_PUBLIC_KEYS = ["KAKAO_MAP_KEY", "SITE_URL"]
+_PUBLIC_KEYS = ["KAKAO_MAP_KEY", "SITE_URL", "CURRENT_SEASON"]
 
 
 @internal_router.get("/api/internal/config")

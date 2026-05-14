@@ -777,7 +777,8 @@ def _migrate_add_columns():
             ('KAKAO_CLIENT_ID',       '카카오 클라이언트 ID',   '카카오 OAuth 앱 REST API 키',                    TRUE,  'OAuth'),
             ('KAKAO_CLIENT_SECRET',   '카카오 클라이언트 시크릿', '카카오 OAuth 앱 시크릿 키',                     TRUE,  'OAuth'),
             ('KAKAO_MAP_KEY',         '카카오맵 JavaScript 키', '카카오맵 API JavaScript 키',                     TRUE,  'OAuth'),
-            ('AUTH_SECRET',           'NextAuth 시크릿',       '세션 암호화 키 (32자 이상 임의 문자열)',             TRUE,  '보안')
+            ('AUTH_SECRET',           'NextAuth 시크릿',       '세션 암호화 키 (32자 이상 임의 문자열)',             TRUE,  '보안'),
+            ('CURRENT_SEASON',        '현재 전례 시기',         '빈 값=꺼짐 / advent · christmas · lent · easter · ordinary · pentecost', FALSE, '스킨')
             ON CONFLICT (key) DO NOTHING
         """))
 

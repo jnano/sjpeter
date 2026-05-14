@@ -75,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: "⚙",
     items: [
       { href: "/admin/menus", label: "메뉴 관리" },
+      { href: "/admin/season", label: "전례 시기 스킨" },
       { href: "/admin/settings", label: "사이트 설정" },
       { href: "/admin/logs", label: "활동 로그" },
       { href: "/admin/docs", label: "기술문서" },

@@ -8,6 +8,7 @@ import OnboardingGate from "@/components/OnboardingGate";
 import { MenusProvider } from "@/components/MenusProvider";
 import { fetchServerMenus } from "@/components/fetchServerMenus";
 import { fetchParishMin } from "@/lib/parish";
+import { fetchCurrentSeason } from "@/lib/season";
 
 const notoSansKR = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -49,10 +50,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialMenus = await fetchServerMenus();
+  const [initialMenus, season] = await Promise.all([
+    fetchServerMenus(),
+    fetchCurrentSeason(),
+  ]);
   return (
     <html
       lang="ko"
+      data-season={season ?? undefined}
       className={`${notoSansKR.variable} ${notoSerifKR.variable} ${playfairDisplay.variable}`}
     >
       <body className="bg-[var(--color-background)]">
