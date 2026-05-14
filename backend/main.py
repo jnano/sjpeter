@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
-from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction
+from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -51,6 +51,7 @@ app.include_router(page_photos.router, prefix="/api")
 app.include_router(menus.router, prefix="/api")
 app.include_router(pages.router, prefix="/api")
 app.include_router(construction.router, prefix="/api")
+app.include_router(banners.router, prefix="/api")
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -596,6 +597,44 @@ def _migrate_add_columns():
                 conn.execute(text(stmt))
             except Exception:
                 pass
+
+        # 배너 그룹·이미지 테이블 — 위치(placement)별 슬라이드
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS banner_groups (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                placement VARCHAR(50) NOT NULL DEFAULT 'home_main',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_banner_groups_placement_active "
+                "ON banner_groups (placement, is_active, sort_order)"
+            ))
+        except Exception:
+            pass
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS banner_images (
+                id SERIAL PRIMARY KEY,
+                group_id INTEGER NOT NULL REFERENCES banner_groups(id) ON DELETE CASCADE,
+                file_url VARCHAR(500) NOT NULL,
+                link_url VARCHAR(500),
+                alt_text VARCHAR(200) NOT NULL DEFAULT '',
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_banner_images_group_sort "
+                "ON banner_images (group_id, sort_order)"
+            ))
+        except Exception:
+            pass
 
         # 사목평의회 구성원 테이블
         conn.execute(text("""

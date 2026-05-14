@@ -1,0 +1,47 @@
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from app.core.database import Base
+
+
+class BannerGroup(Base):
+    """배너 그룹 — 슬라이드 단위 묶음.
+
+    placement 키별로 활성화된(is_active) 그룹 중 sort_order 최소값을
+    그 위치에 노출. 그룹 안 이미지가 1장이면 정적, 2장 이상이면 슬라이더.
+    """
+    __tablename__ = "banner_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    # 미리 정의된 위치 키. 현재: "home_main". 향후 확장 시 enum 늘려도 됨.
+    placement = Column(String(50), nullable=False, default="home_main")
+    is_active = Column(Boolean, nullable=False, default=True)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    images = relationship(
+        "BannerImage",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        order_by="BannerImage.sort_order, BannerImage.id",
+    )
+
+
+class BannerImage(Base):
+    """배너 그룹 안 개별 이미지 — 슬라이드 한 컷.
+
+    link_url 이 있으면 이미지가 a 태그로 감싸져 클릭 시 이동.
+    """
+    __tablename__ = "banner_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("banner_groups.id", ondelete="CASCADE"), nullable=False)
+    file_url = Column(String(500), nullable=False)        # /uploads/banners/xxx.png
+    link_url = Column(String(500), nullable=True)         # 클릭 시 이동 URL (선택)
+    alt_text = Column(String(200), nullable=False, default="")
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    group = relationship("BannerGroup", back_populates="images")

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import MiniCalendar from "./MiniCalendar";
+import BannerSlider from "@/components/BannerSlider";
 import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
@@ -226,18 +226,9 @@ export default async function HomePage() {
     </div>
   );
 
-  // 시즌 배너 — 첫영성체 축하 (정적 노출, 시즌 종료 시 bannerCardEl 변수와 사용처 제거)
-  const bannerCardEl = (
-    <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-white">
-      <Image
-        src="/banners/first-communion.png"
-        alt="첫영성체를 축하합니다"
-        width={419}
-        height={288}
-        className="w-full h-auto block"
-      />
-    </div>
-  );
+  // 시즌 배너 — /admin/banners 에서 placement="home_main" 으로 등록한
+  // 활성 그룹의 이미지를 슬라이더로 노출. 1장이면 정적, 2장+ 시 5초 auto + 인디케이터.
+  const bannerCardEl = <BannerSlider placement="home_main" />;
 
   const massCardEl = (
     <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">

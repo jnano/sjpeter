@@ -57,7 +57,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "사진",
     icon: "🖼",
     items: [
-      { href: "/admin/home-banner", label: "홈 배너" },
+      { href: "/admin/home-banner", label: "홈 사진 배너" },
+      { href: "/admin/banners", label: "배너 슬라이드" },
       { href: "/admin/page-photos", label: "페이지 사진" },
       { href: "/admin/gallery", label: "갤러리" },
     ],
