@@ -870,6 +870,40 @@ def publish_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depend
     return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
 
 
+class PostMoveBody(BaseModel):
+    target_slug: str
+
+
+@router.patch("/api/boards/{slug}/posts/{post_id}/move", response_model=PostOut)
+def move_post(
+    slug: str,
+    post_id: int,
+    body: PostMoveBody,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """게시글을 다른 게시판으로 이동 (admin 전용). 댓글·첨부·추천은 post_id 기준이라 자동 따라감."""
+    src = _get_board_or_404(slug, db)
+    post = db.query(Post).filter(Post.id == post_id, Post.board_id == src.id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    target_slug = (body.target_slug or "").strip()
+    if not target_slug or target_slug == slug:
+        raise HTTPException(status_code=400, detail="대상 게시판을 다르게 지정해 주세요.")
+    target = db.query(Board).filter(Board.slug == target_slug, Board.is_active == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="대상 게시판을 찾을 수 없습니다.")
+    post.board_id = target.id
+    db.commit()
+    db.refresh(post)
+    return (
+        db.query(Post)
+        .options(joinedload(Post.member), joinedload(Post.board), joinedload(Post.attachments))
+        .filter(Post.id == post_id)
+        .first()
+    )
+
+
 @router.patch("/api/boards/drafts/{post_id}/move", response_model=DraftOut)
 def move_draft(post_id: int, body: DraftMoveBody, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()

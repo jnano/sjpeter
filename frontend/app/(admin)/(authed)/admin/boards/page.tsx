@@ -590,9 +590,18 @@ export default function AdminBoardsPage() {
               {isPostsExpanded && (
                 <BoardPostsPanel
                   board={board}
-                  onPostCountChange={(delta) =>
+                  allBoards={boards}
+                  onPostCountChange={(delta, targetSlug) =>
                     setBoards((prev) =>
-                      prev.map((b) => (b.id === board.id ? { ...b, post_count: Math.max(0, b.post_count + delta) } : b)),
+                      prev.map((b) => {
+                        if (b.id === board.id) {
+                          return { ...b, post_count: Math.max(0, b.post_count + delta) };
+                        }
+                        if (targetSlug && b.slug === targetSlug) {
+                          return { ...b, post_count: b.post_count + 1 };
+                        }
+                        return b;
+                      }),
                     )
                   }
                 />
@@ -819,10 +828,12 @@ interface PostListItem {
 
 function BoardPostsPanel({
   board,
+  allBoards,
   onPostCountChange,
 }: {
   board: Board;
-  onPostCountChange: (delta: number) => void;
+  allBoards: Board[];
+  onPostCountChange: (delta: number, targetSlug?: string) => void;
 }) {
   const [posts, setPosts] = useState<PostListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -884,6 +895,47 @@ function BoardPostsPanel({
       onPostCountChange(-1);
     } else {
       alert("삭제에 실패했습니다.");
+    }
+  }
+
+  async function movePost(id: number, title: string) {
+    // 자기 자신을 제외한 활성 게시판 목록
+    const candidates = allBoards.filter((b) => b.slug !== board.slug && b.is_active);
+    if (candidates.length === 0) {
+      alert("이동 가능한 다른 게시판이 없습니다.");
+      return;
+    }
+    const lines = candidates.map((b, i) => `${i + 1}. ${b.name} (${b.slug})`).join("\n");
+    const answer = window.prompt(
+      `「${title}」을(를) 어디로 이동할까요?\n번호 또는 slug 를 입력하세요.\n\n${lines}`,
+    );
+    if (!answer) return;
+    let target: Board | undefined;
+    const num = parseInt(answer);
+    if (Number.isFinite(num) && num >= 1 && num <= candidates.length) {
+      target = candidates[num - 1];
+    } else {
+      target = candidates.find((b) => b.slug === answer.trim());
+    }
+    if (!target) {
+      alert("게시판을 찾을 수 없습니다.");
+      return;
+    }
+    if (!confirm(`「${title}」을(를) 「${target.name}」(으)로 이동하시겠습니까?`)) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/posts/${id}/move`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ target_slug: target.slug }),
+    });
+    if (res.ok) {
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+      select.remove(id);
+      setTotal((t) => Math.max(0, t - 1));
+      onPostCountChange(-1, target.slug);
+    } else {
+      const data = await res.json().catch(() => ({ detail: "" }));
+      alert(data.detail || "이동에 실패했습니다.");
     }
   }
 
@@ -1006,6 +1058,13 @@ function BoardPostsPanel({
                     {" · 조회 "}{p.view_count}
                   </p>
                 </Link>
+                <button
+                  onClick={() => movePost(p.id, p.title)}
+                  className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 shrink-0"
+                  title="다른 게시판으로 이동"
+                >
+                  이동
+                </button>
                 <button
                   onClick={() => deletePost(p.id)}
                   className="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50 shrink-0"
