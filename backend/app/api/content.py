@@ -2,7 +2,7 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, asc, or_, and_
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
@@ -459,16 +459,98 @@ def get_current_meditation(db: Session = Depends(get_db)):
 
 
 @router.get("/meditations", response_model=MeditationListOut)
-def list_meditations(page: int = 1, limit: int = 12, db: Session = Depends(get_db)):
-    q = db.query(Meditation).filter(Meditation.is_published == True)
-    total = q.count()
+def list_meditations(
+    page: int = 1,
+    limit: int = 12,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Meditation).filter(Meditation.is_published == True)
+    if q:
+        # 공백 무시 + 4컬럼 ILIKE 부분일치
+        kw = q.strip()
+        if kw:
+            pattern = f"%{kw}%"
+            query = query.filter(
+                or_(
+                    Meditation.title.ilike(pattern),
+                    Meditation.body.ilike(pattern),
+                    Meditation.scripture.ilike(pattern),
+                    Meditation.author.ilike(pattern),
+                )
+            )
+    total = query.count()
     items = (
-        q.order_by(desc(Meditation.published_date), desc(Meditation.id))
+        query.order_by(desc(Meditation.published_date), desc(Meditation.id))
         .offset((page - 1) * limit)
         .limit(limit)
         .all()
     )
     return {"items": items, "total": total}
+
+
+class MeditationNeighborOut(BaseModel):
+    id: int
+    title: str
+
+
+class MeditationNeighborsOut(BaseModel):
+    prev: Optional[MeditationNeighborOut] = None  # 화살표 ← (목록상 앞 항목 = 더 최근 글)
+    next: Optional[MeditationNeighborOut] = None  # 화살표 → (목록상 뒤 항목 = 더 옛날 글)
+
+
+@router.get("/meditations/{item_id}/neighbors", response_model=MeditationNeighborsOut)
+def get_meditation_neighbors(item_id: int, db: Session = Depends(get_db)):
+    """현재 묵상의 목록 인접 항목.
+
+    목록은 published_date DESC, id DESC 순으로 정렬되므로:
+    - prev (←, 목록 위) = 더 최근 발행 글
+    - next (→, 목록 아래) = 더 옛날 발행 글
+    """
+    current = (
+        db.query(Meditation)
+        .filter(Meditation.id == item_id, Meditation.is_published == True)
+        .first()
+    )
+    if not current:
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+
+    prev = (
+        db.query(Meditation)
+        .filter(
+            Meditation.is_published == True,
+            or_(
+                Meditation.published_date > current.published_date,
+                and_(
+                    Meditation.published_date == current.published_date,
+                    Meditation.id > current.id,
+                ),
+            ),
+        )
+        .order_by(asc(Meditation.published_date), asc(Meditation.id))
+        .first()
+    )
+
+    next_item = (
+        db.query(Meditation)
+        .filter(
+            Meditation.is_published == True,
+            or_(
+                Meditation.published_date < current.published_date,
+                and_(
+                    Meditation.published_date == current.published_date,
+                    Meditation.id < current.id,
+                ),
+            ),
+        )
+        .order_by(desc(Meditation.published_date), desc(Meditation.id))
+        .first()
+    )
+
+    return {
+        "prev": {"id": prev.id, "title": prev.title} if prev else None,
+        "next": {"id": next_item.id, "title": next_item.title} if next_item else None,
+    }
 
 
 @router.get("/meditations/admin", response_model=MeditationListOut)
