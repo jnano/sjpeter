@@ -29,8 +29,10 @@ const GROUP_RESTART_NOTICE = new Set(["OAuth", "보안"]);
 // 텍스트 input 대신 select 로 렌더링할 키들의 옵션 목록
 const SELECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
   HOME_HERO_LAYOUT: [
-    { value: "wide", label: "사진 크게 + 우측 2단 (복음·미사)" },
-    { value: "even", label: "3등분 (사진·복음·미사)" },
+    { value: "wide",       label: "사진 크게 + 우측 2단 · 시즌 배너 표시" },
+    { value: "wide-plain", label: "사진 크게 + 우측 2단 (배너 없음)" },
+    { value: "even",       label: "3등분 · 시즌 배너 표시" },
+    { value: "even-plain", label: "3등분 (배너 없음)" },
   ],
 };
 

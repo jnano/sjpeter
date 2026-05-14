@@ -649,7 +649,7 @@ def _migrate_add_columns():
                     'HOME_HERO_LAYOUT',
                     'wide',
                     '홈 메인 레이아웃',
-                    '"wide" = 사진 크게 + 우측에 복음·미사 2단 스택. "even" = 사진·복음·미사 3등분.',
+                    '4종: wide(사진 크게+배너), wide-plain(사진 크게), even(3등분+배너), even-plain(3등분). admin select 로 선택.',
                     FALSE,
                     '사이트'
                 )

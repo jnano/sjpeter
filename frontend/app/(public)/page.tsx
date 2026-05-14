@@ -162,10 +162,18 @@ export default async function HomePage() {
       getSiteConfig(),
     ]);
 
-  // 홈 메인 레이아웃: wide (사진 큼 + 우측 2단 스택, 기본) | even (3등분)
-  const heroLayout = siteConfig.HOME_HERO_LAYOUT === "even" ? "even" : "wide";
-  const gridColsClass =
-    heroLayout === "even" ? "md:grid-cols-3" : "md:grid-cols-[2fr_1fr]";
+  // 홈 메인 레이아웃 4종:
+  //   wide       — 사진 크게 + 우측 [복음·배너·미사]
+  //   wide-plain — 사진 크게 + 우측 [복음·미사] (배너 없음)
+  //   even       — 사진 / [복음·배너] / 미사 (3등분)
+  //   even-plain — 사진 / 복음 / 미사 (3등분, 배너 없음)
+  const heroLayoutRaw = siteConfig.HOME_HERO_LAYOUT ?? "wide";
+  const heroLayout = (["wide", "wide-plain", "even", "even-plain"].includes(heroLayoutRaw)
+    ? heroLayoutRaw
+    : "wide") as "wide" | "wide-plain" | "even" | "even-plain";
+  const heroIsWide = heroLayout.startsWith("wide");
+  const showBanner = !heroLayout.endsWith("-plain");
+  const gridColsClass = heroIsWide ? "md:grid-cols-[2fr_1fr]" : "md:grid-cols-3";
 
   const entries = parish?.mass_schedule?.entries ?? [];
   const massRows = buildMassRows(entries);
@@ -313,20 +321,26 @@ export default async function HomePage() {
             {/* 큰 사진 (관리자 등록 배너 크로스페이드, 없으면 yakhoun.jpg) */}
             <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
 
-            {/* wide 모드: 우측 컬럼 한 자리에 [복음 → 배너 → 미사] 스택.
-                even 모드: 가운데 컬럼에 [복음 → 배너] 스택, 미사는 별도 cell. */}
-            {heroLayout === "wide" ? (
+            {/* wide(±배너): 우측 1fr 컬럼에 [복음·(배너)·미사] 스택.
+                even+배너:    가운데 컬럼에 [복음·배너] 스택, 미사는 별도 cell.
+                even-plain:   가운데/우측이 [복음] [미사] 각각의 cell. */}
+            {heroIsWide ? (
               <div className="flex flex-col gap-4 min-w-0">
                 {gospelCardEl}
-                {bannerCardEl}
+                {showBanner && bannerCardEl}
                 {massCardEl}
               </div>
-            ) : (
+            ) : showBanner ? (
               <>
                 <div className="flex flex-col gap-4 min-w-0">
                   {gospelCardEl}
                   {bannerCardEl}
                 </div>
+                {massCardEl}
+              </>
+            ) : (
+              <>
+                {gospelCardEl}
                 {massCardEl}
               </>
             )}
