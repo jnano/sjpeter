@@ -139,7 +139,7 @@ export default async function SearchPage({
     const [popular, recommended] = await Promise.all([popularPromise, fetchRecommended()]);
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--color-text)] mb-2">
               무엇을 찾고 계신가요?
@@ -181,7 +181,7 @@ export default async function SearchPage({
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
         <div className="min-w-0">
           <div className="mb-6">
             <SearchHero initialQ={q} />
