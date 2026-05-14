@@ -3,7 +3,7 @@ import time
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc, or_, func, text, case
+from sqlalchemy import desc, or_, and_, func, text, case
 from sqlalchemy.orm.attributes import flag_modified  # noqa: F401  # for future use
 from pydantic import BaseModel
 from typing import Optional
@@ -1121,19 +1121,65 @@ def delete_board(slug: str, db: Session = Depends(get_db), _: Admin = Depends(ge
 # ── 게시글 ────────────────────────────────────────────────
 
 @router.get("/api/boards/{slug}/posts", response_model=PostListOut)
-def list_posts(slug: str, page: int = 1, db: Session = Depends(get_db), viewer: Optional[Member] = Depends(get_optional_member)):
+def list_posts(
+    slug: str,
+    page: int = 1,
+    q: str = "",
+    sort: str = "latest",
+    db: Session = Depends(get_db),
+    viewer: Optional[Member] = Depends(get_optional_member),
+):
+    """sort: latest(최신순) | views(조회순) | likes(추천순) | comments(댓글순).
+    q: 제목·본문 ILIKE 자체 검색. 공백 무시."""
     board = _get_board_or_404(slug, db)
     if board.members_only_read and not viewer:
         raise HTTPException(status_code=403, detail="회원만 볼 수 있는 게시판입니다.")
     _check_selected_access(board, viewer, db)
     per_page = max(1, board.posts_per_page)
     skip = (max(1, page) - 1) * per_page
-    total = db.query(Post).filter(Post.board_id == board.id, Post.is_published == True).count()
+
+    base = db.query(Post).filter(Post.board_id == board.id, Post.is_published == True)
+    kw = q.strip()
+    if kw:
+        # 공백 무시 ILIKE — replace 후 양쪽 매칭
+        compact = "".join(kw.split())
+        pattern = f"%{compact}%"
+        ns = lambda col: func.replace(col, " ", "")
+        base = base.filter(or_(ns(Post.title).ilike(pattern), ns(Post.content).ilike(pattern)))
+
+    total = base.count()
+
+    # 정렬 — 핀(is_pinned) 항상 최상단. 그 다음 sort 기준.
+    sort_key = sort if sort in {"latest", "views", "likes", "comments"} else "latest"
+    pin_first = desc(Post.is_pinned)
+
+    if sort_key == "views":
+        order_cols = [desc(Post.view_count), desc(Post.created_at)]
+    elif sort_key == "likes":
+        # likes 정렬은 PostLike count 기준 — subquery
+        likes_subq = (
+            db.query(PostLike.post_id, func.count(PostLike.id).label("c"))
+            .group_by(PostLike.post_id)
+            .subquery()
+        )
+        base = base.outerjoin(likes_subq, likes_subq.c.post_id == Post.id)
+        order_cols = [desc(func.coalesce(likes_subq.c.c, 0)), desc(Post.created_at)]
+    elif sort_key == "comments":
+        comments_subq = (
+            db.query(Comment.post_id, func.count(Comment.id).label("c"))
+            .group_by(Comment.post_id)
+            .subquery()
+        )
+        base = base.outerjoin(comments_subq, comments_subq.c.post_id == Post.id)
+        order_cols = [desc(func.coalesce(comments_subq.c.c, 0)), desc(Post.created_at)]
+    else:  # latest
+        order_cols = [desc(Post.created_at)]
+
+    order_cols = [pin_first] + order_cols
+
     posts = (
-        db.query(Post)
-        .options(joinedload(Post.member), joinedload(Post.attachments))
-        .filter(Post.board_id == board.id, Post.is_published == True)
-        .order_by(desc(Post.created_at))
+        base.options(joinedload(Post.member), joinedload(Post.attachments))
+        .order_by(*order_cols)
         .offset(skip).limit(per_page).all()
     )
     post_ids = [p.id for p in posts]
@@ -1225,6 +1271,68 @@ def get_post(slug: str, post_id: int, db: Session = Depends(get_db), viewer: Opt
         PostLike.post_id == post_id, PostLike.member_id == viewer.id
     ).first())
     return out
+
+
+class NeighborItem(BaseModel):
+    id: int
+    title: str
+
+
+class NeighborsOut(BaseModel):
+    prev: Optional[NeighborItem] = None
+    next: Optional[NeighborItem] = None
+
+
+@router.get("/api/boards/{slug}/posts/{post_id}/neighbors", response_model=NeighborsOut)
+def get_post_neighbors(
+    slug: str,
+    post_id: int,
+    db: Session = Depends(get_db),
+    viewer: Optional[Member] = Depends(get_optional_member),
+):
+    """같은 게시판 내 인접 글 (created_at DESC 기준)."""
+    board = _get_board_or_404(slug, db)
+    if board.members_only_read and not viewer:
+        raise HTTPException(status_code=403, detail="회원만 볼 수 있는 게시판입니다.")
+    _check_selected_access(board, viewer, db)
+    current = (
+        db.query(Post)
+        .filter(Post.id == post_id, Post.board_id == board.id, Post.is_published == True)
+        .first()
+    )
+    if not current:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    # prev: 더 최신 글 (목록상 위쪽), next: 더 오래된 글 (목록상 아래쪽)
+    prev = (
+        db.query(Post)
+        .filter(
+            Post.board_id == board.id,
+            Post.is_published == True,
+            or_(
+                Post.created_at > current.created_at,
+                and_(Post.created_at == current.created_at, Post.id > current.id),
+            ),
+        )
+        .order_by(Post.created_at.asc(), Post.id.asc())
+        .first()
+    )
+    next_ = (
+        db.query(Post)
+        .filter(
+            Post.board_id == board.id,
+            Post.is_published == True,
+            or_(
+                Post.created_at < current.created_at,
+                and_(Post.created_at == current.created_at, Post.id < current.id),
+            ),
+        )
+        .order_by(Post.created_at.desc(), Post.id.desc())
+        .first()
+    )
+    return NeighborsOut(
+        prev=NeighborItem(id=prev.id, title=prev.title) if prev else None,
+        next=NeighborItem(id=next_.id, title=next_.title) if next_ else None,
+    )
 
 
 @router.post("/api/boards/{slug}/posts/{post_id}/like", response_model=PostOut)

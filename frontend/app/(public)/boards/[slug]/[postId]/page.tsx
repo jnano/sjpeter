@@ -45,6 +45,18 @@ interface Post {
   comments: Comment[];
   attachments: Attachment[];
   board: BoardInfo | null;
+  like_count?: number;
+  liked_by_me?: boolean;
+}
+
+interface NeighborItem {
+  id: number;
+  title: string;
+}
+
+interface NeighborsOut {
+  prev: NeighborItem | null;
+  next: NeighborItem | null;
 }
 
 async function getPost(slug: string, postId: string, token?: string): Promise<Post | null> {
@@ -61,6 +73,20 @@ async function getPost(slug: string, postId: string, token?: string): Promise<Po
   }
 }
 
+async function getNeighbors(slug: string, postId: string, token?: string): Promise<NeighborsOut> {
+  try {
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API}/api/boards/${slug}/posts/${postId}/neighbors`, {
+      cache: "no-store",
+      headers,
+    });
+    if (!res.ok) return { prev: null, next: null };
+    return res.json();
+  } catch {
+    return { prev: null, next: null };
+  }
+}
+
 export default async function PostPage({
   params,
 }: {
@@ -69,13 +95,16 @@ export default async function PostPage({
   const { slug, postId } = await params;
   const session = await auth();
   const token = (session as { accessToken?: string } | null)?.accessToken;
-  const post = await getPost(slug, postId, token);
+  const [post, neighbors] = await Promise.all([
+    getPost(slug, postId, token),
+    getNeighbors(slug, postId, token),
+  ]);
 
   if (!post) notFound();
 
   return (
     <SectionLayout autoHero={false}>
-      <PostDetail post={post} slug={slug} />
+      <PostDetail post={post} slug={slug} neighbors={neighbors} />
     </SectionLayout>
   );
 }

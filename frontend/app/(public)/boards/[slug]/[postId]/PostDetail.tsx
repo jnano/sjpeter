@@ -55,6 +55,18 @@ interface Post {
   comments: Comment[];
   attachments: Attachment[];
   board: BoardInfo | null;
+  like_count?: number;
+  liked_by_me?: boolean;
+}
+
+interface NeighborItem {
+  id: number;
+  title: string;
+}
+
+interface NeighborsOut {
+  prev: NeighborItem | null;
+  next: NeighborItem | null;
 }
 
 function Avatar({ author, size = 24 }: { author: Author | null; size?: number }) {
@@ -207,7 +219,15 @@ function CommentItem({
 }
 
 
-export default function PostDetail({ post, slug }: { post: Post; slug: string }) {
+export default function PostDetail({
+  post,
+  slug,
+  neighbors,
+}: {
+  post: Post;
+  slug: string;
+  neighbors?: NeighborsOut;
+}) {
   const { data: session } = useSession();
   const router = useRouter();
   const [comments, setComments] = useState<Comment[]>(post.comments);
@@ -217,9 +237,34 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
   const [editContent, setEditContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  const [likeCount, setLikeCount] = useState<number>(post.like_count ?? 0);
+  const [likedByMe, setLikedByMe] = useState<boolean>(post.liked_by_me ?? false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   const authHeader = { Authorization: `Bearer ${session?.accessToken}` };
   const myId = session?.memberId ?? null;
+
+  async function toggleLike() {
+    if (!session?.accessToken) {
+      router.push(`/members/login?callbackUrl=/boards/${slug}/${post.id}`);
+      return;
+    }
+    if (likeBusy) return;
+    setLikeBusy(true);
+    try {
+      const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/like`, {
+        method: "POST",
+        headers: authHeader,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLikeCount(data.like_count ?? 0);
+        setLikedByMe(!!data.liked_by_me);
+      }
+    } finally {
+      setLikeBusy(false);
+    }
+  }
 
   const isBoardModerator = myId !== null && post.board?.moderator_id === myId;
   const isPostAuthor = myId !== null && post.member?.id === myId;
@@ -414,6 +459,57 @@ export default function PostDetail({ post, slug }: { post: Post; slug: string })
           목록으로
         </Link>
       </div>
+
+      {/* 추천 버튼 */}
+      <div className="flex justify-center my-6">
+        <button
+          type="button"
+          onClick={toggleLike}
+          disabled={likeBusy}
+          aria-pressed={likedByMe}
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 transition-all ${
+            likedByMe
+              ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+              : "bg-white text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          } ${likeBusy ? "opacity-60 cursor-wait" : ""}`}
+        >
+          <span aria-hidden>{likedByMe ? "❤️" : "🤍"}</span>
+          <span className="text-sm font-medium">추천</span>
+          <span className="text-sm font-bold tabular-nums">{likeCount}</span>
+        </button>
+      </div>
+
+      {/* 이전·다음 글 네비 */}
+      {(neighbors?.prev || neighbors?.next) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {neighbors?.prev ? (
+            <Link
+              href={`/boards/${slug}/${neighbors.prev.id}`}
+              className="group block border border-[var(--color-border)] rounded-lg p-3 hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-surface-warm)] transition-colors"
+            >
+              <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest mb-1">← 이전 글</p>
+              <p className="text-sm text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
+                {neighbors.prev.title}
+              </p>
+            </Link>
+          ) : (
+            <div aria-hidden className="hidden sm:block" />
+          )}
+          {neighbors?.next ? (
+            <Link
+              href={`/boards/${slug}/${neighbors.next.id}`}
+              className="group block border border-[var(--color-border)] rounded-lg p-3 hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-surface-warm)] transition-colors sm:text-right"
+            >
+              <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest mb-1">다음 글 →</p>
+              <p className="text-sm text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
+                {neighbors.next.title}
+              </p>
+            </Link>
+          ) : (
+            <div aria-hidden className="hidden sm:block" />
+          )}
+        </div>
+      )}
 
       {/* 댓글 */}
       <div>

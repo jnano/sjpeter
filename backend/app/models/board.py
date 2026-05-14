@@ -49,6 +49,7 @@ class Post(Base):
     title = Column(String(300), nullable=False)
     content = Column(Text, nullable=False)
     is_published = Column(Boolean, default=True)  # False: 임시저장 (AI 자동 생성)
+    is_pinned = Column(Boolean, default=False, nullable=False)  # 게시판 상단 고정
     view_count = Column(Integer, default=0)
     # 한 줄 게시판(kind='line')용 메타 — 일반 게시판은 null
     intention_kind = Column(String(20), nullable=True)   # '위령' | '감사' | '청원' | '기타' 등

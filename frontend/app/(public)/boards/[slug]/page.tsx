@@ -56,10 +56,19 @@ async function getBoard(slug: string): Promise<Board | null> {
   }
 }
 
-async function getPosts(slug: string, page: number, token?: string): Promise<PostListOut> {
+async function getPosts(
+  slug: string,
+  page: number,
+  q: string,
+  sort: string,
+  token?: string,
+): Promise<PostListOut> {
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
+    const qp = new URLSearchParams({ page: String(page) });
+    if (q) qp.set("q", q);
+    if (sort && sort !== "latest") qp.set("sort", sort);
+    const res = await fetch(`${API}/api/boards/${slug}/posts?${qp}`, {
       cache: "no-store",
       headers,
     });
@@ -69,6 +78,13 @@ async function getPosts(slug: string, page: number, token?: string): Promise<Pos
     return { posts: [], total: 0, posts_per_page: 20 };
   }
 }
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "latest",   label: "최신순" },
+  { value: "views",    label: "조회순" },
+  { value: "likes",    label: "추천순" },
+  { value: "comments", label: "댓글순" },
+];
 
 function ViewToggle({ slug, view }: { slug: string; view: "list" | "photo" }) {
   return (
@@ -102,12 +118,14 @@ export default async function BoardPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; view?: string; q?: string; sort?: string }>;
 }) {
   const { slug } = await params;
-  const { page: pageStr = "1", view = "list" } = await searchParams;
-  const page = Math.max(1, parseInt(pageStr) || 1);
-  const currentView = view === "photo" ? "photo" : "list";
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
+  const currentView = sp.view === "photo" ? "photo" : "list";
+  const q = (sp.q ?? "").trim();
+  const sort = SORT_OPTIONS.some((o) => o.value === sp.sort) ? sp.sort! : "latest";
 
   const [board, session] = await Promise.all([getBoard(slug), auth()]);
 
@@ -162,7 +180,7 @@ export default async function BoardPage({
     );
   }
 
-  const postList = await getPosts(slug, page, token);
+  const postList = await getPosts(slug, page, q, sort, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
 
   return (
@@ -186,12 +204,73 @@ export default async function BoardPage({
         }
       />
       <SectionLayout autoHero={false}>
+        {/* 게시판 자체 검색 + 정렬 */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
+            {currentView !== "list" && <input type="hidden" name="view" value={currentView} />}
+            {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="제목·본문 검색"
+              className="flex-1 min-w-0 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[var(--color-primary)]"
+            />
+            {q && (
+              <Link
+                href={`/boards/${slug}${currentView !== "list" ? `?view=${currentView}` : ""}`}
+                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
+              >
+                지우기
+              </Link>
+            )}
+            <button
+              type="submit"
+              className="text-xs bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+            >
+              검색
+            </button>
+          </form>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {SORT_OPTIONS.map((o) => {
+              const qp = new URLSearchParams();
+              if (q) qp.set("q", q);
+              if (currentView !== "list") qp.set("view", currentView);
+              if (o.value !== "latest") qp.set("sort", o.value);
+              const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
+              const active = sort === o.value;
+              return (
+                <Link
+                  key={o.value}
+                  href={href}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                    active
+                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                      : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                  }`}
+                >
+                  {o.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 검색 결과 카운트 */}
+        {q && (
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">
+            <span className="text-[var(--color-primary)] font-medium">&ldquo;{q}&rdquo;</span> 검색 결과 {postList.total}건
+          </p>
+        )}
+
         <BoardList
           posts={postList.posts}
           slug={slug}
           currentPage={page}
           totalPages={totalPages}
           currentView={currentView}
+          currentQ={q}
+          currentSort={sort}
         />
       </SectionLayout>
     </>
