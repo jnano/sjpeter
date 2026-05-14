@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import MiniCalendar from "./MiniCalendar";
 import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
@@ -251,6 +252,16 @@ export default async function HomePage() {
                   >
                     전체 보기 →
                   </Link>
+                  {/* 시즌 배너 — 첫영성체 축하 (정적 노출, 시즌 종료 시 코드에서 제거) */}
+                  <div className="mt-3 -mx-1">
+                    <Image
+                      src="/banners/first-communion.png"
+                      alt="첫영성체를 축하합니다"
+                      width={419}
+                      height={288}
+                      className="w-full h-auto rounded-lg border border-[var(--color-border)]"
+                    />
+                  </div>
                 </>
               ) : (
                 <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">

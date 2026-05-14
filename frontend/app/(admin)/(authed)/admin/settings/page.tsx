@@ -26,6 +26,14 @@ const GROUP_ICON: Record<string, string> = {
 // OAuth·보안 항목은 서버 환경변수(.env.local)에도 설정해야 반영됨
 const GROUP_RESTART_NOTICE = new Set(["OAuth", "보안"]);
 
+// 텍스트 input 대신 select 로 렌더링할 키들의 옵션 목록
+const SELECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  HOME_HERO_LAYOUT: [
+    { value: "wide", label: "사진 크게 + 우측 2단 (복음·미사)" },
+    { value: "even", label: "3등분 (사진·복음·미사)" },
+  ],
+};
+
 export default function SettingsPage() {
   const router = useRouter();
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -175,19 +183,33 @@ export default function SettingsPage() {
 
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <input
-                      type={s.is_secret && !showSecret[s.key] ? "password" : "text"}
-                      value={values[s.key] ?? ""}
-                      onChange={(e) => setValues((v) => ({ ...v, [s.key]: e.target.value }))}
-                      onKeyDown={(e) => e.key === "Enter" && handleSave(s.key)}
-                      placeholder={
-                        s.is_secret
-                          ? s.is_set ? "변경하려면 새 값을 입력하세요" : "값을 입력하세요"
-                          : s.value ?? ""
-                      }
-                      className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] pr-10"
-                    />
-                    {s.is_secret && (
+                    {SELECT_OPTIONS[s.key] ? (
+                      <select
+                        value={values[s.key] ?? s.value ?? SELECT_OPTIONS[s.key][0].value}
+                        onChange={(e) => setValues((v) => ({ ...v, [s.key]: e.target.value }))}
+                        className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
+                      >
+                        {SELECT_OPTIONS[s.key].map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={s.is_secret && !showSecret[s.key] ? "password" : "text"}
+                        value={values[s.key] ?? ""}
+                        onChange={(e) => setValues((v) => ({ ...v, [s.key]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && handleSave(s.key)}
+                        placeholder={
+                          s.is_secret
+                            ? s.is_set ? "변경하려면 새 값을 입력하세요" : "값을 입력하세요"
+                            : s.value ?? ""
+                        }
+                        className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] pr-10"
+                      />
+                    )}
+                    {s.is_secret && !SELECT_OPTIONS[s.key] && (
                       <button
                         type="button"
                         onClick={() => setShowSecret((p) => ({ ...p, [s.key]: !p[s.key] }))}
