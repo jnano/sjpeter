@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const BOARD_SLUG = "photo";
+const BOARD_SLUG = "events";
 
 interface Author {
   id: number;

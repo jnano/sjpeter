@@ -6,7 +6,7 @@ import Link from "next/link";
 import MarkdownEditor from "@/components/MarkdownEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
-const BOARD_SLUG = "events";
+const BOARD_SLUG = "liturgy";
 
 const ALLOWED_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
@@ -25,7 +25,7 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function EventsWritePage() {
+export default function LiturgyWritePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +67,7 @@ export default function EventsWritePage() {
     const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
     const token = session?.accessToken || adminToken;
     if (!token) {
-      router.push("/members/login?callbackUrl=/gallery/events/write");
+      router.push("/members/login?callbackUrl=/gallery/liturgy/write");
       return;
     }
 
@@ -99,7 +99,7 @@ export default function EventsWritePage() {
       }
 
       router.refresh();
-      router.push(`/gallery/events/${postData.id}`);
+      router.push(`/gallery/liturgy/${postData.id}`);
     } catch {
       setError("서버 오류가 발생했습니다.");
     } finally {
@@ -113,7 +113,7 @@ export default function EventsWritePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <Link
-        href="/gallery/events"
+        href="/gallery/liturgy"
         className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
       >
         ← 목록으로
@@ -166,6 +166,7 @@ export default function EventsWritePage() {
             <div className="flex flex-wrap gap-2">
               {images.map((f, i) => (
                 <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={URL.createObjectURL(f)}
                     alt={f.name}
@@ -214,7 +215,7 @@ export default function EventsWritePage() {
 
         <div className="flex gap-3 justify-end">
           <Link
-            href="/gallery/events"
+            href="/gallery/liturgy"
             className="px-6 py-2.5 border border-[var(--color-border)] rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             취소

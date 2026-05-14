@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { auth } from "@/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
-const SLUG = "photo";
+const SLUG = "events";
 
 interface Author {
   id: number;

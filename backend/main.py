@@ -865,7 +865,7 @@ def _migrate_add_columns():
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,
                                 members_only_write, members_only_read, members_selected, exclude_from_search)
-            VALUES ('행사 사진', 'photo', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+            VALUES ('행사 사진', 'events', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
             ON CONFLICT (slug) DO NOTHING
         """))
 
