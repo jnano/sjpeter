@@ -176,6 +176,103 @@ export default async function HomePage() {
     return b.created_at.localeCompare(a.created_at);
   });
 
+  // ── 메인 3단 카드 마크업 (모드별 wrapper 분기 위해 변수로 추출) ──
+  const gospelCardEl = (
+    <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
+      <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
+        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
+          <span className="text-[var(--color-accent)]">✝</span>
+          오늘의 복음
+        </h2>
+        {gospel?.liturgical_season && (
+          <span className="text-[11px] text-[var(--color-text-muted)] truncate ml-2">
+            {gospel.liturgical_season}
+          </span>
+        )}
+      </div>
+      {gospel?.gospel_text ? (
+        <>
+          <blockquote
+            className="text-[12px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
+            style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
+          >
+            &ldquo;{gospel.gospel_text}&rdquo;
+          </blockquote>
+          {gospel.gospel_reference && (
+            <cite className="block text-[11px] text-[var(--color-text-muted)] mt-2 not-italic">
+              — {gospel.gospel_reference}
+            </cite>
+          )}
+          <Link
+            href="/word"
+            className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+          >
+            전체 보기 →
+          </Link>
+        </>
+      ) : (
+        <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+          오늘의 말씀을 불러오는 중입니다…
+        </p>
+      )}
+    </div>
+  );
+
+  // 시즌 배너 — 첫영성체 축하 (정적 노출, 시즌 종료 시 bannerCardEl 변수와 사용처 제거)
+  const bannerCardEl = (
+    <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-white">
+      <Image
+        src="/banners/first-communion.png"
+        alt="첫영성체를 축하합니다"
+        width={419}
+        height={288}
+        className="w-full h-auto block"
+      />
+    </div>
+  );
+
+  const massCardEl = (
+    <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
+      <div className="mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
+        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
+          <span className="text-[var(--color-accent)]">⏰</span>
+          미사 시간
+        </h2>
+      </div>
+      {massRows.length > 0 ? (
+        <table className="text-[12px] w-full flex-1">
+          <tbody>
+            {massRows.map((row) => (
+              <tr key={row.label} className="align-top">
+                <td className="text-[var(--color-text-muted)] pr-2 pb-1.5 whitespace-nowrap w-9 font-medium">
+                  {row.label}
+                </td>
+                <td className="pb-1.5 text-[var(--color-text)] leading-relaxed">
+                  {row.value}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+          미사 시간 정보가 없습니다.
+        </p>
+      )}
+      {parish?.mass_schedule?.note && (
+        <p className="text-[10.5px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+          ※ {parish.mass_schedule.note}
+        </p>
+      )}
+      <Link
+        href="/info"
+        className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+      >
+        찾아오시는 길 →
+      </Link>
+    </div>
+  );
+
   const boardTabs: BoardTab[] = [
     {
       key: "notice",
@@ -216,102 +313,24 @@ export default async function HomePage() {
             {/* 큰 사진 (관리자 등록 배너 크로스페이드, 없으면 yakhoun.jpg) */}
             <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
 
-            {/* 우측 영역 — wide 모드: 컬럼으로 2단 스택 / even 모드: display:contents 로
-                grid 의 직접 자식처럼 동작해 3등분 배치 유지. */}
-            <div className={heroLayout === "wide" ? "flex flex-col gap-4 min-w-0" : "contents"}>
-
-            {/* 오늘의 복음 */}
-            <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
-              <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-                <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
-                  <span className="text-[var(--color-accent)]">✝</span>
-                  오늘의 복음
-                </h2>
-                {gospel?.liturgical_season && (
-                  <span className="text-[11px] text-[var(--color-text-muted)] truncate ml-2">
-                    {gospel.liturgical_season}
-                  </span>
-                )}
+            {/* wide 모드: 우측 컬럼 한 자리에 [복음 → 배너 → 미사] 스택.
+                even 모드: 가운데 컬럼에 [복음 → 배너] 스택, 미사는 별도 cell. */}
+            {heroLayout === "wide" ? (
+              <div className="flex flex-col gap-4 min-w-0">
+                {gospelCardEl}
+                {bannerCardEl}
+                {massCardEl}
               </div>
-              {gospel?.gospel_text ? (
-                <>
-                  <blockquote
-                    className="text-[12px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
-                    style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
-                  >
-                    &ldquo;{gospel.gospel_text}&rdquo;
-                  </blockquote>
-                  {gospel.gospel_reference && (
-                    <cite className="block text-[11px] text-[var(--color-text-muted)] mt-2 not-italic">
-                      — {gospel.gospel_reference}
-                    </cite>
-                  )}
-                  <Link
-                    href="/word"
-                    className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
-                  >
-                    전체 보기 →
-                  </Link>
-                  {/* 시즌 배너 — 첫영성체 축하 (정적 노출, 시즌 종료 시 코드에서 제거) */}
-                  <div className="mt-3 -mx-1">
-                    <Image
-                      src="/banners/first-communion.png"
-                      alt="첫영성체를 축하합니다"
-                      width={419}
-                      height={288}
-                      className="w-full h-auto rounded-lg border border-[var(--color-border)]"
-                    />
-                  </div>
-                </>
-              ) : (
-                <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
-                  오늘의 말씀을 불러오는 중입니다…
-                </p>
-              )}
-            </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-4 min-w-0">
+                  {gospelCardEl}
+                  {bannerCardEl}
+                </div>
+                {massCardEl}
+              </>
+            )}
 
-            {/* 미사 시간 */}
-            <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
-              <div className="mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-                <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
-                  <span className="text-[var(--color-accent)]">⏰</span>
-                  미사 시간
-                </h2>
-              </div>
-              {massRows.length > 0 ? (
-                <table className="text-[12px] w-full flex-1">
-                  <tbody>
-                    {massRows.map((row) => (
-                      <tr key={row.label} className="align-top">
-                        <td className="text-[var(--color-text-muted)] pr-2 pb-1.5 whitespace-nowrap w-9 font-medium">
-                          {row.label}
-                        </td>
-                        <td className="pb-1.5 text-[var(--color-text)] leading-relaxed">
-                          {row.value}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
-                  미사 시간 정보가 없습니다.
-                </p>
-              )}
-              {parish?.mass_schedule?.note && (
-                <p className="text-[10.5px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
-                  ※ {parish.mass_schedule.note}
-                </p>
-              )}
-              <Link
-                href="/info"
-                className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
-              >
-                찾아오시는 길 →
-              </Link>
-            </div>
-
-            </div>
           </div>
         </div>
       </section>
