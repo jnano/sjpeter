@@ -855,6 +855,20 @@ def _migrate_add_columns():
             ON CONFLICT (slug) DO NOTHING
         """))
 
+        # 갤러리 — admin/gallery 가 사용하는 두 게시판
+        conn.execute(text("""
+            INSERT INTO boards (name, slug, is_active, moderator_only_write,
+                                members_only_write, members_only_read, members_selected, exclude_from_search)
+            VALUES ('전례 사진', 'liturgy', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+            ON CONFLICT (slug) DO NOTHING
+        """))
+        conn.execute(text("""
+            INSERT INTO boards (name, slug, is_active, moderator_only_write,
+                                members_only_write, members_only_read, members_selected, exclude_from_search)
+            VALUES ('행사 사진', 'photo', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+            ON CONFLICT (slug) DO NOTHING
+        """))
+
         # 이벤트 유형 → 게시판 매핑 테이블
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS event_board_mappings (
