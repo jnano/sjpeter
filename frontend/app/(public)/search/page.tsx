@@ -141,9 +141,12 @@ export default async function SearchPage({
       <main className="max-w-6xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--color-text)] mb-2">
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--color-text)] mb-1">
               무엇을 찾고 계신가요?
             </h1>
+            <p className="font-serif italic text-base sm:text-lg text-[var(--color-primary)] mb-2">
+              우리 안에 있는 모든 것을 찾아드립니다.
+            </p>
             <p className="text-sm text-[var(--color-text-muted)] mb-6">
               기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
             </p>
