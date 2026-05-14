@@ -64,7 +64,9 @@ export default function WritePage() {
       setError("제목과 내용을 입력해 주세요.");
       return;
     }
-    if (!session?.accessToken) {
+    const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+    const token = session?.accessToken || adminToken;
+    if (!token) {
       router.push("/members/login");
       return;
     }
@@ -77,7 +79,7 @@ export default function WritePage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title, content }),
       });
@@ -93,7 +95,7 @@ export default function WritePage() {
         fd.append("file", file);
         await fetch(`${API}/api/boards/${slug}/posts/${postData.id}/attachments`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${session.accessToken}` },
+          headers: { Authorization: `Bearer ${token}` },
           body: fd,
         });
       }

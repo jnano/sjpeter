@@ -1,8 +1,10 @@
 import os
+import time
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, or_, func, text, case
+from sqlalchemy.orm.attributes import flag_modified  # noqa: F401  # for future use
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, date
@@ -314,8 +316,21 @@ def _build_match_clause(columns: list, terms: list[str]) -> "tuple":
     return or_(*clauses) if clauses else False
 
 
+# 통합검색 IP 디바운스 — (ip, term) 마지막 카운트 시각.
+# 30초 내 같은 IP·검색어는 중복 카운트 무시. 멀티 워커 환경에선 정확도가
+# 살짝 떨어지지만 인기 검색어 집계 의미는 충분히 보호된다.
+_SEARCH_COUNT_DEBOUNCE_S = 30
+_search_last_count: dict[tuple[str, str], float] = {}
+
+
 @router.get("/api/search", response_model=SearchOut)
-def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+def search_posts(
+    request: Request,
+    q: str = "",
+    page: int = 1,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+):
     """통합검색 (Phase A) — pg_trgm + 가중치 랭킹 + 동의어 확장 + 주보 PDF 본문.
 
     - 검색어를 동의어 사전으로 확장
@@ -343,19 +358,31 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         return SearchOut(results=[], content_results=[], total=0, page=page, limit=limit)
 
     # 검색어 카운트 증가 (2자 이상·1페이지 한정 — 페이지네이션 시 중복 누적 방지)
-    # 카운트 실패는 검색 흐름에 영향 없음
+    # 같은 IP·검색어 30초 내 재호출은 무시(F5 연타·자동완성 방지)
     if len(q) >= 2 and page == 1:
-        try:
-            db.execute(text("""
-                INSERT INTO search_term_counts (term, count, last_searched_at)
-                VALUES (:term, 1, NOW())
-                ON CONFLICT (term) DO UPDATE
-                SET count = search_term_counts.count + 1,
-                    last_searched_at = NOW()
-            """), {"term": q[:100]})
-            db.commit()
-        except Exception:
-            db.rollback()
+        client_ip = request.client.host if request.client else "unknown"
+        cache_key = (client_ip, q[:100])
+        now_ts = time.time()
+        last = _search_last_count.get(cache_key, 0.0)
+        if now_ts - last >= _SEARCH_COUNT_DEBOUNCE_S:
+            _search_last_count[cache_key] = now_ts
+            # 메모리 누수 방지 — 1만 건 넘으면 절반 정리(LRU 흉내)
+            if len(_search_last_count) > 10000:
+                cutoff = now_ts - _SEARCH_COUNT_DEBOUNCE_S
+                for k, v in list(_search_last_count.items()):
+                    if v < cutoff:
+                        _search_last_count.pop(k, None)
+            try:
+                db.execute(text("""
+                    INSERT INTO search_term_counts (term, count, last_searched_at)
+                    VALUES (:term, 1, NOW())
+                    ON CONFLICT (term) DO UPDATE
+                    SET count = search_term_counts.count + 1,
+                        last_searched_at = NOW()
+                """), {"term": q[:100]})
+                db.commit()
+            except Exception:
+                db.rollback()
 
     # 검색어 동의어 확장: ["성당건축"] → ["성당건축", "성전건축", "신축", ...]
     terms = expand(q)
