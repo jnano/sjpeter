@@ -31,6 +31,16 @@
   --breakpoint-md: 43.2rem;
 }
 
+/* 브라우저 기본 검색 인풋 clear(X) 버튼 숨김.
+   자체 구현한 X 버튼(SearchHero·Header 검색바)과 중복 노출 방지. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* ── 스킨 토큰 오버라이드 자리 ──
    (admin)/layout.tsx가 data-skin="admin"으로 감싸므로, 이 셀렉터 안에
    --color-* 등을 재정의하면 admin 영역 전체에 자동 적용된다.
