@@ -349,7 +349,7 @@ def search_posts(
     )
     from app.models.dynamic_page import DynamicPage
     from app.models.construction import ConstructionPhase, ConstructionJournalEntry
-    from app.models.notice import Notice
+    # Notice 모델은 v1.5.69 통합 후 직접 쿼리하지 않음 (Post 검색에 통합됨)
     from app.models.bulletin import Bulletin
     from app.core.search_synonyms import expand
 
@@ -439,20 +439,9 @@ def search_posts(
     # ── 콘텐츠 페이지 검색 (전체 반환, 페이지네이션 없음) ─
     content_results: list[ContentSearchItem] = []
 
-    # 공지사항 — 핀 우선·최신순 (가중치)
-    for n in (
-        db.query(Notice)
-        .filter(_build_match_clause([Notice.title, Notice.content], terms))
-        .order_by(desc(Notice.is_pinned), desc(Notice.created_at))
-        .all()
-    ):
-        excerpt = _make_excerpt(n.content or "", q) if n.content else ""
-        content_results.append(ContentSearchItem(
-            type="notice", label="공지사항",
-            title=n.title,
-            excerpt=excerpt,
-            url=f"/boards/notice/{n.id}",
-        ))
+    # 공지사항 — v1.5.69 부터 board.slug='notice' 의 posts 로 통합되어
+    # 위쪽 게시글 검색(results)에 자연스럽게 포함됨. 별도 content_results
+    # 섹션은 제거(중복 방지).
 
     for h in db.query(HistoryItem).filter(
         _build_match_clause([HistoryItem.event, HistoryItem.detail], terms)
