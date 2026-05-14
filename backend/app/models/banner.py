@@ -18,6 +18,9 @@ class BannerGroup(Base):
     placement = Column(String(50), nullable=False, default="home_main")
     is_active = Column(Boolean, nullable=False, default=True)
     sort_order = Column(Integer, nullable=False, default=0)
+    # 전환 효과: none / fade / slide / slide-up / slide-down /
+    #          zoom-in / zoom-out / ken-burns / blur
+    transition = Column(String(30), nullable=False, default="fade")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

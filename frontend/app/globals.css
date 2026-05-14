@@ -31,6 +31,13 @@
   --breakpoint-md: 43.2rem;
 }
 
+/* 배너 슬라이더 Ken Burns 효과 — 활성 컷이 천천히 확대·이동.
+   transition='ken-burns' 일 때 BannerSlider 가 적용. */
+@keyframes kenburns {
+  0%   { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.12) translate(-2%, -2%); }
+}
+
 /* 브라우저 기본 검색 인풋 clear(X) 버튼 숨김.
    자체 구현한 X 버튼(SearchHero·Header 검색바)과 중복 노출 방지. */
 input[type="search"]::-webkit-search-cancel-button,

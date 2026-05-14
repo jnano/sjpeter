@@ -11,6 +11,19 @@ const PLACEMENT_OPTIONS: { value: string; label: string }[] = [
 const placementLabel = (v: string) =>
   PLACEMENT_OPTIONS.find((p) => p.value === v)?.label ?? v;
 
+// 슬라이드 전환 효과 (이미지 2장 이상일 때 적용)
+const TRANSITION_OPTIONS: { value: string; label: string }[] = [
+  { value: "none", label: "없음 (즉시 전환)" },
+  { value: "fade", label: "페이드" },
+  { value: "slide", label: "슬라이드 (좌→우)" },
+  { value: "slide-up", label: "슬라이드 (아래→위)" },
+  { value: "slide-down", label: "슬라이드 (위→아래)" },
+  { value: "zoom-in", label: "줌 인" },
+  { value: "zoom-out", label: "줌 아웃" },
+  { value: "ken-burns", label: "켄 번스 (서서히 확대)" },
+  { value: "blur", label: "블러" },
+];
+
 interface BannerImage {
   id: number;
   file_url: string;
@@ -25,6 +38,7 @@ interface BannerGroup {
   placement: string;
   is_active: boolean;
   sort_order: number;
+  transition: string;
   created_at: string;
   updated_at: string;
   images: BannerImage[];
@@ -240,6 +254,16 @@ function GroupCard({
         >
           {PLACEMENT_OPTIONS.map((p) => (
             <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+        <select
+          value={group.transition}
+          onChange={(e) => onUpdate({ transition: e.target.value })}
+          title="슬라이드 전환 효과 (2장 이상일 때 적용)"
+          className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+        >
+          {TRANSITION_OPTIONS.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
         <label className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 cursor-pointer">

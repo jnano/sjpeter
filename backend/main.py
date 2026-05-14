@@ -606,10 +606,18 @@ def _migrate_add_columns():
                 placement VARCHAR(50) NOT NULL DEFAULT 'home_main',
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
                 sort_order INTEGER NOT NULL DEFAULT 0,
+                transition VARCHAR(30) NOT NULL DEFAULT 'fade',
                 created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
         """))
+        try:
+            conn.execute(text(
+                "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS "
+                "transition VARCHAR(30) NOT NULL DEFAULT 'fade'"
+            ))
+        except Exception:
+            pass
         try:
             conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_banner_groups_placement_active "

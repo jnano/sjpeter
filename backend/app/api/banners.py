@@ -30,6 +30,10 @@ from app.models.banner import BannerGroup, BannerImage
 router = APIRouter(prefix="/banners", tags=["banners"])
 
 ALLOWED_PLACEMENTS = {"home_main"}
+ALLOWED_TRANSITIONS = {
+    "none", "fade", "slide", "slide-up", "slide-down",
+    "zoom-in", "zoom-out", "ken-burns", "blur",
+}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 
@@ -53,6 +57,7 @@ class BannerGroupOut(BaseModel):
     placement: str
     is_active: bool
     sort_order: int
+    transition: str
     created_at: datetime
     updated_at: datetime
     images: list[BannerImageOut]
@@ -66,6 +71,7 @@ class GroupCreate(BaseModel):
     placement: str = "home_main"
     is_active: bool = True
     sort_order: int = 0
+    transition: str = "fade"
 
 
 class GroupUpdate(BaseModel):
@@ -73,6 +79,7 @@ class GroupUpdate(BaseModel):
     placement: Optional[str] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+    transition: Optional[str] = None
 
 
 class ImageUpdate(BaseModel):
@@ -88,6 +95,15 @@ def _validate_placement(value: str) -> str:
         raise HTTPException(
             status_code=400,
             detail=f"placement 는 {sorted(ALLOWED_PLACEMENTS)} 중 하나여야 합니다.",
+        )
+    return value
+
+
+def _validate_transition(value: str) -> str:
+    if value not in ALLOWED_TRANSITIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"transition 은 {sorted(ALLOWED_TRANSITIONS)} 중 하나여야 합니다.",
         )
     return value
 
@@ -153,11 +169,13 @@ def create_group(
     _: Admin = Depends(get_current_admin),
 ):
     _validate_placement(body.placement)
+    _validate_transition(body.transition)
     group = BannerGroup(
         name=body.name.strip(),
         placement=body.placement,
         is_active=body.is_active,
         sort_order=body.sort_order,
+        transition=body.transition,
     )
     db.add(group)
     db.commit()
@@ -184,6 +202,9 @@ def update_group(
         group.is_active = body.is_active
     if body.sort_order is not None:
         group.sort_order = body.sort_order
+    if body.transition is not None:
+        _validate_transition(body.transition)
+        group.transition = body.transition
     group.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(group)
