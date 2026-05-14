@@ -1150,10 +1150,12 @@ def create_post(
     current: Optional[Member] = Depends(get_current_author),
 ):
     board = _get_board_or_404(slug, db)
-    if board.moderator_only_write and (
-        current is None or (board.moderator_id != current.id and not current.is_admin)
-    ):
-        raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
+    # current is None → get_current_author 가 슈퍼관리자(admin 토큰)일 때.
+    # admin 은 어느 게시판에도 작성 허용. 그 외엔 지정 moderator 또는 회원 권한자만 허용.
+    is_super_admin = current is None
+    if board.moderator_only_write and not is_super_admin:
+        if board.moderator_id != current.id and not getattr(current, "is_admin", False):
+            raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
     post = Post(board_id=board.id, member_id=current.id if current else None, **body.model_dump())
     db.add(post)
     db.commit()
