@@ -328,34 +328,36 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
               </div>
             ))}
 
-            {/* 검색 */}
-            {searchOpen ? (
-              <form onSubmit={handleSearch} className="flex items-center ml-2">
-                <input
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
-                  placeholder="검색어 입력..."
-                  className="w-40 px-3 py-1.5 text-sm rounded-l bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)]"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 text-sm bg-[var(--color-surface-warm)] hover:bg-[var(--color-border)] rounded-r border border-l-0 border-[var(--color-border)] transition-colors"
-                  aria-label="검색"
+            {/* 검색 — 데스크톱 상시 노출 */}
+            <form
+              onSubmit={handleSearch}
+              role="search"
+              aria-label="사이트 검색"
+              className="flex items-center ml-3"
+            >
+              <div className="relative">
+                <span
+                  aria-hidden
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none"
                 >
                   🔍
-                </button>
-              </form>
-            ) : (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 ml-2 rounded text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)] transition-colors"
-                aria-label="검색"
-              >
-                🔍
-              </button>
-            )}
+                </span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setSearchQuery("");
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  placeholder="기도문·공지·주보 검색"
+                  aria-label="검색어"
+                  className="w-56 lg:w-72 pl-8 pr-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)] focus:bg-white transition-colors"
+                />
+              </div>
+            </form>
           </nav>
 
           {/* 모바일 버튼 */}

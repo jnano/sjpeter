@@ -3,6 +3,18 @@ import Link from "next/link";
 const API = process.env.NEXT_PUBLIC_API_URL;
 const LIMIT = 10;
 
+// 빈 검색 상태에서 보여 줄 추천 검색어 (통합 검색으로 라우팅)
+const SUGGESTED_KEYWORDS = [
+  "성모송",
+  "사순",
+  "묵주기도",
+  "평화",
+  "성령",
+  "사목지표",
+  "성가정",
+  "건축",
+];
+
 interface Author {
   id: number;
   nickname: string;
@@ -51,6 +63,40 @@ async function fetchSearch(q: string, page: number): Promise<SearchOut> {
   return res.json();
 }
 
+function SearchHero({ q }: { q: string }) {
+  return (
+    <form
+      action="/search"
+      method="get"
+      role="search"
+      aria-label="통합 검색"
+      className="relative mb-8"
+    >
+      <span
+        aria-hidden
+        className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl pointer-events-none"
+      >
+        🔍
+      </span>
+      <input
+        type="search"
+        name="q"
+        defaultValue={q}
+        autoFocus={!q}
+        placeholder="기도문·공지·주보·행사·본당 가족을 한 번에 검색"
+        aria-label="검색어"
+        className="w-full pl-14 pr-28 py-4 text-base sm:text-lg rounded-2xl bg-white text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] shadow-sm focus:outline-none focus:border-[var(--color-primary)] focus:shadow-md transition-all"
+      />
+      <button
+        type="submit"
+        className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 text-sm font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-xl transition-colors"
+      >
+        검색
+      </button>
+    </form>
+  );
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -60,23 +106,44 @@ export default async function SearchPage({
   const q = qParam.trim();
   const page = Math.max(1, parseInt(pageParam, 10));
 
+  // ── 빈 검색 상태: 큰 검색폼 + 추천 검색어 칩 ──
   if (!q) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-12 text-center text-[var(--color-text-muted)]">
-        검색어를 입력해 주세요.
+      <main className="max-w-3xl mx-auto px-4 py-10">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--color-text)] mb-2">
+          무엇을 찾고 계신가요?
+        </h1>
+        <p className="text-sm text-[var(--color-text-muted)] mb-6">
+          기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
+        </p>
+        <SearchHero q="" />
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 px-1">
+            추천 검색어
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {SUGGESTED_KEYWORDS.map((kw) => (
+              <li key={kw}>
+                <Link
+                  href={`/search?q=${encodeURIComponent(kw)}`}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-[var(--color-border)] text-sm text-[var(--color-text)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)] transition-colors"
+                >
+                  {kw}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
     );
   }
 
   const data = await fetchSearch(q, page);
   const totalPages = Math.ceil(data.total / LIMIT);
-  const grandTotal = data.total + (page === 1 ? data.content_results.length : 0);
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-xl font-bold text-[var(--color-text)] mb-1">
-        검색 결과
-      </h1>
+      <SearchHero q={q} />
       <p className="text-sm text-[var(--color-text-muted)] mb-6">
         <span className="font-medium text-[var(--color-primary)]">&ldquo;{q}&rdquo;</span>
         {" "}검색 결과{" "}
