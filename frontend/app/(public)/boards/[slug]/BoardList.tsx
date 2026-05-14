@@ -86,44 +86,34 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
 }
 
 function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
+  // kind='default' 게시판의 표준 글 목록 — 한 줄 텍스트 리스트.
+  // 사진 그리드가 필요하면 board.kind='gallery' 로 두고 /gallery/{slug} 사용.
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
       {posts.map((post) => (
         <Link
           key={post.id}
           href={`/boards/${slug}/${post.id}`}
-          className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden hover:border-[var(--color-primary)] hover:shadow-sm transition-all"
+          className="flex items-baseline justify-between gap-3 py-3.5 group hover:text-[var(--color-primary)] transition-colors"
         >
-          {post.thumbnail_url && (
-            <div className="relative w-full aspect-video">
-              <Image
-                src={`${API}${post.thumbnail_url}`}
-                alt={post.title}
-                fill
-                className="object-cover group-hover:opacity-95 transition-opacity"
-                sizes="(max-width: 640px) 100vw, 50vw"
-              />
-            </div>
-          )}
-          <div className="p-4">
-            <p className="font-medium text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-2">
+          <span className="flex items-baseline gap-1.5 flex-1 min-w-0">
+            {!post.member && <AiBadge />}
+            <span className="font-medium text-[var(--color-text)] truncate group-hover:underline">
               {post.title}
-              {post.comment_count > 0 && (
-                <span className="ml-1.5 text-sm text-[var(--color-primary)]">
-                  [{post.comment_count}]
-                </span>
-              )}
-            </p>
-            <div className="flex items-center justify-between mt-3 text-xs text-[var(--color-text-muted)]">
-              <span className="flex items-center gap-1.5">
-                {!post.member && <AiBadge />}
-                {post.member?.nickname ?? "성당"}
+            </span>
+            {post.comment_count > 0 && (
+              <span className="text-xs text-[var(--color-primary)] shrink-0">
+                [{post.comment_count}]
               </span>
-              <div className="flex items-center gap-2">
-                <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
-                <span>조회 {post.view_count}</span>
-              </div>
-            </div>
+            )}
+            {post.thumbnail_url && (
+              <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
+            )}
+          </span>
+          <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
+            <span className="hidden sm:inline">{post.member?.nickname ?? "성당"}</span>
+            <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
+            <span className="hidden sm:inline">조회 {post.view_count}</span>
           </div>
         </Link>
       ))}

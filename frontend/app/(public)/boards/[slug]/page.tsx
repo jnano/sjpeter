@@ -98,32 +98,8 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "comments", label: "댓글순" },
 ];
 
-function ViewToggle({ slug, view }: { slug: string; view: "list" | "photo" }) {
-  return (
-    <div className="flex items-center gap-px border border-[var(--color-border)] rounded-lg overflow-hidden">
-      <Link
-        href={`/boards/${slug}?view=list`}
-        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "list"
-            ? "bg-[var(--color-primary)] text-white"
-            : "text-[var(--color-text-muted)] hover:bg-gray-50"
-        }`}
-      >
-        목록
-      </Link>
-      <Link
-        href={`/boards/${slug}?view=photo`}
-        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "photo"
-            ? "bg-[var(--color-primary)] text-white"
-            : "text-[var(--color-text-muted)] hover:bg-gray-50"
-        }`}
-      >
-        사진
-      </Link>
-    </div>
-  );
-}
+// ViewToggle 제거 — 일반 게시판은 텍스트 목록만, 사진 그리드는 board.kind='gallery'
+// 게시판에서 /gallery/{slug} 로 분리됨 (v1.5.72).
 
 export default async function BoardPage({
   params,
@@ -206,17 +182,14 @@ export default async function BoardPage({
         title={board.name}
         subtitle={board.description || ""}
         action={
-          <div className="flex items-center gap-2">
-            <ViewToggle slug={slug} view={currentView} />
-            {canWrite && (
-              <Link
-                href={`/boards/${slug}/write`}
-                className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-xs font-medium rounded-lg transition-colors"
-              >
-                글쓰기
-              </Link>
-            )}
-          </div>
+          canWrite ? (
+            <Link
+              href={`/boards/${slug}/write`}
+              className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              글쓰기
+            </Link>
+          ) : undefined
         }
       />
       <SectionLayout autoHero={false}>
