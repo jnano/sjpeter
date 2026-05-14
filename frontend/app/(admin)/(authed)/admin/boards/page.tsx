@@ -429,6 +429,7 @@ export default function AdminBoardsPage() {
               >
                 <option value="default">일반 (제목+본문)</option>
                 <option value="line">한 줄 (메시지 + 추천)</option>
+                <option value="gallery">갤러리 (사진 그리드)</option>
               </select>
             </label>
           </div>
@@ -526,11 +527,18 @@ export default function AdminBoardsPage() {
                 </div>
                 <div className="flex items-center gap-2 ml-3">
                   <Link
-                    href={`/boards/${board.slug}`}
+                    href={board.kind === "gallery" ? `/gallery/${board.slug}` : `/boards/${board.slug}`}
                     target="_blank"
                     className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                   >
                     보기 ↗
+                  </Link>
+                  <Link
+                    href={board.kind === "gallery" ? `/gallery/${board.slug}/write` : `/boards/${board.slug}/write`}
+                    target="_blank"
+                    className="px-3 py-1.5 text-xs rounded-lg border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)] transition-colors"
+                  >
+                    + 글쓰기
                   </Link>
                   <button
                     onClick={() => {
@@ -944,7 +952,7 @@ function BoardPostsPanel({
                   <img src={`${API}${p.thumbnail_url}`} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
                 )}
                 <Link
-                  href={`/boards/${board.slug}/${p.id}`}
+                  href={board.kind === "gallery" ? `/gallery/${board.slug}/${p.id}` : `/boards/${board.slug}/${p.id}`}
                   target="_blank"
                   className="flex-1 min-w-0 hover:text-blue-600"
                 >

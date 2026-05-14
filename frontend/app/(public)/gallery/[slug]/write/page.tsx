@@ -1,12 +1,11 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import MarkdownEditor from "@/components/MarkdownEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
-const BOARD_SLUG = "events";
 
 const ALLOWED_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
@@ -25,16 +24,39 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function EventsWritePage() {
+export default function GalleryWritePage() {
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug as string;
+
   const { data: session } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [boardName, setBoardName] = useState<string>("갤러리");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // board 메타(이름·kind) 조회 — 잘못된 slug 차단
+  useEffect(() => {
+    if (!slug) return;
+    fetch(`${API}/api/boards/${slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => {
+        if (!b) {
+          setError("존재하지 않는 갤러리입니다.");
+          return;
+        }
+        if (b.kind !== "gallery") {
+          setError("이 게시판은 갤러리가 아닙니다.");
+          return;
+        }
+        setBoardName(b.name || "갤러리");
+      })
+      .catch(() => setError("게시판 정보를 불러오지 못했습니다."));
+  }, [slug]);
 
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
@@ -63,23 +85,19 @@ export default function EventsWritePage() {
       setError("제목과 내용을 입력해 주세요.");
       return;
     }
-    // 회원 토큰 → 없으면 admin 토큰 폴백(슈퍼관리자가 admin 화면 없이 작성 가능)
     const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
     const token = session?.accessToken || adminToken;
     if (!token) {
-      router.push("/members/login?callbackUrl=/gallery/events/write");
+      router.push(`/members/login?callbackUrl=/gallery/${slug}/write`);
       return;
     }
 
     setError("");
     setLoading(true);
     try {
-      const postRes = await fetch(`${API}/api/boards/${BOARD_SLUG}/posts`, {
+      const postRes = await fetch(`${API}/api/boards/${slug}/posts`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title, content }),
       });
       const postData = await postRes.json();
@@ -91,7 +109,7 @@ export default function EventsWritePage() {
       for (const file of files) {
         const fd = new FormData();
         fd.append("file", file);
-        await fetch(`${API}/api/boards/${BOARD_SLUG}/posts/${postData.id}/attachments`, {
+        await fetch(`${API}/api/boards/${slug}/posts/${postData.id}/attachments`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: fd,
@@ -99,7 +117,7 @@ export default function EventsWritePage() {
       }
 
       router.refresh();
-      router.push(`/gallery/events/${postData.id}`);
+      router.push(`/gallery/${slug}/${postData.id}`);
     } catch {
       setError("서버 오류가 발생했습니다.");
     } finally {
@@ -113,13 +131,14 @@ export default function EventsWritePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <Link
-        href="/gallery/events"
+        href={`/gallery/${slug}`}
         className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
       >
         ← 목록으로
       </Link>
 
-      <h1 className="text-2xl font-bold text-[var(--color-primary)] mt-4 mb-8">사진 올리기</h1>
+      <h1 className="text-2xl font-bold text-[var(--color-primary)] mt-4 mb-1">사진 올리기</h1>
+      <p className="text-sm text-[var(--color-text-muted)] mb-8">{boardName}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
@@ -166,6 +185,7 @@ export default function EventsWritePage() {
             <div className="flex flex-wrap gap-2">
               {images.map((f, i) => (
                 <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={URL.createObjectURL(f)}
                     alt={f.name}
@@ -214,7 +234,7 @@ export default function EventsWritePage() {
 
         <div className="flex gap-3 justify-end">
           <Link
-            href="/gallery/events"
+            href={`/gallery/${slug}`}
             className="px-6 py-2.5 border border-[var(--color-border)] rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             취소

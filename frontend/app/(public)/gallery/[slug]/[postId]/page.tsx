@@ -5,7 +5,6 @@ import PageHeader from "@/components/PageHeader";
 import { auth } from "@/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
-const SLUG = "events";
 
 interface Author {
   id: number;
@@ -34,6 +33,7 @@ interface BoardInfo {
   name: string;
   slug: string;
   moderator_id: number | null;
+  kind?: string;
 }
 
 interface Post {
@@ -49,10 +49,10 @@ interface Post {
   board: BoardInfo | null;
 }
 
-async function getPost(postId: string, token?: string): Promise<Post | null> {
+async function getPost(slug: string, postId: string, token?: string): Promise<Post | null> {
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch(`${API}/api/boards/${SLUG}/posts/${postId}`, {
+    const res = await fetch(`${API}/api/boards/${slug}/posts/${postId}`, {
       cache: "no-store",
       headers,
     });
@@ -63,29 +63,33 @@ async function getPost(postId: string, token?: string): Promise<Post | null> {
   }
 }
 
-export default async function EventPostPage({
+export default async function GalleryPostPage({
   params,
 }: {
-  params: Promise<{ postId: string }>;
+  params: Promise<{ slug: string; postId: string }>;
 }) {
-  const { postId } = await params;
+  const { slug, postId } = await params;
   const session = await auth();
   const token = (session as { accessToken?: string } | null)?.accessToken;
-  const post = await getPost(postId, token);
+  const post = await getPost(slug, postId, token);
 
   if (!post) notFound();
+  // 갤러리 종류가 아닌 게시판의 글이 /gallery/{slug}/{id} 로 들어오면 404
+  if (post.board?.kind && post.board.kind !== "gallery") notFound();
+
+  const boardName = post.board?.name ?? "갤러리";
 
   return (
     <>
-      <PageHeader group="사진 갤러리" title="행사 사진" subtitle="공동체가 함께한 행사와 나눔의 기록입니다." />
+      <PageHeader group="사진 갤러리" title={boardName} subtitle="공동체와 함께한 사진 기록입니다." />
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Link
-          href="/gallery/events"
+          href={`/gallery/${slug}`}
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] mb-4 inline-block"
         >
           ← 목록으로
         </Link>
-        <PostDetail post={post} slug={SLUG} />
+        <PostDetail post={post} slug={slug} />
       </div>
     </>
   );

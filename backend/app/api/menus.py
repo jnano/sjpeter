@@ -20,7 +20,11 @@ def _compute_href(item: MenuItem, db: Session) -> str:
     """link_type에 따라 href를 도출. 매 응답 시 호출하여 fresh URL 보장 (slug 변경 대응)."""
     if item.link_type == "board" and item.board_id:
         b = db.query(Board).filter(Board.id == item.board_id).first()
-        return f"/boards/{b.slug}" if b else item.href or ""
+        if not b:
+            return item.href or ""
+        # 갤러리 종류 게시판은 사진 그리드 라우트로 매핑
+        prefix = "/gallery" if getattr(b, "kind", None) == "gallery" else "/boards"
+        return f"{prefix}/{b.slug}"
     if item.link_type == "external":
         return item.external_url or item.href or ""
     if item.link_type == "page":
@@ -110,7 +114,8 @@ def _validate_and_apply_link(body: "MenuItemIn", db: Session, item_id: Optional[
             q = q.filter(MenuItem.id != item_id)
         if q.first():
             raise HTTPException(status_code=400, detail=f"'{b.name}' 게시판은 이미 다른 메뉴 항목에 연결되어 있습니다.")
-        href = f"/boards/{b.slug}"
+        prefix = "/gallery" if getattr(b, "kind", None) == "gallery" else "/boards"
+        href = f"{prefix}/{b.slug}"
 
     else:  # external
         if not body.external_url:

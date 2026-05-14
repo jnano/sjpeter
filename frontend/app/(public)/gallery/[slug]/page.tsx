@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
-export async function generateMetadata(): Promise<Metadata> {
-  const p = await fetchParishMin();
-  return { title: "전례 사진", description: `${p.name} 전례 사진 모음` };
-}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const BOARD_SLUG = "liturgy";
 
 interface Author {
   id: number;
@@ -37,6 +33,7 @@ interface Board {
   members_only_write: boolean;
   members_only_read: boolean;
   posts_per_page: number;
+  kind: string;
 }
 
 interface PostListOut {
@@ -45,9 +42,10 @@ interface PostListOut {
   posts_per_page: number;
 }
 
-async function getBoard(): Promise<Board | null> {
+async function getBoard(slug: string): Promise<Board | null> {
   try {
-    const res = await fetch(`${API}/api/boards/${BOARD_SLUG}`, { next: { revalidate: 3600 } });
+    // cache: no-store — kind 변경(예: default↔gallery) 즉시 반영
+    const res = await fetch(`${API}/api/boards/${slug}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -55,10 +53,10 @@ async function getBoard(): Promise<Board | null> {
   }
 }
 
-async function getPosts(page: number, token?: string): Promise<PostListOut> {
+async function getPosts(slug: string, page: number, token?: string): Promise<PostListOut> {
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch(`${API}/api/boards/${BOARD_SLUG}/posts?page=${page}`, {
+    const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
       next: { revalidate: 300 },
       headers,
     });
@@ -81,46 +79,48 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default async function LiturgyGalleryPage({
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const [p, board] = await Promise.all([fetchParishMin(), getBoard(slug)]);
+  const title = board?.name ?? "갤러리";
+  return { title, description: `${p.name} ${title}` };
+}
+
+export default async function GalleryPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
+  const { slug } = await params;
   const { page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr) || 1);
 
-  const [board, session] = await Promise.all([getBoard(), auth()]);
+  const [board, session] = await Promise.all([getBoard(slug), auth()]);
 
-  const subtitle = board?.description || "미사와 성사의 거룩한 순간을 담았습니다.";
-
-  if (!board) {
-    return (
-      <>
-        <PageHeader group="사진 갤러리" title="전례 사진" subtitle="미사와 성사의 거룩한 순간을 담았습니다." />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-16 text-center">
-            <div className="text-6xl mb-5">📸</div>
-            <p className="font-serif text-xl text-[var(--color-primary)] mb-3">준비 중입니다</p>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              소중한 전례 사진들을 정리하여 곧 공개하겠습니다.
-            </p>
-          </div>
-        </div>
-      </>
-    );
+  // 존재하지 않거나 갤러리 종류가 아닌 게시판은 404
+  if (!board || board.kind !== "gallery") {
+    notFound();
   }
+
+  const subtitle = board.description || "공동체와 함께한 사진 기록입니다.";
 
   if (board.members_only_read && !session) {
     return (
       <>
-        <PageHeader group="사진 갤러리" title="전례 사진" subtitle={subtitle} />
+        <PageHeader group="사진 갤러리" title={board.name} subtitle={subtitle} />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl">
             <p className="text-4xl mb-4">🔒</p>
             <p className="font-semibold text-[var(--color-text)]">회원 전용 갤러리입니다.</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">로그인 후 이용하실 수 있습니다.</p>
             <Link
-              href={`/members/login?callbackUrl=/gallery/liturgy`}
+              href={`/members/login?callbackUrl=/gallery/${slug}`}
               className="px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
             >
               로그인
@@ -132,7 +132,7 @@ export default async function LiturgyGalleryPage({
   }
 
   const token = (session as { accessToken?: string } | null)?.accessToken;
-  const postList = await getPosts(page, token);
+  const postList = await getPosts(slug, page, token);
   const totalPages = Math.max(1, Math.ceil(postList.total / board.posts_per_page));
   const canWrite = !!session;
   const paginationRange = getPaginationRange(page, totalPages);
@@ -141,11 +141,11 @@ export default async function LiturgyGalleryPage({
     <>
       <PageHeader
         group="사진 갤러리"
-        title="전례 사진"
+        title={board.name}
         subtitle={subtitle}
         action={canWrite ? (
           <Link
-            href={`/boards/${BOARD_SLUG}/write`}
+            href={`/gallery/${slug}/write`}
             className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm font-medium rounded-lg transition-colors"
           >
             사진 올리기
@@ -167,7 +167,7 @@ export default async function LiturgyGalleryPage({
           {postList.posts.map((post) => (
             <Link
               key={post.id}
-              href={`/boards/${BOARD_SLUG}/${post.id}`}
+              href={`/gallery/${slug}/${post.id}`}
               className="group rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all"
             >
               {post.thumbnail_url ? (
@@ -206,7 +206,7 @@ export default async function LiturgyGalleryPage({
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 mt-10">
           <Link
-            href={`/gallery/liturgy?page=${Math.max(1, page - 1)}`}
+            href={`/gallery/${slug}?page=${Math.max(1, page - 1)}`}
             aria-disabled={page === 1}
             className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
               page === 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
@@ -220,7 +220,7 @@ export default async function LiturgyGalleryPage({
             ) : (
               <Link
                 key={p}
-                href={`/gallery/liturgy?page=${p}`}
+                href={`/gallery/${slug}?page=${p}`}
                 className={`w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors ${
                   p === page
                     ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -232,7 +232,7 @@ export default async function LiturgyGalleryPage({
             )
           )}
           <Link
-            href={`/gallery/liturgy?page=${Math.min(totalPages, page + 1)}`}
+            href={`/gallery/${slug}?page=${Math.min(totalPages, page + 1)}`}
             aria-disabled={page === totalPages}
             className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
               page === totalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-50"

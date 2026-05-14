@@ -855,19 +855,29 @@ def _migrate_add_columns():
             ON CONFLICT (slug) DO NOTHING
         """))
 
-        # 갤러리 — admin/gallery 가 사용하는 두 게시판
+        # 갤러리 — kind='gallery' 인 게시판은 /gallery/{slug} 로 라우팅됨
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,
-                                members_only_write, members_only_read, members_selected, exclude_from_search)
-            VALUES ('전례 사진', 'liturgy', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+                                members_only_write, members_only_read, members_selected,
+                                exclude_from_search, kind)
+            VALUES ('전례 사진', 'liturgy', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, 'gallery')
             ON CONFLICT (slug) DO NOTHING
         """))
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,
-                                members_only_write, members_only_read, members_selected, exclude_from_search)
-            VALUES ('행사 사진', 'events', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+                                members_only_write, members_only_read, members_selected,
+                                exclude_from_search, kind)
+            VALUES ('행사 사진', 'events', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, 'gallery')
             ON CONFLICT (slug) DO NOTHING
         """))
+        # 기존 환경에서 liturgy·events 가 default 로 잡혀 있던 경우 보정
+        try:
+            conn.execute(text(
+                "UPDATE boards SET kind='gallery' "
+                "WHERE slug IN ('liturgy','events') AND kind <> 'gallery'"
+            ))
+        except Exception:
+            pass
 
         # 이벤트 유형 → 게시판 매핑 테이블
         conn.execute(text("""
