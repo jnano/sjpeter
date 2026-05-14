@@ -47,8 +47,10 @@ function buildGradientMask(direction: string | null, sizePct: number): string | 
   return `linear-gradient(${direction}, rgba(0,0,0,1), rgba(0,0,0,0) ${clamped}%)`;
 }
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
   const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
@@ -117,15 +119,17 @@ export function MeditationCard({
           <h2 className="font-serif text-2xl font-bold text-[var(--color-text)] mb-3 leading-snug">
             {meditation.title}
           </h2>
-          <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-            <span>{formatDate(meditation.published_date)}</span>
-            {meditation.author && (
-              <>
+          {(formatDate(meditation.published_date) || meditation.author) && (
+            <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+              {formatDate(meditation.published_date) && (
+                <span>{formatDate(meditation.published_date)}</span>
+              )}
+              {formatDate(meditation.published_date) && meditation.author && (
                 <span className="text-[var(--color-border)]">·</span>
-                <span>{meditation.author}</span>
-              </>
-            )}
-          </div>
+              )}
+              {meditation.author && <span>{meditation.author}</span>}
+            </div>
+          )}
         </div>
 
         {/* 본문 — 마크다운 렌더링 (단일 줄바꿈은 remark-breaks 로 <br> 유지) */}

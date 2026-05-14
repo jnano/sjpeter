@@ -69,6 +69,36 @@ class CouncilMember(Base):
     is_active = Column(Boolean, default=True)
 
 
+class Prayer(Base):
+    """가톨릭 기도문 — 카테고리별로 정리되어 영구 보존되는 기도문 모음.
+    묵상과 달리 시간성이 없고, 카테고리 안에서 display_order 순서로 노출."""
+    __tablename__ = "prayers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    # 카테고리 키: daily / mass / rosary / liturgy_season / special / memorial / parish
+    category = Column(String(50), nullable=False, default="daily")
+    scripture = Column(String(300), nullable=True)
+    body = Column(Text, nullable=False)
+    author = Column(String(100), nullable=True)
+    is_published = Column(Boolean, default=True, nullable=False)
+    # 카테고리 내 정렬 순서 (낮을수록 위)
+    display_order = Column(Integer, default=0, nullable=False)
+    # 본당 자체 기도 등 메인 페이지 상단에 핀 노출
+    is_featured = Column(Boolean, default=False, nullable=False)
+    # 배경 이미지·표시 옵션 (묵상과 동일 구조 — MeditationCard 재활용)
+    background_image_url = Column(String(500), nullable=True)
+    background_repeat = Column(Boolean, default=False, nullable=False)
+    background_position = Column(String(20), default="top-left", nullable=False)
+    background_blur = Column(Integer, default=0, nullable=False)
+    background_opacity = Column(Integer, default=100, nullable=False)
+    background_gradient = Column(String(10), default="none", nullable=False)
+    background_gradient_size = Column(Integer, default=100, nullable=False)
+    body_font_size_px = Column(Integer, default=15, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Meditation(Base):
     """작은 묵상 — 새 글 저장 시 이전 글은 자동으로 아카이브됨."""
     __tablename__ = "meditations"

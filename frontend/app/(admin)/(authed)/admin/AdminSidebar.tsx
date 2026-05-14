@@ -50,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber" },
       { href: "/admin/notices", label: "공지 관리" },
       { href: "/admin/calendar", label: "행사 캘린더" },
+      { href: "/admin/prayers", label: "기도문 관리" },
     ],
   },
   {

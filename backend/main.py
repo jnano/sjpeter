@@ -544,6 +544,59 @@ def _migrate_add_columns():
             )
         """))
 
+        # 기도문 테이블 — 카테고리별로 영구 보존되는 가톨릭 기도문 모음
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS prayers (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                category VARCHAR(50) NOT NULL DEFAULT 'daily',
+                scripture VARCHAR(300),
+                body TEXT NOT NULL,
+                author VARCHAR(100),
+                is_published BOOLEAN NOT NULL DEFAULT TRUE,
+                display_order INTEGER NOT NULL DEFAULT 0,
+                is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+                background_image_url VARCHAR(500),
+                background_repeat BOOLEAN NOT NULL DEFAULT FALSE,
+                background_position VARCHAR(20) NOT NULL DEFAULT 'top-left',
+                background_blur INTEGER NOT NULL DEFAULT 0,
+                background_opacity INTEGER NOT NULL DEFAULT 100,
+                background_gradient VARCHAR(10) NOT NULL DEFAULT 'none',
+                background_gradient_size INTEGER NOT NULL DEFAULT 100,
+                body_font_size_px INTEGER NOT NULL DEFAULT 15,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        # prayers 카테고리·정렬·핀 빠른 조회용 인덱스
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_prayers_category_order "
+                "ON prayers (category, display_order, id)"
+            ))
+        except Exception:
+            pass
+        # prayers 컬럼 default 보강 — SQLAlchemy가 먼저 테이블을 만들면
+        # 위 CREATE TABLE IF NOT EXISTS가 스킵돼 DEFAULT가 빠진다.
+        # 명시적 ALTER로 raw SQL/psql INSERT 시에도 안전하게.
+        for stmt in [
+            "ALTER TABLE prayers ALTER COLUMN category SET DEFAULT 'daily'",
+            "ALTER TABLE prayers ALTER COLUMN is_published SET DEFAULT TRUE",
+            "ALTER TABLE prayers ALTER COLUMN display_order SET DEFAULT 0",
+            "ALTER TABLE prayers ALTER COLUMN is_featured SET DEFAULT FALSE",
+            "ALTER TABLE prayers ALTER COLUMN background_repeat SET DEFAULT FALSE",
+            "ALTER TABLE prayers ALTER COLUMN background_position SET DEFAULT 'top-left'",
+            "ALTER TABLE prayers ALTER COLUMN background_blur SET DEFAULT 0",
+            "ALTER TABLE prayers ALTER COLUMN background_opacity SET DEFAULT 100",
+            "ALTER TABLE prayers ALTER COLUMN background_gradient SET DEFAULT 'none'",
+            "ALTER TABLE prayers ALTER COLUMN background_gradient_size SET DEFAULT 100",
+            "ALTER TABLE prayers ALTER COLUMN body_font_size_px SET DEFAULT 15",
+        ]:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
+
         # 사목평의회 구성원 테이블
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS council_members (

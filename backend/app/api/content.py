@@ -9,7 +9,7 @@ from datetime import date, datetime
 from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.config import settings
-from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember
+from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember, Prayer
 from app.models.admin import Admin
 
 _PHOTO_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -720,6 +720,277 @@ def delete_meditation(item_id: int, db: Session = Depends(get_db), _: Admin = De
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    db.delete(item)
+    db.commit()
+
+
+# ─── Prayer ─────────────────────────────────────────────────
+
+PRAYER_CATEGORIES = ["daily", "mass", "rosary", "liturgy_season", "special", "memorial", "parish"]
+
+
+class PrayerIn(BaseModel):
+    title: str
+    category: str = "daily"
+    scripture: Optional[str] = None
+    body: str
+    author: Optional[str] = None
+    is_published: bool = True
+    display_order: int = 0
+    is_featured: bool = False
+
+
+class PrayerOut(BaseModel):
+    id: int
+    title: str
+    category: str
+    scripture: Optional[str]
+    body: str
+    author: Optional[str]
+    is_published: bool
+    display_order: int
+    is_featured: bool
+    background_image_url: Optional[str] = None
+    background_repeat: bool = False
+    background_position: str = "top-left"
+    background_blur: int = 0
+    background_opacity: int = 100
+    background_gradient: str = "none"
+    background_gradient_size: int = 100
+    body_font_size_px: int = 15
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PrayerListOut(BaseModel):
+    items: list[PrayerOut]
+    total: int
+
+
+class PrayerBackgroundIn(BaseModel):
+    background_repeat: bool = False
+    background_position: str = "top-left"
+    background_blur: int = 0
+    background_opacity: int = 100
+    background_gradient: str = "none"
+    background_gradient_size: int = 100
+    body_font_size_px: int = 15
+
+
+def _validate_prayer_category(cat: str) -> str:
+    if cat not in PRAYER_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"카테고리는 {PRAYER_CATEGORIES} 중 하나여야 합니다.")
+    return cat
+
+
+@router.get("/prayers", response_model=PrayerListOut)
+def list_prayers(
+    page: int = 1,
+    limit: int = 20,
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    featured_only: bool = False,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Prayer).filter(Prayer.is_published == True)
+    if category:
+        if category not in PRAYER_CATEGORIES:
+            raise HTTPException(status_code=400, detail="유효하지 않은 카테고리입니다.")
+        query = query.filter(Prayer.category == category)
+    if featured_only:
+        query = query.filter(Prayer.is_featured == True)
+    if q:
+        kw = q.strip()
+        if kw:
+            pattern = f"%{kw}%"
+            query = query.filter(
+                or_(
+                    Prayer.title.ilike(pattern),
+                    Prayer.body.ilike(pattern),
+                    Prayer.scripture.ilike(pattern),
+                    Prayer.author.ilike(pattern),
+                )
+            )
+    total = query.count()
+    # 정렬: featured 먼저, 그 다음 display_order ASC, id DESC (최신 등록 순)
+    items = (
+        query.order_by(desc(Prayer.is_featured), asc(Prayer.display_order), desc(Prayer.id))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return {"items": items, "total": total}
+
+
+class PrayerNeighborOut(BaseModel):
+    id: int
+    title: str
+
+
+class PrayerNeighborsOut(BaseModel):
+    prev: Optional[PrayerNeighborOut] = None
+    next: Optional[PrayerNeighborOut] = None
+
+
+@router.get("/prayers/{item_id}/neighbors", response_model=PrayerNeighborsOut)
+def get_prayer_neighbors(item_id: int, db: Session = Depends(get_db)):
+    """같은 카테고리 내 인접 항목 (display_order ASC, id DESC 정렬 기준)."""
+    current = db.query(Prayer).filter(Prayer.id == item_id, Prayer.is_published == True).first()
+    if not current:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+
+    # prev: 같은 카테고리, 목록상 앞 (display_order 작거나 같은 order에서 id 큼)
+    prev = (
+        db.query(Prayer)
+        .filter(
+            Prayer.is_published == True,
+            Prayer.category == current.category,
+            or_(
+                Prayer.display_order < current.display_order,
+                and_(Prayer.display_order == current.display_order, Prayer.id > current.id),
+            ),
+        )
+        .order_by(desc(Prayer.display_order), asc(Prayer.id))
+        .first()
+    )
+    # next: 같은 카테고리, 목록상 뒤
+    next_item = (
+        db.query(Prayer)
+        .filter(
+            Prayer.is_published == True,
+            Prayer.category == current.category,
+            or_(
+                Prayer.display_order > current.display_order,
+                and_(Prayer.display_order == current.display_order, Prayer.id < current.id),
+            ),
+        )
+        .order_by(asc(Prayer.display_order), desc(Prayer.id))
+        .first()
+    )
+    return {
+        "prev": {"id": prev.id, "title": prev.title} if prev else None,
+        "next": {"id": next_item.id, "title": next_item.title} if next_item else None,
+    }
+
+
+@router.get("/prayers/admin", response_model=PrayerListOut)
+def list_prayers_admin(
+    page: int = 1,
+    limit: int = 50,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    query = db.query(Prayer)
+    if category:
+        query = query.filter(Prayer.category == category)
+    total = query.count()
+    items = (
+        query.order_by(asc(Prayer.category), asc(Prayer.display_order), desc(Prayer.id))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return {"items": items, "total": total}
+
+
+@router.get("/prayers/{item_id}", response_model=PrayerOut)
+def get_prayer(item_id: int, db: Session = Depends(get_db)):
+    """공개 단일 기도문 조회. /admin, /{id}/neighbors 라우트 뒤에 등록되어야 한다."""
+    item = db.query(Prayer).filter(Prayer.id == item_id, Prayer.is_published == True).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    return item
+
+
+@router.post("/prayers", response_model=PrayerOut, status_code=201)
+def create_prayer(body: PrayerIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    _validate_prayer_category(body.category)
+    item = Prayer(**body.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.put("/prayers/{item_id}", response_model=PrayerOut)
+def update_prayer(item_id: int, body: PrayerIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    _validate_prayer_category(body.category)
+    item = db.query(Prayer).filter(Prayer.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    for k, v in body.model_dump().items():
+        setattr(item, k, v)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.put("/prayers/{item_id}/background", response_model=PrayerOut)
+def update_prayer_background(item_id: int, body: PrayerBackgroundIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(Prayer).filter(Prayer.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    if body.background_position not in _VALID_BG_POSITIONS:
+        raise HTTPException(status_code=400, detail="유효하지 않은 배경 위치입니다.")
+    if body.background_gradient not in _VALID_BG_GRADIENTS:
+        raise HTTPException(status_code=400, detail="유효하지 않은 그라데이션 값입니다.")
+    item.background_repeat = body.background_repeat
+    item.background_position = body.background_position
+    item.background_blur = max(0, min(40, body.background_blur))
+    item.background_opacity = max(0, min(100, body.background_opacity))
+    item.background_gradient = body.background_gradient
+    item.background_gradient_size = max(10, min(100, body.background_gradient_size))
+    item.body_font_size_px = max(12, min(32, body.body_font_size_px))
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.post("/prayers/{item_id}/background-image", response_model=PrayerOut)
+def upload_prayer_background(
+    item_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    from app.core.config import settings as app_settings
+    item = db.query(Prayer).filter(Prayer.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+    ext = os.path.splitext(file.filename or "bg")[1].lower() or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    save_dir = os.path.join(app_settings.UPLOAD_DIR, "prayer-bg")
+    os.makedirs(save_dir, exist_ok=True)
+    with open(os.path.join(save_dir, filename), "wb") as f:
+        f.write(file.file.read())
+    item.background_image_url = f"/uploads/prayer-bg/{filename}"
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/prayers/{item_id}/background-image", response_model=PrayerOut)
+def delete_prayer_background(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(Prayer).filter(Prayer.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    item.background_image_url = None
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/prayers/{item_id}", status_code=204)
+def delete_prayer(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(Prayer).filter(Prayer.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
     db.delete(item)
     db.commit()
 
