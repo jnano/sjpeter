@@ -12,6 +12,26 @@ interface Meditation {
   author: string | null;
 }
 
+// 슬라이드는 텍스트 흐름이라 ReactMarkdown 풀 렌더링 대신
+// 흔히 쓰이는 마크다운 문법만 제거 — admin 이 ### 헤더·**굵게** 등을 써도
+// 슬라이드에서는 평문으로만 보이도록.
+function stripMarkdown(md: string): string {
+  if (!md) return "";
+  return md
+    .replace(/^#{1,6}\s+/gm, "")               // # ## ### 헤더
+    .replace(/^>\s?/gm, "")                    // > blockquote
+    .replace(/^[-*+]\s+/gm, "")                // - * + 불릿 리스트
+    .replace(/^\d+\.\s+/gm, "")                // 1. 번호 리스트
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")  // ![alt](url) — 이미지: alt만
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [text](url) — 링크: text만
+    .replace(/\*\*([^*]+)\*\*/g, "$1")         // **굵게**
+    .replace(/__([^_]+)__/g, "$1")             // __굵게__
+    .replace(/\*([^*\n]+)\*/g, "$1")           // *기울임*
+    .replace(/(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, "$1") // _기울임_
+    .replace(/~~([^~]+)~~/g, "$1")             // ~~취소선~~
+    .replace(/`([^`]+)`/g, "$1");              // `코드`
+}
+
 export default function MeditationCredits() {
   const [meditation, setMeditation] = useState<Meditation | null>(null);
   const [paused, setPaused] = useState(false);
@@ -66,7 +86,7 @@ export default function MeditationCredits() {
                 {meditation.title}
               </p>
               <p className="text-[12px] text-[var(--color-text)] leading-relaxed font-serif italic whitespace-pre-line">
-                {meditation.body}
+                {stripMarkdown(meditation.body)}
               </p>
               {meditation.author && (
                 <p className="text-[10.5px] text-[var(--color-text-muted)] mt-2">
