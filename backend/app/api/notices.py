@@ -69,6 +69,44 @@ def list_notices(db: Session = Depends(get_db)):
     )
 
 
+class NoticePagedOut(BaseModel):
+    pinned: list[NoticeOut]    # 핀 공지는 페이지와 무관하게 모두 반환
+    items: list[NoticeOut]     # 현재 페이지의 일반 공지
+    total: int                 # 일반 공지 전체 개수 (페이지네이션용)
+    page: int
+    size: int
+
+
+@router.get("/paged", response_model=NoticePagedOut)
+def list_notices_paged(
+    page: int = 1,
+    size: int = 20,
+    db: Session = Depends(get_db),
+):
+    """핀 공지는 항상 전체 반환, 일반 공지만 페이지네이션."""
+    page = max(1, page)
+    size = max(1, min(100, size))
+
+    pinned = (
+        db.query(Notice)
+        .options(joinedload(Notice.attachments))
+        .filter(Notice.is_pinned == True)
+        .order_by(desc(Notice.created_at))
+        .all()
+    )
+
+    base = db.query(Notice).filter(Notice.is_pinned == False)
+    total = base.count()
+    items = (
+        base.options(joinedload(Notice.attachments))
+        .order_by(desc(Notice.created_at))
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+    return NoticePagedOut(pinned=pinned, items=items, total=total, page=page, size=size)
+
+
 @router.get("/{notice_id}", response_model=NoticeOut)
 def get_notice(notice_id: int, db: Session = Depends(get_db)):
     notice = (

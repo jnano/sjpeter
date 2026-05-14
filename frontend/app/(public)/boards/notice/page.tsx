@@ -12,6 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const PAGE_SIZE = 20;
 
 interface Notice {
   id: number;
@@ -22,10 +23,20 @@ interface Notice {
   attachments?: { id: number }[];
 }
 
-async function getNotices(): Promise<Notice[] | null> {
+interface NoticePagedOut {
+  pinned: Notice[];
+  items: Notice[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+async function getNoticesPaged(page: number): Promise<NoticePagedOut | null> {
   try {
-    // admin에서 사진/날짜 수정 시 즉시 반영되도록 캐시 비활성
-    const res = await fetch(`${API}/api/notices/`, { cache: "no-store" });
+    const res = await fetch(
+      `${API}/api/notices/paged?page=${page}&size=${PAGE_SIZE}`,
+      { cache: "no-store" }
+    );
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -33,25 +44,53 @@ async function getNotices(): Promise<Notice[] | null> {
   }
 }
 
-export default async function NoticePage() {
-  const notices = await getNotices();
-  if (notices === null) notFound();
+function getPaginationRange(current: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "…")[] = [1];
+  if (current > 3) pages.push("…");
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    pages.push(i);
+  }
+  if (current < total - 2) pages.push("…");
+  pages.push(total);
+  return pages;
+}
 
-  const pinned = notices.filter((n) => n.is_pinned);
-  const regular = notices.filter((n) => !n.is_pinned);
+function fmtDate(s: string): string {
+  return new Date(s)
+    .toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+}
+
+export default async function NoticePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageStr = "1" } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr) || 1);
+
+  const data = await getNoticesPaged(page);
+  if (data === null) notFound();
+
+  const { pinned, items: regular, total } = data;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginationRange = getPaginationRange(page, totalPages);
+  const isEmpty = pinned.length === 0 && regular.length === 0;
 
   return (
     <>
       <PageHeader group="알림과 게시판" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
       <SectionLayout autoHero={false}>
 
-      {notices.length === 0 ? (
+      {isEmpty ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
           등록된 공지사항이 없습니다.
         </div>
       ) : (
         <div className="divide-y divide-[var(--color-border)]">
-          {/* 고정 공지 */}
+          {/* 고정 공지 — 페이지와 무관하게 항상 상단 */}
           {pinned.map((n) => (
             <Link
               key={n.id}
@@ -72,11 +111,11 @@ export default async function NoticePage() {
                 )}
               </div>
               <span className="text-xs text-[var(--color-text-muted)] shrink-0">
-                {new Date(n.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")}
+                {fmtDate(n.created_at)}
               </span>
             </Link>
           ))}
-          {/* 일반 공지 */}
+          {/* 일반 공지 — 현재 페이지 분량 */}
           {regular.map((n) => (
             <Link
               key={n.id}
@@ -92,10 +131,50 @@ export default async function NoticePage() {
                 </span>
               )}
               <span className="text-xs text-[var(--color-text-muted)] shrink-0">
-                {new Date(n.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")}
+                {fmtDate(n.created_at)}
               </span>
             </Link>
           ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 mt-10">
+          <Link
+            href={`/boards/notice?page=${Math.max(1, page - 1)}`}
+            aria-disabled={page === 1}
+            className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
+              page === 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
+            }`}
+          >
+            ‹
+          </Link>
+          {paginationRange.map((p, i) =>
+            p === "…" ? (
+              <span key={`e-${i}`} className="px-2 text-sm text-[var(--color-text-muted)]">…</span>
+            ) : (
+              <Link
+                key={p}
+                href={`/boards/notice?page=${p}`}
+                className={`w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors ${
+                  p === page
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "border-[var(--color-border)] hover:bg-gray-50"
+                }`}
+              >
+                {p}
+              </Link>
+            )
+          )}
+          <Link
+            href={`/boards/notice?page=${Math.min(totalPages, page + 1)}`}
+            aria-disabled={page === totalPages}
+            className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
+              page === totalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
+            }`}
+          >
+            ›
+          </Link>
         </div>
       )}
       </SectionLayout>
