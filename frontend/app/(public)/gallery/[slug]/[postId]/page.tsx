@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import PostDetail from "@/app/(public)/boards/[slug]/[postId]/PostDetail";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import { auth } from "@/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -82,7 +83,7 @@ export default async function GalleryPostPage({
   return (
     <>
       <PageHeader group="사진 갤러리" title={boardName} subtitle="공동체와 함께한 사진 기록입니다." />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout autoHero={false}>
         <Link
           href={`/gallery/${slug}`}
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] mb-4 inline-block"
@@ -90,7 +91,7 @@ export default async function GalleryPostPage({
           ← 목록으로
         </Link>
         <PostDetail post={post} slug={slug} />
-      </div>
+      </SectionLayout>
     </>
   );
 }

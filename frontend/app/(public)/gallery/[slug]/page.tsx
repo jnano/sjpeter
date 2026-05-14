@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -114,7 +115,7 @@ export default async function GalleryPage({
     return (
       <>
         <PageHeader group="사진 갤러리" title={board.name} subtitle={subtitle} />
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <SectionLayout autoHero={false}>
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl">
             <p className="text-4xl mb-4">🔒</p>
             <p className="font-semibold text-[var(--color-text)]">회원 전용 갤러리입니다.</p>
@@ -126,7 +127,7 @@ export default async function GalleryPage({
               로그인
             </Link>
           </div>
-        </div>
+        </SectionLayout>
       </>
     );
   }
@@ -152,7 +153,7 @@ export default async function GalleryPage({
           </Link>
         ) : undefined}
       />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SectionLayout autoHero={false}>
 
       {postList.posts.length === 0 ? (
         <div className="text-center py-20 text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl">
@@ -242,7 +243,7 @@ export default async function GalleryPage({
           </Link>
         </div>
       )}
-    </div>
+      </SectionLayout>
     </>
   );
 }
