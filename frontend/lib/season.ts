@@ -19,6 +19,16 @@ export const SEASON_LABELS: Record<LiturgicalSeason, string> = {
   pentecost: "성령강림 (Pentecost)",
 };
 
+/** Header 칩 등 짧은 표시용 — 한국어 한 단어 라벨. */
+export const SEASON_LABELS_KO: Record<LiturgicalSeason, string> = {
+  advent: "대림",
+  christmas: "성탄",
+  lent: "사순",
+  easter: "부활",
+  ordinary: "연중시기",
+  pentecost: "성령강림",
+};
+
 const VALID = new Set<string>(Object.keys(SEASON_LABELS));
 
 /**

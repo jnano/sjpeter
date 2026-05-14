@@ -6,17 +6,19 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 import { useNavigation } from "./useNavigation";
+import { SEASON_LABELS_KO, type LiturgicalSeason } from "@/lib/season";
 
 interface Breadcrumb { group: string; title: string }
 
 interface HeaderProps {
   parishName?: string;
   logoUrl?: string | null;
+  season?: LiturgicalSeason | null;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export default function Header({ parishName = "세종성베드로성당", logoUrl = null }: HeaderProps) {
+export default function Header({ parishName = "세종성베드로성당", logoUrl = null, season = null }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -86,6 +88,19 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
       <div className="border-b border-[var(--color-border)]/60 text-sm">
         <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-end items-center">
           <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
+            {season && (
+              <span
+                className="flex items-center gap-1.5 text-xs"
+                title={`현재 전례 시기: ${SEASON_LABELS_KO[season]}`}
+              >
+                <span
+                  aria-hidden
+                  className="w-2.5 h-2.5 rounded-full ring-1 ring-black/5"
+                  style={{ background: "var(--color-primary)" }}
+                />
+                <span>{SEASON_LABELS_KO[season]}</span>
+              </span>
+            )}
             {session ? (
               <div
                 className="relative"
