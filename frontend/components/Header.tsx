@@ -84,8 +84,10 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
 
   return (
     <header className="bg-white text-[var(--color-text)] border-b border-[var(--color-border)] sticky top-0 z-50">
-      {/* 상단 정보 바 — 전례 시기 칩(좌) / 로그인·사용자 메뉴(우) */}
-      <div className="border-b border-[var(--color-border)]/60 text-sm">
+      {/* 상단 정보 바 — 전례 시기 칩(좌) / 로그인·사용자 메뉴(우)
+          배경은 var(--color-surface-warm) → 시즌별로 미세하게 톤이 갈림.
+          평시엔 베이지, 부활이면 연초록, 대림이면 연보라 등. */}
+      <div className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]/60 text-sm transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center gap-3">
           <div className="flex items-center text-[var(--color-text-muted)] min-w-0">
             {season && (
