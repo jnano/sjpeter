@@ -76,15 +76,20 @@ export default function BannerSlider({ placement, className }: Props) {
   const safeIndex = Math.min(index, total - 1);
   const current = images[safeIndex];
 
+  // 이미지 비율이 달라도 카드 크기가 흔들리지 않도록 컨테이너에 고정 비율(3:2)
+  // + object-cover 로 채움. 다양한 비율의 배너가 섞여도 슬라이드 전환 시
+  // 카드 높이가 점프하지 않는다.
   const imageEl = (
-    <Image
-      src={absoluteUrl(current.file_url)}
-      alt={current.alt_text || ""}
-      width={419}
-      height={288}
-      className="w-full h-auto block"
-      unoptimized
-    />
+    <div className="relative w-full aspect-[3/2]">
+      <Image
+        src={absoluteUrl(current.file_url)}
+        alt={current.alt_text || ""}
+        fill
+        sizes="(max-width: 768px) 100vw, 33vw"
+        className="object-cover"
+        unoptimized
+      />
+    </div>
   );
 
   return (
