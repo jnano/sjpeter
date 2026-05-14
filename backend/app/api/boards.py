@@ -283,6 +283,11 @@ EXCERPT_LEN = 120
 
 
 def _make_excerpt(content: str, keyword: str) -> str:
+    # 한 줄 excerpt — 줄바꿈은 공백으로 압축
+    content = (content or "").replace("\n", " ").replace("\r", " ")
+    while "  " in content:
+        content = content.replace("  ", " ")
+    content = content.strip()
     lower = content.lower()
     idx = lower.find(keyword.lower())
     if idx == -1:
@@ -318,7 +323,17 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     - 가중치: 제목 매칭 ×3, 본문 매칭 ×1, 핀 공지 ×2, 최근일수록 +
     - 주보 PDF 본문(bulletins.body_text)도 검색 대상
     """
-    from app.models.content import HistoryItem, Vision, CommunityGroup
+    from app.models.content import (
+        HistoryItem,
+        Vision,
+        CommunityGroup,
+        StaticPage,
+        CouncilMember,
+        Prayer,
+        Meditation,
+    )
+    from app.models.dynamic_page import DynamicPage
+    from app.models.construction import ConstructionPhase, ConstructionJournalEntry
     from app.models.notice import Notice
     from app.models.bulletin import Bulletin
     from app.core.search_synonyms import expand
@@ -481,6 +496,175 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
             title=title,
             excerpt=excerpt,
             url=f"/bulletin/{b.id}",
+        ))
+
+    # ── 기도문 검색 ────────────────────────────────────────
+    for pr in (
+        db.query(Prayer)
+        .filter(Prayer.is_published == True)
+        .filter(_build_match_clause(
+            [Prayer.title, Prayer.body, Prayer.scripture, Prayer.author], terms
+        ))
+        .order_by(desc(Prayer.is_featured), Prayer.display_order, Prayer.id)
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="prayer", label="기도문",
+            title=pr.title,
+            excerpt=_make_excerpt(pr.body, q),
+            url=f"/prayer/{pr.id}",
+        ))
+
+    # ── 묵상 검색 ──────────────────────────────────────────
+    for m in (
+        db.query(Meditation)
+        .filter(Meditation.is_published == True)
+        .filter(_build_match_clause(
+            [Meditation.title, Meditation.body, Meditation.scripture, Meditation.author], terms
+        ))
+        .order_by(desc(Meditation.is_current), desc(Meditation.published_date))
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="meditation", label="작은 묵상",
+            title=m.title,
+            excerpt=_make_excerpt(m.body, q),
+            url=f"/meditation/archive/{m.id}",
+        ))
+
+    # ── 사목평의회 구성원 ──────────────────────────────────
+    for cm in (
+        db.query(CouncilMember)
+        .filter(CouncilMember.is_active == True)
+        .filter(_build_match_clause(
+            [CouncilMember.name, CouncilMember.role, CouncilMember.category], terms
+        ))
+        .order_by(CouncilMember.sort_order, CouncilMember.id)
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="council", label="사목평의회",
+            title=f"{cm.name} — {cm.role}",
+            excerpt=cm.category or "",
+            url="/council",
+        ))
+
+    # ── 정적 페이지 (static_pages: saint/council/prayer/meditation) ──
+    for sp in (
+        db.query(StaticPage)
+        .filter(_build_match_clause(
+            [StaticPage.title, StaticPage.subtitle, StaticPage.body], terms
+        ))
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="static_page", label="페이지",
+            title=sp.title,
+            excerpt=_make_excerpt(sp.body or sp.subtitle or "", q),
+            url=f"/{sp.slug}",
+        ))
+
+    # ── 자유 페이지 (dynamic_pages) ─────────────────────────
+    for dp in (
+        db.query(DynamicPage)
+        .filter(DynamicPage.is_active == True)
+        .filter(_build_match_clause(
+            [DynamicPage.title, DynamicPage.subtitle, DynamicPage.body_markdown], terms
+        ))
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="dynamic_page", label=dp.group_label or "페이지",
+            title=dp.title,
+            excerpt=_make_excerpt(dp.body_markdown or dp.subtitle or "", q),
+            url=f"/p/{dp.slug}",
+        ))
+
+    # ── 성당 건축 단계 ────────────────────────────────────
+    for ph in (
+        db.query(ConstructionPhase)
+        .filter(_build_match_clause(
+            [ConstructionPhase.name, ConstructionPhase.description], terms
+        ))
+        .order_by(ConstructionPhase.sort_order, ConstructionPhase.id)
+        .all()
+    ):
+        content_results.append(ContentSearchItem(
+            type="construction_phase", label="성당건축",
+            title=ph.name,
+            excerpt=_make_excerpt(ph.description or "", q),
+            url="/construction",
+        ))
+
+    # ── 성당 건축 일지 ────────────────────────────────────
+    for je in (
+        db.query(ConstructionJournalEntry)
+        .filter(_build_match_clause([ConstructionJournalEntry.note], terms))
+        .order_by(desc(ConstructionJournalEntry.entry_date))
+        .all()
+    ):
+        date_str = je.entry_date.strftime("%Y-%m-%d") if je.entry_date else ""
+        content_results.append(ContentSearchItem(
+            type="construction_journal", label="건축일지",
+            title=f"{date_str} 공사 기록" if date_str else "공사 기록",
+            excerpt=_make_excerpt(je.note, q),
+            url="/construction",
+        ))
+
+    # ── 역대 사목자 (parish_pastors: priest|sister) ───────
+    pastor_where_parts = []
+    pastor_params: dict = {}
+    for i, term in enumerate(terms):
+        key = f"pkw{i}"
+        pastor_params[key] = f"%{term}%"
+        pastor_where_parts.append(
+            f"(REPLACE(name, ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(title, ''), ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(bio, ''), ' ', '') ILIKE :{key})"
+        )
+    pastor_where = " OR ".join(pastor_where_parts) if pastor_where_parts else "FALSE"
+    pastor_rows = db.execute(text(f"""
+        SELECT id, name, title, bio, category
+        FROM parish_pastors
+        WHERE {pastor_where}
+        ORDER BY sort_order, id
+        LIMIT 50
+    """), pastor_params).fetchall()
+    for r in pastor_rows:
+        url = "/sisters" if (r.category == "sister") else "/pastors"
+        label = "역대 수녀님" if (r.category == "sister") else "역대 사목자"
+        content_results.append(ContentSearchItem(
+            type="pastor", label=label,
+            title=f"{r.name} ({r.title})" if r.title else r.name,
+            excerpt=_make_excerpt(r.bio or "", q),
+            url=url,
+        ))
+
+    # ── 본당 출신 사제 (parish_priests) ───────────────────
+    priest_where_parts = []
+    priest_params: dict = {}
+    for i, term in enumerate(terms):
+        key = f"prkw{i}"
+        priest_params[key] = f"%{term}%"
+        priest_where_parts.append(
+            f"(REPLACE(name, ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(role, ''), ' ', '') ILIKE :{key}"
+            f" OR REPLACE(COALESCE(bio, ''), ' ', '') ILIKE :{key})"
+        )
+    priest_where = " OR ".join(priest_where_parts) if priest_where_parts else "FALSE"
+    priest_rows = db.execute(text(f"""
+        SELECT id, name, role, bio
+        FROM parish_priests
+        WHERE {priest_where}
+        ORDER BY sort_order, id
+        LIMIT 50
+    """), priest_params).fetchall()
+    for r in priest_rows:
+        content_results.append(ContentSearchItem(
+            type="priest", label="본당 출신 사제",
+            title=f"{r.name} ({r.role})" if r.role else r.name,
+            excerpt=_make_excerpt(r.bio or "", q),
+            url="/priests",
         ))
 
     # ── 댓글 검색 ──────────────────────────────────────────
