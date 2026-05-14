@@ -82,7 +82,7 @@ async function fetchRecommended(): Promise<string[]> {
 function PopularCard({ items }: { items: PopularItem[] }) {
   if (items.length === 0) {
     return (
-      <aside className="self-start md:sticky md:top-20 bg-white border border-[var(--color-border)] rounded-xl p-5">
+      <aside className="self-start md:sticky md:top-28 bg-white border border-[var(--color-border)] rounded-xl p-5">
         <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3 flex items-center gap-1.5">
           <span aria-hidden>🔥</span> 인기 검색어
         </h2>
@@ -93,7 +93,7 @@ function PopularCard({ items }: { items: PopularItem[] }) {
     );
   }
   return (
-    <aside className="self-start md:sticky md:top-20 bg-white border border-[var(--color-border)] rounded-xl p-5">
+    <aside className="self-start md:sticky md:top-28 bg-white border border-[var(--color-border)] rounded-xl p-5">
       <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3 flex items-center gap-1.5">
         <span aria-hidden>🔥</span> 인기 검색어
       </h2>
