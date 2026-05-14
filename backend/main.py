@@ -610,6 +610,38 @@ def _migrate_add_columns():
             )
         """))
 
+        # 검색어 카운트 테이블 — 통합 검색 인기 검색어 산출
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS search_term_counts (
+                term VARCHAR(100) PRIMARY KEY,
+                count INTEGER NOT NULL DEFAULT 0,
+                last_searched_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_search_term_counts_count "
+                "ON search_term_counts (count DESC)"
+            ))
+        except Exception:
+            pass
+        # 추천 검색어 site_settings 키 기본값 (admin 편집)
+        try:
+            conn.execute(text("""
+                INSERT INTO site_settings (key, value, label, description, is_secret, group_name)
+                VALUES (
+                    'RECOMMENDED_SEARCHES',
+                    '성모송,사순,묵주기도,평화,성령',
+                    '추천 검색어',
+                    '검색 결과 페이지 빈 상태에서 칩으로 노출됩니다. 쉼표로 구분하여 입력 (예: 성모송,사순,묵주기도)',
+                    FALSE,
+                    '사이트'
+                )
+                ON CONFLICT (key) DO NOTHING
+            """))
+        except Exception:
+            pass
+
         # 이메일 인증 컬럼
         try:
             conn.execute(text(

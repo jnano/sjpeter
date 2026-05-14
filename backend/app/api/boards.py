@@ -342,6 +342,21 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
     if not q:
         return SearchOut(results=[], content_results=[], total=0, page=page, limit=limit)
 
+    # 검색어 카운트 증가 (2자 이상·1페이지 한정 — 페이지네이션 시 중복 누적 방지)
+    # 카운트 실패는 검색 흐름에 영향 없음
+    if len(q) >= 2 and page == 1:
+        try:
+            db.execute(text("""
+                INSERT INTO search_term_counts (term, count, last_searched_at)
+                VALUES (:term, 1, NOW())
+                ON CONFLICT (term) DO UPDATE
+                SET count = search_term_counts.count + 1,
+                    last_searched_at = NOW()
+            """), {"term": q[:100]})
+            db.commit()
+        except Exception:
+            db.rollback()
+
     # 검색어 동의어 확장: ["성당건축"] → ["성당건축", "성전건축", "신축", ...]
     terms = expand(q)
     # 원본 키워드도 항상 포함 (대소문자 무시는 ILIKE가 처리)
@@ -690,6 +705,59 @@ def search_posts(q: str = "", page: int = 1, limit: int = 10, db: Session = Depe
         ))
 
     return SearchOut(results=results, content_results=content_results, total=total, page=page, limit=limit)
+
+
+# ── 인기·추천 검색어 ──────────────────────────────────────
+
+
+class TermItem(BaseModel):
+    term: str
+    count: int = 0
+
+
+class PopularSearchesOut(BaseModel):
+    items: list[TermItem]
+
+
+class RecommendedSearchesOut(BaseModel):
+    items: list[str]
+
+
+@router.get("/api/search/popular", response_model=PopularSearchesOut)
+def get_popular_searches(limit: int = 5, db: Session = Depends(get_db)):
+    """인기 검색어 — count DESC. 동률은 최근 검색이 위."""
+    limit = max(1, min(20, limit))
+    rows = db.execute(
+        text(
+            "SELECT term, count FROM search_term_counts "
+            "WHERE count > 0 "
+            "ORDER BY count DESC, last_searched_at DESC LIMIT :n"
+        ),
+        {"n": limit},
+    ).fetchall()
+    return PopularSearchesOut(
+        items=[TermItem(term=r.term, count=r.count) for r in rows]
+    )
+
+
+@router.get("/api/search/recommended", response_model=RecommendedSearchesOut)
+def get_recommended_searches(db: Session = Depends(get_db)):
+    """관리자가 site_settings.RECOMMENDED_SEARCHES 에 쉼표 구분으로 등록한 추천 검색어."""
+    row = db.execute(
+        text("SELECT value FROM site_settings WHERE key = 'RECOMMENDED_SEARCHES'")
+    ).fetchone()
+    raw = (row.value if row and row.value else "") or ""
+    items: list[str] = []
+    seen: set[str] = set()
+    for part in raw.split(","):
+        t = part.strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        items.append(t)
+        if len(items) >= 10:
+            break
+    return RecommendedSearchesOut(items=items)
 
 
 # ── 게시판 ────────────────────────────────────────────────
