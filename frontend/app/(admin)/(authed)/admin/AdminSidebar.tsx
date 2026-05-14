@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -85,15 +85,88 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+  pinned: boolean;
+  onPinToggle: () => void;
+  mounted: boolean;
 }
 
-export default function AdminSidebar({ open, onClose }: Props) {
+const PEEK_TRIGGER_WIDTH_PX = 12;
+const PEEK_OPEN_DELAY_MS = 200;
+const PEEK_CLOSE_DELAY_MS = 300;
+
+export default function AdminSidebar({
+  mobileOpen,
+  onMobileClose,
+  pinned,
+  onPinToggle,
+  mounted,
+}: Props) {
   const pathname = usePathname();
   const [draftCount, setDraftCount] = useState(0);
   const [extractionCount, setExtractionCount] = useState(0);
   const [visionCount, setVisionCount] = useState(0);
+
+  // peek 상태 — collapsed(=!pinned)에서 좌측 hover로 일시 펼침
+  const [peeking, setPeeking] = useState(false);
+  const peekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearPeekTimer = useCallback(() => {
+    if (peekTimerRef.current) {
+      clearTimeout(peekTimerRef.current);
+      peekTimerRef.current = null;
+    }
+  }, []);
+
+  // collapsed 상태에서 화면 좌측 가장자리(0~12px) hover 시 peek 패널 펼침
+  useEffect(() => {
+    if (!mounted || pinned) {
+      setPeeking(false);
+      clearPeekTimer();
+      return;
+    }
+    function onMove(e: MouseEvent) {
+      // 상단 nav(h-14=56px) 아래 영역에서만 트리거
+      if (e.clientX <= PEEK_TRIGGER_WIDTH_PX && e.clientY > 56) {
+        if (peekTimerRef.current) return;
+        peekTimerRef.current = setTimeout(() => {
+          setPeeking(true);
+          peekTimerRef.current = null;
+        }, PEEK_OPEN_DELAY_MS);
+      }
+    }
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      clearPeekTimer();
+    };
+  }, [mounted, pinned, clearPeekTimer]);
+
+  // 라우트 이동 시 peek 닫기 (네비게이션이 끝나면 패널이 떠 있을 이유가 없음)
+  useEffect(() => {
+    setPeeking(false);
+    clearPeekTimer();
+  }, [pathname, clearPeekTimer]);
+
+  function handleSidebarEnter() {
+    clearPeekTimer();
+  }
+
+  function handleSidebarLeave() {
+    if (pinned) return;
+    clearPeekTimer();
+    peekTimerRef.current = setTimeout(() => {
+      setPeeking(false);
+      peekTimerRef.current = null;
+    }, PEEK_CLOSE_DELAY_MS);
+  }
+
+  function handlePinClick() {
+    setPeeking(false);
+    clearPeekTimer();
+    onPinToggle();
+  }
 
   const fetchDraftCount = useCallback(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
@@ -136,7 +209,6 @@ export default function AdminSidebar({ open, onClose }: Props) {
     else if (item.badgeKey === "vision") count = visionCount;
     if (count <= 0) return null;
 
-    // 사목지표 미처리가 섞여 있으면 빨강(놓치면 안 되는 일), 그 외는 지정 톤
     const hasVisionInside = item.badgeKey === "extractions" && visionCount > 0;
     const tone = hasVisionInside ? "red" : item.badgeTone ?? "amber";
 
@@ -149,29 +221,39 @@ export default function AdminSidebar({ open, onClose }: Props) {
     red: "bg-red-600 text-white",
   };
 
+  // 데스크톱 가시성 — pinned거나 peek 중이면 보임
+  // peek 시에는 본문 위에 떠 있는 floating 효과(shadow)
+  const desktopVisible = mounted && (pinned || peeking);
+  const isFloating = mounted && !pinned && peeking;
+
   return (
     <>
       {/* 모바일 오버레이 */}
-      {open && (
+      {mobileOpen && (
         <button
           type="button"
           aria-label="사이드바 닫기"
-          onClick={onClose}
+          onClick={onMobileClose}
           className="md:hidden fixed inset-0 bg-black/40 z-40"
         />
       )}
 
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen md:h-[calc(100vh-3.5rem)] w-64 bg-white border-r border-gray-200 flex flex-col z-50 transition-transform duration-200 ease-out ${
-          open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        onMouseEnter={handleSidebarEnter}
+        onMouseLeave={handleSidebarLeave}
+        className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] w-64 bg-white border-r border-gray-200 flex flex-col z-40 transition-transform duration-200 ease-out ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } ${
+          desktopVisible ? "md:translate-x-0" : "md:-translate-x-full"
+        } ${isFloating ? "md:shadow-2xl" : ""}`}
+        aria-hidden={!mobileOpen && !desktopVisible}
       >
-        {/* 모바일 헤더 (사이드바 내부) */}
+        {/* 모바일 헤더 */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <span className="font-serif font-bold text-[var(--color-primary)]">관리자 메뉴</span>
           <button
             type="button"
-            onClick={onClose}
+            onClick={onMobileClose}
             aria-label="닫기"
             className="text-gray-400 hover:text-gray-700 text-xl leading-none px-2"
           >
@@ -179,11 +261,36 @@ export default function AdminSidebar({ open, onClose }: Props) {
           </button>
         </div>
 
+        {/* 데스크톱 헤더 — 핀 토글 버튼 */}
+        <div className="hidden md:flex items-center justify-end px-2 py-1.5 border-b border-gray-100">
+          <button
+            type="button"
+            onClick={handlePinClick}
+            aria-label={pinned ? "사이드바 접기" : "사이드바 고정"}
+            title={`${pinned ? "사이드바 접기" : "사이드바 고정"} (⌘\\)`}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {pinned ? (
+                <>
+                  <polyline points="11 17 6 12 11 7" />
+                  <polyline points="18 17 13 12 18 7" />
+                </>
+              ) : (
+                <>
+                  <polyline points="13 17 18 12 13 7" />
+                  <polyline points="6 17 11 12 6 7" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
+
         <nav className="flex-1 overflow-y-auto py-4">
           {/* 대시보드 (단독) */}
           <Link
             href="/admin/dashboard"
-            onClick={onClose}
+            onClick={onMobileClose}
             className={`flex items-center gap-2.5 px-5 py-2.5 mb-2 text-sm transition-colors ${
               pathname === "/admin/dashboard"
                 ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)]"
@@ -209,7 +316,7 @@ export default function AdminSidebar({ open, onClose }: Props) {
                     <li key={it.href}>
                       <Link
                         href={it.href}
-                        onClick={onClose}
+                        onClick={onMobileClose}
                         className={`flex items-center justify-between gap-2 pl-9 pr-5 py-2 text-sm transition-colors ${
                           active
                             ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)] pl-8"

@@ -5,10 +5,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface Props {
-  onMenuClick?: () => void;
+  onMobileMenuClick?: () => void;
+  onDesktopPinClick?: () => void;
+  pinned?: boolean;
+  mounted?: boolean;
 }
 
-export default function AdminNav({ onMenuClick }: Props) {
+export default function AdminNav({
+  onMobileMenuClick,
+  onDesktopPinClick,
+  pinned = true,
+  mounted = false,
+}: Props) {
   const router = useRouter();
   const [isSuper, setIsSuper] = useState(false);
   const [username, setUsername] = useState<string>("");
@@ -27,21 +35,40 @@ export default function AdminNav({ onMenuClick }: Props) {
     router.push("/admin");
   }
 
+  // 데스크톱 핀 버튼은 collapsed 상태일 때만 노출
+  // SSR/CSR 차이로 마운트 전에는 숨김(hydration mismatch 회피)
+  const showDesktopPin = mounted && !pinned && !!onDesktopPinClick;
+
   return (
-    <header className="sticky top-0 z-30 h-14 bg-[var(--color-primary)] text-white flex items-center justify-between px-4 shadow-sm">
+    <header className="sticky top-0 z-50 h-14 bg-[var(--color-primary)] text-white flex items-center justify-between px-4 shadow-sm">
       <div className="flex items-center gap-3 min-w-0">
         {/* 모바일 햄버거 */}
-        {onMenuClick && (
+        {onMobileMenuClick && (
           <button
             type="button"
             aria-label="메뉴"
-            onClick={onMenuClick}
+            onClick={onMobileMenuClick}
             className="md:hidden p-1.5 -ml-1.5 rounded hover:bg-white/10"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
+        {/* 데스크톱 핀 버튼 — collapsed 상태일 때만 */}
+        {showDesktopPin && (
+          <button
+            type="button"
+            aria-label="사이드바 고정"
+            title="사이드바 고정 (⌘\)"
+            onClick={onDesktopPinClick}
+            className="hidden md:inline-flex p-1.5 -ml-1.5 rounded hover:bg-white/10"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="13 17 18 12 13 7" />
+              <polyline points="6 17 11 12 6 7" />
             </svg>
           </button>
         )}
