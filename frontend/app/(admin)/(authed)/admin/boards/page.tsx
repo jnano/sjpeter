@@ -830,6 +830,9 @@ function BoardPostsPanel({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // 글 검색
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedQ, setAppliedQ] = useState("");
   const select = useBulkSelect(posts.map((p) => p.id));
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -838,7 +841,9 @@ function BoardPostsPanel({
     setLoading(true);
     const token = getAdminToken();
     try {
-      const res = await fetch(`${API}/api/boards/${board.slug}/posts?page=${page}`, {
+      const qp = new URLSearchParams({ page: String(page) });
+      if (appliedQ) qp.set("q", appliedQ);
+      const res = await fetch(`${API}/api/boards/${board.slug}/posts?${qp}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -850,9 +855,21 @@ function BoardPostsPanel({
     } finally {
       setLoading(false);
     }
-  }, [board.slug, page]);
+  }, [board.slug, page, appliedQ]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  function applySearch(e: React.FormEvent) {
+    e.preventDefault();
+    setPage(1);
+    setAppliedQ(searchInput.trim());
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+    setAppliedQ("");
+    setPage(1);
+  }
 
   async function deletePost(id: number) {
     if (!confirm("이 글을 삭제하시겠습니까? 댓글·첨부도 함께 삭제됩니다.")) return;
@@ -903,16 +920,42 @@ function BoardPostsPanel({
 
   return (
     <div className="border-t border-gray-200 bg-gray-50 p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-700">
           &lsquo;{board.name}&rsquo; 게시글{" "}
-          <span className="text-xs text-gray-500 font-normal">({total}건)</span>
-        </h3>
-        {totalPages > 1 && (
-          <span className="text-xs text-gray-500">
-            페이지 {page} / {totalPages}
+          <span className="text-xs text-gray-500 font-normal">
+            ({appliedQ ? `검색 ${total}` : `전체 ${total}`}건)
           </span>
-        )}
+        </h3>
+        <div className="flex items-center gap-2">
+          <form onSubmit={applySearch} className="flex items-center gap-1.5">
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="제목·본문 검색"
+              className="text-xs border border-gray-300 rounded px-2 py-1 w-40 focus:outline-none focus:border-[var(--color-primary)]"
+            />
+            {appliedQ && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="text-xs text-gray-500 hover:text-gray-800"
+              >
+                지우기
+              </button>
+            )}
+            <button
+              type="submit"
+              className="text-xs px-2.5 py-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded"
+            >
+              검색
+            </button>
+          </form>
+          {totalPages > 1 && (
+            <span className="text-xs text-gray-500">페이지 {page} / {totalPages}</span>
+          )}
+        </div>
       </div>
 
       <BulkActionBar
