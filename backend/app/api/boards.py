@@ -1549,16 +1549,28 @@ def update_post(
     db: Session = Depends(get_db),
     current: Optional[Member] = Depends(get_current_author),
 ):
+    from app.core.admin_log import log_action
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
     if current and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
+    is_admin_action = current is None  # get_current_author 가 슈퍼관리자면 None
+    is_other_user_action = current is not None and post.member_id != current.id
+    old_title = post.title
     post.title = body.title
     post.content = body.content
     post.intention_kind = body.intention_kind
     post.intention_for = body.intention_for
     post.category = body.category
     db.commit()
+    # admin / moderator 가 다른 사용자의 글을 수정한 경우만 감사 기록
+    if is_admin_action or is_other_user_action:
+        actor = "admin" if is_admin_action else f"member:{current.nickname if current else '?'}"
+        log_action(
+            db, actor,
+            action="post_update", target_type="post", target_id=post.id,
+            detail=f"[{slug}] '{old_title[:80]}' → '{body.title[:80]}' (author_id={post.member_id})",
+        )
     return (
         db.query(Post)
         .options(joinedload(Post.member), joinedload(Post.comments).joinedload(Comment.member), joinedload(Post.attachments))
@@ -1574,12 +1586,24 @@ def delete_post(
     db: Session = Depends(get_db),
     current: Optional[Member] = Depends(get_current_author),
 ):
+    from app.core.admin_log import log_action
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
     if current and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 삭제할 수 있습니다.")
+    is_admin_action = current is None
+    is_other_user_action = current is not None and post.member_id != current.id
+    snapshot_title = post.title
+    snapshot_author = post.member_id
     db.delete(post)
     db.commit()
+    if is_admin_action or is_other_user_action:
+        actor = "admin" if is_admin_action else f"member:{current.nickname if current else '?'}"
+        log_action(
+            db, actor,
+            action="post_delete", target_type="post", target_id=post_id,
+            detail=f"[{slug}] '{snapshot_title[:80]}' (author_id={snapshot_author})",
+        )
 
 
 # ── 댓글 ──────────────────────────────────────────────────
