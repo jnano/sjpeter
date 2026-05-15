@@ -48,7 +48,7 @@ export default function AdminNav({
             type="button"
             aria-label="메뉴"
             onClick={onMobileMenuClick}
-            className="md:hidden p-1.5 -ml-1.5 rounded hover:bg-white/10"
+            className="md:hidden p-2.5 -ml-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-white/10"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="6" x2="21" y2="6" />

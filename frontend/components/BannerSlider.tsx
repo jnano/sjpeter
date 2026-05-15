@@ -186,7 +186,7 @@ export default function BannerSlider({ placement, className }: Props) {
 
       {/* 인디케이터 — 2장 이상일 때만 */}
       {total >= 2 && (
-        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
+        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2 z-10">
           {images.map((img, i) => (
             <button
               key={img.id}
@@ -195,7 +195,7 @@ export default function BannerSlider({ placement, className }: Props) {
               onClick={() => jumpTo(i)}
               className={`h-1.5 rounded-full transition-all ${
                 i === safeIndex
-                  ? "w-5 bg-[var(--color-primary)]"
+                  ? "w-6 bg-[var(--color-primary)]"
                   : "w-1.5 bg-white/80 ring-1 ring-black/10 hover:bg-white"
               }`}
             />
