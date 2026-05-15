@@ -81,6 +81,8 @@ export default function SeasonPage() {
   const [saved, setSaved] = useState(false);
   const [current, setCurrent] = useState<SeasonValue>("");
   const [selected, setSelected] = useState<SeasonValue>("");
+  const [autoMode, setAutoMode] = useState(false);   // SEASON_AUTO_MODE
+  const [autoComputed, setAutoComputed] = useState<SeasonValue>("");  // 오늘 자동 계산 결과
 
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
@@ -88,43 +90,63 @@ export default function SeasonPage() {
       router.push("/admin");
       return;
     }
-    fetch(`${API}/api/admin/settings`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (res) => {
-        if (!res.ok) {
+    Promise.all([
+      fetch(`${API}/api/admin/settings`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/public/site-config`, { cache: "no-store" }),
+    ])
+      .then(async ([resSettings, resPublic]) => {
+        if (!resSettings.ok) {
           router.push("/admin");
           return;
         }
-        const data: { key: string; value: string | null }[] = await res.json();
+        const data: { key: string; value: string | null }[] = await resSettings.json();
         const row = data.find((d) => d.key === "CURRENT_SEASON");
         const value = (row?.value?.trim().toLowerCase() ?? "") as SeasonValue;
         const valid = OPTIONS.some((o) => o.value === value);
         const normalized = valid ? value : "";
         setCurrent(normalized);
         setSelected(normalized);
+
+        const autoRow = data.find((d) => d.key === "SEASON_AUTO_MODE");
+        const autoOn = (autoRow?.value?.trim().toLowerCase() ?? "") === "true";
+        setAutoMode(autoOn);
+
+        // 자동 계산 결과: public-config의 CURRENT_SEASON(자동 모드일 때 계산값으로 덮어쓰여 있음)
+        // 자동 OFF일 때는 별도 확인이 어려우므로, 자동 ON일 때만 표시.
+        if (resPublic.ok) {
+          const pub: Record<string, string> = await resPublic.json();
+          const computed = (pub.CURRENT_SEASON ?? "") as SeasonValue;
+          if (autoOn && OPTIONS.some((o) => o.value === computed)) {
+            setAutoComputed(computed);
+          }
+        }
       })
       .finally(() => setLoading(false));
   }, [router]);
 
-  async function handleSave() {
+  async function patchSetting(key: string, value: string | null): Promise<boolean> {
     const token = localStorage.getItem("admin_token");
     if (!token) {
       router.push("/admin");
-      return;
+      return false;
     }
+    const res = await fetch(`${API}/api/admin/settings/${key}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ value }),
+    });
+    return res.ok;
+  }
+
+  async function handleSave() {
     setSaving(true);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/api/admin/settings/CURRENT_SEASON`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ value: selected || null }),
-      });
-      if (!res.ok) {
+      const ok = await patchSetting("CURRENT_SEASON", selected || null);
+      if (!ok) {
         alert("저장에 실패했습니다.");
         return;
       }
@@ -137,8 +159,42 @@ export default function SeasonPage() {
     }
   }
 
+  async function handleToggleAuto() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const nextAuto = !autoMode;
+      const ok = await patchSetting("SEASON_AUTO_MODE", nextAuto ? "true" : "");
+      if (!ok) {
+        alert("자동 모드 토글 저장 실패.");
+        return;
+      }
+      setAutoMode(nextAuto);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+
+      // 자동 켰을 때: 계산값을 즉시 표시하려고 public-config 재조회
+      if (nextAuto) {
+        try {
+          const r = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
+          if (r.ok) {
+            const pub: Record<string, string> = await r.json();
+            const computed = (pub.CURRENT_SEASON ?? "") as SeasonValue;
+            if (OPTIONS.some((o) => o.value === computed)) setAutoComputed(computed);
+          }
+        } catch {}
+      } else {
+        setAutoComputed("");
+      }
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const dirty = selected !== current;
   const currentLabel = OPTIONS.find((o) => o.value === current)?.label ?? "끄기 (평시)";
+  const autoLabel = OPTIONS.find((o) => o.value === autoComputed)?.label ?? "";
 
   if (loading) {
     return (
@@ -157,12 +213,50 @@ export default function SeasonPage() {
         선택한 시기의 전례색이 사이트 전체에 적용됩니다. 평시로 돌리려면 "끄기"를 선택하세요.
       </p>
 
-      <div className="mb-4 p-3 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-lg text-sm">
-        <span className="text-[var(--color-text-muted)]">현재 적용 중: </span>
-        <strong className="text-[var(--color-primary)]">{currentLabel}</strong>
+      {/* 자동 모드 토글 */}
+      <div className={`mb-4 p-4 border rounded-lg ${autoMode ? "bg-[var(--color-primary)]/5 border-[var(--color-primary)]/30" : "bg-[var(--color-surface-warm)] border-[var(--color-border)]"}`}>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoMode}
+            onChange={handleToggleAuto}
+            disabled={saving}
+            className="mt-1 accent-[var(--color-primary)] w-4 h-4"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-[var(--color-text)]">전례 시기 자동 모드</span>
+              {autoMode && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-[var(--color-primary)] text-white rounded-full font-semibold">
+                  AUTO
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
+              켜면 오늘 날짜로 전례 시기를 자동 계산해 적용합니다 (아래 수동 선택은 무시).
+              부활절(Gauss 알고리즘)을 기준으로 사순·부활·성령강림·대림·성탄·연중을 자동 결정.
+            </p>
+            {autoMode && autoLabel && (
+              <p className="text-sm mt-2">
+                <span className="text-[var(--color-text-muted)]">오늘 자동 적용: </span>
+                <strong className="text-[var(--color-primary)]">{autoLabel}</strong>
+              </p>
+            )}
+          </div>
+        </label>
       </div>
 
-      <ul className="space-y-2 mb-6">
+      <div className="mb-4 p-3 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-lg text-sm">
+        <span className="text-[var(--color-text-muted)]">수동 저장값: </span>
+        <strong className="text-[var(--color-primary)]">{currentLabel}</strong>
+        {autoMode && (
+          <span className="ml-2 text-xs text-[var(--color-text-muted)]">
+            (자동 모드 켜져 있어 현재 사이트에는 자동 계산값이 적용 중)
+          </span>
+        )}
+      </div>
+
+      <ul className={`space-y-2 mb-6 ${autoMode ? "opacity-50 pointer-events-none" : ""}`}>
         {OPTIONS.map((opt) => {
           const isSelected = selected === opt.value;
           const isCurrent = current === opt.value;

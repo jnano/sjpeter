@@ -1,5 +1,6 @@
 import logging
 import smtplib
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from typing import Optional
 from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.site_settings import invalidate, get_setting
+from app.core.liturgical import compute_current_season
 from app.models.site_setting import SiteSetting
 from app.models.admin import Admin
 
@@ -22,7 +24,7 @@ _INTERNAL_KEYS = [
     "KAKAO_CLIENT_ID", "KAKAO_CLIENT_SECRET",
     "AUTH_SECRET",
 ]
-_PUBLIC_KEYS = ["KAKAO_MAP_KEY", "SITE_URL", "CURRENT_SEASON", "HOME_HERO_LAYOUT"]
+_PUBLIC_KEYS = ["KAKAO_MAP_KEY", "SITE_URL", "CURRENT_SEASON", "HOME_HERO_LAYOUT", "SEASON_AUTO_MODE"]
 
 
 @internal_router.get("/api/internal/config")
@@ -42,12 +44,22 @@ def internal_config(request: Request, db: Session = Depends(get_db)):
 
 @internal_router.get("/api/public/site-config")
 def public_config(db: Session = Depends(get_db)):
-    """비밀이 아닌 공개 설정 반환 (프론트엔드 클라이언트 사용)."""
+    """비밀이 아닌 공개 설정 반환 (프론트엔드 클라이언트 사용).
+
+    SEASON_AUTO_MODE='true' 이면 CURRENT_SEASON을 오늘 날짜로 자동 계산해
+    수동 저장값보다 우선 적용 (admin 수동 선택은 자동 모드 꺼야 적용됨).
+    """
     result: dict[str, str] = {}
     for key in _PUBLIC_KEYS:
         val = get_setting(key)
         if val:
             result[key] = val
+
+    # 자동 모드면 CURRENT_SEASON을 오늘 시기로 덮어쓰기
+    auto = (result.get("SEASON_AUTO_MODE", "") or "").strip().lower() == "true"
+    if auto:
+        result["CURRENT_SEASON"] = compute_current_season(date.today())
+
     return result
 
 _MASKED = "••••••••"
