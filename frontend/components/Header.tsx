@@ -49,7 +49,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
   const [isAdminAuthed, setIsAdminAuthed] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const archiveCounts = useArchiveCounts();
-  const { groups } = useNavigation();
+  const { groups, currentGroup } = useNavigation();
 
   const visibleNavGroups = groups
     .filter((g) => g.show_in_header)
@@ -242,6 +242,18 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                 group.landing_href ?? firstInternal?.href ?? group.items[0]?.href ?? null;
               const groupTargetExternal =
                 !group.landing_href && (firstInternal ? false : group.items[0]?.is_external);
+              const isActiveGroup = currentGroup?.id === group.id;
+              const labelCls = `relative px-4 h-full flex items-center text-sm font-medium transition-colors whitespace-nowrap ${
+                openGroup === idx
+                  ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
+                  : isActiveGroup
+                    ? "text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
+                    : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
+              } ${
+                isActiveGroup
+                  ? "after:absolute after:left-3 after:right-3 after:bottom-0 after:h-[2px] after:bg-[var(--color-primary)] after:rounded-t"
+                  : ""
+              }`;
               return (
               <div
                 key={group.key}
@@ -255,21 +267,15 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                     target={groupTargetExternal ? "_blank" : undefined}
                     rel={groupTargetExternal ? "noopener noreferrer" : undefined}
                     onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
-                    className={`px-4 h-full flex items-center text-sm font-medium transition-colors whitespace-nowrap ${
-                      openGroup === idx
-                        ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
-                        : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
-                    }`}
+                    aria-current={isActiveGroup ? "page" : undefined}
+                    className={labelCls}
                   >
                     {group.label}
                   </Link>
                 ) : (
                   <button
-                    className={`px-4 h-full text-sm font-medium transition-colors whitespace-nowrap ${
-                      openGroup === idx
-                        ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
-                        : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
-                    }`}
+                    aria-current={isActiveGroup ? "page" : undefined}
+                    className={labelCls}
                   >
                     {group.label}
                   </button>
@@ -430,11 +436,18 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
         {/* 모바일 메뉴 — 그룹 아코디언 */}
         {menuOpen && (
           <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
-            {visibleNavGroups.map((group, idx) => (
+            {visibleNavGroups.map((group, idx) => {
+              const isActiveGroup = currentGroup?.id === group.id;
+              return (
               <div key={group.key}>
                 <button
                   onClick={() => setOpenGroup(openGroup === idx ? null : idx)}
-                  className="w-full flex items-center justify-between px-3 py-3 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-warm)] transition-colors"
+                  aria-current={isActiveGroup ? "page" : undefined}
+                  className={`w-full flex items-center justify-between px-3 py-3 text-sm font-medium transition-colors hover:bg-[var(--color-surface-warm)] ${
+                    isActiveGroup
+                      ? "text-[var(--color-primary)] border-l-[3px] border-[var(--color-primary)] bg-[var(--color-surface-warm)]/40"
+                      : "text-[var(--color-text)] border-l-[3px] border-transparent"
+                  }`}
                 >
                   <span>{group.label}</span>
                   <span
@@ -494,7 +507,8 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </nav>
         )}
       </div>
