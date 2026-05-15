@@ -64,11 +64,12 @@ export default function EditPage() {
     fetch(`${API}/api/boards/${slug}/posts/${postId}`)
       .then((r) => r.json())
       .then((data) => {
-        const isModerator = session && data.board?.moderator_id === session.memberId;
-        const isAuthor = session && data.member?.id === session.memberId;
-        if (!isAdmin && !isAuthor && !isModerator) {
-          setForbidden(true);
-        } else {
+        const isModerator = !!(session && data.board?.moderator_id === session.memberId);
+        const isAuthor = !!(session && data.member?.id === session.memberId);
+        const allowed = isAdmin || isAuthor || isModerator;
+        // 매 fetch 마다 forbidden 명시 갱신 — isAdmin 이 늦게 true 가 돼도 재실행 시 false 로 복귀
+        setForbidden(!allowed);
+        if (allowed) {
           setTitle(data.title ?? "");
           setContent(data.content ?? "");
           setExistingAttachments(data.attachments ?? []);
