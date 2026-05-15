@@ -116,7 +116,7 @@ export default async function GalleryPage({
     return (
       <>
         <PageHeader group="사진 갤러리" title={board.name} subtitle={subtitle} />
-        <SectionLayout autoHero={false} chipsOnly>
+        <SectionLayout autoHero={false}>
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl">
             <p className="text-4xl mb-4">🔒</p>
             <p className="font-semibold text-[var(--color-text)]">회원 전용 갤러리입니다.</p>
@@ -154,7 +154,7 @@ export default async function GalleryPage({
           </Link>
         ) : undefined}
       />
-      <SectionLayout autoHero={false} chipsOnly>
+      <SectionLayout autoHero={false}>
 
       <BannerSlider placement="gallery_top" className="mb-6" />
 
