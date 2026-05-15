@@ -19,6 +19,9 @@ interface Props {
   heightPx?: number;
   /** object-position 값 ("center", "top left" 등). 디폴트 "center". */
   imagePosition?: string;
+  /** true면 좌측 사이드바 박스 미표시, 가로 칩 메뉴만 렌더(데스크톱·모바일 동일).
+   *  풀폭 본문이 필요한 페이지(/calendar, /gallery 등)용. */
+  chipsOnly?: boolean;
   items: MenuItem[];      // 트리 구조 (children 포함)
 }
 
@@ -36,7 +39,7 @@ function findActiveTopLevel(items: MenuItem[], pathname: string): MenuItem | nul
   return null;
 }
 
-export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, imagePosition, items }: Props) {
+export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, imagePosition, chipsOnly = false, items }: Props) {
   const pathname = usePathname();
   const archiveCounts = useArchiveCounts();
 
@@ -172,6 +175,34 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
           document.body
         )}
       </li>
+    );
+  }
+
+  // chipsOnly: 풀폭 본문이 필요한 페이지(/calendar, /gallery 등)에서
+  //  좌측 사이드바 없이 본문 위에 가로 칩 메뉴만 노출. 데스크톱·모바일 동일.
+  if (chipsOnly) {
+    return (
+      <nav
+        className="-mx-4 px-4 mb-4 sticky top-16 z-30 bg-white border-b border-[var(--color-border)]"
+        aria-label={`${groupTitle} 메뉴`}
+      >
+        <ul className="flex gap-1.5 overflow-x-auto py-2" style={{ WebkitOverflowScrolling: "touch" }}>
+          {visibleItems.map((it) => (
+            <li key={it.id} className="shrink-0">
+              <Chip item={it} kind="top" />
+            </li>
+          ))}
+        </ul>
+        {activeTopLevel && (activeTopLevel.children?.length ?? 0) > 0 && (
+          <ul className="flex gap-1.5 overflow-x-auto pb-2 border-t border-[var(--color-border)]/40" style={{ WebkitOverflowScrolling: "touch" }}>
+            {activeTopLevel.children!.map((c) => (
+              <li key={c.id} className="shrink-0 py-2">
+                <Chip item={c} kind="sub" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </nav>
     );
   }
 

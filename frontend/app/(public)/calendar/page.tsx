@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import BannerSlider from "@/components/BannerSlider";
+import SectionSidebar from "@/components/SectionSidebar";
+import { useNavigation } from "@/components/useNavigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -590,6 +592,7 @@ const VIEW_TABS: { value: ViewMode; label: string }[] = [
 export default function CalendarPage() {
   const today = new Date();
   const todayStr = dateToStr(today);
+  const { currentGroup } = useNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState<Date>(today);
   const [events, setEvents] = useState<Event[]>([]);
@@ -819,6 +822,17 @@ export default function CalendarPage() {
           </div>
         }
       />
+
+      {/* 그룹 메뉴 칩 (풀폭 캘린더 보존을 위해 가로 칩 형태로 표시) */}
+      {currentGroup && currentGroup.items.length > 0 && (
+        <div className="max-w-4xl mx-auto px-4">
+          <SectionSidebar
+            groupTitle={currentGroup.label}
+            items={currentGroup.items}
+            chipsOnly
+          />
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto px-4 pt-6">
         <BannerSlider placement="calendar_top" />
