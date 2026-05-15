@@ -38,9 +38,24 @@ interface Board {
   show_in_menu: boolean;
   post_count: number;
   kind: string;  // 'default' | 'line'
+  list_show_number: boolean;
+  list_show_author: boolean;
+  list_show_date: boolean;
+  list_show_views: boolean;
+  list_show_likes: boolean;
+  list_show_comments: boolean;
   moderator: Moderator | null;
   allowed_members: AllowedMember[];
 }
+
+const LIST_COLUMN_LABELS: { key: keyof Board; label: string }[] = [
+  { key: "list_show_number",   label: "번호" },
+  { key: "list_show_author",   label: "작성자" },
+  { key: "list_show_date",     label: "작성일" },
+  { key: "list_show_views",    label: "조회수" },
+  { key: "list_show_likes",    label: "좋아요수" },
+  { key: "list_show_comments", label: "댓글수" },
+];
 
 function getAccessMode(b: Board): AccessMode {
   if (b.members_selected) return "selected-members";
@@ -622,6 +637,9 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   const [excludeSearch, setExcludeSearch] = useState(board.exclude_from_search);
   const [showInMenu, setShowInMenu] = useState(board.show_in_menu ?? true);
   const [postsPerPage, setPostsPerPage] = useState(board.posts_per_page);
+  const [listShow, setListShow] = useState<Set<string>>(
+    () => new Set(LIST_COLUMN_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)),
+  );
   const [allowedMembers, setAllowedMembers] = useState<AllowedMember[]>(board.allowed_members ?? []);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -634,8 +652,9 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
     setExcludeSearch(board.exclude_from_search);
     setShowInMenu(board.show_in_menu ?? true);
     setPostsPerPage(board.posts_per_page);
+    setListShow(new Set(LIST_COLUMN_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)));
     setAllowedMembers(board.allowed_members ?? []);
-  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members]);
+  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members, board.list_show_number, board.list_show_author, board.list_show_date, board.list_show_views, board.list_show_likes, board.list_show_comments]);
 
   async function save() {
     setSaving(true);
@@ -653,6 +672,12 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           exclude_from_search: excludeSearch,
           show_in_menu: showInMenu,
           posts_per_page: postsPerPage,
+          list_show_number: listShow.has("list_show_number"),
+          list_show_author: listShow.has("list_show_author"),
+          list_show_date: listShow.has("list_show_date"),
+          list_show_views: listShow.has("list_show_views"),
+          list_show_likes: listShow.has("list_show_likes"),
+          list_show_comments: listShow.has("list_show_comments"),
         }),
       });
       if (res.ok) {
@@ -797,7 +822,31 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           />
           개
         </label>
-        <div className="ml-auto flex items-center gap-3">
+
+        {/* 목록 표시 컬럼 토글 — 제목·고정 뱃지·카테고리·첨부는 항상 표시 */}
+        <div className="w-full flex flex-wrap items-center gap-x-4 gap-y-1 text-sm border-t border-gray-200 pt-3 mt-1">
+          <span className="text-xs font-semibold text-gray-600">목록 표시 컬럼:</span>
+          {LIST_COLUMN_LABELS.map((c) => (
+            <label key={c.key as string} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={listShow.has(c.key as string)}
+                onChange={(e) => {
+                  setListShow((prev) => {
+                    const next = new Set(prev);
+                    if (e.target.checked) next.add(c.key as string);
+                    else next.delete(c.key as string);
+                    return next;
+                  });
+                }}
+                className="rounded"
+              />
+              {c.label}
+            </label>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3 w-full justify-end">
           {saveError && <span className="text-xs text-red-500">{saveError}</span>}
           <button
             onClick={save}

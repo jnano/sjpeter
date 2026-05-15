@@ -49,6 +49,13 @@ class BoardIn(BaseModel):
     show_in_menu: bool = True
     moderator_id: Optional[int] = None
     kind: str = "default"  # 'default' | 'line'
+    # 목록 표시 컬럼 토글 (v1.5.120)
+    list_show_number: bool = False
+    list_show_author: bool = True
+    list_show_date: bool = True
+    list_show_views: bool = True
+    list_show_likes: bool = False
+    list_show_comments: bool = True
 
 
 class BoardUpdate(BaseModel):
@@ -65,6 +72,12 @@ class BoardUpdate(BaseModel):
     show_in_menu: Optional[bool] = None
     moderator_id: Optional[int] = None
     kind: Optional[str] = None
+    list_show_number: Optional[bool] = None
+    list_show_author: Optional[bool] = None
+    list_show_date: Optional[bool] = None
+    list_show_views: Optional[bool] = None
+    list_show_likes: Optional[bool] = None
+    list_show_comments: Optional[bool] = None
 
 
 class AllowedMemberOut(BaseModel):
@@ -92,6 +105,12 @@ class BoardOut(BaseModel):
     exclude_from_search: bool = False
     show_in_menu: bool = True
     kind: str = "default"
+    list_show_number: bool = False
+    list_show_author: bool = True
+    list_show_date: bool = True
+    list_show_views: bool = True
+    list_show_likes: bool = False
+    list_show_comments: bool = True
     moderator: Optional[ModeratorOut] = None
     moderator_id: Optional[int] = None
     allowed_members: list[AllowedMemberOut] = []

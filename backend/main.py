@@ -149,6 +149,13 @@ def _migrate_add_columns():
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_in_menu BOOLEAN DEFAULT TRUE",
             # 게시판 형식: 'default'(일반) | 'line'(한 줄 메시지)
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS kind VARCHAR(20) DEFAULT 'default' NOT NULL",
+            # 게시판 목록 표시 컬럼 admin 토글 (v1.5.120)
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_number BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_author BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_date BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_views BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_likes BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_comments BOOLEAN NOT NULL DEFAULT TRUE",
             # posts 한 줄 메시지용 메타 필드
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_kind VARCHAR(20)",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",

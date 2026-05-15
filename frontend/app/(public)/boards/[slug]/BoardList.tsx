@@ -22,8 +22,18 @@ interface Post {
   member: Author | null;
   view_count: number;
   comment_count: number;
+  like_count?: number;
   created_at: string;
   thumbnail_url: string | null;
+}
+
+export interface BoardCols {
+  list_show_number: boolean;
+  list_show_author: boolean;
+  list_show_date: boolean;
+  list_show_views: boolean;
+  list_show_likes: boolean;
+  list_show_comments: boolean;
 }
 
 interface Props {
@@ -32,6 +42,7 @@ interface Props {
   currentPage: number;
   totalPages: number;
   currentView: "list" | "photo";
+  cols: BoardCols;
   currentQ?: string;
   currentSort?: string;
   currentCategory?: string;
@@ -57,7 +68,7 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default function BoardList({ posts, slug, currentPage, totalPages, currentView, currentQ, currentSort, currentCategory }: Props) {
+export default function BoardList({ posts, slug, currentPage, totalPages, currentView, cols, currentQ, currentSort, currentCategory }: Props) {
   return (
     <>
       {posts.length === 0 ? (
@@ -65,9 +76,9 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
           아직 작성된 글이 없습니다. 첫 번째 글을 남겨보세요.
         </div>
       ) : currentView === "list" ? (
-        <ListView posts={posts} slug={slug} />
+        <ListView posts={posts} slug={slug} cols={cols} />
       ) : (
-        <PhotoView posts={posts} slug={slug} />
+        <PhotoView posts={posts} slug={slug} cols={cols} />
       )}
 
       {totalPages > 1 && (
@@ -85,23 +96,28 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
   );
 }
 
-function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
+function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: BoardCols }) {
   // kind='default' 게시판의 표준 글 목록 — 한 줄 텍스트 리스트.
   // 사진 그리드가 필요하면 board.kind='gallery' 로 두고 /gallery/{slug} 사용.
   return (
     <div className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-      {posts.map((post) => (
+      {posts.map((post, i) => (
         <Link
           key={post.id}
           href={`/boards/${slug}/${post.id}`}
           className="flex items-baseline justify-between gap-3 py-3.5 group hover:text-[var(--color-primary)] transition-colors"
         >
           <span className="flex items-baseline gap-1.5 flex-1 min-w-0">
+            {cols.list_show_number && (
+              <span className="text-xs text-[var(--color-text-muted)] tabular-nums shrink-0">
+                {posts.length - i}
+              </span>
+            )}
             {!post.member && <AiBadge />}
             <span className="font-medium text-[var(--color-text)] truncate group-hover:underline">
               {post.title}
             </span>
-            {post.comment_count > 0 && (
+            {cols.list_show_comments && post.comment_count > 0 && (
               <span className="text-xs text-[var(--color-primary)] shrink-0">
                 [{post.comment_count}]
               </span>
@@ -111,9 +127,18 @@ function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
             )}
           </span>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
-            <span className="hidden sm:inline">{post.member?.nickname ?? "성당"}</span>
-            <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
-            <span className="hidden sm:inline">조회 {post.view_count}</span>
+            {cols.list_show_author && (
+              <span className="hidden sm:inline">{post.member?.nickname ?? "성당"}</span>
+            )}
+            {cols.list_show_date && (
+              <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
+            )}
+            {cols.list_show_views && (
+              <span className="hidden sm:inline">조회 {post.view_count}</span>
+            )}
+            {cols.list_show_likes && (
+              <span className="hidden sm:inline" title="좋아요">♡ {post.like_count ?? 0}</span>
+            )}
           </div>
         </Link>
       ))}
@@ -121,7 +146,7 @@ function ListView({ posts, slug }: { posts: Post[]; slug: string }) {
   );
 }
 
-function PhotoView({ posts, slug }: { posts: Post[]; slug: string }) {
+function PhotoView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: BoardCols }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {posts.map((post) => (
@@ -148,15 +173,19 @@ function PhotoView({ posts, slug }: { posts: Post[]; slug: string }) {
           <div className="px-3 py-2.5">
             <p className="text-sm font-medium truncate group-hover:text-[var(--color-primary)]">
               {post.title}
-              {post.comment_count > 0 && (
+              {cols.list_show_comments && post.comment_count > 0 && (
                 <span className="ml-1 text-xs text-[var(--color-primary)]">
                   [{post.comment_count}]
                 </span>
               )}
             </p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {post.member?.nickname ?? "성당"} · {new Date(post.created_at).toLocaleDateString("ko-KR")}
-            </p>
+            {(cols.list_show_author || cols.list_show_date) && (
+              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                {cols.list_show_author && (post.member?.nickname ?? "성당")}
+                {cols.list_show_author && cols.list_show_date && " · "}
+                {cols.list_show_date && new Date(post.created_at).toLocaleDateString("ko-KR")}
+              </p>
+            )}
           </div>
         </Link>
       ))}

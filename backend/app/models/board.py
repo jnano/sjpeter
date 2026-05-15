@@ -21,6 +21,13 @@ class Board(Base):
     show_in_menu = Column(Boolean, default=True)            # True: 헤더 메뉴에 자동 노출
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
     kind = Column(String(20), default="default", nullable=False)  # 'default' | 'line' (한 줄 메시지)
+    # 게시판 목록 표시 컬럼 토글 (admin 제어, v1.5.120)
+    list_show_number = Column(Boolean, nullable=False, default=False)
+    list_show_author = Column(Boolean, nullable=False, default=True)
+    list_show_date = Column(Boolean, nullable=False, default=True)
+    list_show_views = Column(Boolean, nullable=False, default=True)
+    list_show_likes = Column(Boolean, nullable=False, default=False)
+    list_show_comments = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     posts = relationship("Post", back_populates="board", cascade="all, delete-orphan")

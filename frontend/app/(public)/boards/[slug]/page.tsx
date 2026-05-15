@@ -43,6 +43,12 @@ interface Board {
   moderator_id: number | null;
   posts_per_page: number;
   kind: string;
+  list_show_number: boolean;
+  list_show_author: boolean;
+  list_show_date: boolean;
+  list_show_views: boolean;
+  list_show_likes: boolean;
+  list_show_comments: boolean;
 }
 
 async function getBoard(slug: string): Promise<Board | null> {
@@ -305,6 +311,14 @@ export default async function BoardPage({
           currentPage={page}
           totalPages={totalPages}
           currentView={currentView}
+          cols={{
+            list_show_number: board.list_show_number ?? false,
+            list_show_author: board.list_show_author ?? true,
+            list_show_date: board.list_show_date ?? true,
+            list_show_views: board.list_show_views ?? true,
+            list_show_likes: board.list_show_likes ?? false,
+            list_show_comments: board.list_show_comments ?? true,
+          }}
           currentQ={q}
           currentSort={sort}
           currentCategory={category}
