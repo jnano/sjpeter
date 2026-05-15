@@ -379,7 +379,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                   }}
                   placeholder="기도문·공지·주보 검색"
                   aria-label="검색어"
-                  className="w-[181px] lg:w-[231px] pl-8 pr-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)] focus:bg-white transition-colors"
+                  className="w-[177px] lg:w-[226px] pl-8 pr-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)] focus:bg-white transition-colors"
                 />
               </div>
             </form>
