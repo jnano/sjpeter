@@ -208,6 +208,17 @@ function WeekRow({
         );
       })}
 
+      {/* lane row 영역의 column 세로선 — 멀티데이 스팬이 없는 컬럼에서도 세로 그리드 선 유지.
+          z-index 음수로 멀티데이 바 아래에 둠. */}
+      {laneCount > 0 && Array.from({ length: 7 }).map((_, i) => (
+        <div
+          key={`vline-${i}`}
+          aria-hidden
+          style={{ gridRow: `2 / span ${laneCount}`, gridColumn: i + 1 }}
+          className={`pointer-events-none ${i < 6 ? "border-r border-[var(--color-border)]" : ""}`}
+        />
+      ))}
+
       {spans.map(span => (
         <button
           key={`s${span.event.id}-${span.lane}`}
@@ -219,7 +230,7 @@ function WeekRow({
             marginRight: span.isEnd ? 2 : 0,
           }}
           onClick={() => onSelect(span.event)}
-          className={`my-0.5 h-5 px-1.5 text-[10px] leading-5 font-medium truncate text-left
+          className={`relative my-0.5 h-5 px-1.5 text-[10px] leading-5 font-medium truncate text-left
             ${span.isStart ? "rounded-l-sm" : "rounded-l-none"}
             ${span.isEnd ? "rounded-r-sm" : "rounded-r-none"}
             ${barStyle(span.event)}`}
