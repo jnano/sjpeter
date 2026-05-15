@@ -258,8 +258,10 @@ export default function PostDetail({
   }, []);
 
   const isAdmin = !!adminToken;
-  // admin 토큰 우선, 그 외 회원 세션 토큰 사용
+  // 글 수정·삭제·첨부 — admin 토큰 우선
   const authHeader = { Authorization: `Bearer ${adminToken ?? session?.accessToken ?? ""}` };
+  // 댓글·좋아요는 백엔드가 회원 인증만 허용 — admin 토큰 거부됨(403)
+  const memberAuthHeader = { Authorization: `Bearer ${session?.accessToken ?? ""}` };
   const myId = session?.memberId ?? null;
 
   async function toggleLike() {
@@ -272,7 +274,7 @@ export default function PostDetail({
     try {
       const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/like`, {
         method: "POST",
-        headers: authHeader,
+        headers: memberAuthHeader,
       });
       if (res.ok) {
         const data = await res.json();
@@ -295,7 +297,7 @@ export default function PostDetail({
     try {
       const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/comments`, {
         method: "POST",
-        headers: { ...authHeader, "Content-Type": "application/json" },
+        headers: { ...memberAuthHeader, "Content-Type": "application/json" },
         body: JSON.stringify({ content: newComment }),
       });
       if (res.ok) {
@@ -314,7 +316,7 @@ export default function PostDetail({
     try {
       const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/comments`, {
         method: "POST",
-        headers: { ...authHeader, "Content-Type": "application/json" },
+        headers: { ...memberAuthHeader, "Content-Type": "application/json" },
         body: JSON.stringify({ content: replyContent, parent_id: parentId }),
       });
       if (res.ok) {
@@ -345,7 +347,7 @@ export default function PostDetail({
       `${API}/api/boards/${slug}/posts/${post.id}/comments/${commentId}`,
       {
         method: "PUT",
-        headers: { ...authHeader, "Content-Type": "application/json" },
+        headers: { ...memberAuthHeader, "Content-Type": "application/json" },
         body: JSON.stringify({ content: editContent.trim() }),
       }
     );
@@ -360,7 +362,7 @@ export default function PostDetail({
     if (!confirm("댓글을 삭제하시겠습니까?")) return;
     const res = await fetch(
       `${API}/api/boards/${slug}/posts/${post.id}/comments/${commentId}`,
-      { method: "DELETE", headers: authHeader }
+      { method: "DELETE", headers: memberAuthHeader }
     );
     if (res.ok) {
       setComments((prev) =>
