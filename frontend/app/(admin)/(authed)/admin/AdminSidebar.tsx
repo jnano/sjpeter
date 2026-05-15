@@ -47,7 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "신부님·수녀님",
     icon: "👤",
     items: [
-      { href: "/admin/parish-staff", label: "주임 신부님" },
+      { href: "/admin/parish-staff", label: "사목자" },
       { href: "/admin/pastors", label: "역대 신부님·수녀님" },
       { href: "/admin/priests", label: "본당 출신 사제" },
     ],
