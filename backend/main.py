@@ -471,6 +471,14 @@ def _migrate_add_columns():
         except Exception:
             pass
         try:
+            # object-position 값. 'center' 디폴트. 9방향 중 하나.
+            conn.execute(text(
+                "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS "
+                "sidebar_image_position VARCHAR(20) NOT NULL DEFAULT 'center'"
+            ))
+        except Exception:
+            pass
+        try:
             conn.execute(text(
                 "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES menu_items(id) ON DELETE CASCADE"
             ))

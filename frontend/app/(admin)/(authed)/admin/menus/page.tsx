@@ -34,11 +34,25 @@ interface MenuGroup {
   sidebar_image_url: string | null;
   sidebar_width_px: number;
   sidebar_height_px: number | null;
+  sidebar_image_position: string;
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;
   items: MenuItem[];
 }
+
+// 9방향 object-position 그리드 (3x3)
+const IMAGE_POSITIONS: { value: string; row: number; col: number; label: string }[] = [
+  { value: "top left",      row: 0, col: 0, label: "↖" },
+  { value: "top",           row: 0, col: 1, label: "↑" },
+  { value: "top right",     row: 0, col: 2, label: "↗" },
+  { value: "left",          row: 1, col: 0, label: "←" },
+  { value: "center",        row: 1, col: 1, label: "•" },
+  { value: "right",         row: 1, col: 2, label: "→" },
+  { value: "bottom left",   row: 2, col: 0, label: "↙" },
+  { value: "bottom",        row: 2, col: 1, label: "↓" },
+  { value: "bottom right",  row: 2, col: 2, label: "↘" },
+];
 
 interface StaticPage {
   slug: string;
@@ -444,13 +458,56 @@ export default function AdminMenusPage() {
               <div className="border-t border-gray-100 pt-3 mt-3">
                 <label className="block text-xs text-gray-600 mb-2">사이드바 상단 이미지</label>
                 {selectedGroup.sidebar_image_url ? (
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 flex-wrap">
+                    {/* 미리보기 — 실제 박스 비율과 동일하게 보이도록 height_px가 있으면 그 비율 반영 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={selectedGroup.sidebar_image_url.startsWith("/uploads/") ? `${API}${selectedGroup.sidebar_image_url}` : selectedGroup.sidebar_image_url}
                       alt=""
-                      className="w-28 aspect-[5/4] object-cover rounded border border-gray-200"
+                      className={`w-28 object-cover rounded border border-gray-200 ${
+                        selectedGroup.sidebar_height_px && selectedGroup.sidebar_height_px > 0
+                          ? ""
+                          : "aspect-[5/4]"
+                      }`}
+                      style={{
+                        objectPosition: selectedGroup.sidebar_image_position || "center",
+                        ...(selectedGroup.sidebar_height_px && selectedGroup.sidebar_height_px > 0
+                          ? {
+                              height: `${
+                                (selectedGroup.sidebar_height_px / selectedGroup.sidebar_width_px) * 112
+                              }px`,
+                            }
+                          : {}),
+                      }}
                     />
+
+                    {/* 9방향 위치 선택 그리드 */}
+                    <div>
+                      <p className="text-[11px] text-gray-500 mb-1">이미지 위치</p>
+                      <div className="grid grid-cols-3 gap-0.5 w-[84px]">
+                        {IMAGE_POSITIONS.map((p) => {
+                          const active = (selectedGroup.sidebar_image_position || "center") === p.value;
+                          return (
+                            <button
+                              key={p.value}
+                              type="button"
+                              onClick={() => updateGroup(selectedGroup, { sidebar_image_position: p.value })}
+                              title={p.value}
+                              aria-label={`이미지 위치 ${p.value}`}
+                              aria-pressed={active}
+                              className={`w-7 h-7 text-xs flex items-center justify-center rounded border transition-colors ${
+                                active
+                                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div className="flex flex-col gap-2">
                       <button onClick={() => fileRef.current?.click()} className="text-xs px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50">교체</button>
                       <button onClick={deleteSidebarImage} className="text-xs px-3 py-1.5 border border-red-300 text-red-600 rounded hover:bg-red-50">제거</button>

@@ -14,6 +14,7 @@ class MenuGroup(Base):
     sidebar_image_url = Column(String(500))                      # 사이드바 상단 이미지
     sidebar_width_px = Column(Integer, default=220)              # 사이드바 폭
     sidebar_height_px = Column(Integer, nullable=True)           # 사이드바 이미지 높이 (NULL=자동 비율)
+    sidebar_image_position = Column(String(20), nullable=False, default="center")  # object-position
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     show_in_header = Column(Boolean, default=True)               # FALSE면 헤더 dropdown 안 나옴 (사이드바 전용)

@@ -17,6 +17,8 @@ interface Props {
   widthPx?: number;
   /** 사이드바 상단 이미지 높이(px). undefined면 자동 비율(aspect-[5/4]). */
   heightPx?: number;
+  /** object-position 값 ("center", "top left" 등). 디폴트 "center". */
+  imagePosition?: string;
   items: MenuItem[];      // 트리 구조 (children 포함)
 }
 
@@ -34,7 +36,7 @@ function findActiveTopLevel(items: MenuItem[], pathname: string): MenuItem | nul
   return null;
 }
 
-export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, items }: Props) {
+export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, imagePosition, items }: Props) {
   const pathname = usePathname();
   const archiveCounts = useArchiveCounts();
 
@@ -217,7 +219,8 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
       </nav>
 
       {/* 데스크톱: 이미지 + 트리 (자동 펼침)
-          heightPx 지정 시 그 높이로 고정(+ object-cover), 미지정 시 aspect-[5/4] */}
+          heightPx 지정 시 그 높이로 고정(+ object-cover), 미지정 시 aspect-[5/4]
+          imagePosition으로 박스 안에서 보여질 영역 선택 (디폴트 'center') */}
       {resolvedImage && (
         <div
           className={`relative w-full rounded-lg overflow-hidden mb-5 hidden md:block ${
@@ -230,6 +233,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             alt={imageAlt ?? groupTitle}
             fill
             className="object-cover"
+            style={{ objectPosition: imagePosition || "center" }}
             sizes={`${widthPx}px`}
           />
         </div>
