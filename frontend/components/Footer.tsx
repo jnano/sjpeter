@@ -108,7 +108,7 @@ export default async function Footer() {
   }));
 
   return (
-    <footer className="bg-white border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
+    <footer className="bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
