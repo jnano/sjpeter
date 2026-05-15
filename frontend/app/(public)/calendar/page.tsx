@@ -367,6 +367,16 @@ function WeekView({
 
       {/* 본문: 멀티데이 스패닝 + 단일 이벤트 */}
       <div className="grid grid-cols-7" style={{ gridTemplateRows: gridRows }}>
+        {/* lane row 영역의 column 세로선 유지 — 멀티데이 스팬 없는 컬럼에서도 세로선 표시 */}
+        {laneCount > 0 && Array.from({ length: 7 }).map((_, i) => (
+          <div
+            key={`vline-${i}`}
+            aria-hidden
+            style={{ gridRow: `1 / span ${laneCount}`, gridColumn: i + 1 }}
+            className={`pointer-events-none ${i < 6 ? "border-r border-[var(--color-border)]" : ""}`}
+          />
+        ))}
+
         {spans.map(span => (
           <button
             key={`s${span.event.id}-${span.lane}`}
@@ -378,7 +388,7 @@ function WeekView({
               marginRight: span.isEnd ? 4 : 0,
             }}
             onClick={() => onSelect(span.event)}
-            className={`my-1 h-5 px-2 text-[11px] leading-5 font-medium truncate text-left
+            className={`relative my-1 h-5 px-2 text-[11px] leading-5 font-medium truncate text-left
               ${span.isStart ? "rounded-l-md" : "rounded-l-none"}
               ${span.isEnd ? "rounded-r-md" : "rounded-r-none"}
               ${barStyle(span.event)}`}
