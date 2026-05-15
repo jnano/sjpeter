@@ -121,7 +121,7 @@ const PEEK_TRIGGER_WIDTH_PX = 12;
 const PEEK_OPEN_DELAY_MS = 200;
 const PEEK_CLOSE_DELAY_MS = 300;
 
-const OPEN_GROUPS_KEY = "admin_sidebar_open_groups";
+const OPEN_GROUP_KEY = "admin_sidebar_open_group";
 const OPEN_SUBGROUPS_KEY = "admin_sidebar_open_subgroups";
 
 function parseStored(key: string): Set<string> {
@@ -149,23 +149,24 @@ export default function AdminSidebar({
   const [extractionCount, setExtractionCount] = useState(0);
   const [visionCount, setVisionCount] = useState(0);
 
-  // 열림 상태 — localStorage 영속. 기본은 모두 닫힘
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  // 대분류는 accordion — 한 번에 하나만 열림. 중분류는 독립.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [openSubGroups, setOpenSubGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!mounted) return;
-    setOpenGroups(parseStored(OPEN_GROUPS_KEY));
+    try {
+      const saved = localStorage.getItem(OPEN_GROUP_KEY);
+      setOpenGroup(saved && saved.length > 0 ? saved : null);
+    } catch {}
     setOpenSubGroups(parseStored(OPEN_SUBGROUPS_KEY));
   }, [mounted]);
 
   function toggleGroup(label: string) {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+    setOpenGroup((prev) => {
+      const next = prev === label ? null : label;
       try {
-        localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify([...next]));
+        localStorage.setItem(OPEN_GROUP_KEY, next ?? "");
       } catch {}
       return next;
     });
@@ -411,7 +412,7 @@ export default function AdminSidebar({
 
           {/* 그룹별 메뉴 */}
           {NAV_GROUPS.map((g) => {
-            const open = openGroups.has(g.label);
+            const open = openGroup === g.label;
             const headerId = `admin-group-${g.label}`;
             return (
               <div key={g.label} className="mb-1">
