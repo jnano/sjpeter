@@ -1233,6 +1233,38 @@ function ChangelogTab() {
     인프라: "bg-gray-100 text-gray-700",
   };
 
+  // 날짜별 그룹화 — CHANGELOG는 최신순이라 등장 순서대로 그룹 키 유지
+  const groups: { date: string; versions: typeof CHANGELOG }[] = [];
+  for (const v of CHANGELOG) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === v.date) {
+      last.versions.push(v);
+    } else {
+      groups.push({ date: v.date, versions: [v] });
+    }
+  }
+
+  // 가장 최근 날짜만 디폴트로 펼침. 사용자가 토글 가능.
+  const [openDates, setOpenDates] = useState<Set<string>>(
+    () => new Set(groups[0] ? [groups[0].date] : []),
+  );
+
+  function toggle(date: string) {
+    setOpenDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
+
+  function expandAll() {
+    setOpenDates(new Set(groups.map((g) => g.date)));
+  }
+  function collapseAll() {
+    setOpenDates(new Set());
+  }
+
   return (
     <div className="space-y-1">
       <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-3 text-xs text-[var(--color-text)] space-y-1">
@@ -1246,38 +1278,108 @@ function ChangelogTab() {
           새 항목은 <code className="font-mono">frontend/app/admin/docs/page.tsx</code> 상단 <code className="font-mono">CHANGELOG</code> 배열 맨 앞에 추가하세요.
         </p>
       </div>
-      {CHANGELOG.map((v, i) => (
-        <div key={v.version} className="flex gap-4">
-          {/* 타임라인 선 */}
-          <div className="flex flex-col items-center">
-            <div className={`w-3 h-3 rounded-full border-2 mt-1 ${i === 0 ? "bg-[var(--color-primary)] border-[var(--color-primary)]" : "bg-white border-[var(--color-border-dark)]"}`} />
-            {i < CHANGELOG.length - 1 && <div className="w-px flex-1 bg-[var(--color-border)] mt-1" />}
-          </div>
-          {/* 내용 */}
-          <div className="pb-6 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`text-base font-bold ${i === 0 ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"}`}>
-                v{v.version}
-              </span>
-              {i === 0 && (
-                <span className="rounded-full bg-[var(--color-primary)] text-white text-[11px] px-2 py-0.5 font-semibold">
-                  최신
-                </span>
+
+      {/* 전체 펼치기/접기 */}
+      <div className="flex items-center justify-end gap-3 mb-2 text-xs">
+        <button
+          type="button"
+          onClick={expandAll}
+          className="text-[var(--color-primary)] hover:underline"
+        >
+          모두 펼치기
+        </button>
+        <span className="text-[var(--color-border-dark)]">·</span>
+        <button
+          type="button"
+          onClick={collapseAll}
+          className="text-[var(--color-text-muted)] hover:underline"
+        >
+          모두 접기
+        </button>
+      </div>
+
+      {/* 날짜별 그룹 */}
+      <div className="space-y-2">
+        {groups.map((g, gi) => {
+          const open = openDates.has(g.date);
+          const totalItems = g.versions.reduce((sum, v) => sum + v.items.length, 0);
+          return (
+            <section
+              key={g.date}
+              className="rounded-lg border border-[var(--color-border)] bg-white overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => toggle(g.date)}
+                aria-expanded={open}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--color-surface-warm)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3 flex-wrap min-w-0">
+                  <span className="font-mono text-sm font-semibold text-[var(--color-text)]">
+                    {g.date}
+                  </span>
+                  {gi === 0 && (
+                    <span className="rounded-full bg-[var(--color-primary)] text-white text-[10px] px-1.5 py-0.5 font-semibold">
+                      최신
+                    </span>
+                  )}
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    v{g.versions[g.versions.length - 1].version} ~ v{g.versions[0].version}
+                  </span>
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    · {g.versions.length}개 버전 · {totalItems}개 항목
+                  </span>
+                </div>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "" : "-rotate-90"}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {open && (
+                <div className="px-4 pb-4 pt-1 border-t border-[var(--color-border)]">
+                  {g.versions.map((v, vi) => (
+                    <div key={v.version} className="flex gap-4">
+                      {/* 타임라인 선 */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-3 h-3 rounded-full border-2 mt-1 ${gi === 0 && vi === 0 ? "bg-[var(--color-primary)] border-[var(--color-primary)]" : "bg-white border-[var(--color-border-dark)]"}`} />
+                        {vi < g.versions.length - 1 && <div className="w-px flex-1 bg-[var(--color-border)] mt-1" />}
+                      </div>
+                      {/* 내용 */}
+                      <div className="pb-4 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className={`text-base font-bold ${gi === 0 && vi === 0 ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"}`}>
+                            v{v.version}
+                          </span>
+                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${tagColor[v.tag]}`}>{v.tag}</span>
+                        </div>
+                        <ul className="space-y-1">
+                          {v.items.map((item) => (
+                            <li key={item} className="flex items-start gap-2 text-sm">
+                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)] shrink-0" />
+                              <span className="text-[var(--color-text)]">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-              <span className={`rounded px-2 py-0.5 text-xs font-medium ${tagColor[v.tag]}`}>{v.tag}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">{v.date}</span>
-            </div>
-            <ul className="space-y-1">
-              {v.items.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)] shrink-0" />
-                  <span className="text-[var(--color-text)]">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ))}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
