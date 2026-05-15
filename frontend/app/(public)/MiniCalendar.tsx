@@ -67,7 +67,7 @@ export default function MiniCalendar() {
         >
           ‹
         </button>
-        <h3 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px]">
+        <h3 className="font-serif font-bold text-[var(--color-primary)] text-[13px]">
           {year}년 {month}월
         </h3>
         <button
@@ -85,7 +85,7 @@ export default function MiniCalendar() {
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
-              className={`text-center text-[11px] font-medium py-1 ${
+              className={`text-center text-[12px] font-medium py-1 ${
                 i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"
               }`}
             >
@@ -107,9 +107,9 @@ export default function MiniCalendar() {
                 className="relative flex items-center justify-center rounded-md hover:bg-[var(--color-surface-warm)] transition-colors group"
               >
                 <span
-                  className={`text-[12.5px] ${
+                  className={`text-[13px] ${
                     isToday
-                      ? "bg-[var(--color-primary)] text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11.5px]"
+                      ? "bg-[var(--color-primary)] text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-[12px]"
                       : dow === 0
                       ? "text-red-500"
                       : dow === 6
@@ -132,7 +132,7 @@ export default function MiniCalendar() {
       <div className="border-t border-[var(--color-border)] px-4 py-2 text-right">
         <Link
           href="/calendar"
-          className="text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+          className="text-[12px] font-medium text-[var(--color-primary)] hover:underline"
         >
           전체 일정 →
         </Link>

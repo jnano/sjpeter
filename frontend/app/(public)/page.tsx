@@ -187,7 +187,7 @@ export default async function HomePage() {
   const gospelCardEl = (
     <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
       <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
+        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
           <span className="text-[var(--color-accent)]">✝</span>
           오늘의 복음
         </h2>
@@ -200,7 +200,7 @@ export default async function HomePage() {
       {gospel?.gospel_text ? (
         <>
           <blockquote
-            className="text-[12px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
+            className="text-[13px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
             style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
           >
             &ldquo;{gospel.gospel_text}&rdquo;
@@ -218,7 +218,7 @@ export default async function HomePage() {
           </Link>
         </>
       ) : (
-        <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+        <p className="text-[13px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
           오늘의 말씀을 불러오는 중입니다…
         </p>
       )}
@@ -232,13 +232,13 @@ export default async function HomePage() {
   const massCardEl = (
     <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
       <div className="mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
-        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[12.5px] flex items-center gap-1.5">
+        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
           <span className="text-[var(--color-accent)]">⏰</span>
           미사 시간
         </h2>
       </div>
       {massRows.length > 0 ? (
-        <table className="text-[12px] w-full flex-1">
+        <table className="text-[13px] w-full flex-1">
           <tbody>
             {massRows.map((row) => (
               <tr key={row.label} className="align-top">
@@ -253,12 +253,12 @@ export default async function HomePage() {
           </tbody>
         </table>
       ) : (
-        <p className="text-[12px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+        <p className="text-[13px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
           미사 시간 정보가 없습니다.
         </p>
       )}
       {parish?.mass_schedule?.note && (
-        <p className="text-[10.5px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
           ※ {parish.mass_schedule.note}
         </p>
       )}

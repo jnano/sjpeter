@@ -92,7 +92,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
           <div className="flex items-center text-[var(--color-text-muted)] min-w-0">
             {season && (
               <span
-                className="flex items-center gap-1.5 text-xs"
+                className="flex items-center gap-1.5 text-[13px]"
                 title={`현재 전례 시기: ${SEASON_LABELS_KO[season]}`}
               >
                 <span
