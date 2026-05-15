@@ -114,6 +114,17 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
 }
 
 export default function BoardList({ posts, slug, currentPage, totalPages, currentView, cols, currentQ, currentSort, currentCategory }: Props) {
+  // 글 상세 → 삭제·뒤로 돌아갈 때 현재 페이지·필터를 복원하기 위해 링크에 from= 첨부
+  function detailHref(postId: number) {
+    const qp = new URLSearchParams();
+    if (currentPage > 1) qp.set("page", String(currentPage));
+    if (currentView && currentView !== "list") qp.set("view", currentView);
+    if (currentQ) qp.set("q", currentQ);
+    if (currentSort && currentSort !== "latest") qp.set("sort", currentSort);
+    if (currentCategory) qp.set("category", currentCategory);
+    const qs = qp.toString();
+    return `/boards/${slug}/${postId}${qs ? `?from=${encodeURIComponent(qs)}` : ""}`;
+  }
   return (
     <>
       {posts.length === 0 ? (
@@ -121,9 +132,9 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
           아직 작성된 글이 없습니다. 첫 번째 글을 남겨보세요.
         </div>
       ) : currentView === "list" ? (
-        <ListView posts={posts} slug={slug} cols={cols} />
+        <ListView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
       ) : (
-        <PhotoView posts={posts} slug={slug} cols={cols} />
+        <PhotoView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
       )}
 
       {totalPages > 1 && (
@@ -141,7 +152,7 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
   );
 }
 
-function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: BoardCols }) {
+function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
   // kind='default' 게시판의 표준 글 목록 — 한 줄 텍스트 리스트.
   // 사진 그리드가 필요하면 board.kind='gallery' 로 두고 /gallery/{slug} 사용.
   return (
@@ -149,7 +160,7 @@ function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: Bo
       {posts.map((post, i) => (
         <Link
           key={post.id}
-          href={`/boards/${slug}/${post.id}`}
+          href={hrefFor(post.id)}
           className="flex items-baseline justify-between gap-3 py-3.5 group hover:text-[var(--color-primary)] transition-colors"
         >
           <span className="flex items-baseline gap-1.5 flex-1 min-w-0">
@@ -194,13 +205,13 @@ function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: Bo
   );
 }
 
-function PhotoView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: BoardCols }) {
+function PhotoView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {posts.map((post) => (
         <Link
           key={post.id}
-          href={`/boards/${slug}/${post.id}`}
+          href={hrefFor(post.id)}
           className="group rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all"
         >
           {post.thumbnail_url ? (

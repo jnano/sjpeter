@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MarkdownContent from "@/components/MarkdownContent";
 
@@ -230,6 +230,12 @@ export default function PostDetail({
 }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // 목록에서 from=encoded(qs) 를 받아 삭제·취소 시 그 페이지·필터로 복귀
+  const backToListHref = (() => {
+    const from = searchParams?.get("from");
+    return from ? `/boards/${slug}?${from}` : `/boards/${slug}`;
+  })();
   const [comments, setComments] = useState<Comment[]>(post.comments);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -373,7 +379,7 @@ export default function PostDetail({
     });
     if (res.ok) {
       router.refresh();
-      router.push(`/boards/${slug}`);
+      router.push(backToListHref);
     }
   }
 
@@ -465,7 +471,7 @@ export default function PostDetail({
           </>
         )}
         <Link
-          href={`/boards/${slug}`}
+          href={backToListHref}
           className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
         >
           목록으로
