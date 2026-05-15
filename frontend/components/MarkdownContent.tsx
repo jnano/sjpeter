@@ -21,7 +21,7 @@ export default function MarkdownContent({ content, size = "sm" }: Props) {
       prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded prose-code:text-sm
       prose-pre:bg-gray-100 prose-pre:rounded-lg prose-pre:overflow-x-auto
       prose-img:rounded-lg prose-img:border prose-img:border-[var(--color-border)]
-      prose-hr:border-[var(--color-border)]">
+      prose-hr:border-[var(--color-border)]`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
