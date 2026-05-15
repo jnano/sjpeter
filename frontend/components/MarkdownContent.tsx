@@ -7,6 +7,47 @@ interface Props {
   size?: "sm" | "base";
 }
 
+/** YouTube URL 에서 비디오 ID 추출. 인식 못 하면 null. */
+function youtubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
+    if (u.hostname.endsWith("youtube.com") || u.hostname.endsWith("youtube-nocookie.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      if (u.pathname.startsWith("/embed/")) return u.pathname.slice("/embed/".length);
+      if (u.pathname.startsWith("/shorts/")) return u.pathname.slice("/shorts/".length);
+    }
+    return null;
+  } catch { return null; }
+}
+
+/** Naver TV URL 에서 비디오 ID 추출. 인식 못 하면 null. */
+function naverTvId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "tv.naver.com") {
+      const m = u.pathname.match(/^\/(?:v|embed)\/(\d+)/);
+      return m ? m[1] : null;
+    }
+    return null;
+  } catch { return null; }
+}
+
+function VideoEmbed({ src, title }: { src: string; title: string }) {
+  return (
+    <div className="my-4 relative w-full aspect-video rounded-lg overflow-hidden border border-[var(--color-border)]">
+      <iframe
+        src={src}
+        title={title}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        loading="lazy"
+        className="absolute inset-0 w-full h-full"
+      />
+    </div>
+  );
+}
+
 export default function MarkdownContent({ content, size = "sm" }: Props) {
   const proseSize = size === "base" ? "prose-base" : "prose-sm";
   return (
@@ -29,6 +70,25 @@ export default function MarkdownContent({ content, size = "sm" }: Props) {
             if (!src) return null;
             // eslint-disable-next-line @next/next/no-img-element
             return <img src={src} alt={alt ?? ""} className="rounded-lg border border-[var(--color-border)]" />;
+          },
+          // YouTube / Naver TV URL 을 자동 iframe 임베드. 텍스트가 URL 과 같을 때(자동 링크)만 변환.
+          a({ href, children }) {
+            const url = typeof href === "string" ? href : "";
+            const sole = Array.isArray(children) && children.length === 1
+              ? String(children[0])
+              : typeof children === "string" ? children : "";
+            const isAutoLink = sole === url;
+            if (url && isAutoLink) {
+              const yt = youtubeId(url);
+              if (yt) return <VideoEmbed src={`https://www.youtube.com/embed/${yt}`} title="YouTube video" />;
+              const nv = naverTvId(url);
+              if (nv) return <VideoEmbed src={`https://tv.naver.com/embed/${nv}`} title="Naver TV video" />;
+            }
+            return (
+              <a href={url} target={url.startsWith("http") ? "_blank" : undefined} rel={url.startsWith("http") ? "noopener noreferrer" : undefined}>
+                {children}
+              </a>
+            );
           },
         }}
       >
