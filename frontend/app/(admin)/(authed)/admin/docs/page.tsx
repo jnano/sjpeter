@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.92";
+export const CURRENT_VERSION = "1.5.94";
 export const LAST_UPDATED = "2026-05-15";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-15";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.94", date: "2026-05-15", tag: "기능",
+    items: ["/admin/docs 변경 이력을 날짜별 그룹화 + 접기/펼치기 (모두 펼치기·접기 단축 버튼 포함)"],
+  },
+  {
+    version: "1.5.93", date: "2026-05-15", tag: "인프라",
+    items: ["/admin/docs 변경 이력을 v1.5.92 까지 갱신 (66개 항목 추가, prefix→tag 매핑)"],
+  },
   {
     version: "1.5.92", date: "2026-05-15", tag: "기능",
     items: ["전례 시기 자동 계산 + 자동/수동 모드 토글 — Gauss 알고리즘 부활절 기준, /admin/season 토글로 매일 자동 갱신"],
