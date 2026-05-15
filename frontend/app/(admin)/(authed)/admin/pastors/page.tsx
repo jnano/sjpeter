@@ -85,7 +85,7 @@ export default function AdminPastorsPage() {
     }
   }
 
-  // editId가 있고 이임일이 비어 있으면 "본당 가족으로 복원" 모드
+  // editId가 있고 이임일이 비어 있으면 "현재 사목자로 복원" 모드
   const isRestoreMode = editId !== null && !form.resigned_at;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -93,7 +93,7 @@ export default function AdminPastorsPage() {
     const token = getToken();
 
     if (isRestoreMode) {
-      if (!confirm(`${form.name} 님을 본당 가족으로 복원하시겠습니까?\n역대 사목자 목록에서는 사라지고 본당 가족 목록에 다시 등장합니다.`)) {
+      if (!confirm(`${form.name} 님을 현재 사목자로 복원하시겠습니까?\n역대 사목자 목록에서는 사라지고 현재 사목자 목록에 다시 등장합니다.`)) {
         return;
       }
       const res = await fetch(`${API}/api/archive/pastors/${editId}/restore-to-staff`, {
@@ -105,7 +105,7 @@ export default function AdminPastorsPage() {
         setMsg({ type: "err", text: d.detail || "복원에 실패했습니다." });
         return;
       }
-      setMsg({ type: "ok", text: "본당 가족으로 복원되었습니다." });
+      setMsg({ type: "ok", text: "현재 사목자로 복원되었습니다." });
       setShowForm(false);
       loadAfterMutation();
       return;
@@ -242,7 +242,7 @@ export default function AdminPastorsPage() {
                 className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]" />
               {editId && !form.resigned_at && (
                 <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                  ⚠ 비워서 저장하면 <strong>본당 가족으로 복원</strong>됩니다.
+                  ⚠ 비워서 저장하면 <strong>현재 사목자로 복원</strong>됩니다.
                 </p>
               )}
             </div>
@@ -262,7 +262,7 @@ export default function AdminPastorsPage() {
                   : "bg-[var(--color-primary)] hover:opacity-90"
               }`}
             >
-              {isRestoreMode ? "본당 가족으로 복원" : "저장"}
+              {isRestoreMode ? "현재 사목자로 복원" : "저장"}
             </button>
           </div>
         </form>

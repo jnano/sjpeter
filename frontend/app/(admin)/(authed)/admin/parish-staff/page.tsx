@@ -509,7 +509,7 @@ export default function AdminParishStaffPage() {
               : "bg-gray-900 text-white hover:bg-black"
           }`}
         >
-          {showNewForm ? "닫기" : "+ 본당 가족 등록"}
+          {showNewForm ? "닫기" : "+ 새 사목자 등록"}
         </button>
       </div>
 
@@ -526,7 +526,7 @@ export default function AdminParishStaffPage() {
               <h3 className="text-lg font-bold text-gray-900">역대 사목자로 이전</h3>
               <p className="text-sm text-gray-500 mt-1">
                 <strong>{editing.name}</strong> ({editing.role})을(를) 역대 사목자 목록으로 이전합니다.
-                이전 후 본당 가족 목록에서는 사라지고 /pastors 페이지에 표시됩니다.
+                이전 후 현재 사목자 목록에서는 사라지고 /pastors 페이지에 표시됩니다.
               </p>
             </div>
             <div className="space-y-3">
@@ -586,7 +586,7 @@ export default function AdminParishStaffPage() {
       {/* 목록 */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">등록된 본당 가족 ({list.length})</h2>
+          <h2 className="font-semibold text-gray-900">현재 재임 중인 사목자 ({list.length})</h2>
         </div>
         <BulkActionBar
           selectedCount={select.selectedCount}

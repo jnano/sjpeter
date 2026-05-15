@@ -189,12 +189,10 @@ export default async function SearchPage({
           <p className="text-sm text-[var(--color-text-muted)] mb-6">
             <span className="font-medium text-[var(--color-primary)]">&ldquo;{q}&rdquo;</span>
             {" "}검색 결과{" "}
-            {page === 1
-              ? `${(data.total + data.content_results.length).toLocaleString()}건`
-              : `${data.total.toLocaleString()}건`}
+            {`${data.total.toLocaleString()}건`}
           </p>
 
-          {data.content_results.length === 0 && data.results.length === 0 ? (
+          {data.results.length === 0 ? (
             <div className="text-center py-16 text-[var(--color-text-muted)]">
               <p className="text-4xl mb-4">🔍</p>
               <p>검색 결과가 없습니다.</p>
@@ -202,47 +200,9 @@ export default async function SearchPage({
             </div>
           ) : (
             <>
-              {/* 페이지 콘텐츠 결과 (page 1에만 표시) */}
-              {page === 1 && data.content_results.length > 0 && (
-                <section className="mb-6">
-                  <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 px-1">
-                    페이지 콘텐츠
-                  </h2>
-                  <ul className="divide-y divide-[var(--color-border)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-                    {data.content_results.map((item, i) => (
-                      <li key={i}>
-                        <Link
-                          href={item.url}
-                          className="group flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-warm)] transition-colors"
-                        >
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-medium shrink-0 mt-0.5">
-                            {item.label}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors mb-0.5">
-                              <HighlightText text={item.title} keyword={q} />
-                            </p>
-                            {item.excerpt && (
-                              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed line-clamp-1">
-                                <HighlightText text={item.excerpt} keyword={q} />
-                              </p>
-                            )}
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
               {/* 게시글 결과 */}
               {data.results.length > 0 && (
                 <section>
-                  {page === 1 && data.content_results.length > 0 && (
-                    <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 px-1">
-                      게시판 게시글
-                    </h2>
-                  )}
                   <ul className="divide-y divide-[var(--color-border)]">
                     {data.results.map((item) => (
                       <li key={item.id} className="py-5">
