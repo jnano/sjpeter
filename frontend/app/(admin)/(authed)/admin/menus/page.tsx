@@ -158,7 +158,10 @@ export default function AdminMenusPage() {
     const body = {
       key: merged.key, label: merged.label, subtitle: merged.subtitle,
       icon: merged.icon, sidebar_image_url: merged.sidebar_image_url,
-      sidebar_width_px: merged.sidebar_width_px, sort_order: merged.sort_order,
+      sidebar_width_px: merged.sidebar_width_px,
+      sidebar_height_px: merged.sidebar_height_px,
+      sidebar_image_position: merged.sidebar_image_position,
+      sort_order: merged.sort_order,
       is_active: merged.is_active, show_in_header: merged.show_in_header,
     };
     const res = await fetch(`${API}/api/menus/groups/${g.id}`, {
