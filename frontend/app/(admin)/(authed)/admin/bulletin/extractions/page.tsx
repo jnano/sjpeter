@@ -34,6 +34,8 @@ interface Board {
   slug: string;
 }
 
+const ALL_KINDS = ["묵상", "지표", "공지", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"] as const;
+
 export default function ExtractionsPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -44,7 +46,18 @@ export default function ExtractionsPage() {
   const [selectedBoard, setSelectedBoard] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<Record<number, boolean>>({});
+  const [bulkProcessing, setBulkProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+
+  // 다중 선택·필터
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [filterKind, setFilterKind] = useState<string>("all");
+  // 인라인 편집 — extraction id → 편집 중인 필드들
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{ title: string; content: string; event_date: string; location: string }>({
+    title: "", content: "", event_date: "", location: "",
+  });
 
   const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
 
@@ -134,6 +147,66 @@ export default function ExtractionsPage() {
     }
   }
 
+  async function bulkApprove() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setError(""); setInfo("");
+    setBulkProcessing(true);
+    try {
+      const res = await fetch(`${API}/api/bulletins/extractions/bulk-approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ extraction_ids: ids }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "일괄 승인 실패");
+      const result: { approved: number[]; skipped: { id: number; reason: string }[]; failed: { id: number; reason: string }[] } = await res.json();
+      // 승인된 항목은 다시 로드 (status·created_*_id 갱신)
+      await loadExtractions();
+      setSelectedIds(new Set());
+      notify(DataEvent.EXTRACTIONS_COUNT);
+      const parts = [`승인 ${result.approved.length}`];
+      if (result.skipped.length) parts.push(`건너뜀 ${result.skipped.length} (지표 또는 처리됨)`);
+      if (result.failed.length) parts.push(`실패 ${result.failed.length}`);
+      setInfo(parts.join(" · "));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "일괄 승인에 실패했습니다.");
+    } finally {
+      setBulkProcessing(false);
+    }
+  }
+
+  async function startEdit(ext: Extraction) {
+    setEditingId(ext.id);
+    setEditForm({
+      title: ext.title ?? "",
+      content: ext.content ?? "",
+      event_date: ext.event_date ?? "",
+      location: ext.location ?? "",
+    });
+  }
+
+  async function saveEdit(extId: number) {
+    setError("");
+    try {
+      const body: Record<string, string | null> = {};
+      body.title = editForm.title;
+      body.content = editForm.content;
+      body.event_date = editForm.event_date || null;
+      body.location = editForm.location;
+      const res = await fetch(`${API}/api/bulletins/extractions/${extId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "편집 저장 실패");
+      const updated: Extraction = await res.json();
+      setExtractions((prev) => prev.map((e) => (e.id === extId ? updated : e)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "편집 저장에 실패했습니다.");
+    }
+  }
+
   async function reject(extId: number) {
     setProcessing((p) => ({ ...p, [extId]: true }));
     try {
@@ -152,8 +225,40 @@ export default function ExtractionsPage() {
     }
   }
 
-  const pending = extractions.filter((e) => e.status === "pending");
+  const allPending = extractions.filter((e) => e.status === "pending");
+  const pending = filterKind === "all"
+    ? allPending
+    : allPending.filter((e) => (e.event_type ?? "기타") === filterKind);
   const done = extractions.filter((e) => e.status !== "pending");
+
+  // 카테고리별 카운트 (검토 대기 중)
+  const kindCounts: Record<string, number> = { all: allPending.length };
+  for (const k of ALL_KINDS) kindCounts[k] = allPending.filter((e) => (e.event_type ?? "기타") === k).length;
+
+  const allSelected = pending.length > 0 && pending.every((e) => selectedIds.has(e.id));
+  function toggleAll() {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const e of pending) next.delete(e.id);
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const e of pending) next.add(e.id);
+        return next;
+      });
+    }
+  }
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   if (loading) {
     return (
@@ -182,6 +287,11 @@ export default function ExtractionsPage() {
             {error}
           </div>
         )}
+        {info && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm px-4 py-3 rounded-lg">
+            {info}
+          </div>
+        )}
 
         {extractions.length === 0 && (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center text-[var(--color-text-muted)]">
@@ -189,26 +299,141 @@ export default function ExtractionsPage() {
           </div>
         )}
 
+        {/* 카테고리 필터 칩 */}
+        {allPending.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setFilterKind("all")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                filterKind === "all"
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "bg-white border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+              }`}
+            >
+              전체 ({kindCounts.all})
+            </button>
+            {ALL_KINDS.map((k) => kindCounts[k] > 0 && (
+              <button
+                key={k}
+                onClick={() => setFilterKind(k)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  filterKind === k
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "bg-white border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                }`}
+              >
+                {k} ({kindCounts[k]})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 일괄 액션 바 */}
+        {pending.length > 0 && (
+          <div className="bg-white border border-[var(--color-border)] rounded-lg px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                className="accent-[var(--color-primary)]"
+              />
+              <span className="text-[var(--color-text)]">
+                전체 선택 ({selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : `${pending.length}개`})
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={bulkApprove}
+                disabled={selectedIds.size === 0 || bulkProcessing}
+                className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {bulkProcessing ? "처리 중…" : "선택 항목 일괄 승인 (자동 라우팅)"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 승인 대기 */}
         {pending.length > 0 && (
           <section>
             <h2 className="font-serif font-bold text-[var(--color-primary)] mb-3">
-              검토 대기 ({pending.length}건)
+              검토 대기 ({pending.length}건{filterKind !== "all" ? ` / 전체 ${allPending.length}건` : ""})
             </h2>
             <div className="space-y-4">
               {pending.map((ext) => (
-                <ExtractionCard
-                  key={ext.id}
-                  ext={ext}
-                  boards={boards}
-                  selectedBoardId={selectedBoard[ext.id]}
-                  onSelectBoard={(bid) => setSelectedBoard((p) => ({ ...p, [ext.id]: bid }))}
-                  onApprove={() => approve(ext)}
-                  onApproveAsEvent={() => approveAsEvent(ext)}
-                  onApproveAsVision={(payload) => approveAsVision(ext, payload)}
-                  onReject={() => reject(ext.id)}
-                  processing={!!processing[ext.id]}
-                />
+                <div key={ext.id} className="relative">
+                  {/* 체크박스 */}
+                  <label className="absolute left-3 top-5 z-10 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(ext.id)}
+                      onChange={() => toggleOne(ext.id)}
+                      className="accent-[var(--color-primary)] w-4 h-4"
+                    />
+                  </label>
+                  <div className="pl-10">
+                    {editingId === ext.id ? (
+                      <div className="bg-white border border-[var(--color-primary)] rounded-xl p-5 space-y-2">
+                        <p className="text-xs font-semibold text-[var(--color-primary)]">편집 중</p>
+                        <input
+                          value={editForm.title}
+                          onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                          placeholder="제목"
+                          className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                        />
+                        <textarea
+                          value={editForm.content}
+                          onChange={(e) => setEditForm((p) => ({ ...p, content: e.target.value }))}
+                          rows={3}
+                          placeholder="본문"
+                          className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white resize-y"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={editForm.event_date}
+                            onChange={(e) => setEditForm((p) => ({ ...p, event_date: e.target.value }))}
+                            className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                          />
+                          <input
+                            value={editForm.location}
+                            onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))}
+                            placeholder="장소"
+                            className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={() => saveEdit(ext.id)}
+                            className="flex-1 px-3 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm rounded-md font-medium"
+                          >
+                            저장
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="px-3 py-1.5 border border-[var(--color-border)] rounded-md text-sm"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <ExtractionCard
+                        ext={ext}
+                        boards={boards}
+                        selectedBoardId={selectedBoard[ext.id]}
+                        onSelectBoard={(bid) => setSelectedBoard((p) => ({ ...p, [ext.id]: bid }))}
+                        onApprove={() => approve(ext)}
+                        onApproveAsEvent={() => approveAsEvent(ext)}
+                        onApproveAsVision={(payload) => approveAsVision(ext, payload)}
+                        onReject={() => reject(ext.id)}
+                        onEdit={() => startEdit(ext)}
+                        processing={!!processing[ext.id]}
+                      />
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -269,6 +494,7 @@ function ExtractionCard({
   onApproveAsEvent,
   onApproveAsVision,
   onReject,
+  onEdit,
   processing,
 }: {
   ext: Extraction;
@@ -279,6 +505,7 @@ function ExtractionCard({
   onApproveAsEvent: () => void;
   onApproveAsVision: (payload: VisionPayload) => void;
   onReject: () => void;
+  onEdit?: () => void;
   processing: boolean;
 }) {
   const isVision = ext.event_type === "지표";
@@ -299,9 +526,19 @@ function ExtractionCard({
           </span>
           <span className="font-medium">{ext.title}</span>
         </div>
-        {ext.event_date && (
-          <span className="text-xs text-[var(--color-text-muted)] shrink-0">{ext.event_date}</span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {ext.event_date && (
+            <span className="text-xs text-[var(--color-text-muted)]">{ext.event_date}</span>
+          )}
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="text-xs text-[var(--color-primary)] hover:underline"
+            >
+              편집
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 상세 */}
