@@ -861,12 +861,18 @@ def list_drafts(db: Session = Depends(get_db), _: Admin = Depends(get_current_ad
 
 
 @router.post("/api/boards/drafts/{post_id}/publish", response_model=DraftOut)
-def publish_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def publish_draft(post_id: int, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    from app.core.admin_log import log_action, get_admin_identifier
     post = db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id, Post.is_published == False).first()
     if not post:
         raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
     post.is_published = True
     db.commit()
+    log_action(
+        db, get_admin_identifier(admin),
+        action="draft_publish", target_type="post", target_id=post.id,
+        detail=f"draft → published: {post.title[:100] if post.title else ''}",
+    )
     return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
 
 
@@ -905,25 +911,39 @@ def move_post(
 
 
 @router.patch("/api/boards/drafts/{post_id}/move", response_model=DraftOut)
-def move_draft(post_id: int, body: DraftMoveBody, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def move_draft(post_id: int, body: DraftMoveBody, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    from app.core.admin_log import log_action, get_admin_identifier
     post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()
     if not post:
         raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
     board = db.query(Board).filter(Board.slug == body.board_slug, Board.is_active == True).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
+    old_board_id = post.board_id
     post.board_id = board.id
     db.commit()
+    log_action(
+        db, get_admin_identifier(admin),
+        action="draft_move", target_type="post", target_id=post.id,
+        detail=f"board_id {old_board_id} → {board.id} ({board.slug})",
+    )
     return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
 
 
 @router.delete("/api/boards/drafts/{post_id}", status_code=204)
-def delete_draft(post_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_draft(post_id: int, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    from app.core.admin_log import log_action, get_admin_identifier
     post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()
     if not post:
         raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+    title = post.title[:100] if post.title else ""
     db.delete(post)
     db.commit()
+    log_action(
+        db, get_admin_identifier(admin),
+        action="draft_delete", target_type="post", target_id=post_id,
+        detail=f"deleted: {title}",
+    )
 
 
 class PublishMultiBody(BaseModel):
