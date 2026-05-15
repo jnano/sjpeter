@@ -486,7 +486,7 @@ export default function AdminParishStaffPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">본당 가족 관리</h1>
+        <h1 className="text-xl font-bold text-gray-900">주임 신부님</h1>
         <p className="text-sm text-gray-500 mt-1">
           주임·보좌신부, 수녀, 사무장 등 현재 재임 중인 분들을 관리합니다. (`/pastor` 페이지에 노출)
         </p>

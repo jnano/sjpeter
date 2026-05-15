@@ -52,13 +52,6 @@ interface CommunityGroup {
 
 interface BoardOption { slug: string; name: string; }
 
-interface StaticPage {
-  slug: string;
-  title: string;
-  subtitle: string | null;
-  body: string | null;
-}
-
 interface CouncilMember {
   id: number;
   name: string;
@@ -480,6 +473,8 @@ const emptyComForm = {
   photo_display_mode: "slideshow",
 };
 
+const COMMUNITY_COLLAPSED_KEY = "admin_community_collapsed_divisions";
+
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
   const [boards, setBoards] = useState<BoardOption[]>([]);
@@ -490,7 +485,31 @@ function CommunityTab() {
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [collapsedDivisions, setCollapsedDivisions] = useState<Set<number>>(new Set());
   const select = useBulkSelect(items.map((i) => i.id));
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(COMMUNITY_COLLAPSED_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) setCollapsedDivisions(new Set(arr.filter((v) => typeof v === "number")));
+      }
+    } catch {}
+  }, []);
+
+  function toggleDivision(id: number) {
+    setCollapsedDivisions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(COMMUNITY_COLLAPSED_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }
 
   async function load() {
     const [communityRes, boardsRes] = await Promise.all([
@@ -578,12 +597,15 @@ function CommunityTab() {
 
   // 분과(parent_id=null) 먼저, 그 뒤에 같은 부모의 소속단체들 트리 정렬
   const topLevel = items.filter((i) => !i.parent_id).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
-  const children = (parentId: number) =>
+  const childrenOf = (parentId: number) =>
     items.filter((i) => i.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const childCount = (parentId: number) => items.filter((i) => i.parent_id === parentId).length;
   const sortedItems: CommunityGroup[] = [];
   for (const top of topLevel) {
     sortedItems.push(top);
-    sortedItems.push(...children(top.id));
+    if (!collapsedDivisions.has(top.id)) {
+      sortedItems.push(...childrenOf(top.id));
+    }
   }
   // parent가 사라진 고아도 끝에 표시
   const orphans = items.filter((i) => i.parent_id && !topLevel.find((t) => t.id === i.parent_id));
@@ -756,7 +778,36 @@ function CommunityTab() {
                     {g.parent_id ? (
                       <span className="text-xs text-gray-400">└</span>
                     ) : (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">분과</span>
+                      <>
+                        {childCount(g.id) > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleDivision(g.id)}
+                            aria-expanded={!collapsedDivisions.has(g.id)}
+                            aria-label={`${g.name} 분과 ${collapsedDivisions.has(g.id) ? "펼치기" : "접기"}`}
+                            className="text-gray-400 hover:text-gray-700 -ml-1 mr-0.5"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                              className={`transition-transform ${collapsedDivisions.has(g.id) ? "-rotate-90" : ""}`}
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                        ) : null}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">분과</span>
+                        {childCount(g.id) > 0 && (
+                          <span className="text-[10px] text-gray-400">소속 {childCount(g.id)}개</span>
+                        )}
+                      </>
                     )}
                     <p className="font-medium text-sm">{g.name}</p>
                     {g.slug && !g.parent_id && (
@@ -911,107 +962,6 @@ function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onC
       )}
       <input type="file" accept="image/*" onChange={upload} disabled={uploading} className="text-xs" />
       {uploading && <p className="text-xs text-gray-400 mt-1">업로드 중…</p>}
-    </div>
-  );
-}
-
-// ─── Pages Tab ───────────────────────────────────────────
-
-const PAGE_LABELS: Record<string, string> = {
-  saint: "성 베드로",
-  council: "사목평의회",
-  meditation: "묵상 글",
-  prayer: "기도문",
-};
-
-function PagesTab() {
-  const [pages, setPages] = useState<StaticPage[]>([]);
-  const [editSlug, setEditSlug] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", subtitle: "", body: "" });
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  async function load() {
-    const res = await fetch(`${API}/api/content/pages`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-    if (res.ok) setPages(await res.json());
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function save(slug: string) {
-    setLoading(true);
-    const res = await fetch(`${API}/api/content/pages/${slug}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(editForm),
-    });
-    setLoading(false);
-    if (res.ok) { setMsg("저장되었습니다."); setEditSlug(null); load(); }
-  }
-
-  return (
-    <div className="space-y-4">
-      {msg && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg}</p>}
-      <p className="text-xs text-gray-500">각 페이지의 제목·부제·본문을 수정합니다. 본문은 줄바꿈이 그대로 표시됩니다.</p>
-
-      <div className="space-y-3">
-        {pages.map((page) =>
-          editSlug === page.slug ? (
-            <div key={page.slug} className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-mono text-blue-400">/{page.slug}</span>
-                <span className="font-semibold text-sm text-gray-700">{PAGE_LABELS[page.slug] ?? page.slug}</span>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">제목</label>
-                <input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">부제 (선택)</label>
-                <input value={editForm.subtitle} onChange={(e) => setEditForm((p) => ({ ...p, subtitle: e.target.value }))} className={inputCls} placeholder="페이지 아래에 작은 글씨로 표시됩니다" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">본문</label>
-                <textarea
-                  value={editForm.body}
-                  onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))}
-                  rows={10}
-                  className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}
-                  placeholder="내용을 입력하세요. 줄바꿈은 그대로 반영됩니다."
-                />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => save(page.slug)} disabled={loading} className={btnPrimary}>저장</button>
-                <button onClick={() => setEditSlug(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
-              </div>
-            </div>
-          ) : (
-            <div key={page.slug} className="bg-white border border-gray-200 rounded-xl p-5 flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono text-gray-400">/{page.slug}</span>
-                  <span className="font-semibold text-sm">{PAGE_LABELS[page.slug] ?? page.slug}</span>
-                </div>
-                <p className="text-sm font-medium text-gray-700">{page.title}</p>
-                {page.subtitle && <p className="text-xs text-gray-400 mt-0.5">{page.subtitle}</p>}
-                {page.body ? (
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2 whitespace-pre-line">{page.body}</p>
-                ) : (
-                  <p className="text-xs text-orange-400 mt-1">본문 없음 — 수정 버튼으로 내용을 추가하세요.</p>
-                )}
-              </div>
-              <button
-                onClick={() => { setEditSlug(page.slug); setEditForm({ title: page.title, subtitle: page.subtitle ?? "", body: page.body ?? "" }); }}
-                className={btnEdit}
-              >
-                수정
-              </button>
-            </div>
-          )
-        )}
-      </div>
     </div>
   );
 }
@@ -1973,12 +1923,11 @@ function BackgroundPanel({
 // ─── Main Page ────────────────────────────────────────────
 
 const TABS = [
-  { key: "meditation", label: "묵상 글" },
-  { key: "council", label: "사목평의회" },
-  { key: "history", label: "연혁" },
-  { key: "vision", label: "사목지표" },
-  { key: "community", label: "단체/분과" },
-  { key: "pages", label: "페이지 내용" },
+  { key: "vision", label: "사목지표", subtitle: "본당의 사목 방향을 관리합니다." },
+  { key: "meditation", label: "주일 말씀", subtitle: "주일 말씀과 묵상 글을 관리합니다." },
+  { key: "history", label: "연혁", subtitle: "성당의 역사·연혁 기록을 관리합니다." },
+  { key: "council", label: "사목평의회", subtitle: "회장단·분과대표·구역장대표를 관리합니다." },
+  { key: "community", label: "단체·분과", subtitle: "단체와 분과 정보를 관리합니다." },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -1990,7 +1939,9 @@ export default function AdminContentPage() {
   const rawTab = searchParams.get("tab");
   const tab: TabKey = (TABS.map((t) => t.key) as string[]).includes(rawTab ?? "")
     ? (rawTab as TabKey)
-    : "meditation";
+    : "vision";
+
+  const currentTab = TABS.find((t) => t.key === tab) ?? TABS[0];
 
   function setTab(key: TabKey) {
     router.push(`/admin/content?tab=${key}`);
@@ -1999,8 +1950,8 @@ export default function AdminContentPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">페이지 콘텐츠 관리</h1>
-        <p className="text-sm text-gray-500 mt-1">묵상, 연혁, 사목지표, 단체/분과 내용을 관리합니다.</p>
+        <h1 className="text-2xl font-bold">{currentTab.label}</h1>
+        <p className="text-sm text-gray-500 mt-1">{currentTab.subtitle}</p>
       </div>
 
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1">
@@ -2024,7 +1975,6 @@ export default function AdminContentPage() {
       {tab === "history" && <HistoryTab />}
       {tab === "vision" && <VisionTab />}
       {tab === "community" && <CommunityTab />}
-      {tab === "pages" && <PagesTab />}
     </div>
   );
 }

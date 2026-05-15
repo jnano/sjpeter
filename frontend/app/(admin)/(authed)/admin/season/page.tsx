@@ -151,7 +151,7 @@ export default function SeasonPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)] mb-1">
-        전례 시기 스킨
+        전례 시기 테마
       </h1>
       <p className="text-sm text-[var(--color-text-muted)] mb-6">
         선택한 시기의 전례색이 사이트 전체에 적용됩니다. 평시로 돌리려면 "끄기"를 선택하세요.

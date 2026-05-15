@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -11,8 +11,9 @@ interface NavItem {
   href: string;
   label: string;
   badgeKey?: "drafts" | "extractions" | "vision";
-  // vision 뱃지는 빨강 (사목지표 자동 등록 안 되므로 누락 방지 강조)
   badgeTone?: "amber" | "violet" | "red";
+  aiTag?: boolean;
+  children?: NavItem[];
 }
 
 interface NavGroup {
@@ -21,65 +22,89 @@ interface NavGroup {
   items: NavItem[];
 }
 
+interface NavSolo {
+  href: string;
+  label: string;
+  icon: string;
+}
+
+// 그룹 헤더 없이 대시보드 아래 단독으로 표시되는 항목
+const SOLO_TOP: NavSolo[] = [
+  { href: "/admin/construction", label: "성전 건축", icon: "🏗" },
+];
+
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "성당 소개",
+    label: "성당 정보",
     icon: "⛪",
     items: [
-      { href: "/admin/parish", label: "성당 정보" },
-      { href: "/admin/content", label: "페이지 콘텐츠" },
-      { href: "/admin/pages", label: "동적 페이지" },
-      { href: "/admin/construction", label: "성전 건축" },
+      { href: "/admin/parish/info", label: "기본 정보" },
+      { href: "/admin/parish/mass-times", label: "미사 시간" },
+      { href: "/admin/content?tab=history", label: "연혁" },
     ],
   },
   {
-    label: "본당 인물",
+    label: "신부님·수녀님",
     icon: "👤",
     items: [
-      { href: "/admin/parish-staff", label: "본당 가족" },
+      { href: "/admin/parish-staff", label: "주임 신부님" },
       { href: "/admin/pastors", label: "역대 신부님·수녀님" },
       { href: "/admin/priests", label: "본당 출신 사제" },
     ],
   },
   {
-    label: "주보·소식",
+    label: "소식·일정",
     icon: "📰",
     items: [
-      { href: "/admin/bulletin", label: "주보 관리" },
-      { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet" },
-      { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber" },
-      { href: "/admin/notices", label: "공지 관리" },
+      {
+        href: "/admin/bulletin",
+        label: "주보",
+        children: [
+          { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet", aiTag: true },
+          { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber", aiTag: true },
+          { href: "/admin/event-mapping", label: "AI 분류설정", aiTag: true },
+        ],
+      },
+      { href: "/admin/notices", label: "공지" },
       { href: "/admin/calendar", label: "행사 캘린더" },
-      { href: "/admin/prayers", label: "기도문 관리" },
     ],
   },
   {
-    label: "사진",
+    label: "말씀·기도",
+    icon: "🙏",
+    items: [
+      { href: "/admin/content?tab=vision", label: "사목지표" },
+      { href: "/admin/content?tab=meditation", label: "주일 말씀" },
+      { href: "/admin/prayers", label: "기도문" },
+    ],
+  },
+  {
+    label: "배너 관리",
     icon: "🖼",
     items: [
-      { href: "/admin/home-banner", label: "홈 사진 배너" },
-      { href: "/admin/banners", label: "배너 슬라이드" },
-      { href: "/admin/page-photos", label: "페이지 사진" },
+      { href: "/admin/banners", label: "광고 배너" },
     ],
   },
   {
-    label: "게시판·회원",
+    label: "공동체",
     icon: "💬",
     items: [
+      { href: "/admin/content?tab=council", label: "사목평의회" },
+      { href: "/admin/content?tab=community", label: "단체·분과" },
       { href: "/admin/boards", label: "게시판 관리" },
       { href: "/admin/members", label: "회원 관리" },
-      { href: "/admin/event-mapping", label: "분류 설정" },
     ],
   },
   {
     label: "시스템",
     icon: "⚙",
     items: [
-      { href: "/admin/menus", label: "메뉴 관리" },
-      { href: "/admin/season", label: "전례 시기 스킨" },
+      { href: "/admin/menus", label: "메뉴" },
+      { href: "/admin/pages", label: "동적 페이지" },
+      { href: "/admin/season", label: "전례 시기 테마" },
       { href: "/admin/settings", label: "사이트 설정" },
       { href: "/admin/logs", label: "활동 로그" },
-      { href: "/admin/docs", label: "기술문서" },
+      { href: "/admin/docs", label: "기술 문서" },
     ],
   },
 ];
@@ -96,6 +121,21 @@ const PEEK_TRIGGER_WIDTH_PX = 12;
 const PEEK_OPEN_DELAY_MS = 200;
 const PEEK_CLOSE_DELAY_MS = 300;
 
+const COLLAPSED_GROUPS_KEY = "admin_sidebar_collapsed_groups";
+const COLLAPSED_SUBGROUPS_KEY = "admin_sidebar_collapsed_subgroups";
+
+function parseStored(key: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr.filter((v) => typeof v === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 export default function AdminSidebar({
   mobileOpen,
   onMobileClose,
@@ -104,9 +144,44 @@ export default function AdminSidebar({
   mounted,
 }: Props) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [draftCount, setDraftCount] = useState(0);
   const [extractionCount, setExtractionCount] = useState(0);
   const [visionCount, setVisionCount] = useState(0);
+
+  // 접기 상태 — localStorage 영속
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [collapsedSubGroups, setCollapsedSubGroups] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!mounted) return;
+    setCollapsedGroups(parseStored(COLLAPSED_GROUPS_KEY));
+    setCollapsedSubGroups(parseStored(COLLAPSED_SUBGROUPS_KEY));
+  }, [mounted]);
+
+  function toggleGroup(label: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      try {
+        localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }
+
+  function toggleSubGroup(href: string) {
+    setCollapsedSubGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) next.delete(href);
+      else next.add(href);
+      try {
+        localStorage.setItem(COLLAPSED_SUBGROUPS_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }
 
   // peek 상태 — collapsed(=!pinned)에서 좌측 hover로 일시 펼침
   const [peeking, setPeeking] = useState(false);
@@ -119,7 +194,6 @@ export default function AdminSidebar({
     }
   }, []);
 
-  // collapsed 상태에서 화면 좌측 가장자리(0~12px) hover 시 peek 패널 펼침
   useEffect(() => {
     if (!mounted || pinned) {
       setPeeking(false);
@@ -127,7 +201,6 @@ export default function AdminSidebar({
       return;
     }
     function onMove(e: MouseEvent) {
-      // 상단 nav(h-14=56px) 아래 영역에서만 트리거
       if (e.clientX <= PEEK_TRIGGER_WIDTH_PX && e.clientY > 56) {
         if (peekTimerRef.current) return;
         peekTimerRef.current = setTimeout(() => {
@@ -143,7 +216,6 @@ export default function AdminSidebar({
     };
   }, [mounted, pinned, clearPeekTimer]);
 
-  // 라우트 이동 시 peek 닫기 (네비게이션이 끝나면 패널이 떠 있을 이유가 없음)
   useEffect(() => {
     setPeeking(false);
     clearPeekTimer();
@@ -200,7 +272,23 @@ export default function AdminSidebar({
   useInvalidationListener(DataEvent.DRAFTS_COUNT, fetchDraftCount);
   useInvalidationListener(DataEvent.EXTRACTIONS_COUNT, fetchExtractionCount);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  // ?tab=... 쿼리도 활성 판단에 사용
+  const currentTab = searchParams?.get("tab") ?? null;
+
+  const isActive = useCallback((href: string) => {
+    // href에 쿼리가 있으면 pathname + tab 비교
+    const qIdx = href.indexOf("?");
+    if (qIdx >= 0) {
+      const path = href.slice(0, qIdx);
+      const params = new URLSearchParams(href.slice(qIdx + 1));
+      const tab = params.get("tab");
+      if (pathname !== path) return false;
+      return currentTab === tab;
+    }
+    // 쿼리 없는 href는 pathname startsWith 매칭. 단 다른 항목의 쿼리에 의해 활성화되지 않도록 그대로 비교
+    if (pathname === href) return true;
+    return pathname.startsWith(href + "/");
+  }, [pathname, currentTab]);
 
   function badgeFor(item: NavItem): { count: number; tone: string } | null {
     let count = 0;
@@ -221,14 +309,38 @@ export default function AdminSidebar({
     red: "bg-red-600 text-white",
   };
 
-  // 데스크톱 가시성 — pinned거나 peek 중이면 보임
-  // peek 시에는 본문 위에 떠 있는 floating 효과(shadow)
+  // 부모(주보)가 활성이거나 자식 중 하나가 활성이면 부모 그룹 펼침을 유지
+  const subGroupAutoOpen = useMemo(() => {
+    const open = new Set<string>();
+    for (const g of NAV_GROUPS) {
+      for (const it of g.items) {
+        if (it.children && it.children.length > 0) {
+          if (isActive(it.href) || it.children.some((c) => isActive(c.href))) {
+            open.add(it.href);
+          }
+        }
+      }
+    }
+    return open;
+  }, [isActive]);
+
+  // 그룹 안에 활성 항목이 있으면 그룹 펼침 유지
+  const groupAutoOpen = useMemo(() => {
+    const open = new Set<string>();
+    for (const g of NAV_GROUPS) {
+      const hasActive = g.items.some(
+        (it) => isActive(it.href) || (it.children?.some((c) => isActive(c.href)) ?? false)
+      );
+      if (hasActive) open.add(g.label);
+    }
+    return open;
+  }, [isActive]);
+
   const desktopVisible = mounted && (pinned || peeking);
   const isFloating = mounted && !pinned && peeking;
 
   return (
     <>
-      {/* 모바일 오버레이 */}
       {mobileOpen && (
         <button
           type="button"
@@ -247,6 +359,7 @@ export default function AdminSidebar({
           desktopVisible ? "md:translate-x-0" : "md:-translate-x-full"
         } ${isFloating ? "md:shadow-2xl" : ""}`}
         aria-hidden={!mobileOpen && !desktopVisible}
+        aria-label="관리자 메뉴"
       >
         {/* 모바일 헤더 */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -261,7 +374,7 @@ export default function AdminSidebar({
           </button>
         </div>
 
-        {/* 데스크톱 헤더 — 핀 토글 버튼 */}
+        {/* 데스크톱 헤더 — 핀 토글 */}
         <div className="hidden md:flex items-center justify-end px-2 py-1.5 border-b border-gray-100">
           <button
             type="button"
@@ -270,7 +383,7 @@ export default function AdminSidebar({
             title={`${pinned ? "사이드바 접기" : "사이드바 고정"} (⌘\\)`}
             className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               {pinned ? (
                 <>
                   <polyline points="11 17 6 12 11 7" />
@@ -286,58 +399,204 @@ export default function AdminSidebar({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="flex-1 overflow-y-auto py-4" aria-label="관리자 내비게이션">
           {/* 대시보드 (단독) */}
           <Link
             href="/admin/dashboard"
             onClick={onMobileClose}
-            className={`flex items-center gap-2.5 px-5 py-2.5 mb-2 text-sm transition-colors ${
+            aria-current={pathname === "/admin/dashboard" ? "page" : undefined}
+            className={`flex items-center gap-2.5 px-5 py-2.5 mb-1 text-sm transition-colors ${
               pathname === "/admin/dashboard"
                 ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)]"
                 : "text-gray-700 hover:bg-gray-50 border-l-4 border-transparent"
             }`}
           >
-            <span className="text-base">📊</span>
+            <span className="text-base" aria-hidden="true">📊</span>
             <span>대시보드</span>
           </Link>
 
+          {/* 그룹 헤더 없이 단독으로 표시되는 항목 */}
+          {SOLO_TOP.map((s) => {
+            const active = isActive(s.href);
+            return (
+              <Link
+                key={s.href}
+                href={s.href}
+                onClick={onMobileClose}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-2.5 px-5 py-2.5 mb-2 text-sm transition-colors ${
+                  active
+                    ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)]"
+                    : "text-gray-700 hover:bg-gray-50 border-l-4 border-transparent"
+                }`}
+              >
+                <span className="text-base" aria-hidden="true">{s.icon}</span>
+                <span>{s.label}</span>
+              </Link>
+            );
+          })}
+
           {/* 그룹별 메뉴 */}
-          {NAV_GROUPS.map((g) => (
-            <div key={g.label} className="mb-1">
-              <p className="px-5 pt-3 pb-1 text-[11px] font-semibold tracking-wider text-gray-400 uppercase flex items-center gap-1.5">
-                <span className="text-sm">{g.icon}</span>
-                <span>{g.label}</span>
-              </p>
-              <ul>
-                {g.items.map((it) => {
-                  const active = isActive(it.href);
-                  const badge = badgeFor(it);
-                  return (
-                    <li key={it.href}>
-                      <Link
-                        href={it.href}
-                        onClick={onMobileClose}
-                        className={`flex items-center justify-between gap-2 pl-9 pr-5 py-2 text-sm transition-colors ${
-                          active
-                            ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)] pl-8"
-                            : "text-gray-700 hover:bg-gray-50 border-l-4 border-transparent"
-                        }`}
-                      >
-                        <span>{it.label}</span>
-                        {badge && (
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${toneClass[badge.tone] ?? toneClass.amber}`}
-                          >
-                            {badge.count}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+          {NAV_GROUPS.map((g) => {
+            const userCollapsed = collapsedGroups.has(g.label);
+            const autoOpen = groupAutoOpen.has(g.label);
+            const collapsed = userCollapsed && !autoOpen;
+            const headerId = `admin-group-${g.label}`;
+            return (
+              <div key={g.label} className="mb-1">
+                <h2 className="px-2 pt-3 pb-0.5">
+                  <button
+                    type="button"
+                    id={headerId}
+                    onClick={() => toggleGroup(g.label)}
+                    aria-expanded={!collapsed}
+                    className="w-full flex items-center justify-between gap-1.5 px-3 py-1 rounded hover:bg-gray-50 text-[11px] font-semibold tracking-wider text-gray-400 uppercase transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm" aria-hidden="true">{g.icon}</span>
+                      <span>{g.label}</span>
+                    </span>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className={`transition-transform ${collapsed ? "-rotate-90" : ""}`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                </h2>
+                {!collapsed && (
+                  <ul aria-labelledby={headerId}>
+                    {g.items.map((it) => {
+                      const active = isActive(it.href);
+                      const badge = badgeFor(it);
+                      const hasChildren = it.children && it.children.length > 0;
+
+                      // 자식 펼침 상태: 사용자가 명시적으로 접지 않았거나, 활성 자식/부모가 있으면 자동 펼침
+                      const subUserCollapsed = collapsedSubGroups.has(it.href);
+                      const subAutoOpen = subGroupAutoOpen.has(it.href);
+                      const subCollapsed = hasChildren && subUserCollapsed && !subAutoOpen;
+
+                      return (
+                        <li key={it.href}>
+                          {/* 부모(중분류 헤더 + 링크) */}
+                          <div className={`flex items-stretch ${active ? "" : ""}`}>
+                            <Link
+                              href={it.href}
+                              onClick={onMobileClose}
+                              aria-current={active ? "page" : undefined}
+                              className={`flex-1 flex items-center justify-between gap-2 pl-9 pr-3 py-2 text-sm transition-colors ${
+                                active
+                                  ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)] pl-8"
+                                  : "text-gray-700 hover:bg-gray-50 border-l-4 border-transparent"
+                              }`}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <span>{it.label}</span>
+                                {it.aiTag && (
+                                  <>
+                                    <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-violet-100 text-violet-700 leading-none" aria-hidden="true">AI</span>
+                                    <span className="sr-only">AI 기능</span>
+                                  </>
+                                )}
+                              </span>
+                              {badge && (
+                                <>
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${toneClass[badge.tone] ?? toneClass.amber}`}
+                                    aria-hidden="true"
+                                  >
+                                    {badge.count}
+                                  </span>
+                                  <span className="sr-only">{it.label} 알림 {badge.count}건</span>
+                                </>
+                              )}
+                            </Link>
+                            {hasChildren && (
+                              <button
+                                type="button"
+                                onClick={() => toggleSubGroup(it.href)}
+                                aria-expanded={!subCollapsed}
+                                aria-label={`${it.label} 하위 메뉴 ${subCollapsed ? "펼치기" : "접기"}`}
+                                className="px-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                  className={`transition-transform ${subCollapsed ? "-rotate-90" : ""}`}
+                                >
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* 자식(소분류) */}
+                          {hasChildren && !subCollapsed && (
+                            <ul className="ml-1">
+                              {it.children!.map((c) => {
+                                const cActive = isActive(c.href);
+                                const cBadge = badgeFor(c);
+                                return (
+                                  <li key={c.href}>
+                                    <Link
+                                      href={c.href}
+                                      onClick={onMobileClose}
+                                      aria-current={cActive ? "page" : undefined}
+                                      className={`flex items-center justify-between gap-2 pl-14 pr-5 py-1.5 text-[13px] transition-colors ${
+                                        cActive
+                                          ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold border-l-4 border-[var(--color-primary)] pl-[3.25rem]"
+                                          : "text-gray-600 hover:bg-gray-50 border-l-4 border-transparent"
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-1.5">
+                                        <span>{c.label}</span>
+                                        {c.aiTag && (
+                                          <>
+                                            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-violet-100 text-violet-700 leading-none" aria-hidden="true">AI</span>
+                                            <span className="sr-only">AI 기능</span>
+                                          </>
+                                        )}
+                                      </span>
+                                      {cBadge && (
+                                        <>
+                                          <span
+                                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${toneClass[cBadge.tone] ?? toneClass.amber}`}
+                                            aria-hidden="true"
+                                          >
+                                            {cBadge.count}
+                                          </span>
+                                          <span className="sr-only">{c.label} 알림 {cBadge.count}건</span>
+                                        </>
+                                      )}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
     </>
