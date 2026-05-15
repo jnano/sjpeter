@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.111";
-export const LAST_UPDATED = "2026-05-15";
+export const CURRENT_VERSION = "1.5.137";
+export const LAST_UPDATED = "2026-05-16";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,117 @@ export const LAST_UPDATED = "2026-05-15";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.137", date: "2026-05-16", tag: "인프라",
+    items: ["/admin/docs CHANGELOG v1.5.112~136 일괄 동기화 + 백업"],
+  },
+  {
+    version: "1.5.136", date: "2026-05-16", tag: "기능",
+    items: [
+      "게시판 형식(일반/한줄/갤러리)을 수정 폼에서 변경 가능 (변경 시 라우팅 경로 안내 confirm)",
+      "게시판 어드민 그룹화: board_admin_groups 테이블 신설 + /admin/boards 에 그룹 CRUD 섹션·이동 셀렉트",
+      "그룹 섹션 아코디언 (디폴트 모두 접힘, 한 번에 한 그룹) + 전체선택 옆 '모두 펼치기/접기' 토글",
+      "게시글 상단 고정 (📌): PATCH /api/boards/{slug}/posts/{post_id}/pin 신규, 슈퍼관리자·moderator 만 가능",
+      "어드민 글 관리 패널에 핀 토글 + 핀 뱃지, 토글 후 silent fetch 로 깜빡임 없이 정렬 갱신",
+      "공개 /boards/[slug] (TableView·PhotoView) + /gallery/[slug] 핀 글에 📌 표시",
+    ],
+  },
+  {
+    version: "1.5.135", date: "2026-05-16", tag: "디자인",
+    items: ["헤더 — 현재 페이지가 속한 그룹 라벨을 항상 강조 (데스크톱 2px primary 바, 모바일 좌측 3px 보더)"],
+  },
+  {
+    version: "1.5.134", date: "2026-05-16", tag: "디자인",
+    items: ["/pastor (본당 가족) 타임라인 스토리식 새 디자인 — 좌·우 교차 배치, 행 사이 ✦ 장식"],
+  },
+  {
+    version: "1.5.133", date: "2026-05-16", tag: "기능",
+    items: ["/admin/content community 분과 순서를 /admin/menus 의 menu_items 순서로 동기화 — 단일 출처화"],
+  },
+  {
+    version: "1.5.132", date: "2026-05-15", tag: "수정",
+    items: ["게시판 댓글·좋아요는 회원 세션 토큰만 사용 (admin 토큰 거부 403 회피)"],
+  },
+  {
+    version: "1.5.131", date: "2026-05-15", tag: "수정",
+    items: ["게시판 글 삭제·목록으로 시 원래 페이지·필터 복원"],
+  },
+  {
+    version: "1.5.130", date: "2026-05-15", tag: "디자인",
+    items: ["게시판 동영상 아이콘을 밝고 반짝이는 디자인으로 변경"],
+  },
+  {
+    version: "1.5.129", date: "2026-05-15", tag: "기능",
+    items: ["게시판 동영상 포함 글에 목록 TV 아이콘(📺) 표시"],
+  },
+  {
+    version: "1.5.128", date: "2026-05-15", tag: "기능",
+    items: ["게시판 naver.me 단축 URL 도 자동 임베드 (백엔드 resolver)"],
+  },
+  {
+    version: "1.5.127", date: "2026-05-15", tag: "기능",
+    items: ["게시판 게시글 본문에 YouTube·Naver TV 동영상 자동 임베드"],
+  },
+  {
+    version: "1.5.126", date: "2026-05-15", tag: "수정",
+    items: ["보안 — 게시글 수정·삭제에 admin 감사 로깅 추가"],
+  },
+  {
+    version: "1.5.125", date: "2026-05-15", tag: "수정",
+    items: ["게시판 글 수정 — admin 토큰 늦게 인식돼 forbidden 가 풀리지 않던 문제"],
+  },
+  {
+    version: "1.5.124", date: "2026-05-15", tag: "수정",
+    items: ["MarkdownContent — template literal 닫는 따옴표 누락 수정"],
+  },
+  {
+    version: "1.5.123", date: "2026-05-15", tag: "디자인",
+    items: ["게시판 게시글 본문 글자 크기 16px (text-base) 로 상향"],
+  },
+  {
+    version: "1.5.122", date: "2026-05-15", tag: "기능",
+    items: ["admin 이 공개 페이지에서도 모든 게시글 수정·삭제 가능"],
+  },
+  {
+    version: "1.5.121", date: "2026-05-15", tag: "기능",
+    items: ["게시판 목록에 작성자 프로필 사진 표시"],
+  },
+  {
+    version: "1.5.120", date: "2026-05-15", tag: "기능",
+    items: ["게시판 목록 표시 컬럼 admin 토글 (list_show_*)"],
+  },
+  {
+    version: "1.5.119", date: "2026-05-15", tag: "기능",
+    items: ["게시글 다중 게시판 복사 기능 (admin)"],
+  },
+  {
+    version: "1.5.118", date: "2026-05-15", tag: "수정",
+    items: ["보안 P3 — Draft 발행·이동·삭제에 admin 감사 로깅"],
+  },
+  {
+    version: "1.5.117", date: "2026-05-15", tag: "수정",
+    items: ["보안 P2 — admin layout 공통 토큰 가드"],
+  },
+  {
+    version: "1.5.116", date: "2026-05-15", tag: "수정",
+    items: ["보안 P0 — 권한 누수 차단"],
+  },
+  {
+    version: "1.5.115", date: "2026-05-15", tag: "디자인",
+    items: ["모바일 Step 3·4 — 터치 타깃 통일 + 배너 인디케이터"],
+  },
+  {
+    version: "1.5.114", date: "2026-05-15", tag: "디자인",
+    items: ["모바일/캘린더 Step 2 — 모바일(<768px) 첫 진입 시 자동 'list' 뷰"],
+  },
+  {
+    version: "1.5.113", date: "2026-05-15", tag: "디자인",
+    items: ["모바일 Step 1 — 60대 가독성 위해 작은 폰트 일괄 상향"],
+  },
+  {
+    version: "1.5.112", date: "2026-05-15", tag: "인프라",
+    items: ["/admin/docs CHANGELOG v1.5.111 동기화"],
+  },
   {
     version: "1.5.111", date: "2026-05-15", tag: "디자인",
     items: ["헤더 검색 입력 폭을 placeholder 끝에 맞춤 (-20%, w-[142px] lg:w-[181px])"],
