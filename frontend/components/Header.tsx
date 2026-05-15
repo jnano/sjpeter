@@ -234,22 +234,46 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
 
           {/* 데스크톱 네비게이션 */}
           <nav className="hidden md:flex items-center h-full">
-            {visibleNavGroups.map((group, idx) => (
+            {visibleNavGroups.map((group, idx) => {
+              // 그룹 라벨 클릭 시 이동할 경로 — admin/menus 의 landing_href 가 있으면 그 값,
+              // 없으면 첫 번째 sub item 의 href (외부 링크 제외)
+              const firstInternal = group.items.find((i) => !i.is_external);
+              const groupHref =
+                group.landing_href ?? firstInternal?.href ?? group.items[0]?.href ?? null;
+              const groupTargetExternal =
+                !group.landing_href && (firstInternal ? false : group.items[0]?.is_external);
+              return (
               <div
                 key={group.key}
                 className="relative h-full flex items-center"
                 onMouseEnter={() => openGroupNow(idx)}
                 onMouseLeave={scheduleGroupClose}
               >
-                <button
-                  className={`px-4 h-full text-sm font-medium transition-colors whitespace-nowrap ${
-                    openGroup === idx
-                      ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
-                      : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
-                  }`}
-                >
-                  {group.label}
-                </button>
+                {groupHref ? (
+                  <Link
+                    href={groupHref}
+                    target={groupTargetExternal ? "_blank" : undefined}
+                    rel={groupTargetExternal ? "noopener noreferrer" : undefined}
+                    onClick={() => { setOpenGroup(null); setHoveredItem(null); }}
+                    className={`px-4 h-full flex items-center text-sm font-medium transition-colors whitespace-nowrap ${
+                      openGroup === idx
+                        ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
+                        : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
+                    }`}
+                  >
+                    {group.label}
+                  </Link>
+                ) : (
+                  <button
+                    className={`px-4 h-full text-sm font-medium transition-colors whitespace-nowrap ${
+                      openGroup === idx
+                        ? "text-[var(--color-primary)] bg-[var(--color-surface-warm)]"
+                        : "text-[var(--color-text)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-warm)]"
+                    }`}
+                  >
+                    {group.label}
+                  </button>
+                )}
 
                 {/* dropdown — 1열, 자식 있으면 hover 시 우측 popup */}
                 {openGroup === idx && (
@@ -326,7 +350,8 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
 
             {/* 검색 — 데스크톱 상시 노출 */}
             <form

@@ -177,6 +177,7 @@ class MenuGroupIn(BaseModel):
     sidebar_width_px: int = 220
     sidebar_height_px: Optional[int] = None
     sidebar_image_position: str = "center"
+    landing_href: Optional[str] = None
     sort_order: int = 0
     is_active: bool = True
     show_in_header: bool = True

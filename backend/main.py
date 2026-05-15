@@ -479,6 +479,14 @@ def _migrate_add_columns():
         except Exception:
             pass
         try:
+            # 헤더 그룹 라벨 클릭 시 이동할 페이지 (NULL=첫 번째 sub item으로)
+            conn.execute(text(
+                "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS "
+                "landing_href VARCHAR(500)"
+            ))
+        except Exception:
+            pass
+        try:
             conn.execute(text(
                 "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES menu_items(id) ON DELETE CASCADE"
             ))

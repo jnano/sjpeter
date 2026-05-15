@@ -35,6 +35,7 @@ interface MenuGroup {
   sidebar_width_px: number;
   sidebar_height_px: number | null;
   sidebar_image_position: string;
+  landing_href: string | null;
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;
@@ -181,6 +182,7 @@ export default function AdminMenusPage() {
       sidebar_width_px: merged.sidebar_width_px,
       sidebar_height_px: merged.sidebar_height_px,
       sidebar_image_position: merged.sidebar_image_position,
+      landing_href: merged.landing_href,
       sort_order: merged.sort_order,
       is_active: merged.is_active, show_in_header: merged.show_in_header,
     };
@@ -474,6 +476,26 @@ export default function AdminMenusPage() {
                   <p className="text-xs text-gray-400 mt-1">
                     체크 해제 시 헤더 dropdown에는 안 나오지만, 해당 경로 페이지에서 좌측 사이드바로 표시됩니다.
                   </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">
+                    헤더 그룹 라벨 클릭 시 이동 경로
+                    <span className="text-gray-400 font-normal ml-1">— 비우면 첫 번째 sub 항목으로 자동 이동</span>
+                  </label>
+                  <input
+                    key={`landing-${selectedGroup.id}`}
+                    defaultValue={selectedGroup.landing_href ?? ""}
+                    onBlur={(e) => {
+                      const raw = e.target.value.trim();
+                      const next = raw === "" ? null : raw;
+                      if (next !== (selectedGroup.landing_href ?? null)) {
+                        updateGroup(selectedGroup, { landing_href: next });
+                      }
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={inputCls}
+                    placeholder="예: /about 또는 비우면 첫 번째 sub 항목"
+                  />
                 </div>
               </div>
 
