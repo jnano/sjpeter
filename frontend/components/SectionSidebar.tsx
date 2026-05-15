@@ -40,20 +40,9 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   const pathname = usePathname();
   const archiveCounts = useArchiveCounts();
 
-  // 사이드바를 페이지 로드 시 viewport에서 보이는 위치 그대로 고정.
-  // PageHeader 높이가 페이지마다 달라 단순 sticky top 클래스로 못 맞춤 → 초기 측정 후 적용.
+  // 사이드바는 스크롤을 따라 움직임 — 헤더(h-16=64px) 아래로 일정 여백을 두고 sticky.
+  // PopularCard(/search) 와 동일한 top-28(112px) 사용.
   const asideRef = React.useRef<HTMLElement>(null);
-  const [stickyTopPx, setStickyTopPx] = React.useState<number | null>(null);
-  React.useLayoutEffect(() => {
-    if (!asideRef.current) return;
-    // 스크롤 0에서만 측정 (이미 스크롤된 상태에서 마운트되면 측정 의미 없음 → fallback 80px)
-    if (window.scrollY === 0) {
-      const top = asideRef.current.getBoundingClientRect().top;
-      setStickyTopPx(Math.max(64, top));  // 헤더 h-16(64px)보다 작아질 일은 없게
-    } else {
-      setStickyTopPx(80);
-    }
-  }, [pathname]);
   const filterArchive = (its: MenuItem[]): MenuItem[] =>
     its
       .filter((it) => !isArchiveLinkHidden(it.href, archiveCounts))
@@ -189,10 +178,9 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   return (
     <aside
       ref={asideRef}
-      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:self-start"
+      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:self-start md:top-28"
       style={{
         ["--sidebar-w" as string]: `${widthPx}px`,
-        top: stickyTopPx !== null ? `${stickyTopPx}px` : "5rem",
         // overflow를 잡지 않음 — 자식 popup(absolute left-full)이 사이드바 박스를
         // 넘쳐 표시되므로 overflow-y:auto를 두면 가로/세로 양쪽 스크롤바가 생긴다.
         // 사이드바 컨텐츠 자체는 짧아 viewport 안에 들어가므로 sticky만으로 충분.
