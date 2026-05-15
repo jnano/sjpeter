@@ -47,13 +47,26 @@ export default function EditPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  // admin 토큰 인식 — admin 이면 모든 글 수정 허용
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("admin_token");
+      const expStr = localStorage.getItem("admin_token_exp");
+      const exp = expStr ? Number(expStr) : 0;
+      if (t && exp && Date.now() < exp) setAdminToken(t);
+    } catch {}
+  }, []);
+  const isAdmin = !!adminToken;
+  const bearerToken = adminToken ?? session?.accessToken ?? "";
 
   useEffect(() => {
     fetch(`${API}/api/boards/${slug}/posts/${postId}`)
       .then((r) => r.json())
       .then((data) => {
         const isModerator = session && data.board?.moderator_id === session.memberId;
-        if (session && data.member?.id !== session.memberId && !isModerator) {
+        const isAuthor = session && data.member?.id === session.memberId;
+        if (!isAdmin && !isAuthor && !isModerator) {
           setForbidden(true);
         } else {
           setTitle(data.title ?? "");
@@ -62,7 +75,7 @@ export default function EditPage() {
         }
         setFetching(false);
       });
-  }, [slug, postId, session]);
+  }, [slug, postId, session, isAdmin]);
 
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
@@ -82,10 +95,10 @@ export default function EditPage() {
   }
 
   async function deleteExistingAttachment(attId: number) {
-    if (!session?.accessToken) return;
+    if (!bearerToken) return;
     const res = await fetch(
       `${API}/api/boards/${slug}/posts/${postId}/attachments/${attId}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } }
+      { method: "DELETE", headers: { Authorization: `Bearer ${bearerToken}` } }
     );
     if (res.ok) {
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attId));
@@ -98,7 +111,7 @@ export default function EditPage() {
       setError("제목과 내용을 입력해 주세요.");
       return;
     }
-    if (!session?.accessToken) {
+    if (!bearerToken) {
       router.push("/members/login");
       return;
     }
@@ -110,7 +123,7 @@ export default function EditPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${bearerToken}`,
         },
         body: JSON.stringify({ title, content }),
       });
@@ -125,7 +138,7 @@ export default function EditPage() {
         fd.append("file", file);
         await fetch(`${API}/api/boards/${slug}/posts/${postId}/attachments`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${session.accessToken}` },
+          headers: { Authorization: `Bearer ${bearerToken}` },
           body: fd,
         });
       }

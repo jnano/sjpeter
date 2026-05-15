@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -240,8 +240,20 @@ export default function PostDetail({
   const [likeCount, setLikeCount] = useState<number>(post.like_count ?? 0);
   const [likedByMe, setLikedByMe] = useState<boolean>(post.liked_by_me ?? false);
   const [likeBusy, setLikeBusy] = useState(false);
+  // admin 토큰이 있으면 admin 으로 인식 — 공개 페이지에서도 글 수정·삭제 허용
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("admin_token");
+      const expStr = localStorage.getItem("admin_token_exp");
+      const exp = expStr ? Number(expStr) : 0;
+      if (t && exp && Date.now() < exp) setAdminToken(t);
+    } catch {}
+  }, []);
 
-  const authHeader = { Authorization: `Bearer ${session?.accessToken}` };
+  const isAdmin = !!adminToken;
+  // admin 토큰 우선, 그 외 회원 세션 토큰 사용
+  const authHeader = { Authorization: `Bearer ${adminToken ?? session?.accessToken ?? ""}` };
   const myId = session?.memberId ?? null;
 
   async function toggleLike() {
@@ -268,7 +280,7 @@ export default function PostDetail({
 
   const isBoardModerator = myId !== null && post.board?.moderator_id === myId;
   const isPostAuthor = myId !== null && post.member?.id === myId;
-  const canEditPost = isPostAuthor || isBoardModerator;
+  const canEditPost = isPostAuthor || isBoardModerator || isAdmin;
 
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();
