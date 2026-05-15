@@ -639,10 +639,16 @@ function CommunityTab() {
               <label className="block text-xs font-medium text-gray-600 mb-1">이름 *</label>
               <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="예: 전례분과" required />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">정렬 순서</label>
-              <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
-            </div>
+            {form.parent_id !== null ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">정렬 순서 (소속단체 내부)</label>
+                <input type="number" value={form.sort_order} onChange={(e) => setForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} />
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500 self-end pb-2">
+                분과 순서는 <a href="/admin/menus" className="text-blue-600 hover:underline">/admin/menus</a> 에서 관리합니다.
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -701,6 +707,9 @@ function CommunityTab() {
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">단체/분과 목록 ({items.length}건)</h3>
+          <p className="mt-1 text-xs text-gray-500">
+            분과의 표시 순서는 <a href="/admin/menus" className="text-blue-600 hover:underline">/admin/menus</a> 의 <span className="font-medium">본당 공동체 &gt; 분과와 단체</span> 에서 ↑↓ 로 관리합니다. 여기서 분과의 정렬 순서를 바꿔도 반영되지 않습니다. (소속 단체 순서는 아래에서 관리)
+          </p>
         </div>
         <div className="px-6 pt-3">
           <BulkActionBar
@@ -720,7 +729,13 @@ function CommunityTab() {
               <div key={g.id} className="p-4 bg-blue-50 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="이름" />
-                  <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="순서" />
+                  {editForm.parent_id !== null ? (
+                    <input type="number" value={editForm.sort_order} onChange={(e) => setEditForm((p) => ({ ...p, sort_order: +e.target.value }))} className={inputCls} placeholder="소속단체 내부 순서" />
+                  ) : (
+                    <div className="text-xs text-gray-500 self-center pl-1">
+                      분과 순서는 <a href="/admin/menus" className="text-blue-600 hover:underline">/admin/menus</a> 에서 관리합니다.
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>

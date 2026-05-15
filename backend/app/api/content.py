@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember, Prayer
+from app.models.menu import MenuItem
 from app.models.admin import Admin
 
 _PHOTO_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -170,7 +171,41 @@ class CommunityGroupOut(BaseModel):
 
 @router.get("/community", response_model=list[CommunityGroupOut])
 def list_community(db: Session = Depends(get_db)):
-    return db.query(CommunityGroup).order_by(CommunityGroup.sort_order, CommunityGroup.id).all()
+    # 분과(parent_id IS NULL) 의 순서는 /admin/menus 의 menu_items.sort_order 가 단일 출처.
+    # menu_items.static_page_slug = '/groups/' || community_groups.slug 로 매칭.
+    # 소속 단체(parent_id NOT NULL) 는 자체 sort_order 유지.
+    groups = db.query(CommunityGroup).all()
+
+    parent_slugs = [g.slug for g in groups if g.parent_id is None and g.slug]
+    menu_orders: dict[str, int] = {}
+    if parent_slugs:
+        rows = (
+            db.query(MenuItem.static_page_slug, MenuItem.sort_order)
+            .filter(
+                MenuItem.link_type == "page",
+                MenuItem.static_page_slug.in_([f"/groups/{s}" for s in parent_slugs]),
+            )
+            .all()
+        )
+        for slug, order in rows:
+            menu_orders[slug.removeprefix("/groups/")] = order
+
+    def effective_sort(g: CommunityGroup) -> int:
+        if g.parent_id is None and g.slug and g.slug in menu_orders:
+            return menu_orders[g.slug]
+        return g.sort_order
+
+    groups.sort(key=lambda g: (effective_sort(g), g.id))
+
+    # 프론트엔드(어드민·공개)들이 응답의 sort_order 로 재정렬하므로
+    # 분과의 sort_order 를 메뉴 기반 effective 값으로 덮어서 반환.
+    result = []
+    for g in groups:
+        out = CommunityGroupOut.model_validate(g)
+        if g.parent_id is None:
+            out.sort_order = effective_sort(g)
+        result.append(out)
+    return result
 
 
 @router.get("/community/slug/{slug}", response_model=CommunityGroupOut)
