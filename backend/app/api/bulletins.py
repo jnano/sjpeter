@@ -18,6 +18,7 @@ from app.core.email import send_bulletin_notification
 from app.models.bulletin import Bulletin
 from app.models.bulletin_extraction import BulletinExtraction
 from app.models.board import Board, Post
+from app.models.event_board_mapping import EventBoardMapping
 from app.models.member import Member
 from app.models.admin import Admin
 
@@ -262,11 +263,25 @@ def analyze_bulletin(
     return new_extractions
 
 
+# 매핑 가능한 event_type — /admin/event-mapping 에서 7개 행사 유형별로
+# '게시판' 또는 '캘린더' 라우팅 지정 가능. 매핑 없을 때 디폴트:
+#   - 행사·모임 + 날짜 → events 테이블
+#   - 그 외 → ai-extract 게시판 임시저장
+ROUTABLE_EVENT_TYPES = {"행사", "모임", "봉사", "순례", "피정", "강의", "기타"}
+
+
 def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], bulletin_id: int) -> list[BulletinExtraction]:
     """events 리스트를 BulletinExtraction에 저장하고 자동 라우팅.
-    - 공지 → notices INSERT, status='auto_drafted'
-    - 행사/모임 + 날짜 → events INSERT, status='auto_drafted'
-    - 나머지 → ai-extract 게시판 임시저장 (또는 pending)
+
+    라우팅 우선순위:
+    1. 묵상 → meditations 직등록
+    2. 지표 → pending (수동 검토)
+    3. 공지 → notices 직등록
+    4. 행사·모임·봉사·순례·피정·강의·기타 → /admin/event-mapping 매핑 우선
+       a. use_calendar=True + 날짜 있음 → events 테이블 (event_kind=event_type)
+       b. board_id 지정 → 그 게시판으로 Post
+       c. 매핑 없음 + 행사·모임 + 날짜 → events 테이블 (디폴트)
+       d. 그 외 → ai-extract 게시판 fallback
     """
     from sqlalchemy import text as _text
     if not events:
@@ -275,6 +290,12 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
     parish_row = db.execute(_text("SELECT id FROM parishes LIMIT 1")).fetchone()
     parish_id = parish_row[0] if parish_row else 1
     ai_board = db.query(Board).filter(Board.slug == "ai-extract", Board.is_active == True).first()
+
+    # /admin/event-mapping 매핑을 한 번에 dict 로 로드 (event_type → EventBoardMapping)
+    mapping_by_type: dict[str, EventBoardMapping] = {
+        m.event_type: m for m in db.query(EventBoardMapping).all()
+    }
+
     issue_label = (
         f"제{bulletin.issue_number}호"
         if bulletin.issue_number
@@ -368,35 +389,89 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             new_extractions.append(ext)
             continue
 
-        # 행사/모임 + 날짜 → 캘린더 바로 등록 (created_at은 주보 발행일)
-        if event_type in ("행사", "모임") and parsed_date:
+        # ── 4. 행사·모임·봉사·순례·피정·강의·기타: /admin/event-mapping 매핑 우선 ──
+        if event_type in ROUTABLE_EVENT_TYPES:
+            mapping = mapping_by_type.get(event_type)
             category = "community" if event_type == "모임" else "general"
-            parsed_end = _parse_date(ev.get("end_date"))
-            row = db.execute(
-                _text(
-                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
-                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
-                ),
-                {
-                    "title": title, "desc": content_text,
-                    "edate": parsed_date,
-                    "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
-                    "loc": ev.get("location"), "cat": category, "kind": event_type,
-                    "created": published_ts,
-                },
-            ).first()
-            ext = BulletinExtraction(
-                bulletin_id=bulletin_id, title=title, content=content_text,
-                group_name=ev.get("group_name"), event_date=parsed_date,
-                location=ev.get("location"), event_type=event_type,
-                fingerprint=fp, status="auto_drafted",
-                created_event_id=row[0] if row else None,
-            )
-            db.add(ext)
-            new_extractions.append(ext)
-            continue
 
-        # 나머지 (날짜 없는 행사·모임) → ai-extract 게시판 임시저장
+            # 4a) 매핑.use_calendar=True + 날짜 있음 → events 테이블
+            if mapping and mapping.use_calendar and parsed_date:
+                parsed_end = _parse_date(ev.get("end_date"))
+                row = db.execute(
+                    _text(
+                        "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
+                        "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
+                    ),
+                    {
+                        "title": title, "desc": content_text,
+                        "edate": parsed_date,
+                        "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
+                        "loc": ev.get("location"), "cat": category, "kind": event_type,
+                        "created": published_ts,
+                    },
+                ).first()
+                ext = BulletinExtraction(
+                    bulletin_id=bulletin_id, title=title, content=content_text,
+                    group_name=ev.get("group_name"), event_date=parsed_date,
+                    location=ev.get("location"), event_type=event_type,
+                    fingerprint=fp, status="auto_drafted",
+                    created_event_id=row[0] if row else None,
+                )
+                db.add(ext)
+                new_extractions.append(ext)
+                continue
+
+            # 4b) 매핑.board_id 지정 → 그 게시판으로 Post 생성
+            if mapping and mapping.board_id:
+                post = Post(
+                    board_id=mapping.board_id, member_id=None,
+                    title=f"[{issue_label}] {title}",
+                    content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
+                    is_published=False,
+                )
+                db.add(post)
+                db.flush()
+                ext = BulletinExtraction(
+                    bulletin_id=bulletin_id, title=title, content=content_text,
+                    group_name=ev.get("group_name"), event_date=parsed_date,
+                    location=ev.get("location"), event_type=event_type,
+                    fingerprint=fp, status="auto_drafted",
+                    target_board_id=mapping.board_id, created_post_id=post.id,
+                )
+                db.add(ext)
+                new_extractions.append(ext)
+                continue
+
+            # 4c) 매핑 없음 + 행사·모임 + 날짜 → events 테이블 (기존 디폴트 동작)
+            if event_type in ("행사", "모임") and parsed_date:
+                parsed_end = _parse_date(ev.get("end_date"))
+                row = db.execute(
+                    _text(
+                        "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
+                        "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
+                    ),
+                    {
+                        "title": title, "desc": content_text,
+                        "edate": parsed_date,
+                        "eend": parsed_end if parsed_end and parsed_end != parsed_date else None,
+                        "loc": ev.get("location"), "cat": category, "kind": event_type,
+                        "created": published_ts,
+                    },
+                ).first()
+                ext = BulletinExtraction(
+                    bulletin_id=bulletin_id, title=title, content=content_text,
+                    group_name=ev.get("group_name"), event_date=parsed_date,
+                    location=ev.get("location"), event_type=event_type,
+                    fingerprint=fp, status="auto_drafted",
+                    created_event_id=row[0] if row else None,
+                )
+                db.add(ext)
+                new_extractions.append(ext)
+                continue
+
+            # 4d) 그 외 (날짜 없거나 use_calendar=False & board_id=NULL) → ai-extract fallback (아래로)
+
+        # ── 5. fallback: ai-extract 게시판 임시저장 ──
         if ai_board:
             post = Post(
                 board_id=ai_board.id, member_id=None,
