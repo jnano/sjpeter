@@ -73,10 +73,30 @@ function getToken() {
 
 const inputCls = "w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 
+const SELECTED_GROUP_KEY = "admin_menus_selected_group_id";
+
 export default function AdminMenusPage() {
   const router = useRouter();
   const [groups, setGroups] = useState<MenuGroup[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  // 새로고침 후에도 마지막 선택 그룹 유지 — localStorage lazy init
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem(SELECTED_GROUP_KEY);
+    if (!saved) return null;
+    const id = parseInt(saved);
+    return isNaN(id) ? null : id;
+  });
+
+  // selectedGroupId 변경 시마다 영속화
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (selectedGroupId === null) {
+      localStorage.removeItem(SELECTED_GROUP_KEY);
+    } else {
+      localStorage.setItem(SELECTED_GROUP_KEY, String(selectedGroupId));
+    }
+  }, [selectedGroupId]);
+
   const [staticPages, setStaticPages] = useState<StaticPage[]>([]);
   const [boards, setBoards] = useState<BoardOption[]>([]);
   const [loading, setLoading] = useState(true);
