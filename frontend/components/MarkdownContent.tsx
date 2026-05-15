@@ -1,5 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Props {
   content: string;
@@ -31,6 +36,57 @@ function naverTvId(url: string): string | null {
     }
     return null;
   } catch { return null; }
+}
+
+/** naver.me 단축 URL → 공유 코드. 인식 못 하면 null. */
+function naverShareCode(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "naver.me") {
+      const code = u.pathname.slice(1);
+      return /^[A-Za-z0-9]{1,40}$/.test(code) ? code : null;
+    }
+    return null;
+  } catch { return null; }
+}
+
+/** naver.me 공유 URL 을 백엔드 resolver 로 풀어 Naver TV 임베드 시도.
+ *  CORS 때문에 클라이언트에서 직접 redirect 추적 못 함 → /api/util/resolve-naver-share 호출. */
+function NaverShareEmbed({ code, originalUrl }: { code: string; originalUrl: string }) {
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/api/util/resolve-naver-share?code=${encodeURIComponent(code)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        setVideoId(d?.video_id ?? null);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [code]);
+
+  if (!loaded) {
+    return (
+      <div className="my-4 w-full aspect-video rounded-lg border border-[var(--color-border)] bg-gray-50 flex items-center justify-center text-sm text-[var(--color-text-muted)]">
+        동영상 불러오는 중…
+      </div>
+    );
+  }
+  if (videoId) {
+    return <VideoEmbed src={`https://tv.naver.com/embed/${videoId}`} title="Naver TV video" />;
+  }
+  // Naver TV 아니거나 resolve 실패 — 일반 외부 링크로
+  return (
+    <a href={originalUrl} target="_blank" rel="noopener noreferrer">
+      {originalUrl}
+    </a>
+  );
 }
 
 function VideoEmbed({ src, title }: { src: string; title: string }) {
@@ -83,6 +139,8 @@ export default function MarkdownContent({ content, size = "sm" }: Props) {
               if (yt) return <VideoEmbed src={`https://www.youtube.com/embed/${yt}`} title="YouTube video" />;
               const nv = naverTvId(url);
               if (nv) return <VideoEmbed src={`https://tv.naver.com/embed/${nv}`} title="Naver TV video" />;
+              const shareCode = naverShareCode(url);
+              if (shareCode) return <NaverShareEmbed code={shareCode} originalUrl={url} />;
             }
             return (
               <a href={url} target={url.startsWith("http") ? "_blank" : undefined} rel={url.startsWith("http") ? "noopener noreferrer" : undefined}>
