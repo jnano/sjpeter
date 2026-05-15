@@ -29,11 +29,20 @@ from app.models.banner import BannerGroup, BannerImage
 
 router = APIRouter(prefix="/banners", tags=["banners"])
 
-ALLOWED_PLACEMENTS = {"home_main"}
+ALLOWED_PLACEMENTS = {
+    "home_main", "home_middle", "home_bottom",
+    "about_top", "about_bottom",
+    "calendar_top",
+    "bulletin_top",
+    "gallery_top",
+}
 ALLOWED_TRANSITIONS = {
     "none", "fade", "slide", "slide-up", "slide-down",
     "zoom-in", "zoom-out", "ken-burns", "blur",
 }
+ALLOWED_ASPECT_RATIOS = {"16:9", "4:3", "1:1", "4:1", "3:1", "21:9", "3:2"}
+DELAY_MIN = 2
+DELAY_MAX = 30
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 
@@ -58,6 +67,9 @@ class BannerGroupOut(BaseModel):
     is_active: bool
     sort_order: int
     transition: str
+    aspect_ratio: str
+    delay_seconds: int
+    show_caption_overlay: bool
     created_at: datetime
     updated_at: datetime
     images: list[BannerImageOut]
@@ -72,6 +84,9 @@ class GroupCreate(BaseModel):
     is_active: bool = True
     sort_order: int = 0
     transition: str = "fade"
+    aspect_ratio: str = "16:9"
+    delay_seconds: int = 5
+    show_caption_overlay: bool = False
 
 
 class GroupUpdate(BaseModel):
@@ -80,6 +95,9 @@ class GroupUpdate(BaseModel):
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
     transition: Optional[str] = None
+    aspect_ratio: Optional[str] = None
+    delay_seconds: Optional[int] = None
+    show_caption_overlay: Optional[bool] = None
 
 
 class ImageUpdate(BaseModel):
@@ -104,6 +122,24 @@ def _validate_transition(value: str) -> str:
         raise HTTPException(
             status_code=400,
             detail=f"transition 은 {sorted(ALLOWED_TRANSITIONS)} 중 하나여야 합니다.",
+        )
+    return value
+
+
+def _validate_aspect_ratio(value: str) -> str:
+    if value not in ALLOWED_ASPECT_RATIOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"aspect_ratio 는 {sorted(ALLOWED_ASPECT_RATIOS)} 중 하나여야 합니다.",
+        )
+    return value
+
+
+def _validate_delay(value: int) -> int:
+    if value < DELAY_MIN or value > DELAY_MAX:
+        raise HTTPException(
+            status_code=400,
+            detail=f"delay_seconds 는 {DELAY_MIN}~{DELAY_MAX} 범위여야 합니다.",
         )
     return value
 
@@ -170,12 +206,17 @@ def create_group(
 ):
     _validate_placement(body.placement)
     _validate_transition(body.transition)
+    _validate_aspect_ratio(body.aspect_ratio)
+    _validate_delay(body.delay_seconds)
     group = BannerGroup(
         name=body.name.strip(),
         placement=body.placement,
         is_active=body.is_active,
         sort_order=body.sort_order,
         transition=body.transition,
+        aspect_ratio=body.aspect_ratio,
+        delay_seconds=body.delay_seconds,
+        show_caption_overlay=body.show_caption_overlay,
     )
     db.add(group)
     db.commit()
@@ -205,6 +246,14 @@ def update_group(
     if body.transition is not None:
         _validate_transition(body.transition)
         group.transition = body.transition
+    if body.aspect_ratio is not None:
+        _validate_aspect_ratio(body.aspect_ratio)
+        group.aspect_ratio = body.aspect_ratio
+    if body.delay_seconds is not None:
+        _validate_delay(body.delay_seconds)
+        group.delay_seconds = body.delay_seconds
+    if body.show_caption_overlay is not None:
+        group.show_caption_overlay = body.show_caption_overlay
     group.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(group)

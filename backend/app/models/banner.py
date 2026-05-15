@@ -21,6 +21,12 @@ class BannerGroup(Base):
     # 전환 효과: none / fade / slide / slide-up / slide-down /
     #          zoom-in / zoom-out / ken-burns / blur
     transition = Column(String(30), nullable=False, default="fade")
+    # 가로:세로 비율 — "16:9", "4:3", "1:1", "4:1", "3:1", "21:9", "3:2"
+    aspect_ratio = Column(String(16), nullable=False, default="16:9")
+    # 자동 슬라이드 간격(초). 2~30 범위
+    delay_seconds = Column(Integer, nullable=False, default=5)
+    # true면 이미지 위에 alt_text를 자막 오버레이로 표시
+    show_caption_overlay = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

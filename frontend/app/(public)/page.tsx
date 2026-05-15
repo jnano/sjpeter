@@ -379,6 +379,11 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── 배너: 홈 중단 (admin이 home_middle 그룹을 활성화한 경우에만 노출) ── */}
+      <div className={CONTAINER}>
+        <BannerSlider placement="home_middle" className="my-2" />
+      </div>
+
       {/* ── 사진 슬라이더 (자동 회전) ── */}
       <section>
         <div className={CONTAINER}>
@@ -402,6 +407,11 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── 배너: 홈 하단 (admin이 home_bottom 그룹을 활성화한 경우에만 노출) ── */}
+      <div className={CONTAINER}>
+        <BannerSlider placement="home_bottom" className="my-2" />
+      </div>
 
       {/* ── 마무리 인용 ── */}
       <section>

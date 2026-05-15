@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import BannerSlider from "@/components/BannerSlider";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -818,6 +819,10 @@ export default function CalendarPage() {
           </div>
         }
       />
+
+      <div className="max-w-4xl mx-auto px-4 pt-6">
+        <BannerSlider placement="calendar_top" />
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* 보기 모드 토글 + 오늘 */}

@@ -620,6 +620,27 @@ def _migrate_add_columns():
             pass
         try:
             conn.execute(text(
+                "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS "
+                "aspect_ratio VARCHAR(16) NOT NULL DEFAULT '16:9'"
+            ))
+        except Exception:
+            pass
+        try:
+            conn.execute(text(
+                "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS "
+                "delay_seconds INTEGER NOT NULL DEFAULT 5"
+            ))
+        except Exception:
+            pass
+        try:
+            conn.execute(text(
+                "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS "
+                "show_caption_overlay BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
+        try:
+            conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_banner_groups_placement_active "
                 "ON banner_groups (placement, is_active, sort_order)"
             ))

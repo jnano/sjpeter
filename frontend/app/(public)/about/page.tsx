@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import BannerSlider from "@/components/BannerSlider";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +101,8 @@ export default async function AboutPage() {
     <>
       <PageHeader group="성당 소개" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
       <SectionLayout group="about">
+
+      <BannerSlider placement="about_top" className="mb-6" />
 
       {/* 상단 2단: 좌 40% 사진 / 우 60% 안내 */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 items-stretch">
@@ -244,6 +247,8 @@ export default async function AboutPage() {
           </p>
         )}
       </section>
+
+      <BannerSlider placement="about_bottom" className="mt-8" />
       </SectionLayout>
     </>
   );

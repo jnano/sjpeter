@@ -4,12 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// 향후 위치(placement) enum 늘리면 여기 라벨 추가
+// 노출 위치(페이지·슬롯). 백엔드 ALLOWED_PLACEMENTS와 동기화 유지
 const PLACEMENT_OPTIONS: { value: string; label: string }[] = [
-  { value: "home_main", label: "홈 메인 영역" },
+  { value: "home_main", label: "홈 — 메인" },
+  { value: "home_middle", label: "홈 — 중단" },
+  { value: "home_bottom", label: "홈 — 하단" },
+  { value: "about_top", label: "성당 소개 — 상단" },
+  { value: "about_bottom", label: "성당 소개 — 하단" },
+  { value: "calendar_top", label: "행사 캘린더 — 상단" },
+  { value: "bulletin_top", label: "주보 — 상단" },
+  { value: "gallery_top", label: "갤러리 — 상단" },
 ];
-const placementLabel = (v: string) =>
-  PLACEMENT_OPTIONS.find((p) => p.value === v)?.label ?? v;
 
 // 슬라이드 전환 효과 (이미지 2장 이상일 때 적용)
 const TRANSITION_OPTIONS: { value: string; label: string }[] = [
@@ -23,6 +28,20 @@ const TRANSITION_OPTIONS: { value: string; label: string }[] = [
   { value: "ken-burns", label: "켄 번스 (서서히 확대)" },
   { value: "blur", label: "블러" },
 ];
+
+// 가로:세로 비율 (BannerSlider 컨테이너 aspect-ratio)
+const ASPECT_RATIO_OPTIONS: { value: string; label: string }[] = [
+  { value: "16:9", label: "16:9 (와이드)" },
+  { value: "3:2", label: "3:2" },
+  { value: "4:3", label: "4:3" },
+  { value: "1:1", label: "1:1 (정사각)" },
+  { value: "4:1", label: "4:1 (가로 긴)" },
+  { value: "3:1", label: "3:1" },
+  { value: "21:9", label: "21:9 (시네마)" },
+];
+
+const DELAY_MIN = 2;
+const DELAY_MAX = 30;
 
 interface BannerImage {
   id: number;
@@ -39,6 +58,9 @@ interface BannerGroup {
   is_active: boolean;
   sort_order: number;
   transition: string;
+  aspect_ratio: string;
+  delay_seconds: number;
+  show_caption_overlay: boolean;
   created_at: string;
   updated_at: string;
   images: BannerImage[];
@@ -148,10 +170,10 @@ export default function AdminBannersPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)]">배너 관리</h1>
+        <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)]">광고 배너</h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          위치별 슬라이드 배너를 등록합니다. 같은 위치에 활성화된 그룹들의 이미지가
-          sort_order 순서로 합쳐져 노출되고, 2장 이상이면 5초 간격 자동 슬라이드 + 인디케이터가 표시됩니다.
+          공개 페이지의 지정된 위치(슬롯)에 배너를 노출합니다. 같은 위치에 활성화된 그룹들의 이미지가
+          sort_order 순서로 합쳐지고, 2장 이상이면 자동 슬라이드됩니다. 그룹마다 크기(비율)·전환 효과·딜레이·캡션 노출 여부를 따로 설정할 수 있습니다.
         </p>
       </div>
 
@@ -236,57 +258,101 @@ function GroupCard({
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-      {/* 그룹 헤더 */}
-      <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          defaultValue={group.name}
-          onBlur={(e) => {
-            const v = e.target.value.trim();
-            if (v && v !== group.name) onUpdate({ name: v });
-          }}
-          className="flex-1 min-w-[160px] bg-transparent border border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-white rounded px-2 py-1 text-sm font-semibold text-[var(--color-text)]"
-        />
-        <select
-          value={group.placement}
-          onChange={(e) => onUpdate({ placement: e.target.value })}
-          className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
-        >
-          {PLACEMENT_OPTIONS.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-        <select
-          value={group.transition}
-          onChange={(e) => onUpdate({ transition: e.target.value })}
-          title="슬라이드 전환 효과 (2장 이상일 때 적용)"
-          className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
-        >
-          {TRANSITION_OPTIONS.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
-        <label className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 cursor-pointer">
+      {/* 그룹 헤더 — 2행 구조 */}
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+        {/* 행 1: 이름·위치·전환·활성·정렬·삭제 */}
+        <div className="px-4 pt-3 pb-1.5 flex flex-wrap items-center gap-2">
           <input
-            type="checkbox"
-            checked={group.is_active}
-            onChange={(e) => onUpdate({ is_active: e.target.checked })}
+            type="text"
+            defaultValue={group.name}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== group.name) onUpdate({ name: v });
+            }}
+            className="flex-1 min-w-[160px] bg-transparent border border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-white rounded px-2 py-1 text-sm font-semibold text-[var(--color-text)]"
           />
-          활성
-        </label>
-        <input
-          type="number"
-          value={group.sort_order}
-          onChange={(e) => onUpdate({ sort_order: parseInt(e.target.value) || 0 })}
-          title="정렬 (작을수록 위)"
-          className="w-14 text-xs border border-[var(--color-border)] rounded px-2 py-1"
-        />
-        <button
-          onClick={onDelete}
-          className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded"
-        >
-          그룹 삭제
-        </button>
+          <select
+            value={group.placement}
+            onChange={(e) => onUpdate({ placement: e.target.value })}
+            className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+          >
+            {PLACEMENT_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          <select
+            value={group.transition}
+            onChange={(e) => onUpdate({ transition: e.target.value })}
+            title="슬라이드 전환 효과 (2장 이상일 때 적용)"
+            className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+          >
+            {TRANSITION_OPTIONS.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          <label className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={group.is_active}
+              onChange={(e) => onUpdate({ is_active: e.target.checked })}
+            />
+            활성
+          </label>
+          <input
+            type="number"
+            value={group.sort_order}
+            onChange={(e) => onUpdate({ sort_order: parseInt(e.target.value) || 0 })}
+            title="정렬 (작을수록 위)"
+            className="w-14 text-xs border border-[var(--color-border)] rounded px-2 py-1"
+          />
+          <button
+            onClick={onDelete}
+            className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded"
+          >
+            그룹 삭제
+          </button>
+        </div>
+
+        {/* 행 2: 크기·딜레이·캡션 오버레이 */}
+        <div className="px-4 pb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--color-text-muted)]">
+          <label className="flex items-center gap-1.5">
+            <span>크기</span>
+            <select
+              value={group.aspect_ratio}
+              onChange={(e) => onUpdate({ aspect_ratio: e.target.value })}
+              className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+            >
+              {ASPECT_RATIO_OPTIONS.map((a) => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span>딜레이</span>
+            <input
+              type="number"
+              min={DELAY_MIN}
+              max={DELAY_MAX}
+              defaultValue={group.delay_seconds}
+              onBlur={(e) => {
+                let v = parseInt(e.target.value) || 5;
+                if (v < DELAY_MIN) v = DELAY_MIN;
+                if (v > DELAY_MAX) v = DELAY_MAX;
+                if (v !== group.delay_seconds) onUpdate({ delay_seconds: v });
+              }}
+              className="w-14 text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+            />
+            <span>초 ({DELAY_MIN}~{DELAY_MAX})</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={group.show_caption_overlay}
+              onChange={(e) => onUpdate({ show_caption_overlay: e.target.checked })}
+            />
+            <span>대체 텍스트를 이미지 위에 자막으로 표시</span>
+          </label>
+        </div>
       </div>
 
       {/* 이미지 목록 */}

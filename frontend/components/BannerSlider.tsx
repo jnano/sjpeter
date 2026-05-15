@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const AUTO_SLIDE_MS = 5000;
 const TRANSITION_MS = 700;
+const DEFAULT_DELAY_SECONDS = 5;
+const DEFAULT_ASPECT_RATIO = "16:9";
 
 interface BannerImage {
   id: number;
@@ -23,6 +24,9 @@ interface BannerGroup {
   is_active: boolean;
   sort_order: number;
   transition: string;
+  aspect_ratio: string;
+  delay_seconds: number;
+  show_caption_overlay: boolean;
   images: BannerImage[];
 }
 
@@ -40,11 +44,14 @@ function absoluteUrl(path: string): string {
   return `${API}${path}`;
 }
 
-// 전환 효과별 enter/leave 클래스 — 양쪽 슬라이드를 stack 으로 겹쳐 두고
-// 활성 컷에는 enter 클래스, 직전 컷에는 leave 클래스를 입혀 700ms 동안
-// 두 컷이 교차하도록 한다.
+// "16:9" → "16 / 9" (CSS aspect-ratio 값)
+function toAspectRatioCss(value: string): string {
+  const [w, h] = value.split(":").map((v) => v.trim());
+  if (!w || !h) return "16 / 9";
+  return `${w} / ${h}`;
+}
+
 function classesFor(transition: Transition, active: boolean): string {
-  // 공통 — duration·ease 는 transition 의 inline style 로 둠
   const base = "absolute inset-0 transition-all ease-out";
   switch (transition) {
     case "none":
@@ -64,7 +71,6 @@ function classesFor(transition: Transition, active: boolean): string {
     case "blur":
       return `${base} ${active ? "blur-0 opacity-100" : "blur-md opacity-0"}`;
     case "ken-burns":
-      // Ken Burns 는 활성 컷에서 천천히 확대(15s) — 비활성은 fade out
       return `${base} ${active ? "opacity-100 [animation:kenburns_15s_ease-in-out_infinite_alternate]" : "opacity-0"}`;
     default:
       return `${base} ${active ? "opacity-100" : "opacity-0"}`;
@@ -91,26 +97,28 @@ export default function BannerSlider({ placement, className }: Props) {
     };
   }, [placement]);
 
-  // 활성 그룹들의 이미지를 한 줄로 합쳐 슬라이드
   const images: BannerImage[] = (groups ?? []).flatMap((g) => g.images);
   const total = images.length;
 
-  // 전환 효과는 (단순화를 위해) 첫 활성 그룹의 것을 사용. 여러 그룹이
-  // 같은 placement 에 있어도 보통 하나만 활성이므로 충분.
-  const transition: Transition = ((groups ?? []).find((g) => g.images.length > 0)?.transition
-    ?? "fade") as Transition;
+  // 활성 그룹의 설정값 사용 (첫 이미지가 있는 그룹 기준)
+  const activeGroup = (groups ?? []).find((g) => g.images.length > 0) ?? null;
+  const transition: Transition = (activeGroup?.transition ?? "fade") as Transition;
+  const aspectRatio = activeGroup?.aspect_ratio ?? DEFAULT_ASPECT_RATIO;
+  const delaySeconds = activeGroup?.delay_seconds ?? DEFAULT_DELAY_SECONDS;
+  const showCaption = activeGroup?.show_caption_overlay ?? false;
 
   // 자동 슬라이드 — 2장 이상
   useEffect(() => {
     if (total < 2) return;
+    const intervalMs = Math.max(1000, delaySeconds * 1000);
     const timer = setInterval(() => {
       setIndex((i) => {
         prevIndexRef.current = i;
         return (i + 1) % total;
       });
-    }, AUTO_SLIDE_MS);
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, [total]);
+  }, [total, delaySeconds]);
 
   if (groups === null) return null;
   if (total === 0) return null;
@@ -127,18 +135,19 @@ export default function BannerSlider({ placement, className }: Props) {
     <div
       className={`relative border border-[var(--color-border)] rounded-xl overflow-hidden bg-white ${className ?? ""}`}
     >
-      {/* 고정 비율 컨테이너 — 모든 컷을 stack 으로 겹쳐 둠 */}
-      <div className="relative w-full aspect-[3/2] overflow-hidden">
+      {/* 가변 비율 컨테이너 — 그룹별 aspect_ratio 적용 */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio: toAspectRatioCss(aspectRatio) }}
+      >
         {images.map((img, i) => {
           const active = i === safeIndex;
-          // 비활성 중 직전 컷만 leave 트랜지션이 시각적으로 의미 있음.
-          // 그 외 컷은 opacity-0 으로 숨김(animation 무의미해도 트리 안에 둠).
           const inner = (
             <Image
               src={absoluteUrl(img.file_url)}
               alt={img.alt_text || ""}
               fill
-              sizes="(max-width: 768px) 100vw, 33vw"
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
               unoptimized
               priority={active}
@@ -147,7 +156,6 @@ export default function BannerSlider({ placement, className }: Props) {
           const cls = classesFor(transition, active);
           const wrapStyle = { transitionDuration: `${TRANSITION_MS}ms` } as React.CSSProperties;
 
-          // link_url 이 있으면 a 태그로 감싸기 — 활성 컷에서만 클릭 가능
           return (
             <div key={img.id} className={cls} style={wrapStyle} aria-hidden={!active}>
               {img.link_url && active ? (
@@ -161,6 +169,15 @@ export default function BannerSlider({ placement, className }: Props) {
                 </Link>
               ) : (
                 inner
+              )}
+
+              {/* 캡션 오버레이 — show_caption_overlay 가 true이고 alt_text 가 있을 때만 */}
+              {showCaption && img.alt_text && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-4 py-3">
+                  <p className="text-white text-sm md:text-base font-medium leading-snug line-clamp-2">
+                    {img.alt_text}
+                  </p>
+                </div>
               )}
             </div>
           );

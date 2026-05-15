@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Bulletin } from "@/lib/api";
 import BulletinClient from "./BulletinClient";
 import PageHeader from "@/components/PageHeader";
+import BannerSlider from "@/components/BannerSlider";
 import SectionLayout from "@/components/SectionLayout";
 import { fetchParishMin } from "@/lib/parish";
 
@@ -42,6 +43,7 @@ export default async function BulletinPage() {
     <>
       <PageHeader group="말씀과 기도" title="주보 아카이브" subtitle="이번 주 주보와 지난 주보를 한 자리에서 만납니다" />
       <SectionLayout group="word">
+        <BannerSlider placement="bulletin_top" className="mb-6" />
         <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} parishName={p.name} />
       </SectionLayout>
     </>

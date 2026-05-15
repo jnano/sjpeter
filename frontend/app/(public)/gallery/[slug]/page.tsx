@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import BannerSlider from "@/components/BannerSlider";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -154,6 +155,8 @@ export default async function GalleryPage({
         ) : undefined}
       />
       <SectionLayout autoHero={false}>
+
+      <BannerSlider placement="gallery_top" className="mb-6" />
 
       {postList.posts.length === 0 ? (
         <div className="text-center py-20 text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl">
