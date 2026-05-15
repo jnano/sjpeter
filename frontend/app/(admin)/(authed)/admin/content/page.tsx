@@ -473,7 +473,7 @@ const emptyComForm = {
   photo_display_mode: "slideshow",
 };
 
-const COMMUNITY_COLLAPSED_KEY = "admin_community_collapsed_divisions";
+const COMMUNITY_OPEN_KEY = "admin_community_open_divisions";
 
 function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
@@ -485,27 +485,28 @@ function CommunityTab() {
   const [msg, setMsg] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [collapsedDivisions, setCollapsedDivisions] = useState<Set<number>>(new Set());
+  // 기본 = 모두 접힘. 사용자가 명시적으로 펼친 분과만 openDivisions 에 들어감.
+  const [openDivisions, setOpenDivisions] = useState<Set<number>>(new Set());
   const select = useBulkSelect(items.map((i) => i.id));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = localStorage.getItem(COMMUNITY_COLLAPSED_KEY);
+      const raw = localStorage.getItem(COMMUNITY_OPEN_KEY);
       if (raw) {
         const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) setCollapsedDivisions(new Set(arr.filter((v) => typeof v === "number")));
+        if (Array.isArray(arr)) setOpenDivisions(new Set(arr.filter((v) => typeof v === "number")));
       }
     } catch {}
   }, []);
 
   function toggleDivision(id: number) {
-    setCollapsedDivisions((prev) => {
+    setOpenDivisions((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       try {
-        localStorage.setItem(COMMUNITY_COLLAPSED_KEY, JSON.stringify([...next]));
+        localStorage.setItem(COMMUNITY_OPEN_KEY, JSON.stringify([...next]));
       } catch {}
       return next;
     });
@@ -603,7 +604,7 @@ function CommunityTab() {
   const sortedItems: CommunityGroup[] = [];
   for (const top of topLevel) {
     sortedItems.push(top);
-    if (!collapsedDivisions.has(top.id)) {
+    if (openDivisions.has(top.id)) {
       sortedItems.push(...childrenOf(top.id));
     }
   }
@@ -783,8 +784,8 @@ function CommunityTab() {
                           <button
                             type="button"
                             onClick={() => toggleDivision(g.id)}
-                            aria-expanded={!collapsedDivisions.has(g.id)}
-                            aria-label={`${g.name} 분과 ${collapsedDivisions.has(g.id) ? "펼치기" : "접기"}`}
+                            aria-expanded={openDivisions.has(g.id)}
+                            aria-label={`${g.name} 분과 ${openDivisions.has(g.id) ? "접기" : "펼치기"}`}
                             className="text-gray-400 hover:text-gray-700 -ml-1 mr-0.5"
                           >
                             <svg
@@ -797,7 +798,7 @@ function CommunityTab() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               aria-hidden="true"
-                              className={`transition-transform ${collapsedDivisions.has(g.id) ? "-rotate-90" : ""}`}
+                              className={`transition-transform ${openDivisions.has(g.id) ? "" : "-rotate-90"}`}
                             >
                               <polyline points="6 9 12 15 18 9" />
                             </svg>
