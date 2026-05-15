@@ -1276,6 +1276,9 @@ def create_post(
     if board.moderator_only_write and not is_super_admin:
         if board.moderator_id != current.id and not getattr(current, "is_admin", False):
             raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
+    # 선택 회원 게시판: 작성도 허용 명단만 (admin 은 제외)
+    if not is_super_admin:
+        _check_selected_access(board, current, db)
     post = Post(board_id=board.id, member_id=current.id if current else None, **body.model_dump())
     db.add(post)
     db.commit()
@@ -1468,6 +1471,11 @@ def create_comment(
     db: Session = Depends(get_db),
     current: Member = Depends(get_current_member),
 ):
+    board = _get_board_or_404(slug, db)
+    # 게시판이 회원 전용 읽기/선택 회원이면 댓글 작성도 동일 조건 적용
+    if board.members_only_read and not current:
+        raise HTTPException(status_code=403, detail="회원만 댓글을 작성할 수 있습니다.")
+    _check_selected_access(board, current, db)
     _get_post_or_404(slug, post_id, db)
     if body.parent_id:
         parent = db.query(Comment).filter(Comment.id == body.parent_id, Comment.post_id == post_id).first()

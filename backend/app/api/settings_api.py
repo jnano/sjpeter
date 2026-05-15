@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.core.database import get_db
-from app.core.auth import get_current_admin
+from app.core.auth import get_current_admin, get_current_super_admin
 from app.core.site_settings import invalidate, get_setting
 from app.core.liturgical import compute_current_season
 from app.models.site_setting import SiteSetting
@@ -112,7 +112,7 @@ def update_setting(
     key: str,
     body: SettingUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_super_admin),
 ):
     row = db.query(SiteSetting).filter(SiteSetting.key == key).first()
     if not row:
