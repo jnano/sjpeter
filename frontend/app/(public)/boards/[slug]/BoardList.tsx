@@ -9,6 +9,24 @@ function AiBadge() {
   );
 }
 
+/** 동영상 포함 표시 — 밝은 색·반짝임. inline 은 목록 텍스트 옆, 큰 형식은 PhotoView. */
+function VideoBadge({ inline = false }: { inline?: boolean }) {
+  if (inline) {
+    return (
+      <span
+        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 shrink-0 animate-pulse"
+        title="동영상 포함"
+      >
+        <span className="text-[10px]">✨</span>
+        <span className="text-[11px]">🎬</span>
+      </span>
+    );
+  }
+  return (
+    <span className="text-3xl animate-pulse" title="동영상 포함">🎬</span>
+  );
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
@@ -152,9 +170,7 @@ function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: Bo
             {post.thumbnail_url && (
               <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
             )}
-            {post.has_video && (
-              <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="동영상 포함">📺</span>
-            )}
+            {post.has_video && <VideoBadge inline />}
           </span>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
             {cols.list_show_author && (
@@ -197,12 +213,22 @@ function PhotoView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: B
                 sizes="(max-width: 640px) 50vw, 33vw"
               />
               {post.has_video && (
-                <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded" title="동영상 포함">📺</span>
+                <span
+                  className="absolute top-2 right-2 inline-flex items-center gap-0.5 bg-rose-500/95 text-white text-xs px-2 py-0.5 rounded-full shadow-md animate-pulse"
+                  title="동영상 포함"
+                >
+                  <span className="text-[10px]">✨</span>
+                  <span>🎬</span>
+                </span>
               )}
             </div>
           ) : (
             <div className="w-full aspect-square bg-gray-100 flex items-center justify-center relative">
-              <span className="text-3xl text-gray-300">{post.has_video ? "📺" : "📄"}</span>
+              {post.has_video ? (
+                <span className="text-3xl animate-pulse" title="동영상 포함">🎬</span>
+              ) : (
+                <span className="text-3xl text-gray-300">📄</span>
+              )}
             </div>
           )}
           <div className="px-3 py-2.5">
