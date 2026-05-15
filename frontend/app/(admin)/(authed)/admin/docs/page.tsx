@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.94";
+export const CURRENT_VERSION = "1.5.100";
 export const LAST_UPDATED = "2026-05-15";
 
 // 버전 규칙:
@@ -15,6 +15,30 @@ export const LAST_UPDATED = "2026-05-15";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.100", date: "2026-05-15", tag: "기능",
+    items: ["헤더 대메뉴(그룹 라벨) 클릭 시 페이지 이동 — admin/menus 의 landing_href 설정, 없으면 첫 sub 항목 자동 fallback"],
+  },
+  {
+    version: "1.5.99", date: "2026-05-15", tag: "수정",
+    items: ["/admin/content?tab=community 분과 그룹 기본을 접힌 상태로 — collapsed → open 모델 반전"],
+  },
+  {
+    version: "1.5.98", date: "2026-05-15", tag: "인프라",
+    items: ["presentation/DEPLOY_CAFE24.md §15 'Claude Code 활용 방식' 추가 (서버 설치 / 로컬 SSH / 혼합 비교)"],
+  },
+  {
+    version: "1.5.97", date: "2026-05-15", tag: "인프라",
+    items: ["DEPLOY_CAFE24.md 를 Cafe24 자동 설치 구성에 맞춰 재작성 (Python 3.12·uv·Uvicorn·PG17 사전 설치 반영)"],
+  },
+  {
+    version: "1.5.96", date: "2026-05-15", tag: "인프라",
+    items: ["presentation/DEPLOY_CAFE24.md 신설 — Cafe24 VPS 배포 시나리오 12단계 + 부록"],
+  },
+  {
+    version: "1.5.95", date: "2026-05-15", tag: "인프라",
+    items: ["백업 사전 작업으로 /admin/docs CHANGELOG 동기화 (v1.5.93·v1.5.94 추가)"],
+  },
   {
     version: "1.5.94", date: "2026-05-15", tag: "기능",
     items: ["/admin/docs 변경 이력을 날짜별 그룹화 + 접기/펼치기 (모두 펼치기·접기 단축 버튼 포함)"],
