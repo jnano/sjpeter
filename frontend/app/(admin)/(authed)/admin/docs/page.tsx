@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.26";
-export const LAST_UPDATED = "2026-05-13";
+export const CURRENT_VERSION = "1.5.92";
+export const LAST_UPDATED = "2026-05-15";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,285 @@ export const LAST_UPDATED = "2026-05-13";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.92", date: "2026-05-15", tag: "기능",
+    items: ["전례 시기 자동 계산 + 자동/수동 모드 토글 — Gauss 알고리즘 부활절 기준, /admin/season 토글로 매일 자동 갱신"],
+  },
+  {
+    version: "1.5.91", date: "2026-05-15", tag: "디자인",
+    items: ["footer 배경에 전례 시기 테마 색 적용 (--color-surface-warm)"],
+  },
+  {
+    version: "1.5.90", date: "2026-05-15", tag: "수정",
+    items: ["캘린더 주 보기에서도 lane 영역 column 세로선 누락 — 빈 div 7개로 세로선 강제 표시"],
+  },
+  {
+    version: "1.5.89", date: "2026-05-15", tag: "기능",
+    items: ["SectionLayout chipsOnly 패턴 추가 + 갤러리 적용 (풀폭 본문 + 가로 칩 메뉴)"],
+  },
+  {
+    version: "1.5.88", date: "2026-05-15", tag: "수정",
+    items: ["캘린더 멀티데이 lane 영역의 column 세로선 누락 — 빈 div 7개로 세로선 유지"],
+  },
+  {
+    version: "1.5.87", date: "2026-05-15", tag: "기능",
+    items: ["/calendar 풀폭 본문 보존 + PageHeader 아래 가로 칩 메뉴 (SectionSidebar chipsOnly)"],
+  },
+  {
+    version: "1.5.86", date: "2026-05-15", tag: "디자인",
+    items: ["/search 검색 후에도 '무엇을 찾고 계신가요?' 헤더 유지 — 진입 경험 일관성"],
+  },
+  {
+    version: "1.5.85", date: "2026-05-15", tag: "수정",
+    items: ["SectionSidebar가 스크롤을 따라 움직이도록 sticky top 단순화 (md:top-28, PopularCard와 동일)"],
+  },
+  {
+    version: "1.5.84", date: "2026-05-15", tag: "기능",
+    items: ["/admin/menus 새로고침 후 현재 선택 그룹 유지 (localStorage 영속)"],
+  },
+  {
+    version: "1.5.83", date: "2026-05-15", tag: "수정",
+    items: ["admin/menus 그룹 PUT 본문에 sidebar_height_px·sidebar_image_position 누락 — 9방향 그리드 클릭이 저장 안 되던 문제"],
+  },
+  {
+    version: "1.5.82", date: "2026-05-15", tag: "기능",
+    items: ["사이드바 상단 이미지 위치(object-position) 9방향 선택 — admin/menus 3x3 그리드"],
+  },
+  {
+    version: "1.5.81", date: "2026-05-15", tag: "기능",
+    items: ["사이드바 상단 이미지 세로 크기 지정 (sidebar_height_px, NULL=자동 5:4 비율)"],
+  },
+  {
+    version: "1.5.80", date: "2026-05-15", tag: "수정",
+    items: ["배너 그룹 위치 변경이 select에서 깜빡이며 안 고정되는 문제 — optimistic update 적용"],
+  },
+  {
+    version: "1.5.79", date: "2026-05-15", tag: "기능",
+    items: [
+      "배너 노출 위치 확장 (home_main 1개 → 8개): home·about·calendar·bulletin·gallery",
+      "그룹별 크기(aspect_ratio) · 슬라이드 전환 · 딜레이(2~30초) · 캡션 오버레이 설정",
+    ],
+  },
+  {
+    version: "1.5.78", date: "2026-05-15", tag: "인프라",
+    items: ["사이드바·페이지 '주임 신부님' → '사목자' 일관성 (사목 인원 전체 의미 정확화)"],
+  },
+  {
+    version: "1.5.77", date: "2026-05-15", tag: "인프라",
+    items: [
+      "admin '본당 가족' 표현 → '현재 사목자' 정리 (parish-staff·pastors)",
+      "검색 카테고리에서 '페이지 콘텐츠' 제외 (UI 폐기 + 데이터 동결)",
+    ],
+  },
+  {
+    version: "1.5.76", date: "2026-05-15", tag: "수정",
+    items: ["admin 사이드바 accordion — 다른 그룹 열면 기존 열린 그룹 자동 닫힘"],
+  },
+  {
+    version: "1.5.75", date: "2026-05-15", tag: "수정",
+    items: ["admin 사이드바 그룹 접기를 '기본 닫힘 + 클릭 시 열림' 모델로 반전"],
+  },
+  {
+    version: "1.5.74", date: "2026-05-15", tag: "인프라",
+    items: [
+      "admin 사이드바 8그룹 재편 + 라벨 정리 + 성전 건축 단독 배치",
+      "대분류·중분류 접기 UI (localStorage 영속) + AI 텍스트 뱃지",
+      "a11y 4건: h2 그룹 헤더, aria-current=page, 이모지 aria-hidden, 뱃지 sr-only",
+      "parish 라우트 분리: /admin/parish/info, /admin/parish/mass-times",
+      "content 페이지 'pages' 탭 폐기 + 탭별 동적 h1, 단체·분과 페이지 분과 접기",
+    ],
+  },
+  {
+    version: "1.5.73", date: "2026-05-14", tag: "디자인",
+    items: ["kind='default' 게시판을 텍스트 한 줄 리스트로 일관화"],
+  },
+  {
+    version: "1.5.72", date: "2026-05-14", tag: "디자인",
+    items: ["/gallery/[slug] 에 SectionLayout 적용 — 사이드바 활성화"],
+  },
+  {
+    version: "1.5.71", date: "2026-05-14", tag: "기능",
+    items: ["게시판 간 글 이동 (admin)"],
+  },
+  {
+    version: "1.5.70", date: "2026-05-14", tag: "기능",
+    items: ["게시판 카테고리 자유입력 + 필터"],
+  },
+  {
+    version: "1.5.69", date: "2026-05-14", tag: "인프라",
+    items: ["공지사항을 boards 시스템으로 통합"],
+  },
+  {
+    version: "1.5.68", date: "2026-05-14", tag: "기능",
+    items: ["admin/boards 글 관리 패널에 자체 검색 추가"],
+  },
+  {
+    version: "1.5.67", date: "2026-05-14", tag: "기능",
+    items: ["게시판 자체 검색·정렬·이전다음 글·추천 UI"],
+  },
+  {
+    version: "1.5.66", date: "2026-05-14", tag: "수정",
+    items: ["게시판 권한 일관화 + 검색 IP 디바운스"],
+  },
+  {
+    version: "1.5.65", date: "2026-05-14", tag: "기능",
+    items: ["공지사항 페이지네이션 — 페이지당 20건 + 핀은 항상 상단"],
+  },
+  {
+    version: "1.5.64", date: "2026-05-14", tag: "기능",
+    items: ["배너 슬라이드 전환 효과 9종 — admin 그룹별 선택 (fade/slide/zoom/ken-burns 등)"],
+  },
+  {
+    version: "1.5.63", date: "2026-05-14", tag: "디자인",
+    items: ["배너 슬라이더 카드를 고정 비율(3:2)로 고정 — 이미지 크기에 따른 흔들림 제거"],
+  },
+  {
+    version: "1.5.62", date: "2026-05-14", tag: "인프라",
+    items: ["동적 /gallery/[slug] 라우트 + boards.kind='gallery' 통합"],
+  },
+  {
+    version: "1.5.61", date: "2026-05-14", tag: "인프라",
+    items: ["/admin/gallery 제거, 게시판 시스템으로 통합"],
+  },
+  {
+    version: "1.5.60", date: "2026-05-14", tag: "수정",
+    items: ["create_post가 슈퍼관리자(admin)를 거부하던 버그 수정"],
+  },
+  {
+    version: "1.5.59", date: "2026-05-14", tag: "수정",
+    items: ["/admin/gallery가 사용하는 liturgy·photo 게시판 자동 생성"],
+  },
+  {
+    version: "1.5.58", date: "2026-05-14", tag: "디자인",
+    items: ["홈 미사 시간 표기를 24시간 형식으로 변경"],
+  },
+  {
+    version: "1.5.57", date: "2026-05-14", tag: "기능",
+    items: ["위치별 슬라이드 배너 시스템 — banner_groups·banner_images 신설"],
+  },
+  {
+    version: "1.5.56", date: "2026-05-14", tag: "기능",
+    items: ["홈 메인 레이아웃 4종 select로 확장"],
+  },
+  {
+    version: "1.5.55", date: "2026-05-14", tag: "디자인",
+    items: ["홈 시즌 배너를 복음 카드 안 → 독립 배너 카드로 분리"],
+  },
+  {
+    version: "1.5.54", date: "2026-05-14", tag: "기능",
+    items: ["첫영성체 시즌 배너 + 설정 select 박스"],
+  },
+  {
+    version: "1.5.53", date: "2026-05-14", tag: "기능",
+    items: ["홈 메인 레이아웃을 admin에서 wide/even 토글"],
+  },
+  {
+    version: "1.5.52", date: "2026-05-14", tag: "디자인",
+    items: ["홈 메인 3단 → 사진 확장 + 복음·미사 우측 2단 스택"],
+  },
+  {
+    version: "1.5.51", date: "2026-05-14", tag: "디자인",
+    items: ["묵상 슬라이드의 마크다운 문법 노출 제거"],
+  },
+  {
+    version: "1.5.50", date: "2026-05-14", tag: "디자인",
+    items: ["인기 검색어 sticky top 80→112px — 헤더 가림 회피"],
+  },
+  {
+    version: "1.5.49", date: "2026-05-14", tag: "디자인",
+    items: ["/search '우리 안에 있는 모든 것을 찾아드립니다' 부제 제거"],
+  },
+  {
+    version: "1.5.48", date: "2026-05-14", tag: "디자인",
+    items: ["인기 검색어 카드를 self-start + sticky로 고정"],
+  },
+  {
+    version: "1.5.47", date: "2026-05-14", tag: "디자인",
+    items: ["/search '우리 안에 있는 모든 것을 찾아드립니다' 부제 추가"],
+  },
+  {
+    version: "1.5.46", date: "2026-05-14", tag: "디자인",
+    items: ["/search 2-column 분기를 lg → md로 낮춤, 사이드 폭 280 → 260px"],
+  },
+  {
+    version: "1.5.45", date: "2026-05-14", tag: "디자인",
+    items: ["브라우저 기본 검색 X 버튼 숨김 — 자체 X와 중복 노출 제거"],
+  },
+  {
+    version: "1.5.44", date: "2026-05-14", tag: "디자인",
+    items: ["데스크톱 레이아웃 유지 폭 10% 확대 (md: 768 → 691.2px)"],
+  },
+  {
+    version: "1.5.43", date: "2026-05-14", tag: "기능",
+    items: ["인기 검색어 사이드 카드 + 추천 검색어 admin 편집"],
+  },
+  {
+    version: "1.5.42", date: "2026-05-14", tag: "기능",
+    items: ["헤더 상시 검색바 + /search 큰 입력란·추천 검색어"],
+  },
+  {
+    version: "1.5.41", date: "2026-05-14", tag: "기능",
+    items: ["admin 사이드바를 노션 방식으로 — pinned·peek hover·⌘\\ 토글"],
+  },
+  {
+    version: "1.5.40", date: "2026-05-14", tag: "기능",
+    items: ["통합 검색에 prayer·meditation·council·page·construction·pastor·priest 보강"],
+  },
+  {
+    version: "1.5.39", date: "2026-05-14", tag: "기능",
+    items: ["주요 기도문 24건 시드 — 7개 카테고리 전부 채움"],
+  },
+  {
+    version: "1.5.38", date: "2026-05-14", tag: "기능",
+    items: ["기도문 카테고리 시스템 — 7개 카테고리·검색·prev/next·admin CRUD"],
+  },
+  {
+    version: "1.5.37", date: "2026-05-14", tag: "인프라",
+    items: ["메뉴 라벨을 사이트 전역 단일 진실 소스로 통합"],
+  },
+  {
+    version: "1.5.36", date: "2026-05-14", tag: "디자인",
+    items: ["pentecost 라벨 확장 + 상단 정보 바에 시즌 surface-warm 배경"],
+  },
+  {
+    version: "1.5.35", date: "2026-05-14", tag: "디자인",
+    items: ["전례 시기 칩을 상단 좌측 끝으로 이동"],
+  },
+  {
+    version: "1.5.34", date: "2026-05-14", tag: "기능",
+    items: ["전례 시기 칩을 공개 사이트 헤더 우측 끝에 표시"],
+  },
+  {
+    version: "1.5.33", date: "2026-05-14", tag: "기능",
+    items: ["묵상 아카이브 검색·압축 페이지네이션·prev/next 네비·OG 메타·focus 강조"],
+  },
+  {
+    version: "1.5.32", date: "2026-05-14", tag: "인프라",
+    items: ["글로벌 작업 흐름으로 가는 다리 한 줄 추가"],
+  },
+  {
+    version: "1.5.31", date: "2026-05-14", tag: "기능",
+    items: ["전례 시기 스킨 admin 토글 — site_settings 기반 사이트 전체 적용"],
+  },
+  {
+    version: "1.5.30", date: "2026-05-14", tag: "인프라",
+    items: ["가톨릭 전례 5절기 시즈널 스킨 예시 추가"],
+  },
+  {
+    version: "1.5.29", date: "2026-05-14", tag: "인프라",
+    items: ["admin 스킨 인프라 — data-skin 속성 + CSS 변수 오버라이드 자리"],
+  },
+  {
+    version: "1.5.28", date: "2026-05-14", tag: "인프라",
+    items: ["admin 로그인/인증 영역을 별도 sub-group으로 분리"],
+  },
+  {
+    version: "1.5.27", date: "2026-05-14", tag: "인프라",
+    items: [
+      "admin·공개 영역을 Route Group으로 분리 — 공개 Header 누수 차단",
+      "root layout 슬림화 + (public)/layout.tsx 신설",
+    ],
+  },
   {
     version: "1.5.26", date: "2026-05-13", tag: "기능",
     items: [
