@@ -24,6 +24,7 @@ interface Post {
   comment_count: number;
   created_at: string;
   thumbnail_url: string | null;
+  is_pinned: boolean;
 }
 
 interface PostListOut {

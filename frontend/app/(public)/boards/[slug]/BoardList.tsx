@@ -70,6 +70,7 @@ interface Post {
   created_at: string;
   thumbnail_url: string | null;
   has_video?: boolean;
+  is_pinned?: boolean;
 }
 
 export interface BoardCols {
@@ -169,8 +170,13 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
                 {posts.length - i}
               </span>
             )}
+            {post.is_pinned && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded shrink-0 font-semibold" title="상단 고정">
+                📌 고정
+              </span>
+            )}
             {!post.member && <AiBadge />}
-            <span className="font-medium text-[var(--color-text)] truncate group-hover:underline">
+            <span className={`font-medium text-[var(--color-text)] truncate group-hover:underline ${post.is_pinned ? "font-semibold" : ""}`}>
               {post.title}
             </span>
             {cols.list_show_comments && post.comment_count > 0 && (
@@ -244,6 +250,9 @@ function PhotoView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string
           )}
           <div className="px-3 py-2.5">
             <p className="text-sm font-medium truncate group-hover:text-[var(--color-primary)]">
+              {post.is_pinned && (
+                <span className="mr-1 text-amber-600" title="상단 고정">📌</span>
+              )}
               {post.title}
               {cols.list_show_comments && post.comment_count > 0 && (
                 <span className="ml-1 text-xs text-[var(--color-primary)]">

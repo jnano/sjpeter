@@ -25,6 +25,7 @@ interface Post {
   comment_count: number;
   created_at: string;
   thumbnail_url: string | null;
+  is_pinned: boolean;
 }
 
 interface Board {
@@ -191,6 +192,9 @@ export default async function GalleryPage({
               )}
               <div className="px-3 py-2.5 bg-white">
                 <p className="text-sm font-medium truncate group-hover:text-[var(--color-primary)]">
+                  {post.is_pinned && (
+                    <span className="mr-1 text-amber-600" title="상단 고정">📌</span>
+                  )}
                   {post.title}
                   {post.comment_count > 0 && (
                     <span className="ml-1 text-xs text-[var(--color-primary)]">

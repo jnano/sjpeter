@@ -12,7 +12,7 @@ from datetime import datetime, date
 from app.core.database import get_db
 from app.core.auth import get_current_admin, get_current_member, get_current_author, get_optional_member
 from app.core.config import settings
-from app.models.board import Board, Post, Comment, BoardAllowedMember, PostLike
+from app.models.board import Board, Post, Comment, BoardAllowedMember, PostLike, BoardAdminGroup
 from app.models.attachment import Attachment
 from app.models.member import Member
 from app.models.admin import Admin
@@ -72,6 +72,7 @@ class BoardUpdate(BaseModel):
     exclude_from_search: Optional[bool] = None
     show_in_menu: Optional[bool] = None
     moderator_id: Optional[int] = None
+    admin_group_id: Optional[int] = None
     kind: Optional[str] = None
     list_show_number: Optional[bool] = None
     list_show_author: Optional[bool] = None
@@ -114,6 +115,7 @@ class BoardOut(BaseModel):
     list_show_comments: bool = True
     moderator: Optional[ModeratorOut] = None
     moderator_id: Optional[int] = None
+    admin_group_id: Optional[int] = None
     allowed_members: list[AllowedMemberOut] = []
 
     class Config:
@@ -186,6 +188,7 @@ class PostOut(BaseModel):
     view_count: int
     created_at: datetime
     updated_at: datetime
+    is_pinned: bool = False
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
     category: Optional[str] = None
@@ -198,6 +201,10 @@ class PostOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PostPinIn(BaseModel):
+    is_pinned: bool
 
 
 _VIDEO_URL_RE = re.compile(
@@ -226,6 +233,7 @@ class PostSummary(BaseModel):
     comment_count: int = 0
     thumbnail_url: Optional[str] = None
     has_video: bool = False
+    is_pinned: bool = False
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
     category: Optional[str] = None
@@ -1234,6 +1242,79 @@ def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), _:
     return _board_out(board, db)
 
 
+# ─── 게시판 어드민 분류 그룹 (admin/boards 화면 정리용) ─────────────────
+
+class BoardAdminGroupIn(BaseModel):
+    name: str
+
+
+class BoardAdminGroupOut(BaseModel):
+    id: int
+    name: str
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class BoardAdminGroupReorderIn(BaseModel):
+    ids: list[int]
+
+
+@router.get("/api/board-admin-groups", response_model=list[BoardAdminGroupOut])
+def list_board_admin_groups(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    return (
+        db.query(BoardAdminGroup)
+        .order_by(BoardAdminGroup.sort_order, BoardAdminGroup.id)
+        .all()
+    )
+
+
+@router.post("/api/board-admin-groups", response_model=BoardAdminGroupOut)
+def create_board_admin_group(body: BoardAdminGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="그룹 이름을 입력하세요.")
+    max_order = db.query(BoardAdminGroup).count()
+    g = BoardAdminGroup(name=name, sort_order=max_order)
+    db.add(g)
+    db.commit()
+    db.refresh(g)
+    return g
+
+
+@router.put("/api/board-admin-groups/reorder")
+def reorder_board_admin_groups(body: BoardAdminGroupReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    for i, gid in enumerate(body.ids):
+        db.query(BoardAdminGroup).filter(BoardAdminGroup.id == gid).update({"sort_order": i})
+    db.commit()
+    return {"ok": True}
+
+
+@router.put("/api/board-admin-groups/{group_id}", response_model=BoardAdminGroupOut)
+def update_board_admin_group(group_id: int, body: BoardAdminGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    g = db.query(BoardAdminGroup).filter(BoardAdminGroup.id == group_id).first()
+    if not g:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="그룹 이름을 입력하세요.")
+    g.name = name
+    db.commit()
+    db.refresh(g)
+    return g
+
+
+@router.delete("/api/board-admin-groups/{group_id}", status_code=204)
+def delete_board_admin_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    g = db.query(BoardAdminGroup).filter(BoardAdminGroup.id == group_id).first()
+    if not g:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    # boards.admin_group_id 는 ON DELETE SET NULL — 안에 있던 게시판은 자동으로 미분류 처리됨.
+    db.delete(g)
+    db.commit()
+
+
 @router.get("/api/boards/{slug}/allowed-members", response_model=list[AllowedMemberOut])
 def list_allowed_members(slug: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
@@ -1592,6 +1673,39 @@ def update_post(
             action="post_update", target_type="post", target_id=post.id,
             detail=f"[{slug}] '{old_title[:80]}' → '{body.title[:80]}' (author_id={post.member_id})",
         )
+    return (
+        db.query(Post)
+        .options(joinedload(Post.member), joinedload(Post.comments).joinedload(Comment.member), joinedload(Post.attachments))
+        .filter(Post.id == post_id)
+        .first()
+    )
+
+
+@router.patch("/api/boards/{slug}/posts/{post_id}/pin", response_model=PostOut)
+def pin_post(
+    slug: str,
+    post_id: int,
+    body: PostPinIn,
+    db: Session = Depends(get_db),
+    current: Optional[Member] = Depends(get_current_author),
+):
+    """게시글 상단 고정 토글. 슈퍼관리자(current is None) 또는 게시판 관리자(moderator)만 가능."""
+    from app.core.admin_log import log_action
+    board = _get_board_or_404(slug, db)
+    post = _get_post_or_404(slug, post_id, db)
+    is_super = current is None
+    is_moderator = current is not None and board.moderator_id == current.id
+    if not (is_super or is_moderator):
+        raise HTTPException(status_code=403, detail="고정 권한이 없습니다. 관리자만 변경할 수 있습니다.")
+    post.is_pinned = bool(body.is_pinned)
+    db.commit()
+    actor = "admin" if is_super else f"member:{current.nickname if current else '?'}"
+    log_action(
+        db, actor,
+        action="post_pin" if post.is_pinned else "post_unpin",
+        target_type="post", target_id=post.id,
+        detail=f"[{slug}] '{post.title[:80]}'",
+    )
     return (
         db.query(Post)
         .options(joinedload(Post.member), joinedload(Post.comments).joinedload(Comment.member), joinedload(Post.attachments))

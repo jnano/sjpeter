@@ -20,6 +20,8 @@ class Board(Base):
     exclude_from_search = Column(Boolean, default=False)
     show_in_menu = Column(Boolean, default=True)            # True: 헤더 메뉴에 자동 노출
     moderator_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
+    # 어드민 분류 그룹 (admin/boards 화면 정렬·묶음용. NULL=미분류). 공개 페이지엔 영향 없음.
+    admin_group_id = Column(Integer, ForeignKey("board_admin_groups.id", ondelete="SET NULL"), nullable=True)
     kind = Column(String(20), default="default", nullable=False)  # 'default' | 'line' (한 줄 메시지)
     # 게시판 목록 표시 컬럼 토글 (admin 제어, v1.5.120)
     list_show_number = Column(Boolean, nullable=False, default=False)
@@ -33,6 +35,17 @@ class Board(Base):
     posts = relationship("Post", back_populates="board", cascade="all, delete-orphan")
     moderator = relationship("Member", foreign_keys=[moderator_id])
     allowed_member_rows = relationship("BoardAllowedMember", back_populates="board", cascade="all, delete-orphan")
+    admin_group = relationship("BoardAdminGroup", foreign_keys=[admin_group_id])
+
+
+class BoardAdminGroup(Base):
+    """게시판 어드민 분류 그룹. /admin/boards 화면에서 게시판을 묶는 용도. 공개 페이지엔 미반영."""
+    __tablename__ = "board_admin_groups"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80), nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class BoardAllowedMember(Base):

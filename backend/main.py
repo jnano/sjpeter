@@ -172,6 +172,23 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # 게시판 어드민 분류 그룹 (admin/boards 화면 정리용. 공개 페이지엔 영향 없음.)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS board_admin_groups (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(80) NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        try:
+            conn.execute(text(
+                "ALTER TABLE boards ADD COLUMN IF NOT EXISTS admin_group_id INTEGER "
+                "REFERENCES board_admin_groups(id) ON DELETE SET NULL"
+            ))
+        except Exception:
+            pass
+
         # 지정 회원 접근 테이블
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS board_allowed_members (

@@ -45,7 +45,14 @@ interface Board {
   list_show_likes: boolean;
   list_show_comments: boolean;
   moderator: Moderator | null;
+  admin_group_id: number | null;
   allowed_members: AllowedMember[];
+}
+
+interface BoardAdminGroup {
+  id: number;
+  name: string;
+  sort_order: number;
 }
 
 const LIST_COLUMN_LABELS: { key: keyof Board; label: string }[] = [
@@ -84,6 +91,12 @@ const ACCESS_LABELS: Record<AccessMode, { label: string; badge: string; color: s
 function getAdminToken() {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("admin_token");
+}
+
+function kindLabel(k: string): string {
+  if (k === "line") return "한 줄";
+  if (k === "gallery") return "갤러리";
+  return "일반";
 }
 
 // 관리자 검색 드롭다운 컴포넌트
@@ -181,6 +194,12 @@ function ModeratorPicker({
 
 export default function AdminBoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
+  const [adminGroups, setAdminGroups] = useState<BoardAdminGroup[]>([]);
+  const [newGroupName, setNewGroupName] = useState("");
+  // 열린 그룹 키 집합. 비어있음 = 모두 접힘 (디폴트).
+  // 헤더 클릭 = 아코디언 (다른 그룹 닫고 이 그룹만 열기), 같은 그룹 다시 클릭 = 닫기.
+  // "모두 펼치기" 액션은 이를 무시하고 모든 visible section 을 동시에 펼침.
+  const [openGroupKeys, setOpenGroupKeys] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -201,7 +220,115 @@ export default function AdminBoardsPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchParams = useSearchParams();
 
-  useEffect(() => { fetchBoards(); }, []);
+  useEffect(() => { fetchBoards(); fetchAdminGroups(); }, []);
+
+  function toggleGroupOpen(key: string) {
+    // 헤더 클릭: 열려있으면 닫기, 닫혀있으면 다른 그룹 모두 닫고 이 그룹만 열기 (아코디언).
+    setOpenGroupKeys((prev) => (prev.has(key) ? new Set() : new Set([key])));
+  }
+
+  // 현재 표시되는 섹션의 키 목록을 계산. "모두 펼치기" 가 visibleSections 와 동일한 필터링을 사용해야 일관됨.
+  function computeVisibleSectionKeys(): string[] {
+    const sortedGroups = [...adminGroups].sort(
+      (a, b) => a.sort_order - b.sort_order || a.id - b.id,
+    );
+    const uncategorizedCount = boards.filter((b) => !b.admin_group_id).length;
+    const keys: string[] = [];
+    // 미분류는 보드가 있을 때만 표시
+    if (uncategorizedCount > 0) keys.push("uncategorized");
+    // 그룹은 보드가 없어도 항상 표시 (이동 대상 슬롯 노출)
+    for (const g of sortedGroups) keys.push(`g-${g.id}`);
+    return keys;
+  }
+
+  function toggleAllGroupsOpen() {
+    const allKeys = computeVisibleSectionKeys();
+    setOpenGroupKeys((prev) => (prev.size > 0 ? new Set() : new Set(allKeys)));
+  }
+
+  async function fetchAdminGroups() {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/board-admin-groups`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setAdminGroups(await res.json());
+  }
+
+  async function createGroup() {
+    const name = newGroupName.trim();
+    if (!name) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/board-admin-groups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      setNewGroupName("");
+      fetchAdminGroups();
+    }
+  }
+
+  async function renameGroup(g: BoardAdminGroup) {
+    const name = prompt("그룹 이름 변경", g.name);
+    if (!name || name.trim() === g.name) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/board-admin-groups/${g.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    if (res.ok) fetchAdminGroups();
+  }
+
+  async function deleteGroup(g: BoardAdminGroup) {
+    const inside = boards.filter((b) => b.admin_group_id === g.id);
+    if (!confirm(
+      `'${g.name}' 그룹을 삭제합니다.\n` +
+        (inside.length > 0
+          ? `안의 게시판 ${inside.length}개는 '미분류' 로 이동됩니다.\n`
+          : "") +
+        `계속하시겠습니까?`,
+    )) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/board-admin-groups/${g.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      // 안에 있던 게시판은 ON DELETE SET NULL 로 자동 미분류 처리됨 → 보드 목록 새로고침
+      fetchAdminGroups();
+      fetchBoards();
+    }
+  }
+
+  async function moveGroup(g: BoardAdminGroup, dir: -1 | 1) {
+    const sorted = [...adminGroups].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+    const i = sorted.findIndex((x) => x.id === g.id);
+    const j = i + dir;
+    if (j < 0 || j >= sorted.length) return;
+    [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/board-admin-groups/reorder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ids: sorted.map((x) => x.id) }),
+    });
+    if (res.ok) fetchAdminGroups();
+  }
+
+  async function moveBoardToGroup(board: Board, groupId: number | null) {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ admin_group_id: groupId }),
+    });
+    if (res.ok) {
+      const updated: Board = await res.json();
+      setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    }
+  }
 
   useEffect(() => {
     if (searchParams.get("create") === "true") {
@@ -467,21 +594,108 @@ export default function AdminBoardsPage() {
         </form>
       )}
 
+      {/* 그룹 관리 (admin 정리용. 공개 페이지엔 영향 없음) */}
+      <section className="mb-5 bg-white border border-gray-200 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-700">
+            그룹 <span className="text-gray-400 font-normal">({adminGroups.length}개)</span>
+          </h2>
+          <p className="text-xs text-gray-400">admin/boards 화면 정리용 · 공개 페이지엔 영향 없음</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {[...adminGroups]
+            .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+            .map((g, i, arr) => (
+              <div
+                key={g.id}
+                className="flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-200 rounded-md text-sm"
+              >
+                <span className="font-medium text-indigo-800">{g.name}</span>
+                <span className="text-indigo-400 text-xs">
+                  ({boards.filter((b) => b.admin_group_id === g.id).length})
+                </span>
+                <button
+                  onClick={() => moveGroup(g, -1)}
+                  disabled={i === 0}
+                  className="ml-1 text-indigo-400 hover:text-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                  title="위로"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => moveGroup(g, 1)}
+                  disabled={i === arr.length - 1}
+                  className="text-indigo-400 hover:text-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                  title="아래로"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => renameGroup(g)}
+                  className="text-indigo-400 hover:text-indigo-700 text-xs ml-1"
+                  title="이름 변경"
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={() => deleteGroup(g)}
+                  className="text-indigo-400 hover:text-red-500 text-xs"
+                  title="그룹 삭제"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                createGroup();
+              }
+            }}
+            placeholder="새 그룹 이름 (예: 분과, 단체)"
+            className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400"
+          />
+          <button
+            type="button"
+            onClick={createGroup}
+            disabled={!newGroupName.trim()}
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            + 그룹 추가
+          </button>
+        </div>
+      </section>
+
       {/* 다중 선택 액션 바 */}
       {boards.length > 0 && (
         <div className="flex items-center justify-between mb-3 px-1">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={selected.size > 0 && selected.size === boards.length}
-              ref={(el) => {
-                if (el) el.indeterminate = selected.size > 0 && selected.size < boards.length;
-              }}
-              onChange={toggleSelectAll}
-              className="rounded"
-            />
-            전체 선택 ({selected.size}/{boards.length})
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selected.size > 0 && selected.size === boards.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = selected.size > 0 && selected.size < boards.length;
+                }}
+                onChange={toggleSelectAll}
+                className="rounded"
+              />
+              전체 선택 ({selected.size}/{boards.length})
+            </label>
+            <button
+              type="button"
+              onClick={toggleAllGroupsOpen}
+              className="px-2.5 py-1 text-xs rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              title={openGroupKeys.size > 0 ? "그룹 모두 접기" : "그룹 모두 펼치기"}
+            >
+              {openGroupKeys.size > 0 ? "▾ 모두 접기" : "▸ 모두 펼치기"}
+            </button>
+          </div>
           {selected.size > 0 && (
             <button
               type="button"
@@ -495,13 +709,62 @@ export default function AdminBoardsPage() {
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-6">
         {boards.length === 0 && <p className="text-center py-12 text-gray-500">게시판이 없습니다.</p>}
-        {boards.map((board) => {
-          const mode = getAccessMode(board);
-          const modeInfo = ACCESS_LABELS[mode];
-          const isExpanded = expandedId === board.id;
-          const isPostsExpanded = postsExpandedId === board.id;
+        {(() => {
+          const sortedGroups = [...adminGroups].sort(
+            (a, b) => a.sort_order - b.sort_order || a.id - b.id,
+          );
+          const sections: { key: string; label: string; groupId: number | null; boards: Board[] }[] = [
+            { key: "uncategorized", label: "미분류", groupId: null, boards: boards.filter((b) => !b.admin_group_id) },
+            ...sortedGroups.map((g) => ({
+              key: `g-${g.id}`,
+              label: g.name,
+              groupId: g.id,
+              boards: boards.filter((b) => b.admin_group_id === g.id),
+            })),
+          ];
+          // 미분류가 비어 있고 그룹이 하나라도 있으면 미분류 섹션은 숨김 (시각 노이즈 감소)
+          const visibleSections = sections.filter(
+            (s) => s.boards.length > 0 || (s.groupId !== null),
+          );
+          return visibleSections.map((section) => {
+            const isOpen = openGroupKeys.has(section.key);
+            return (
+            <div key={section.key}>
+              <button
+                type="button"
+                onClick={() => toggleGroupOpen(section.key)}
+                aria-expanded={isOpen}
+                className="w-full text-left mb-2 px-1 flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-800 transition-colors"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={`transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+                <span>{section.label}</span>
+                <span className="text-gray-300 font-normal">({section.boards.length})</span>
+                {section.boards.length === 0 && (
+                  <span className="text-gray-300 font-normal normal-case tracking-normal">— 비어 있음. 아래 게시판에서 이 그룹으로 이동하세요.</span>
+                )}
+              </button>
+              {isOpen && (
+              <div className="space-y-2">
+                {section.boards.map((board) => {
+                  const mode = getAccessMode(board);
+                  const modeInfo = ACCESS_LABELS[mode];
+                  const isExpanded = expandedId === board.id;
+                  const isPostsExpanded = postsExpandedId === board.id;
 
           return (
             <div key={board.id} id={`board-${board.id}`} className={`bg-white border rounded-xl overflow-hidden ${selected.has(board.id) ? "border-red-300 bg-red-50/30" : "border-gray-200"}`}>
@@ -541,6 +804,23 @@ export default function AdminBoardsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-3">
+                  <select
+                    value={board.admin_group_id ?? ""}
+                    onChange={(e) =>
+                      moveBoardToGroup(board, e.target.value ? parseInt(e.target.value) : null)
+                    }
+                    className="px-2 py-1.5 text-xs rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    title="그룹 이동"
+                  >
+                    <option value="">— 미분류 —</option>
+                    {[...adminGroups]
+                      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                  </select>
                   <Link
                     href={board.kind === "gallery" ? `/gallery/${board.slug}` : `/boards/${board.slug}`}
                     target="_blank"
@@ -623,7 +903,13 @@ export default function AdminBoardsPage() {
               )}
             </div>
           );
-        })}
+                })}
+              </div>
+              )}
+            </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );
@@ -632,6 +918,7 @@ export default function AdminBoardsPage() {
 function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: Board) => void }) {
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description ?? "");
+  const [kind, setKind] = useState(board.kind ?? "default");
   const [accessMode, setAccessMode] = useState<AccessMode>(getAccessMode(board));
   const [moderator, setModerator] = useState<Moderator | null>(board.moderator);
   const [excludeSearch, setExcludeSearch] = useState(board.exclude_from_search);
@@ -647,6 +934,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   useEffect(() => {
     setName(board.name);
     setDescription(board.description ?? "");
+    setKind(board.kind ?? "default");
     setAccessMode(getAccessMode(board));
     setModerator(board.moderator);
     setExcludeSearch(board.exclude_from_search);
@@ -654,7 +942,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
     setPostsPerPage(board.posts_per_page);
     setListShow(new Set(LIST_COLUMN_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)));
     setAllowedMembers(board.allowed_members ?? []);
-  }, [board.name, board.description, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members, board.list_show_number, board.list_show_author, board.list_show_date, board.list_show_views, board.list_show_likes, board.list_show_comments]);
+  }, [board.name, board.description, board.kind, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members, board.list_show_number, board.list_show_author, board.list_show_date, board.list_show_views, board.list_show_likes, board.list_show_comments]);
 
   async function save() {
     setSaving(true);
@@ -667,6 +955,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
+          kind,
           ...accessModeToFields(accessMode),
           moderator_id: moderator?.id ?? null,
           exclude_from_search: excludeSearch,
@@ -822,6 +1111,39 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           />
           개
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          형식
+          <select
+            value={kind}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next !== kind) {
+                const ok = confirm(
+                  `게시판 형식을 '${kindLabel(kind)}' → '${kindLabel(next)}' 로 변경합니다.\n저장 시 라우팅이 ${
+                    next === "gallery" ? "/gallery" : "/boards"
+                  }/${board.slug} 로 바뀝니다.\n기존 게시글은 유지되지만 표시 방식이 달라집니다.\n계속하시겠습니까?`,
+                );
+                if (!ok) return;
+              }
+              setKind(next);
+            }}
+            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="default">일반 (제목+본문)</option>
+            <option value="line">한 줄 (메시지 + 추천)</option>
+            <option value="gallery">갤러리 (사진 그리드)</option>
+          </select>
+        </label>
+        {kind === "line" && (
+          <p className="w-full text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 -mt-1">
+            ⓘ 한 줄 게시판: 회원이 짧은 메시지(예: 봉헌, 기도 청원)와 종류·대상을 남기며, 다른 회원이 &quot;함께 기도합니다&quot; 버튼으로 공감할 수 있습니다.
+          </p>
+        )}
+        {kind === "gallery" && (
+          <p className="w-full text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2 -mt-1">
+            ⓘ 갤러리 게시판: 사진 그리드 형태로 표시됩니다. 첫 첨부 사진이 카드 썸네일로 사용되며, URL 은 <code className="bg-white border border-emerald-200 px-1 rounded">/gallery/{board.slug}</code> 입니다.
+          </p>
+        )}
 
         {/* 목록 표시 컬럼 토글 — 제목·고정 뱃지·카테고리·첨부는 항상 표시 */}
         <div className="w-full flex flex-wrap items-center gap-x-4 gap-y-1 text-sm border-t border-gray-200 pt-3 mt-1">
@@ -872,6 +1194,7 @@ interface PostListItem {
   created_at: string;
   comment_count: number;
   thumbnail_url: string | null;
+  is_pinned: boolean;
   member: { id: number; nickname: string } | null;
 }
 
@@ -897,8 +1220,8 @@ function BoardPostsPanel({
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
+  const fetchPosts = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     const token = getAdminToken();
     try {
       const qp = new URLSearchParams({ page: String(page) });
@@ -913,7 +1236,7 @@ function BoardPostsPanel({
         if (data.posts_per_page) setPerPage(data.posts_per_page);
       }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [board.slug, page, appliedQ]);
 
@@ -929,6 +1252,22 @@ function BoardPostsPanel({
     setSearchInput("");
     setAppliedQ("");
     setPage(1);
+  }
+
+  async function togglePin(id: number, current: boolean) {
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/posts/${id}/pin`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ is_pinned: !current }),
+    });
+    if (res.ok) {
+      // 핀 토글로 정렬 순서가 바뀌므로 목록만 silent 갱신 — loading 표시 없이 in-place 교체.
+      // 페이지 전체 새로고침 안 함 → 열린 그룹·글 관리 패널 상태 유지 + 깜빡임 없음.
+      fetchPosts({ silent: true });
+    } else {
+      alert("고정 변경에 실패했습니다.");
+    }
   }
 
   async function deletePost(id: number) {
@@ -1150,13 +1489,31 @@ function BoardPostsPanel({
                   target="_blank"
                   className="flex-1 min-w-0 hover:text-blue-600"
                 >
-                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                    {p.is_pinned && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded shrink-0">
+                        📌 고정
+                      </span>
+                    )}
+                    <span className="truncate">{p.title}</span>
+                  </p>
                   <p className="text-xs text-gray-500 mt-0.5 truncate">
                     {p.member?.nickname ?? "익명"} · {new Date(p.created_at).toLocaleDateString("ko-KR")}
                     {p.comment_count > 0 && ` · 댓글 ${p.comment_count}`}
                     {" · 조회 "}{p.view_count}
                   </p>
                 </Link>
+                <button
+                  onClick={() => togglePin(p.id, p.is_pinned)}
+                  className={`text-xs px-2 py-1 border rounded shrink-0 transition-colors ${
+                    p.is_pinned
+                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                  }`}
+                  title={p.is_pinned ? "고정 해제" : "상단 고정"}
+                >
+                  {p.is_pinned ? "📌 고정 해제" : "📌 고정"}
+                </button>
                 <button
                   onClick={() => copyPost(p.id, p.title)}
                   className="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50 shrink-0"
