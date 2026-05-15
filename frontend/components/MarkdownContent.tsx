@@ -3,11 +3,14 @@ import remarkGfm from "remark-gfm";
 
 interface Props {
   content: string;
+  /** 본문 글자 크기. sm=14px(기본) · base=16px (게시글 본문 등 가독성 우선). */
+  size?: "sm" | "base";
 }
 
-export default function MarkdownContent({ content }: Props) {
+export default function MarkdownContent({ content, size = "sm" }: Props) {
+  const proseSize = size === "base" ? "prose-base" : "prose-sm";
   return (
-    <div className="prose prose-sm max-w-none text-[var(--color-text)] leading-relaxed
+    <div className={`prose ${proseSize} max-w-none text-[var(--color-text)] leading-relaxed
       prose-headings:text-[var(--color-primary)] prose-headings:font-bold
       prose-a:text-[var(--color-primary)] prose-a:no-underline hover:prose-a:underline
       prose-blockquote:border-l-4 prose-blockquote:border-l-[var(--color-primary)]

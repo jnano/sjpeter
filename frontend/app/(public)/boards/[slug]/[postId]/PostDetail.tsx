@@ -398,7 +398,7 @@ export default function PostDetail({
 
       {/* 본문 */}
       <div className="mb-8">
-        <MarkdownContent content={post.content} />
+        <MarkdownContent content={post.content} size="base" />
       </div>
 
       {/* 첨부파일 */}
