@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.100";
+export const CURRENT_VERSION = "1.5.111";
 export const LAST_UPDATED = "2026-05-15";
 
 // 버전 규칙:
@@ -15,6 +15,50 @@ export const LAST_UPDATED = "2026-05-15";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.111", date: "2026-05-15", tag: "디자인",
+    items: ["헤더 검색 입력 폭을 placeholder 끝에 맞춤 (-20%, w-[142px] lg:w-[181px])"],
+  },
+  {
+    version: "1.5.110", date: "2026-05-15", tag: "디자인",
+    items: ["헤더 검색 입력 폭 -2% 미세 조정 (177/226px)"],
+  },
+  {
+    version: "1.5.109", date: "2026-05-15", tag: "디자인",
+    items: ["헤더 검색 입력 폭 +3% (181/231px)"],
+  },
+  {
+    version: "1.5.108", date: "2026-05-15", tag: "디자인",
+    items: ["헤더 데스크톱 검색 입력 폭 20% 축소 — 그룹 라벨 노출 여유 확보"],
+  },
+  {
+    version: "1.5.107", date: "2026-05-15", tag: "디자인",
+    items: ["/calendar 사이드바 형식 메뉴로 변경 — max-w-6xl 래퍼 + SectionSidebar(chipsOnly 제거)"],
+  },
+  {
+    version: "1.5.106", date: "2026-05-15", tag: "디자인",
+    items: ["전례·행사 갤러리에 사이드바 형식 메뉴 적용 (chipsOnly 제거)"],
+  },
+  {
+    version: "1.5.105", date: "2026-05-15", tag: "기능",
+    items: ["/admin/bulletin/extractions 다중 선택 일괄 승인 + 카테고리 필터 + 인라인 편집"],
+  },
+  {
+    version: "1.5.104", date: "2026-05-15", tag: "기능",
+    items: ["AI 추출 자동 라우팅 → 관리자 검토·승인 워크플로 (모두 pending, _apply_extraction_routing 헬퍼 + bulk-approve + PATCH)"],
+  },
+  {
+    version: "1.5.103", date: "2026-05-15", tag: "기능",
+    items: ["캘린더 필터 칩에 봉사·순례·피정·강의·기타 추가 + 이벤트 색 일관화 (KIND_BAR/CHIP/FILTER 색 매핑)"],
+  },
+  {
+    version: "1.5.102", date: "2026-05-15", tag: "기능",
+    items: ["AI 분류설정 백엔드 연결 — /admin/event-mapping 매핑이 실제 추출 라우팅에 적용"],
+  },
+  {
+    version: "1.5.101", date: "2026-05-15", tag: "인프라",
+    items: ["백업 사전 작업으로 /admin/docs CHANGELOG v1.5.100 동기화 (v1.5.95~v1.5.100 추가)"],
+  },
   {
     version: "1.5.100", date: "2026-05-15", tag: "기능",
     items: ["헤더 대메뉴(그룹 라벨) 클릭 시 페이지 이동 — admin/menus 의 landing_href 설정, 없으면 첫 sub 항목 자동 fallback"],
