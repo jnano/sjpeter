@@ -14,6 +14,32 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 interface Author {
   id: number;
   nickname: string;
+  avatar_url?: string | null;
+}
+
+function avatarSrc(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${API}${url}`;
+}
+
+function AuthorChip({ author, size = "sm" }: { author: Author | null; size?: "sm" | "md" }) {
+  const dim = size === "md" ? "w-6 h-6" : "w-5 h-5";
+  const src = avatarSrc(author?.avatar_url ?? null);
+  const initial = (author?.nickname ?? "성").slice(0, 1);
+  return (
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className={`${dim} rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden shrink-0`}>
+        {src ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={src} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{initial}</span>
+        )}
+      </span>
+      <span className="truncate">{author?.nickname ?? "성당"}</span>
+    </span>
+  );
 }
 
 interface Post {
@@ -128,7 +154,9 @@ function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: Bo
           </span>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
             {cols.list_show_author && (
-              <span className="hidden sm:inline">{post.member?.nickname ?? "성당"}</span>
+              <span className="hidden sm:inline-flex">
+                <AuthorChip author={post.member} />
+              </span>
             )}
             {cols.list_show_date && (
               <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
@@ -180,11 +208,13 @@ function PhotoView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: B
               )}
             </p>
             {(cols.list_show_author || cols.list_show_date) && (
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {cols.list_show_author && (post.member?.nickname ?? "성당")}
-                {cols.list_show_author && cols.list_show_date && " · "}
-                {cols.list_show_date && new Date(post.created_at).toLocaleDateString("ko-KR")}
-              </p>
+              <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] mt-1">
+                {cols.list_show_author && <AuthorChip author={post.member} />}
+                {cols.list_show_author && cols.list_show_date && <span>·</span>}
+                {cols.list_show_date && (
+                  <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
+                )}
+              </div>
             )}
           </div>
         </Link>
