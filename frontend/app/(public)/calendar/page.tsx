@@ -649,7 +649,13 @@ export default function CalendarPage() {
   const today = new Date();
   const todayStr = dateToStr(today);
   const { currentGroup } = useNavigation();
+  // 모바일(<768px)에서는 월간 그리드가 답답해 첫 진입 시 자동 'list' 뷰로.
+  // 사용자가 다른 뷰 토글하면 그대로 사용.
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth < 768) setViewMode("list");
+  }, []);
   const [cursor, setCursor] = useState<Date>(today);
   const [events, setEvents] = useState<Event[]>([]);
   const [selected, setSelected] = useState<Event | null>(null);
