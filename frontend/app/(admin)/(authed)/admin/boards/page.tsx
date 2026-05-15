@@ -898,6 +898,56 @@ function BoardPostsPanel({
     }
   }
 
+  async function copyPost(id: number, title: string) {
+    // 자기 자신 제외한 활성 게시판 목록
+    const candidates = allBoards.filter((b) => b.slug !== board.slug && b.is_active);
+    if (candidates.length === 0) {
+      alert("복사 가능한 다른 게시판이 없습니다.");
+      return;
+    }
+    const lines = candidates.map((b, i) => `${i + 1}. ${b.name} (${b.slug})`).join("\n");
+    const answer = window.prompt(
+      `「${title}」을(를) 어느 게시판들로 복사할까요?\n번호 또는 slug 를 콤마로 구분해 입력하세요.\n예: 1,3,5 또는 notice,community\n\n${lines}`,
+    );
+    if (!answer) return;
+    const tokens = answer.split(",").map((s) => s.trim()).filter(Boolean);
+    const targets: { slug: string; name: string }[] = [];
+    for (const tok of tokens) {
+      const num = parseInt(tok);
+      let target: Board | undefined;
+      if (Number.isFinite(num) && num >= 1 && num <= candidates.length) {
+        target = candidates[num - 1];
+      } else {
+        target = candidates.find((b) => b.slug === tok);
+      }
+      if (target && !targets.some((t) => t.slug === target!.slug)) {
+        targets.push({ slug: target.slug, name: target.name });
+      }
+    }
+    if (targets.length === 0) {
+      alert("선택된 게시판이 없습니다.");
+      return;
+    }
+    if (!confirm(`「${title}」을(를) ${targets.length}개 게시판으로 복사하시겠습니까?\n\n${targets.map((t) => "· " + t.name).join("\n")}`)) return;
+    const token = getAdminToken();
+    const res = await fetch(`${API}/api/boards/${board.slug}/posts/${id}/copy`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ target_slugs: targets.map((t) => t.slug) }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ detail: "" }));
+      alert(data.detail || "복사에 실패했습니다.");
+      return;
+    }
+    const result: { created: { slug: string; post_id: number }[]; failed: { slug: string; reason: string }[] } = await res.json();
+    // 대상 게시판들의 카운트 갱신
+    for (const c of result.created) onPostCountChange(1, c.slug);
+    const lines2 = [`복사 ${result.created.length}건`];
+    if (result.failed.length) lines2.push(`실패 ${result.failed.length}건: ${result.failed.map((f) => f.slug).join(", ")}`);
+    alert(lines2.join("\n"));
+  }
+
   async function movePost(id: number, title: string) {
     // 자기 자신을 제외한 활성 게시판 목록
     const candidates = allBoards.filter((b) => b.slug !== board.slug && b.is_active);
@@ -1058,6 +1108,13 @@ function BoardPostsPanel({
                     {" · 조회 "}{p.view_count}
                   </p>
                 </Link>
+                <button
+                  onClick={() => copyPost(p.id, p.title)}
+                  className="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50 shrink-0"
+                  title="다중 게시판으로 복사"
+                >
+                  복사
+                </button>
                 <button
                   onClick={() => movePost(p.id, p.title)}
                   className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 shrink-0"

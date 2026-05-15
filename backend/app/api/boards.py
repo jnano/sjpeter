@@ -876,6 +876,88 @@ def publish_draft(post_id: int, db: Session = Depends(get_db), admin = Depends(g
     return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
 
 
+class PostCopyBody(BaseModel):
+    target_slugs: list[str]
+
+
+@router.post("/api/boards/{slug}/posts/{post_id}/copy")
+def copy_post_to_boards(
+    slug: str,
+    post_id: int,
+    body: PostCopyBody,
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_admin),
+):
+    """게시글을 다중 게시판으로 복사 (admin 전용).
+
+    - title·content·attachments(file_url 공유)·member_id 유지
+    - created_at 은 복사 시점, view_count·like 등 0 으로 리셋
+    - 각 target_slug 별로 새 Post + 첨부 행 생성
+    - 결과: {"created": [{slug, post_id}, ...], "failed": [{slug, reason}, ...]}
+    """
+    from app.core.admin_log import log_action, get_admin_identifier
+
+    src = _get_board_or_404(slug, db)
+    src_post = (
+        db.query(Post)
+        .options(joinedload(Post.attachments))
+        .filter(Post.id == post_id, Post.board_id == src.id)
+        .first()
+    )
+    if not src_post:
+        raise HTTPException(status_code=404, detail="원본 게시글을 찾을 수 없습니다.")
+
+    seen: set[str] = set()
+    created: list[dict] = []
+    failed: list[dict] = []
+
+    for target_slug in body.target_slugs:
+        ts = (target_slug or "").strip()
+        if not ts or ts == slug or ts in seen:
+            # 자기 자신 또는 중복 — 스킵
+            if ts and ts != slug:
+                failed.append({"slug": ts, "reason": "중복 요청"})
+            elif ts == slug:
+                failed.append({"slug": ts, "reason": "원본과 동일 게시판"})
+            continue
+        seen.add(ts)
+        target = db.query(Board).filter(Board.slug == ts, Board.is_active == True).first()
+        if not target:
+            failed.append({"slug": ts, "reason": "게시판을 찾을 수 없음"})
+            continue
+
+        new_post = Post(
+            board_id=target.id,
+            member_id=src_post.member_id,
+            title=src_post.title,
+            content=src_post.content,
+            is_published=src_post.is_published,
+            view_count=0,
+        )
+        db.add(new_post)
+        db.flush()
+        # 첨부 — file_url 공유, 새 Attachment 행만 생성
+        for att in src_post.attachments:
+            db.add(Attachment(
+                post_id=new_post.id,
+                original_name=att.original_name,
+                stored_name=att.stored_name,
+                file_url=att.file_url,
+                file_size=att.file_size,
+                is_image=att.is_image,
+            ))
+        created.append({"slug": ts, "post_id": new_post.id})
+
+    db.commit()
+    if created:
+        log_action(
+            db, get_admin_identifier(admin),
+            action="post_copy", target_type="post", target_id=src_post.id,
+            detail=f"copied to {len(created)} boards: {', '.join(c['slug'] for c in created)}",
+        )
+    return {"created": created, "failed": failed}
+
+
 class PostMoveBody(BaseModel):
     target_slug: str
 
