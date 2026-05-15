@@ -398,6 +398,113 @@ crontab -e
 
 ---
 
+## 15. Claude Code 활용 방식 (배포·운영)
+
+dev-vps 배포 과정에서 Claude Code를 어떻게 활용할지에 대한 세 가지 방식과 권장안.
+
+### 15.1 방식 1 — 서버에 Claude Code 직접 설치
+
+```bash
+ssh deploy@<vps_ip>
+
+# Node.js 는 §2에서 이미 설치됨
+sudo npm install -g @anthropic-ai/claude-code
+
+# 인증 (둘 중 하나)
+export ANTHROPIC_API_KEY=sk-ant-xxx   # API key
+# 또는
+claude login                          # 브라우저 OAuth
+
+cd ~/apps/faithandme
+claude
+```
+
+**가능한 작업**: 의존성 설치 자동화·systemd·Nginx 설정 작성·빌드·재시작·`journalctl` 분석·`psql` 점검.
+
+**제약·주의**:
+| 항목 | 내용 |
+|---|---|
+| 자원 | Claude Code 자체 메모리 200~400MB. DEV B(4GB)에서는 운영과 공존하나 빌드 중에는 빠듯 |
+| 보안 | `ANTHROPIC_API_KEY`를 서버에 두면 침해 시 키 노출. `chmod 600 ~/.claude/*` 필수 |
+| 권한 | `sudo` 비밀번호 프롬프트 충돌 — `deploy ALL=(ALL) NOPASSWD: ...` 화이트리스트 권장 |
+| 비용 | API 호출량은 보통 작업당 적음 |
+
+### 15.2 방식 2 — 로컬 Claude Code + SSH 원격 실행 (권장)
+
+```bash
+# 로컬에서 Bash 도구로 직접 실행
+ssh deploy@<vps_ip> "sudo systemctl restart cathedral-backend"
+ssh deploy@<vps_ip> "sudo journalctl -u cathedral-backend -n 100"
+rsync -av ./backend/ deploy@<vps_ip>:~/apps/faithandme/backend/
+```
+
+**장점**:
+- API key·OAuth 토큰이 로컬에만 머무름 (서버 노출 없음)
+- 로컬 IDE·git history·메모리(`~/.claude/`) 그대로 활용
+- 서버 자원 미사용 (운영 서비스 영향 0)
+- 모든 작업이 로컬에 기록 → 재현·롤백 쉬움
+
+**단점**:
+- 명령마다 SSH 왕복 (응답 약간 느림)
+- VPN/방화벽 제약 시 SSH 접속 자체가 막힐 수 있음
+
+### 15.3 방식 3 — 혼합 (계획·점검은 로컬, 실행은 서버 직접)
+
+- 로컬 Claude Code로 systemd·Nginx·`.env` 등 **설정 파일 생성**
+- `scp`로 서버 전송 후, 서버에서는 사람이 `systemctl enable …` 같은 짧은 명령만 직접 실행
+- 트러블슈팅은 SSH 세션에서 `journalctl`·`htop`을 사람이 보며 진행
+
+### 15.4 권장: 방식 2 + 필요 시 방식 3
+
+**근거**:
+1. API key 보안 — 서버에 두지 않는 게 사고 위험 최소
+2. 자원 절약 — dev-vps 4GB를 운영 서비스·빌드에 집중
+3. 재현성 — 로컬 git·메모리에 작업 기록이 남아 다음 배포·롤백 시 참조
+4. 현재 워크플로우와 일치 — git·rsync·ssh 기반 패턴
+
+**방식 1을 고려할 만한 경우**:
+- 본당 운영 담당자가 로컬 환경 셋업이 어려움
+- 장시간 트러블슈팅이 필요한 인시던트 (서버 안에서 빠른 반복)
+- 본당 자체에서 cron·자동화 봇이 Claude Code로 야간 작업 수행
+
+### 15.5 방식 2로 첫 배포 실행 — 예시
+
+로컬 Claude Code 가 Bash 도구로 직접 보낼 수 있는 명령 시퀀스:
+
+```bash
+# 1) 백업 파일 업로드
+scp ~/Dev/Backup/faithandme_*_code.tar.gz deploy@<vps_ip>:~
+
+# 2) 압축 해제 + DB 스키마 import
+ssh deploy@<vps_ip> '
+  mkdir -p ~/apps &&
+  tar xzf ~/faithandme_*.tar.gz -C ~/apps &&
+  psql -U cathedral_user -d cathedral -h localhost < ~/apps/db_schema.sql
+'
+
+# 3) 백엔드 venv·의존성 설치
+ssh deploy@<vps_ip> '
+  cd ~/apps/faithandme/backend &&
+  uv venv && source .venv/bin/activate &&
+  uv pip install -r requirements.txt psycopg2-binary
+'
+
+# 4) systemd 파일 전송·등록
+scp ./deploy/cathedral-backend.service deploy@<vps_ip>:/tmp/
+ssh deploy@<vps_ip> '
+  sudo mv /tmp/cathedral-backend.service /etc/systemd/system/ &&
+  sudo systemctl daemon-reload &&
+  sudo systemctl enable --now cathedral-backend
+'
+
+# 5) 동작 확인
+ssh deploy@<vps_ip> 'curl -s http://127.0.0.1:8000/docs | head -c 200'
+```
+
+각 단계 응답을 Claude Code가 분석 → 다음 단계 결정·트러블슈팅.
+
+---
+
 ## 부록: 자동 설치 활용으로 줄어든 작업
 
 | 기존 시나리오 | Cafe24 자동 설치로 생략 |
