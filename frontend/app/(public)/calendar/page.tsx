@@ -99,15 +99,34 @@ function compareEvents(a: Event, b: Event): number {
   return (a.start_time ?? "").localeCompare(b.start_time ?? "");
 }
 
+// event_kind 별 색 매핑 — KIND_FILTERS·KIND_FILTER_BTN 색과 톤 일관
+const KIND_BAR_COLOR: Record<string, string> = {
+  "행사": "bg-blue-100 text-blue-700",
+  "모임": "bg-green-100 text-green-700",
+  "봉사": "bg-orange-100 text-orange-700",
+  "순례": "bg-indigo-100 text-indigo-700",
+  "피정": "bg-purple-100 text-purple-700",
+  "강의": "bg-teal-100 text-teal-700",
+  "기타": "bg-gray-100 text-gray-700",
+};
+
+const KIND_CHIP_COLOR: Record<string, string> = {
+  "행사": "bg-blue-50 text-blue-700 border-blue-200",
+  "모임": "bg-green-50 text-green-700 border-green-200",
+  "봉사": "bg-orange-50 text-orange-700 border-orange-200",
+  "순례": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "피정": "bg-purple-50 text-purple-700 border-purple-200",
+  "강의": "bg-teal-50 text-teal-700 border-teal-200",
+  "기타": "bg-gray-50 text-gray-700 border-gray-200",
+};
+
 function barStyle(e: Event): string {
-  if (e.event_kind === "모임") return "bg-green-100 text-green-700";
-  if (e.event_kind === "행사") return "bg-blue-100 text-blue-700";
+  if (e.event_kind && KIND_BAR_COLOR[e.event_kind]) return KIND_BAR_COLOR[e.event_kind];
   return BAR_COLOR[e.category] ?? BAR_COLOR.general;
 }
 
 function chipStyle(e: Event): string {
-  if (e.event_kind === "모임") return "bg-green-50 text-green-700 border-green-200";
-  if (e.event_kind === "행사") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (e.event_kind && KIND_CHIP_COLOR[e.event_kind]) return KIND_CHIP_COLOR[e.event_kind];
   return CHIP_COLOR[e.category] ?? CHIP_COLOR.general;
 }
 
@@ -599,9 +618,25 @@ function ListView({
 
 const KIND_FILTERS = [
   { value: "all", label: "전체" },
-  { value: "행사", label: "행사 모아보기" },
-  { value: "모임", label: "모임 모아보기" },
+  { value: "행사", label: "행사" },
+  { value: "모임", label: "모임" },
+  { value: "봉사", label: "봉사" },
+  { value: "순례", label: "순례" },
+  { value: "피정", label: "피정" },
+  { value: "강의", label: "강의" },
+  { value: "기타", label: "기타" },
 ];
+
+// 필터 칩 활성 시 배경색 (event_kind 별) — barStyle/chipStyle 와 톤 일관
+const KIND_FILTER_BTN: Record<string, string> = {
+  "행사": "bg-blue-600 text-white border-blue-600",
+  "모임": "bg-green-600 text-white border-green-600",
+  "봉사": "bg-orange-500 text-white border-orange-500",
+  "순례": "bg-indigo-500 text-white border-indigo-500",
+  "피정": "bg-purple-500 text-white border-purple-500",
+  "강의": "bg-teal-500 text-white border-teal-500",
+  "기타": "bg-gray-500 text-white border-gray-500",
+};
 
 const VIEW_TABS: { value: ViewMode; label: string }[] = [
   { value: "month", label: "월" },
@@ -900,9 +935,8 @@ export default function CalendarPage() {
                 onClick={() => setFilterKind(f.value)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                   filterKind === f.value
-                    ? f.value === "모임" ? "bg-green-600 text-white border-green-600"
-                    : f.value === "행사" ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    ? KIND_FILTER_BTN[f.value]
+                      ?? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
                     : "border-[var(--color-border)] bg-white hover:bg-gray-50"
                 }`}
               >
