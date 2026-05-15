@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -121,8 +121,8 @@ const PEEK_TRIGGER_WIDTH_PX = 12;
 const PEEK_OPEN_DELAY_MS = 200;
 const PEEK_CLOSE_DELAY_MS = 300;
 
-const COLLAPSED_GROUPS_KEY = "admin_sidebar_collapsed_groups";
-const COLLAPSED_SUBGROUPS_KEY = "admin_sidebar_collapsed_subgroups";
+const OPEN_GROUPS_KEY = "admin_sidebar_open_groups";
+const OPEN_SUBGROUPS_KEY = "admin_sidebar_open_subgroups";
 
 function parseStored(key: string): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -149,35 +149,35 @@ export default function AdminSidebar({
   const [extractionCount, setExtractionCount] = useState(0);
   const [visionCount, setVisionCount] = useState(0);
 
-  // 접기 상태 — localStorage 영속
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [collapsedSubGroups, setCollapsedSubGroups] = useState<Set<string>>(new Set());
+  // 열림 상태 — localStorage 영속. 기본은 모두 닫힘
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [openSubGroups, setOpenSubGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!mounted) return;
-    setCollapsedGroups(parseStored(COLLAPSED_GROUPS_KEY));
-    setCollapsedSubGroups(parseStored(COLLAPSED_SUBGROUPS_KEY));
+    setOpenGroups(parseStored(OPEN_GROUPS_KEY));
+    setOpenSubGroups(parseStored(OPEN_SUBGROUPS_KEY));
   }, [mounted]);
 
   function toggleGroup(label: string) {
-    setCollapsedGroups((prev) => {
+    setOpenGroups((prev) => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
       else next.add(label);
       try {
-        localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...next]));
+        localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify([...next]));
       } catch {}
       return next;
     });
   }
 
   function toggleSubGroup(href: string) {
-    setCollapsedSubGroups((prev) => {
+    setOpenSubGroups((prev) => {
       const next = new Set(prev);
       if (next.has(href)) next.delete(href);
       else next.add(href);
       try {
-        localStorage.setItem(COLLAPSED_SUBGROUPS_KEY, JSON.stringify([...next]));
+        localStorage.setItem(OPEN_SUBGROUPS_KEY, JSON.stringify([...next]));
       } catch {}
       return next;
     });
@@ -309,33 +309,6 @@ export default function AdminSidebar({
     red: "bg-red-600 text-white",
   };
 
-  // 부모(주보)가 활성이거나 자식 중 하나가 활성이면 부모 그룹 펼침을 유지
-  const subGroupAutoOpen = useMemo(() => {
-    const open = new Set<string>();
-    for (const g of NAV_GROUPS) {
-      for (const it of g.items) {
-        if (it.children && it.children.length > 0) {
-          if (isActive(it.href) || it.children.some((c) => isActive(c.href))) {
-            open.add(it.href);
-          }
-        }
-      }
-    }
-    return open;
-  }, [isActive]);
-
-  // 그룹 안에 활성 항목이 있으면 그룹 펼침 유지
-  const groupAutoOpen = useMemo(() => {
-    const open = new Set<string>();
-    for (const g of NAV_GROUPS) {
-      const hasActive = g.items.some(
-        (it) => isActive(it.href) || (it.children?.some((c) => isActive(c.href)) ?? false)
-      );
-      if (hasActive) open.add(g.label);
-    }
-    return open;
-  }, [isActive]);
-
   const desktopVisible = mounted && (pinned || peeking);
   const isFloating = mounted && !pinned && peeking;
 
@@ -438,9 +411,7 @@ export default function AdminSidebar({
 
           {/* 그룹별 메뉴 */}
           {NAV_GROUPS.map((g) => {
-            const userCollapsed = collapsedGroups.has(g.label);
-            const autoOpen = groupAutoOpen.has(g.label);
-            const collapsed = userCollapsed && !autoOpen;
+            const open = openGroups.has(g.label);
             const headerId = `admin-group-${g.label}`;
             return (
               <div key={g.label} className="mb-1">
@@ -449,7 +420,7 @@ export default function AdminSidebar({
                     type="button"
                     id={headerId}
                     onClick={() => toggleGroup(g.label)}
-                    aria-expanded={!collapsed}
+                    aria-expanded={open}
                     className="w-full flex items-center justify-between gap-1.5 px-3 py-1 rounded hover:bg-gray-50 text-[11px] font-semibold tracking-wider text-gray-400 uppercase transition-colors"
                   >
                     <span className="flex items-center gap-1.5">
@@ -466,23 +437,21 @@ export default function AdminSidebar({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       aria-hidden="true"
-                      className={`transition-transform ${collapsed ? "-rotate-90" : ""}`}
+                      className={`transition-transform ${open ? "" : "-rotate-90"}`}
                     >
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </button>
                 </h2>
-                {!collapsed && (
+                {open && (
                   <ul aria-labelledby={headerId}>
                     {g.items.map((it) => {
                       const active = isActive(it.href);
                       const badge = badgeFor(it);
                       const hasChildren = it.children && it.children.length > 0;
 
-                      // 자식 펼침 상태: 사용자가 명시적으로 접지 않았거나, 활성 자식/부모가 있으면 자동 펼침
-                      const subUserCollapsed = collapsedSubGroups.has(it.href);
-                      const subAutoOpen = subGroupAutoOpen.has(it.href);
-                      const subCollapsed = hasChildren && subUserCollapsed && !subAutoOpen;
+                      // 자식 펼침 상태: 사용자가 명시적으로 열어야만 열림
+                      const subOpen = hasChildren && openSubGroups.has(it.href);
 
                       return (
                         <li key={it.href}>
@@ -523,8 +492,8 @@ export default function AdminSidebar({
                               <button
                                 type="button"
                                 onClick={() => toggleSubGroup(it.href)}
-                                aria-expanded={!subCollapsed}
-                                aria-label={`${it.label} 하위 메뉴 ${subCollapsed ? "펼치기" : "접기"}`}
+                                aria-expanded={subOpen}
+                                aria-label={`${it.label} 하위 메뉴 ${subOpen ? "접기" : "펼치기"}`}
                                 className="px-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
                               >
                                 <svg
@@ -537,7 +506,7 @@ export default function AdminSidebar({
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   aria-hidden="true"
-                                  className={`transition-transform ${subCollapsed ? "-rotate-90" : ""}`}
+                                  className={`transition-transform ${subOpen ? "" : "-rotate-90"}`}
                                 >
                                   <polyline points="6 9 12 15 18 9" />
                                 </svg>
@@ -546,7 +515,7 @@ export default function AdminSidebar({
                           </div>
 
                           {/* 자식(소분류) */}
-                          {hasChildren && !subCollapsed && (
+                          {hasChildren && subOpen && (
                             <ul className="ml-1">
                               {it.children!.map((c) => {
                                 const cActive = isActive(c.href);
