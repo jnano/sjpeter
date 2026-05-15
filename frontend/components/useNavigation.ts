@@ -41,6 +41,7 @@ export interface MenuGroup {
   icon: string | null;
   sidebar_image_url: string | null;
   sidebar_width_px: number;
+  sidebar_height_px: number | null;
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;

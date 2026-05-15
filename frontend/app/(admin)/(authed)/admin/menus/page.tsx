@@ -33,6 +33,7 @@ interface MenuGroup {
   icon: string | null;
   sidebar_image_url: string | null;
   sidebar_width_px: number;
+  sidebar_height_px: number | null;
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;
@@ -393,6 +394,31 @@ export default function AdminMenusPage() {
                     className={inputCls}
                     min={160}
                     max={400}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    이미지 높이 (px)
+                    <span className="text-gray-400 font-normal ml-1">— 비우면 자동 비율(5:4)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={selectedGroup.sidebar_height_px ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (raw === "") {
+                        updateGroup(selectedGroup, { sidebar_height_px: null });
+                        return;
+                      }
+                      const v = parseInt(raw);
+                      if (!isNaN(v) && v > 0) {
+                        updateGroup(selectedGroup, { sidebar_height_px: v });
+                      }
+                    }}
+                    className={inputCls}
+                    min={40}
+                    max={600}
+                    placeholder="자동"
                   />
                 </div>
                 <div>
