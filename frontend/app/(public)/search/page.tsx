@@ -183,6 +183,13 @@ export default async function SearchPage({
     <main className="max-w-6xl mx-auto px-4 py-10">
       <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
         <div className="min-w-0">
+          {/* 검색 전과 동일한 헤더 유지 — 일관된 진입 경험 */}
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--color-text)] mb-2">
+            무엇을 찾고 계신가요?
+          </h1>
+          <p className="text-sm text-[var(--color-text-muted)] mb-6">
+            기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
+          </p>
           <div className="mb-6">
             <SearchHero initialQ={q} />
           </div>
