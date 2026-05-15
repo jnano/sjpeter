@@ -109,20 +109,38 @@ export default function AdminBannersPage() {
         alert("그룹 생성 실패");
         return;
       }
+      const created: BannerGroup = await res.json();
+      setGroups((prev) =>
+        [...prev, created].sort(
+          (a, b) =>
+            a.placement.localeCompare(b.placement) ||
+            a.sort_order - b.sort_order ||
+            a.id - b.id,
+        ),
+      );
       setNewName("");
-      load();
     } finally {
       setCreating(false);
     }
   }
 
+  // 즉시 로컬 상태 반영 + 백엔드 PATCH + 응답 정합화. 실패 시 전체 재조회로 롤백.
+  // (load() 만 의존하면 controlled <select> 가 응답 도착까지 변경 전 값으로 잠시 복원되어
+  //  사용자에게 "위치가 안 고정된다"는 깜빡임으로 보임)
   async function updateGroup(id: number, patch: Partial<BannerGroup>) {
+    setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
     const res = await fetch(`${API}/api/banners/groups/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(patch),
     });
-    if (res.ok) load();
+    if (res.ok) {
+      const updated: BannerGroup = await res.json();
+      setGroups((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    } else {
+      alert("저장 실패. 목록을 새로고침합니다.");
+      load();
+    }
   }
 
   async function deleteGroup(id: number, name: string) {
@@ -131,7 +149,11 @@ export default function AdminBannersPage() {
       method: "DELETE",
       headers: authHeaders(),
     });
-    if (res.ok) load();
+    if (res.ok) {
+      setGroups((prev) => prev.filter((g) => g.id !== id));
+    } else {
+      load();
+    }
   }
 
   async function uploadImage(groupId: number, file: File) {
