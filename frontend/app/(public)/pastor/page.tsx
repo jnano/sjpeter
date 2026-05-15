@@ -46,33 +46,27 @@ function resolvePhoto(url: string | null): string | null {
 
 export default async function PastorPage() {
   const all = await getStaff();
-  const priests = all.filter((s) => s.role === "주임신부" || s.role === "보좌신부");
-  const others = all.filter((s) => s.role !== "주임신부" && s.role !== "보좌신부");
 
   return (
     <>
-      <PageHeader group="성당 소개" title="주임신부님" subtitle="주임 신부님과 함께하는 본당 공동체" />
+      <PageHeader group="성당 소개" title="주임신부님" />
       <SectionLayout group="about">
-        <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)] mb-5 pb-3 border-b border-[var(--color-border)]">
-          본당 가족
-        </h1>
-
-        {all.length === 0 && (
+        {all.length === 0 ? (
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)]">
             <p className="text-3xl mb-2">✝</p>
             <p className="text-sm">아직 등록된 본당 가족 정보가 없습니다.</p>
             <p className="text-xs mt-1">관리자 페이지에서 등록할 수 있습니다.</p>
           </div>
-        )}
-
-        {priests.map((p) => (
-          <PriestCard key={p.id} staff={p} />
-        ))}
-
-        {others.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            {others.map((o) => (
-              <CompactCard key={o.id} staff={o} />
+        ) : (
+          <div className="relative">
+            {all.map((staff, idx) => (
+              <StoryRow
+                key={staff.id}
+                staff={staff}
+                reversed={idx % 2 === 1}
+                isLast={idx === all.length - 1}
+                isPriest={staff.role === "주임신부" || staff.role === "보좌신부"}
+              />
             ))}
           </div>
         )}
@@ -81,7 +75,17 @@ export default async function PastorPage() {
   );
 }
 
-function PriestCard({ staff }: { staff: Staff }) {
+function StoryRow({
+  staff,
+  reversed,
+  isLast,
+  isPriest,
+}: {
+  staff: Staff;
+  reversed: boolean;
+  isLast: boolean;
+  isPriest: boolean;
+}) {
   const photo = resolvePhoto(staff.photo_url);
   const careerLines = (staff.career_items ?? "")
     .split("\n")
@@ -89,89 +93,86 @@ function PriestCard({ staff }: { staff: Staff }) {
     .filter(Boolean);
 
   return (
-    <article className="bg-white border border-[var(--color-border)] rounded-xl p-6 sm:p-7 mb-5">
-      <div className="flex flex-col sm:flex-row gap-6">
-        {/* 좌: 사진 + 이름 + 직함 + 축일 */}
-        <div className="sm:w-44 shrink-0 text-center">
-          <div className="relative w-32 h-40 sm:w-36 sm:h-44 mx-auto bg-[var(--color-surface-warm)] rounded overflow-hidden">
+    <section className="relative">
+      <div
+        className={`flex flex-col gap-5 md:gap-10 items-start ${
+          reversed ? "md:flex-row-reverse" : "md:flex-row"
+        }`}
+      >
+        {/* 사진 */}
+        <div className="w-full md:w-auto md:shrink-0 flex justify-center md:block">
+          <div
+            className={`relative bg-[var(--color-surface-warm)] rounded-lg overflow-hidden ${
+              isPriest ? "w-44 h-56 md:w-56 md:h-72" : "w-36 h-44 md:w-44 md:h-56"
+            }`}
+          >
             {photo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={photo} alt={staff.name} className="absolute inset-0 w-full h-full object-cover" />
+              <img
+                src={photo}
+                alt={staff.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-4xl text-[var(--color-border-dark)]">
+              <div className="absolute inset-0 flex items-center justify-center text-5xl text-[var(--color-border-dark)]">
                 ✝
               </div>
             )}
           </div>
-          <p className="mt-2.5 font-serif font-bold text-sm text-[var(--color-text)]">
-            {staff.name}
-            {staff.title && (
-              <span className="font-normal text-[var(--color-text-muted)]"> {staff.title}</span>
-            )}
-          </p>
-          {staff.feast_day && (
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">· 축일 : {staff.feast_day}</p>
-          )}
         </div>
 
-        {/* 우: 소개 + 약력 */}
-        <div className="flex-1 text-sm leading-relaxed">
-          {staff.introduction && (
-            <p className="text-[var(--color-text)] whitespace-pre-line mb-4">{staff.introduction}</p>
+        {/* 본문 */}
+        <div className="flex-1 min-w-0 w-full">
+          <p className="text-[11px] tracking-[0.15em] text-[var(--color-text-muted)] uppercase mb-1">
+            {staff.role}
+          </p>
+          <h2 className="font-serif text-xl md:text-2xl font-bold text-[var(--color-primary)]">
+            {staff.name}
+            {staff.title && (
+              <span className="font-normal text-sm md:text-base text-[var(--color-text-muted)] ml-2">
+                {staff.title}
+              </span>
+            )}
+          </h2>
+          {staff.feast_day && (
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">· 축일 {staff.feast_day}</p>
           )}
+
+          {staff.introduction && (
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-text)] whitespace-pre-line">
+              {staff.introduction}
+            </p>
+          )}
+
           {careerLines.length > 0 && (
-            <ul className="list-disc pl-5 space-y-1 text-[var(--color-text-muted)] text-[13px]">
+            <ul className="mt-4 list-disc pl-5 space-y-1 text-[13px] text-[var(--color-text-muted)]">
               {careerLines.map((line, i) => (
                 <li key={i}>{line}</li>
               ))}
             </ul>
           )}
+
+          {(staff.scripture_quote || staff.scripture_reference) && (
+            <blockquote className="mt-5 pl-4 border-l-2 border-[var(--color-primary)]/40 italic text-sm text-[var(--color-text)]">
+              {staff.scripture_quote && <p>{`"${staff.scripture_quote}"`}</p>}
+              {staff.scripture_reference && (
+                <p className="text-xs text-[var(--color-text-muted)] mt-1 not-italic">
+                  — {staff.scripture_reference}
+                </p>
+              )}
+            </blockquote>
+          )}
         </div>
       </div>
 
-      {/* 하단 인용구 */}
-      {(staff.scripture_quote || staff.scripture_reference) && (
-        <div className="mt-6 pt-5 border-t border-dashed border-[var(--color-border)] text-center text-sm">
-          {staff.scripture_quote && (
-            <p className="text-[var(--color-text)]">{staff.scripture_quote}</p>
-          )}
-          {staff.scripture_reference && (
-            <p className="text-[var(--color-text-muted)] mt-0.5">{staff.scripture_reference}</p>
-          )}
+      {/* 행 사이 구분 장식 (마지막 행은 생략) */}
+      {!isLast && (
+        <div className="flex justify-center my-10 md:my-14" aria-hidden="true">
+          <span className="text-[var(--color-border-dark)] text-base tracking-[0.6em]">
+            ✦ ✦ ✦
+          </span>
         </div>
       )}
-    </article>
-  );
-}
-
-function CompactCard({ staff }: { staff: Staff }) {
-  const photo = resolvePhoto(staff.photo_url);
-  return (
-    <article className="bg-white border border-[var(--color-border)] rounded-xl p-4 flex items-start gap-4">
-      <div className="relative w-20 h-24 shrink-0 bg-[var(--color-surface-warm)] rounded overflow-hidden">
-        {photo ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={photo} alt={staff.name} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-2xl text-[var(--color-border-dark)]">
-            ✝
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-serif font-bold text-sm text-[var(--color-text)]">
-          {staff.name}
-          {staff.title && (
-            <span className="font-normal text-[var(--color-text-muted)]"> {staff.title}</span>
-          )}
-        </p>
-        {staff.introduction && (
-          <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">{staff.introduction}</p>
-        )}
-        {staff.feast_day && (
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">· 축일 : {staff.feast_day}</p>
-        )}
-      </div>
-    </article>
+    </section>
   );
 }
