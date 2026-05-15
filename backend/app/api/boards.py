@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
@@ -199,6 +200,24 @@ class PostOut(BaseModel):
         from_attributes = True
 
 
+_VIDEO_URL_RE = re.compile(
+    r"https?://(?:"
+    r"(?:www\.)?youtube\.com/(?:watch\?v=|embed/|shorts/)|"
+    r"youtu\.be/|"
+    r"(?:www\.)?youtube-nocookie\.com/embed/|"
+    r"tv\.naver\.com/(?:v|embed)/|"
+    r"naver\.me/"
+    r")[A-Za-z0-9_-]+",
+    re.IGNORECASE,
+)
+
+
+def _has_video(content: Optional[str]) -> bool:
+    if not content:
+        return False
+    return bool(_VIDEO_URL_RE.search(content))
+
+
 class PostSummary(BaseModel):
     id: int
     title: str
@@ -206,6 +225,7 @@ class PostSummary(BaseModel):
     created_at: datetime
     comment_count: int = 0
     thumbnail_url: Optional[str] = None
+    has_video: bool = False
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
     category: Optional[str] = None
@@ -1379,6 +1399,7 @@ def list_posts(
         s.liked_by_me = p.id in my_likes
         first_img = next((a for a in p.attachments if a.is_image), None)
         s.thumbnail_url = first_img.file_url if first_img else None
+        s.has_video = _has_video(p.content)
         result.append(s)
     return PostListOut(posts=result, total=total, posts_per_page=per_page)
 

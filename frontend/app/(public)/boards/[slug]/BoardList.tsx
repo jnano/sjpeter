@@ -51,6 +51,7 @@ interface Post {
   like_count?: number;
   created_at: string;
   thumbnail_url: string | null;
+  has_video?: boolean;
 }
 
 export interface BoardCols {
@@ -151,6 +152,9 @@ function ListView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: Bo
             {post.thumbnail_url && (
               <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
             )}
+            {post.has_video && (
+              <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="동영상 포함">📺</span>
+            )}
           </span>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
             {cols.list_show_author && (
@@ -192,10 +196,13 @@ function PhotoView({ posts, slug, cols }: { posts: Post[]; slug: string; cols: B
                 className="object-cover group-hover:opacity-90 transition-opacity"
                 sizes="(max-width: 640px) 50vw, 33vw"
               />
+              {post.has_video && (
+                <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded" title="동영상 포함">📺</span>
+              )}
             </div>
           ) : (
-            <div className="w-full aspect-square bg-gray-100 flex items-center justify-center">
-              <span className="text-3xl text-gray-300">📄</span>
+            <div className="w-full aspect-square bg-gray-100 flex items-center justify-center relative">
+              <span className="text-3xl text-gray-300">{post.has_video ? "📺" : "📄"}</span>
             </div>
           )}
           <div className="px-3 py-2.5">
