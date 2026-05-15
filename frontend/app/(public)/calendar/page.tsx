@@ -879,22 +879,20 @@ export default function CalendarPage() {
         }
       />
 
-      {/* 그룹 메뉴 칩 (풀폭 캘린더 보존을 위해 가로 칩 형태로 표시) */}
-      {currentGroup && currentGroup.items.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4">
-          <SectionSidebar
-            groupTitle={currentGroup.label}
-            items={currentGroup.items}
-            chipsOnly
-          />
-        </div>
-      )}
-
-      <div className="max-w-4xl mx-auto px-4 pt-6">
-        <BannerSlider placement="calendar_top" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row md:gap-10">
+          {currentGroup && currentGroup.items.length > 0 && (
+            <SectionSidebar
+              groupTitle={currentGroup.label}
+              imageSrc={currentGroup.sidebar_image_url ?? undefined}
+              widthPx={currentGroup.sidebar_width_px}
+              heightPx={currentGroup.sidebar_height_px ?? undefined}
+              imagePosition={currentGroup.sidebar_image_position}
+              items={currentGroup.items}
+            />
+          )}
+          <div className="flex-1 min-w-0 mt-6 md:mt-0">
+            <BannerSlider placement="calendar_top" className="mb-6" />
         {/* 보기 모드 토글 + 오늘 */}
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
           <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
@@ -1015,6 +1013,8 @@ export default function CalendarPage() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </>
   );
