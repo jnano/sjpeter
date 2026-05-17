@@ -33,6 +33,7 @@ interface Board {
   id: number;
   name: string;
   slug: string;
+  is_active?: boolean;
 }
 
 const ALL_KINDS = ["묵상", "지표", "공지", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"] as const;
@@ -78,8 +79,9 @@ export default function ExtractionsPage() {
   async function loadBoards() {
     const res = await fetch(`${API}/api/boards/`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
-      const data = await res.json();
-      setBoards(data);
+      const data: Board[] = await res.json();
+      // 비활성 게시판은 라우팅 대상에서 제외 (선택 시 백엔드 404 회피)
+      setBoards(data.filter((b) => b.is_active !== false));
     }
   }
 

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.145";
+export const CURRENT_VERSION = "1.5.146";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.146", date: "2026-05-18", tag: "기능",
+    items: [
+      "AI 추출 시스템 완성도 보강 5건 (P2):",
+      "  · POST /api/bulletins/routed-counts/batch — 다건 삭제 다이얼로그 집계 N+1 회피",
+      "  · 미러 게시판 셀렉트 is_active=true 필터 (백엔드 404 회피)",
+      "  · 출처 footer markdown 일관성 점검 (rehypeRaw 모든 노출 지점 적용 확인 — 변경 불필요)",
+      "  · bulletins.ai_retry_count + 일시 오류(timeout/connection/throttle) 1회 자동 재시도 (5초 후)",
+      "  · 승인된 extractions 영구 보존 정책 (감사 로그 가치 + cascade 로 정리됨)",
+    ],
+  },
   {
     version: "1.5.145", date: "2026-05-18", tag: "기능",
     items: [

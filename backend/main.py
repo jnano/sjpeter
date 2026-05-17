@@ -919,6 +919,15 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # AI 분석 일시 실패 자동 재시도 카운터 (Bedrock timeout 등 일시 오류용)
+        try:
+            conn.execute(text(
+                "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS "
+                "ai_retry_count INTEGER NOT NULL DEFAULT 0"
+            ))
+        except Exception:
+            pass
+
         # 묵상 대표 지정 + 배경 이미지 설정
         for col_sql in [
             "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT FALSE",

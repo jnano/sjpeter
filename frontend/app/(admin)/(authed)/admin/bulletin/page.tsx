@@ -86,22 +86,21 @@ export default function BulletinListPage() {
     if (ids.length === 0) return;
     const token = localStorage.getItem("admin_token");
     if (!token) { router.push("/admin"); return; }
-    // 다건 선택 시 각 주보별 카운트 합산
-    const counts = await Promise.all(ids.map(async (id) => {
-      try {
-        const r = await fetch(`${API}/api/bulletins/${id}/routed-counts`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return r.ok ? await r.json() : null;
-      } catch { return null; }
-    }));
-    const sum = counts.reduce((acc, c) => {
-      if (!c) return acc;
-      for (const k of ["extractions","events","meditations","visions","posts","images"]) {
-        acc[k] = (acc[k] || 0) + (c[k] || 0);
+    // 다건 선택: batch endpoint 로 한 번에 집계 (N+1 회피)
+    let sum: Record<string, number> = {};
+    try {
+      const r = await fetch(`${API}/api/bulletins/routed-counts/batch`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ bulletin_ids: ids }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        sum = data.sum || {};
       }
-      return acc;
-    }, {} as Record<string, number>);
+    } catch {
+      // 집계 실패해도 삭제는 진행
+    }
     const warnLines: string[] = [];
     if (sum.extractions) warnLines.push(`  · AI 추출 메타 ${sum.extractions}건`);
     if (sum.events) warnLines.push(`  · 캘린더 행사 ${sum.events}건`);

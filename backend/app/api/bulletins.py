@@ -172,10 +172,63 @@ def reanalyze_bulletin(
     bulletin.ai_started_at = datetime.utcnow()
     bulletin.ai_finished_at = None
     bulletin.ai_error = None
+    bulletin.ai_retry_count = 0  # 수동 재분석은 새 시작 — 자동 재시도 한도 리셋
     db.commit()
 
     background_tasks.add_task(_auto_process_bulletin, bulletin_id)
     return {"ok": True, "ai_status": "processing"}
+
+
+class BatchCountsBody(BaseModel):
+    bulletin_ids: list[int]
+
+
+@router.post("/routed-counts/batch")
+def bulletin_routed_counts_batch(
+    body: BatchCountsBody,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """다건 주보의 결과물 카운트를 한 번에 합산. /admin/bulletin 다중 삭제 다이얼로그용 (N+1 회피)."""
+    if not body.bulletin_ids:
+        return {"per_bulletin": {}, "sum": {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}}
+
+    # IN 절 한 번씩으로 모든 카운트 집계
+    ids = tuple(body.bulletin_ids)
+
+    def counts_by_id(sql: str, id_col: str) -> dict[int, int]:
+        rows = db.execute(text(sql), {"ids": ids}).fetchall()
+        return {r[0]: r[1] for r in rows}
+
+    ext_map = counts_by_id(
+        "SELECT bulletin_id, COUNT(*) FROM bulletin_extractions WHERE bulletin_id IN :ids GROUP BY bulletin_id", "bulletin_id")
+    img_map = counts_by_id(
+        "SELECT bulletin_id, COUNT(*) FROM bulletin_extracted_images WHERE bulletin_id IN :ids GROUP BY bulletin_id", "bulletin_id")
+    ev_map = counts_by_id(
+        "SELECT source_bulletin_id, COUNT(*) FROM events WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
+    med_map = counts_by_id(
+        "SELECT source_bulletin_id, COUNT(*) FROM meditations WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
+    vis_map = counts_by_id(
+        "SELECT source_bulletin_id, COUNT(*) FROM visions WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
+    post_map = counts_by_id(
+        "SELECT source_bulletin_id, COUNT(*) FROM posts WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
+
+    per_bulletin: dict[int, dict] = {}
+    total = {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}
+    for bid in body.bulletin_ids:
+        row = {
+            "extractions": ext_map.get(bid, 0),
+            "events": ev_map.get(bid, 0),
+            "meditations": med_map.get(bid, 0),
+            "visions": vis_map.get(bid, 0),
+            "posts": post_map.get(bid, 0),
+            "images": img_map.get(bid, 0),
+        }
+        per_bulletin[bid] = row
+        for k, v in row.items():
+            total[k] += v
+
+    return {"per_bulletin": per_bulletin, "sum": total}
 
 
 @router.get("/{bulletin_id}/routed-counts")
@@ -895,14 +948,30 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
     except Exception as exc:
         logger.exception("[bulletin %d] 자동 처리 실패: %s", bulletin_id, exc)
         db.rollback()
-        # 실패 상태 기록 — rollback 이후 새 트랜잭션
+        # 일시적 오류(timeout/connection) 이고 재시도 안 했으면 1회 자동 재시도
+        err_str = str(exc).lower()
+        transient_patterns = ("timeout", "timed out", "connection", "throttl", "rate limit", "503", "502", "504", "service unavailable")
+        is_transient = any(p in err_str for p in transient_patterns)
         try:
             b = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
-            if b:
-                b.ai_status = "failed"
-                b.ai_finished_at = datetime.utcnow()
-                b.ai_error = str(exc)[:500]
+            if not b:
+                return
+            current_retry = getattr(b, "ai_retry_count", 0) or 0
+            if is_transient and current_retry < 1:
+                # 1회 자동 재시도 — 5초 후 같은 함수 재호출
+                b.ai_retry_count = current_retry + 1
+                b.ai_error = f"[일시 오류 자동 재시도 {current_retry + 1}회] {str(exc)[:400]}"
                 db.commit()
+                logger.warning("[bulletin %d] 일시 오류 → 5초 후 1회 자동 재시도", bulletin_id)
+                import time as _time
+                _time.sleep(5)
+                _auto_process_bulletin(bulletin_id)
+                return
+            # 재시도 한도 초과 또는 영구 오류 → failed
+            b.ai_status = "failed"
+            b.ai_finished_at = datetime.utcnow()
+            b.ai_error = str(exc)[:500]
+            db.commit()
         except Exception:
             db.rollback()
     finally:
