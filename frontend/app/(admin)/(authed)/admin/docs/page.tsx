@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.137";
-export const LAST_UPDATED = "2026-05-16";
+export const CURRENT_VERSION = "1.5.142";
+export const LAST_UPDATED = "2026-05-17";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,51 @@ export const LAST_UPDATED = "2026-05-16";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.142", date: "2026-05-17", tag: "인프라",
+    items: ["/admin/docs CHANGELOG v1.5.138~141 동기화 + 백업"],
+  },
+  {
+    version: "1.5.141", date: "2026-05-17", tag: "인프라",
+    items: [
+      "회원 영명축일 (members.name_day_month/day) — 가입·수정 폼 + DELETE /me/name-day",
+      "CORS LAN IP(121.152.118.40) 허용 — 같은 Wi-Fi 휴대폰 접속",
+      "BACKEND_INTERNAL_URL 환경변수 fallback 패턴 일괄 적용 (Footer·fetchServerMenus 등)",
+      "gospel 복음 본문 파싱 개선 — board_layout 컨테이너 단위 정확 추출",
+      "모바일 폰트·페이지 폴리시 50여 곳 (boards·meditation·groups·pastors·gallery 등)",
+      "icons 컴포넌트(BulletinIcon·ChurchIcon·GroupsIcon) 추출 + SearchHero를 components/ 로 이동",
+      "AdminSidebar 메인 사진 항목 추가, 발표 자료 스크린샷 4종",
+    ],
+  },
+  {
+    version: "1.5.140", date: "2026-05-17", tag: "기능",
+    items: [
+      "본당 교통 안내 — TransportRoute 모델 + /api/transport-routes CRUD (admin 자유 편집·정렬)",
+      "/admin/parish/info 에 교통 안내 섹션(라벨·설명·정렬), /info 페이지에 출발지별 노선 카드",
+      "미사 시간 렌더링을 lib/mass.ts 로 분리 (재사용 가능)",
+    ],
+  },
+  {
+    version: "1.5.139", date: "2026-05-17", tag: "기능",
+    items: [
+      "장애 신고 시스템 — IssueReport 모델 + /api/reports CRUD (비회원 신고 허용, 운영자 상태 관리)",
+      "/report 공개 페이지(신고 폼) + /admin/reports (상태·메모 관리)",
+      "Footer 에 ReportLink (페이지 URL 자동 수집) + AdminSidebar 진입점",
+    ],
+  },
+  {
+    version: "1.5.138", date: "2026-05-17", tag: "기능",
+    items: [
+      "[묶음] 게시판 카드 뷰 신규 — admin 글 관리 카드 디자인 차용, 작성자(이름+아바타) 우측 배치",
+      "[묶음] 게시판별 뷰 토글 노출 제어 — boards.show_view_list/card/photo, 활성 뷰 1개 이하면 토글 숨김, URL ?view= 비활성 뷰면 활성으로 폴백",
+      "[묶음] 홈에서 잘못 호출되던 youth_council fetch 제거 — 404 백엔드 로그 노이즈 정리",
+      "[묶음] 게시판 검색폼 노출 여부 admin 제어 — boards.show_search_form, 공개 페이지에서 form 조건부 렌더",
+      "[묶음] 게시글 공유 기능 — POST /api/boards/{slug}/posts/{id}/share (Web Share API + 클립보드 폴백), boards.share_enabled + posts.share_allowed 이중 토글, 작성·편집 폼 \"공유 허용\" 체크박스, 목록 🔗 공유수 컬럼",
+      "[묶음] 운영자 권한 통일 — 글 수정·삭제·이동·복사·핀 토글 + 댓글 수정·삭제 모두 운영자(is_admin=True 회원) 통과, 공개 글 상세에 이동·복사 버튼(운영자 전용), UI 명칭 \"위임관리자\" → \"운영자\" 일괄 (DB 컬럼·JWT 키는 호환 유지)",
+      "[묶음] 회원 비활성화·삭제 endpoint 자기 자신 가드 — 백엔드 400 + 프론트 본인 버튼 disabled",
+      "[묶음] admin API URL 환경변수 정리 — dashboard·members·bulletin/new·bulletin/extractions 하드코딩 → NEXT_PUBLIC_API_URL, /admin/members 자체 아바타에 API 호스트 자동 prepend",
+    ],
+  },
   {
     version: "1.5.137", date: "2026-05-16", tag: "인프라",
     items: ["/admin/docs CHANGELOG v1.5.112~136 일괄 동기화 + 백업"],
@@ -639,7 +684,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
     version: "1.5.8", date: "2026-05-12", tag: "기능",
     items: [
       "세션 만료 정책 정비 — 기본 12시간 + idle 30분 자동 로그아웃, '로그인 상태 유지' 체크 시 7일",
-      "위임 관리자 해제된 회원에게 헤더 '관리페이지' 링크 노출 차단",
+      "운영자 해제된 회원에게 헤더 '관리페이지' 링크 노출 차단",
       "SessionSync로 권한 변경 즉시 동기화 (재로그인 없이 반영)",
     ],
   },
@@ -713,7 +758,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
   {
     version: "1.4.0", date: "2026-05-01", tag: "기능",
     items: [
-      "관리자 위임 기능 — is_admin 회원에게 관리 권한 부여·회수 (최고관리자만)",
+      "운영자 지정 기능 — is_admin 회원에게 운영자 권한 부여·회수 (최고관리자만)",
       "활동 로그 페이지 (/admin/logs) — 관리자 행동 자동 기록 조회",
       "갤러리 관리 페이지 (/admin/gallery) — 다중 사진 업로드",
       "공개 갤러리 페이지 (/gallery/liturgy, /gallery/events)",
@@ -893,13 +938,13 @@ function GuideTab() {
             <p className="font-semibold text-yellow-800 mb-1">⭐ 최고관리자 (Super Admin)</p>
             <ul className="text-xs text-yellow-700 space-y-1">
               <li>• ID/PW로 <code>/admin</code> 직접 로그인</li>
-              <li>• 회원 관리자 권한 부여·회수 가능</li>
+              <li>• 회원 운영자 권한 부여·회수 가능</li>
               <li>• localStorage: <code>admin_is_super = "true"</code></li>
               <li>• 게시글 작성 시 author = null (성당 명의)</li>
             </ul>
           </div>
           <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
-            <p className="font-semibold text-purple-800 mb-1">👤 위임 관리자 (Delegated Admin)</p>
+            <p className="font-semibold text-purple-800 mb-1">👤 운영자 (Delegated Admin)</p>
             <ul className="text-xs text-purple-700 space-y-1">
               <li>• 회원 로그인 → 관리자 페이지 접근</li>
               <li>• 최고관리자가 회원에게 권한 부여</li>
@@ -908,7 +953,7 @@ function GuideTab() {
             </ul>
           </div>
         </div>
-        <Tip>로그아웃은 최고관리자에게만 표시됩니다. 위임 관리자는 브라우저 탭을 닫거나 <code>localStorage</code>를 직접 삭제하세요.</Tip>
+        <Tip>로그아웃은 최고관리자에게만 표시됩니다. 운영자는 브라우저 탭을 닫거나 <code>localStorage</code>를 직접 삭제하세요.</Tip>
         <p className="text-xs text-[var(--color-text-muted)]">세션 저장 키: <code>admin_token</code>, <code>admin_display_name</code>, <code>admin_role</code>, <code>admin_is_super</code></p>
       </Accordion>
 
@@ -949,9 +994,83 @@ function GuideTab() {
           "posts_per_page: 페이지당 게시글 수 설정",
         ]} />
         <p className="mb-2 font-medium mt-4">게시글·댓글 삭제</p>
-        <p>관리자는 모든 게시판의 게시글·댓글을 삭제할 수 있습니다. 게시글 상세 페이지에서 삭제 버튼이 표시됩니다.</p>
+        <p>최고관리자·운영자는 모든 게시판의 게시글·댓글을 삭제할 수 있습니다. 게시판관리자는 자기 보드 내, 작성자는 자기 글에 한해 삭제 가능합니다. 게시글 상세 페이지에서 권한이 있는 사용자에게만 삭제 버튼이 표시됩니다.</p>
         <Warn>게시글 삭제 시 첨부파일과 댓글이 함께 삭제됩니다. 복구 불가합니다.</Warn>
         <p className="text-xs text-[var(--color-text-muted)] mt-2">기본 게시판 slug: <code>notice</code>, <code>free</code>, <code>news</code>, <code>liturgy</code>, <code>photo</code></p>
+      </Accordion>
+
+      <Accordion icon="🎴" title="게시판 뷰 형식 (목록/카드/사진)" badge="v1.5.138">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          공개 게시판은 <strong>목록·카드·사진</strong> 3가지 뷰를 가지며, 게시판마다 어떤 뷰 버튼을 노출할지 admin에서 선택할 수 있습니다.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+          <div className="rounded-lg border border-[var(--color-border)] p-3 text-xs">
+            <p className="font-semibold mb-1">📃 목록</p>
+            <p className="text-[var(--color-text-muted)]">한 줄 텍스트 — 제목 + 댓글수, 사진/동영상 아이콘. list_show_* 토글에 따라 메타 노출</p>
+          </div>
+          <div className="rounded-lg border border-[var(--color-border)] p-3 text-xs">
+            <p className="font-semibold mb-1">🪪 카드</p>
+            <p className="text-[var(--color-text-muted)]">admin 글 관리 패널과 동일한 카드 디자인. 좌 썸네일 + 가운데 제목/메타 + 우측 작성자(이름·아바타)</p>
+          </div>
+          <div className="rounded-lg border border-[var(--color-border)] p-3 text-xs">
+            <p className="font-semibold mb-1">🖼️ 사진</p>
+            <p className="text-[var(--color-text-muted)]">2~3열 그리드. 썸네일 없으면 📄 또는 🎬 아이콘. 카드 하단에 제목·작성자·날짜</p>
+          </div>
+        </div>
+        <p className="mb-2 font-medium">노출 제어 컬럼 (boards 테이블)</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1 mb-3">
+          <li>• <code>show_view_list / show_view_card / show_view_photo</code> — 각 뷰의 토글 노출 여부 (default true)</li>
+          <li>• <strong>활성 뷰가 2개 이상</strong>일 때만 토글 UI 표시. <strong>1개 이하</strong>면 토글 자체 숨김</li>
+          <li>• <strong>URL <code>?view=X</code>가 비활성 뷰</strong>이면 → 활성 뷰 중 첫 번째로 자동 폴백</li>
+          <li>• <strong>모두 끄면</strong> list 폴백</li>
+        </ul>
+        <Tip>갤러리 게시판(<code>kind=&quot;gallery&quot;</code>)은 이 페이지를 안 쓰고 별도 <code>/gallery/&#123;slug&#125;</code> 라우트로 분기되므로 영향 없음.</Tip>
+      </Accordion>
+
+      <Accordion icon="🔍" title="게시판 검색폼 노출" badge="v1.5.139">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          게시판마다 검색 input + 검색 버튼의 표시 여부를 admin에서 토글할 수 있습니다. 정렬·뷰 토글·카테고리 칩·글쓰기 버튼은 영향 없습니다.
+        </p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+          <li>• 컬럼: <code>boards.show_search_form</code> (BOOLEAN NOT NULL DEFAULT TRUE)</li>
+          <li>• /admin/boards 게시판 수정 폼의 &quot;검색폼 표시&quot; 체크박스로 제어</li>
+          <li>• 끄면 공개 페이지의 <code>&lt;form&gt;</code> 자체가 렌더링되지 않음</li>
+        </ul>
+      </Accordion>
+
+      <Accordion icon="🔗" title="게시글 공유" badge="v1.5.140">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          글 상세에 공유 버튼을 노출하고 외부 공유(SNS·문자·링크 복사) 횟수를 카운트합니다. <strong>이중 토글</strong>(게시판 + 글)을 통과해야 노출됩니다.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3 mb-3">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs">
+            <p className="font-semibold text-blue-800 mb-1">게시판 (admin)</p>
+            <ul className="text-blue-700 space-y-0.5">
+              <li>• <code>boards.share_enabled</code> 토글 (default true)</li>
+              <li>• &quot;공유 기능 사용&quot; 체크박스로 제어</li>
+              <li>• 끄면 그 게시판 전체에서 공유 버튼·카운트 숨김</li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-xs">
+            <p className="font-semibold text-purple-800 mb-1">글 (작성자)</p>
+            <ul className="text-purple-700 space-y-0.5">
+              <li>• <code>posts.share_allowed</code> 토글 (default false)</li>
+              <li>• 글쓰기·편집 폼의 &quot;이 글의 공유를 허용합니다&quot; 체크박스</li>
+              <li>• 체크해야 상세 페이지에 🔗 공유 버튼 노출</li>
+            </ul>
+          </div>
+        </div>
+        <p className="mb-2 font-medium">공유 방식</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1 mb-3">
+          <li>• <strong>Web Share API</strong>(<code>navigator.share</code>) 우선 — 모바일에서 OS 공유 메뉴(카톡·문자·SNS 등)</li>
+          <li>• 지원 안 되는 PC 브라우저는 <strong>클립보드 복사</strong> + &quot;링크가 복사되었습니다&quot; 토스트</li>
+          <li>• 사용자가 공유 다이얼로그를 취소(AbortError)하면 카운트 미증가</li>
+        </ul>
+        <p className="mb-2 font-medium">목록 공유수 컬럼</p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+          <li>• <code>boards.list_show_shares</code> + <code>boards.share_enabled</code> 모두 true일 때만 노출</li>
+          <li>• 목록(List) 우측 메타 + 카드(Card) 메타 라인에 <code>🔗 N</code> 표시</li>
+        </ul>
       </Accordion>
 
       <Accordion icon="👥" title="회원 관리" badge="/admin/members">
@@ -968,7 +1087,68 @@ function GuideTab() {
             </div>
           ))}
         </div>
-        <Warn>관리자 권한 부여·회수는 최고관리자만 가능합니다. 위임 관리자에게는 해당 버튼이 표시되지 않습니다.</Warn>
+        <Warn>운영자 지정·회수는 최고관리자만 가능합니다. 운영자에게는 해당 버튼이 표시되지 않습니다.</Warn>
+      </Accordion>
+
+      <Accordion icon="🛡️" title="운영자 권한 매트릭스" badge="v1.5.141">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          역할별로 게시글·댓글에 대한 권한이 다릅니다. 최고관리자·운영자는 게시글의 모든 권한을 가지며, 게시판관리자(moderator)는 자기 보드의 글 수정·삭제, 작성자는 자기 글 수정·삭제만 가능합니다.
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-[var(--color-surface-warm)]">
+                <th className="text-left px-3 py-2 font-semibold">역할</th>
+                <th className="px-2 py-2">글쓰기</th>
+                <th className="px-2 py-2">수정 (자기)</th>
+                <th className="px-2 py-2">수정 (타인)</th>
+                <th className="px-2 py-2">삭제</th>
+                <th className="px-2 py-2">이동</th>
+                <th className="px-2 py-2">복사</th>
+                <th className="px-2 py-2">핀</th>
+                <th className="px-2 py-2">댓글 관리 (타인)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-[var(--color-border)]">
+                <td className="px-3 py-2 font-medium">최고관리자</td>
+                <td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td>
+              </tr>
+              <tr className="border-t border-[var(--color-border)] bg-purple-50/40">
+                <td className="px-3 py-2 font-medium">운영자</td>
+                <td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td>
+              </tr>
+              <tr className="border-t border-[var(--color-border)]">
+                <td className="px-3 py-2 font-medium">게시판관리자 (해당 보드)</td>
+                <td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center">✅</td><td className="text-center text-red-500">✗</td>
+              </tr>
+              <tr className="border-t border-[var(--color-border)]">
+                <td className="px-3 py-2 font-medium">작성자</td>
+                <td className="text-center">✅</td><td className="text-center">✅</td><td className="text-center text-gray-400">—</td><td className="text-center">자기만</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td>
+              </tr>
+              <tr className="border-t border-[var(--color-border)]">
+                <td className="px-3 py-2 font-medium">일반 회원</td>
+                <td className="text-center">보드 정책</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td><td className="text-center text-red-500">✗</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <Tip>글쓰기 가능 여부는 게시판 설정(<code>members_only_write</code>, <code>moderator_only_write</code>)에 따라 회원에게 추가 제약이 걸립니다.</Tip>
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">
+          공개 글 상세 페이지의 액션 바: [이동][복사][수정][삭제][목록으로] — 이동/복사는 최고관리자·운영자에게만, 수정/삭제는 권한 있는 역할에게만 노출됩니다.
+        </p>
+      </Accordion>
+
+      <Accordion icon="🚫" title="자기 자신 비활성화·삭제 방지" badge="v1.5.142">
+        <p className="mb-3 text-[var(--color-text-muted)]">
+          운영자가 본인 행에서 [비활성화] 또는 [삭제] 버튼을 누르면 자기 세션이 즉시 무효화되어 admin 페이지 접근이 막힙니다(<code>is_active=false</code> 조건의 인증 헬퍼). 이 사고를 방지하기 위한 이중 가드입니다.
+        </p>
+        <ul className="text-xs text-[var(--color-text-muted)] space-y-1 mb-3">
+          <li>• <strong>백엔드</strong>: <code>PUT /api/members/admin/&#123;id&#125;/deactivate</code>, <code>DELETE /api/members/admin/&#123;id&#125;</code> 가 <code>isinstance(_admin, Member) and _admin.id == target.id</code> 이면 <strong>400 반환</strong></li>
+          <li>• <strong>프론트</strong>: /admin/members 의 본인 행 [비활성화] [삭제] [권한 회수] 버튼이 <code>disabled</code>, 호버 시 &quot;자신에게는 적용할 수 없습니다&quot; 툴팁</li>
+          <li>• 슈퍼관리자는 <code>Admin</code> 테이블이라 Member 목록에 자기 행이 없어 별도 가드 불필요</li>
+        </ul>
+        <Warn>비활성화는 강한 조치입니다 — 신규 로그인 차단 + <strong>기존 발급된 JWT까지 즉시 무효화</strong>. 모든 인증 헬퍼가 <code>Member.is_active == True</code>로 필터링하기 때문입니다.</Warn>
       </Accordion>
 
       <Accordion icon="⛪" title="본당 정보" badge="/admin/parish">
@@ -1321,8 +1501,8 @@ function ApiTab() {
       <div>
         <h3 className="font-semibold text-[var(--color-primary)] mb-2">인증 (Auth)</h3>
         <ApiTable>
-          <ApiRow method="POST" path="/auth/admin-login" desc="최고관리자 또는 위임 관리자 로그인 (identifier, password)" />
-          <ApiRow method="POST" path="/auth/admin-session" desc="회원 JWT → 관리자 토큰 교환 (위임 관리자용)" auth="회원" />
+          <ApiRow method="POST" path="/auth/admin-login" desc="최고관리자 또는 운영자 로그인 (identifier, password)" />
+          <ApiRow method="POST" path="/auth/admin-session" desc="회원 JWT → 관리자 토큰 교환 (운영자용)" auth="회원" />
           <ApiRow method="GET"  path="/auth/admin-me" desc="현재 관리자 정보 조회" auth="관리자" />
           <ApiRow method="POST" path="/members/login" desc="회원 로그인 (email, password)" />
           <ApiRow method="POST" path="/members/register" desc="회원 가입" />
