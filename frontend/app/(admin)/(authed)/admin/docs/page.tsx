@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.149";
+export const CURRENT_VERSION = "1.5.150";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.150", date: "2026-05-18", tag: "수정",
+    items: [
+      "복음 구절 가져오기 정규식 보완 — 굿뉴스 측 '복음의 끝입니다' 오기에도 매칭",
+      "  · 2026-05-17 (주님 승천 대축일) 페이지에서 시작 표기가 '복음의 끝입니다' 로 잘못 표기되어 NULL 반환되던 문제 해결",
+      "  · /admin/bulletin/new + /meditation 묵상 페이지 + /meditation SVG 중앙정렬",
+    ],
+  },
   {
     version: "1.5.149", date: "2026-05-18", tag: "수정",
     items: [

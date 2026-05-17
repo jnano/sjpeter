@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import {
   MeditationCard,
   CurrentMeditationFooter,
@@ -10,7 +11,7 @@ import { fetchParishMin } from "@/lib/parish";
 
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "묵상 글", description: `${p.name} 묵상 글` };
+  return { title: "주일 말씀 묵상과 실천", description: `${p.name} 주일 말씀 묵상과 실천` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -43,7 +44,7 @@ export default async function MeditationPage() {
         ) : (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8">
             <div className="text-center py-16 text-[var(--color-text-muted)]">
-              <div className="text-5xl mb-4">✝</div>
+              <div className="text-5xl mb-4 flex justify-center"><CrossIcon /></div>
               <p className="font-serif text-lg text-[var(--color-primary)] mb-2">준비 중입니다</p>
               <p className="text-sm">곧 묵상 글이 올라올 예정입니다.</p>
             </div>
