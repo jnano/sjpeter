@@ -1,1 +1,43 @@
-Generic single-database configuration.
+Alembic 마이그레이션 가이드 — faithandme
+==========================================
+
+## 정책 (v1.5.147~)
+
+**모든 신규 schema 변경은 Alembic revision 으로 일원화합니다.**
+
+이전엔 `main.py` startup 의 raw SQL `ALTER TABLE ... IF NOT EXISTS` 로
+컬럼·인덱스를 추가했지만, 이는 추적 어려움·롤백 불가의 한계가 있었습니다.
+
+신규 변경은 다음 흐름을 따릅니다:
+
+1. **모델 정의 변경** (`app/models/*.py` 에 컬럼 추가 등)
+2. **revision 생성**
+   ```bash
+   cd backend && source venv/bin/activate
+   alembic revision --autogenerate -m "add foo column to bar"
+   ```
+3. **생성된 파일 검토**
+   - `alembic/versions/NNNN_*.py` 의 `upgrade()` / `downgrade()` 가
+     의도한 변경만 포함하는지 확인
+   - autogenerate 가 잡지 못하는 항목(trgm 인덱스·custom 타입 등)은 직접 작성
+4. **app 재기동**: 다음 startup 시 `_alembic_upgrade_to_head()` 가 자동 적용
+
+## 기존 누적 변경
+
+`main.py` 의 `_migrate_add_columns()` 는 기존 누적 ALTER 를 그대로 유지합니다.
+IF NOT EXISTS 라 멱등성이 있으므로 alembic 과 병행해도 안전합니다.
+시간이 지나면서 옛 ALTER 를 alembic revision 으로 이관할 수 있지만 필수는 아닙니다.
+
+## baseline
+
+`0001_baseline_*.py` 는 도입 시점의 DB 상태를 head 로 stamp 한 빈 revision 입니다.
+새 환경에서는 `_migrate_add_columns()` + `create_all()` 이 schema 를 만들고,
+그 위에 alembic revision 들이 순서대로 적용됩니다.
+
+## 명령어 정리
+
+- `alembic current` — 현재 적용된 revision
+- `alembic history` — 전체 revision 이력
+- `alembic upgrade head` — 최신까지 적용 (startup 자동 호출됨)
+- `alembic downgrade -1` — 1단계 롤백
+- `alembic check` — 모델 ↔ DB drift 확인 (인덱스 차이는 무시 가능)

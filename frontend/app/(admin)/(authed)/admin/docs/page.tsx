@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.147";
+export const CURRENT_VERSION = "1.5.148";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.148", date: "2026-05-18", tag: "수정",
+    items: [
+      "AI 추출 시스템 사소한 보강 6건:",
+      "  · status != 'rejected' dead filter 2곳 제거 (v1.5.143 이후 의미 없는 필터)",
+      "  · routed-counts/batch IN 절을 expanding bindparam 으로 명시 (SQLAlchemy 표준)",
+      "  · AI 통계 페이지 빈 데이터 시 안내 박스 + '주보 등록' 진입",
+      "  · 출처 footer 날짜 포맷 YYYY-MM-DD → YYYY.MM.DD 로 issue_label 과 통일",
+      "  · alembic/README 가이드 작성 — 신규 schema 변경 정책 명시",
+      "  · AdminSidebar 의 주보 메뉴에 'AI 분석 통계' 진입 추가",
+    ],
+  },
   {
     version: "1.5.147", date: "2026-05-18", tag: "인프라",
     items: [

@@ -63,6 +63,23 @@ export default function AiStatsPage() {
         </Link>
       </div>
 
+      {stats.total_analyzed === 0 && (
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center">
+          <p className="text-4xl mb-3">📊</p>
+          <p className="font-medium text-[var(--color-text)]">아직 분석된 주보가 없습니다</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-2">
+            주보 PDF 를 업로드하면 자동으로 AI 분석이 진행되고, 결과 지표가 이 페이지에 누적됩니다.
+          </p>
+          <Link
+            href="/admin/bulletin/new"
+            className="inline-block mt-4 bg-[var(--color-primary)] text-white text-sm px-4 py-2 rounded-lg hover:bg-[var(--color-primary-light)] transition-colors"
+          >
+            + 새 주보 등록
+          </Link>
+        </div>
+      )}
+
+      {stats.total_analyzed > 0 && <>
       {/* 핵심 지표 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
@@ -180,6 +197,7 @@ export default function AiStatsPage() {
           </table>
         </div>
       </section>
+      </>}
     </div>
   );
 }

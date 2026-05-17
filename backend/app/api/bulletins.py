@@ -193,25 +193,22 @@ def bulletin_routed_counts_batch(
     if not body.bulletin_ids:
         return {"per_bulletin": {}, "sum": {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}}
 
-    # IN 절 한 번씩으로 모든 카운트 집계
-    ids = tuple(body.bulletin_ids)
+    # SQLAlchemy expanding bindparam — IN 절에 list 안전하게 바인딩 (PG syntax error 방어)
+    from sqlalchemy import bindparam
 
-    def counts_by_id(sql: str, id_col: str) -> dict[int, int]:
-        rows = db.execute(text(sql), {"ids": ids}).fetchall()
+    def counts_by_col(table: str, col: str) -> dict[int, int]:
+        stmt = text(
+            f"SELECT {col}, COUNT(*) FROM {table} WHERE {col} IN :ids GROUP BY {col}"
+        ).bindparams(bindparam("ids", expanding=True))
+        rows = db.execute(stmt, {"ids": body.bulletin_ids}).fetchall()
         return {r[0]: r[1] for r in rows}
 
-    ext_map = counts_by_id(
-        "SELECT bulletin_id, COUNT(*) FROM bulletin_extractions WHERE bulletin_id IN :ids GROUP BY bulletin_id", "bulletin_id")
-    img_map = counts_by_id(
-        "SELECT bulletin_id, COUNT(*) FROM bulletin_extracted_images WHERE bulletin_id IN :ids GROUP BY bulletin_id", "bulletin_id")
-    ev_map = counts_by_id(
-        "SELECT source_bulletin_id, COUNT(*) FROM events WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
-    med_map = counts_by_id(
-        "SELECT source_bulletin_id, COUNT(*) FROM meditations WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
-    vis_map = counts_by_id(
-        "SELECT source_bulletin_id, COUNT(*) FROM visions WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
-    post_map = counts_by_id(
-        "SELECT source_bulletin_id, COUNT(*) FROM posts WHERE source_bulletin_id IN :ids GROUP BY source_bulletin_id", "source_bulletin_id")
+    ext_map = counts_by_col("bulletin_extractions", "bulletin_id")
+    img_map = counts_by_col("bulletin_extracted_images", "bulletin_id")
+    ev_map = counts_by_col("events", "source_bulletin_id")
+    med_map = counts_by_col("meditations", "source_bulletin_id")
+    vis_map = counts_by_col("visions", "source_bulletin_id")
+    post_map = counts_by_col("posts", "source_bulletin_id")
 
     per_bulletin: dict[int, dict] = {}
     total = {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}
@@ -493,15 +490,13 @@ def _format_event_card_body(
 
 def _format_source_footer(bulletin: Bulletin) -> str:
     """AI 추출 콘텐츠 본문 끝에 붙일 출처 표기.
-    본문과 3줄 띄운 뒤 회색 작은 글씨로: '출처: 제N호 주보 (YYYY-MM-DD)'."""
-    issue_label = (
-        f"제{bulletin.issue_number}호"
-        if bulletin.issue_number
-        else bulletin.published_date.strftime("%Y.%m.%d")
-    )
+    본문과 3줄 띄운 뒤 회색 작은 글씨로: '출처: 제N호 주보 (YYYY.MM.DD)'.
+    날짜 포맷은 issue_label 과 한국식 점 구분자(YYYY.MM.DD) 로 통일."""
+    date_str = bulletin.published_date.strftime("%Y.%m.%d")
+    issue_label = f"제{bulletin.issue_number}호" if bulletin.issue_number else date_str
     return (
         "\n\n\n\n"
-        f'<span style="color: gray;"><small>**출처: {issue_label} 주보** ({bulletin.published_date})</small></span>'
+        f'<span style="color: gray;"><small>**출처: {issue_label} 주보** ({date_str})</small></span>'
     )
 
 
@@ -549,7 +544,6 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         )
         exists = db.query(BulletinExtraction).filter(
             BulletinExtraction.fingerprint == fp,
-            BulletinExtraction.status != "rejected",
         ).first()
         if exists:
             continue
@@ -1533,9 +1527,7 @@ def _is_fuzzy_duplicate(
     if not title:
         return False
 
-    query = db.query(BulletinExtraction.title).filter(
-        BulletinExtraction.status != "rejected",
-    )
+    query = db.query(BulletinExtraction.title)
     if event_date:
         query = query.filter(BulletinExtraction.event_date == event_date)
     elif bulletin_id is not None:
