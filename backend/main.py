@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports
+from app.api import issue_reports, transport_routes
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -54,6 +54,7 @@ app.include_router(pages.router, prefix="/api")
 app.include_router(construction.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
+app.include_router(transport_routes.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -1042,6 +1043,29 @@ def _migrate_add_columns():
         conn.execute(text(
             "ALTER TABLE events ADD COLUMN IF NOT EXISTS event_kind VARCHAR(10)"
         ))
+
+        # 본당 교통 안내 (v1.5.140) — 출발지별 노선 카드. admin이 자유 추가·수정·삭제
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS transport_routes (
+                id SERIAL PRIMARY KEY,
+                label VARCHAR(80) NOT NULL,
+                description TEXT NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_transport_routes_sort ON transport_routes(sort_order)"
+        ))
+        for ddl in [
+            "ALTER TABLE transport_routes ALTER COLUMN created_at SET DEFAULT NOW()",
+            "ALTER TABLE transport_routes ALTER COLUMN updated_at SET DEFAULT NOW()",
+        ]:
+            try:
+                conn.execute(text(ddl))
+            except Exception:
+                pass
 
         # 장애 신고 (v1.5.139) — 비회원 가능, 페이지 URL 자동 수집, 운영자가 상태 관리
         conn.execute(text("""

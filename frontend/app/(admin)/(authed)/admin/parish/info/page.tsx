@@ -278,6 +278,196 @@ export default function AdminParishInfoPage() {
           </button>
         </div>
       </form>
+
+      {/* 교통 안내 — /info 페이지의 출발지별 카드 관리 */}
+      <TransportRoutesSection />
     </div>
+  );
+}
+
+// ───────────────────────────────────────────────
+// 교통 안내 섹션 (출발지별 카드 CRUD)
+// ───────────────────────────────────────────────
+
+interface TransportRoute {
+  id: number;
+  label: string;
+  description: string;
+  sort_order: number;
+}
+
+function TransportRoutesSection() {
+  const [routes, setRoutes] = useState<TransportRoute[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [draftLabel, setDraftLabel] = useState("");
+  const [draftDesc, setDraftDesc] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+
+  function fetchRoutes() {
+    setLoading(true);
+    fetch(`${API}/api/transport-routes`)
+      .then((r) => r.json())
+      .then((data: TransportRoute[]) => setRoutes(Array.isArray(data) ? data : []))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { fetchRoutes(); }, []);
+
+  async function addRoute(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draftLabel.trim() || !draftDesc.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/transport-routes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ label: draftLabel.trim(), description: draftDesc.trim() }),
+      });
+      if (res.ok) {
+        setDraftLabel(""); setDraftDesc("");
+        fetchRoutes();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function startEdit(r: TransportRoute) {
+    setEditingId(r.id);
+    setEditLabel(r.label);
+    setEditDesc(r.description);
+  }
+
+  async function saveEdit(id: number) {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/transport-routes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ label: editLabel.trim(), description: editDesc.trim() }),
+      });
+      if (res.ok) {
+        setEditingId(null);
+        fetchRoutes();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeRoute(id: number) {
+    if (!confirm("이 출발지 노선을 삭제하시겠습니까?")) return;
+    const res = await fetch(`${API}/api/transport-routes/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token ?? ""}` },
+    });
+    if (res.ok) fetchRoutes();
+  }
+
+  async function move(id: number, direction: -1 | 1) {
+    const idx = routes.findIndex((r) => r.id === id);
+    const target = idx + direction;
+    if (idx < 0 || target < 0 || target >= routes.length) return;
+    const newOrder = [...routes];
+    [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
+    const res = await fetch(`${API}/api/transport-routes/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+      body: JSON.stringify({ ids: newOrder.map((r) => r.id) }),
+    });
+    if (res.ok) fetchRoutes();
+  }
+
+  return (
+    <section className="mt-10 p-6 bg-white border border-gray-200 rounded-xl">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold">교통 안내</h2>
+        <p className="text-xs text-gray-500 mt-1">
+          공개 /info 페이지에 출발지별 카드로 표시됩니다. 추가·수정·삭제 즉시 반영.
+        </p>
+      </div>
+
+      {/* 신규 등록 폼 */}
+      <form onSubmit={addRoute} className="space-y-2 mb-6 p-4 border border-dashed border-gray-300 rounded-lg">
+        <input
+          type="text"
+          value={draftLabel}
+          onChange={(e) => setDraftLabel(e.target.value)}
+          placeholder="출발지 라벨 (예: 도담동에서 오실 때)"
+          maxLength={80}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <textarea
+          value={draftDesc}
+          onChange={(e) => setDraftDesc(e.target.value)}
+          placeholder="노선 설명 (예: BRT B2 이용 → 정부세종청사북측 정류장 하차, 도보 약 5분)"
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saving || !draftLabel.trim() || !draftDesc.trim()}
+            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            추가
+          </button>
+        </div>
+      </form>
+
+      {/* 목록 */}
+      {loading ? (
+        <p className="text-center py-6 text-sm text-gray-500">불러오는 중…</p>
+      ) : routes.length === 0 ? (
+        <p className="text-center py-6 text-sm text-gray-400">등록된 교통 안내가 없습니다.</p>
+      ) : (
+        <ul className="space-y-2">
+          {routes.map((r, idx) => (
+            <li key={r.id} className="p-3 border border-gray-200 rounded-lg">
+              {editingId === r.id ? (
+                <div className="space-y-2">
+                  <input
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    maxLength={80}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <textarea
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                    <button type="button" onClick={() => saveEdit(r.id)} disabled={saving} className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">저장</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button type="button" onClick={() => move(r.id, -1)} disabled={idx === 0} className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-30">▲</button>
+                    <button type="button" onClick={() => move(r.id, 1)} disabled={idx === routes.length - 1} className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-30">▼</button>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{r.label}</p>
+                    <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{r.description}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button type="button" onClick={() => startEdit(r)} className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50">수정</button>
+                    <button type="button" onClick={() => removeRoute(r.id)} className="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50">삭제</button>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

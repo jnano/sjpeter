@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // 좌표가 바뀌면 바로 반영돼야 하므로 캐시하지 않는다
 export const dynamic = "force-dynamic";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface MassEntry { day: string; time: string; note: string; }
 interface MassSchedule { entries: MassEntry[]; note: string; }
@@ -33,7 +33,7 @@ const DAY_ORDER: Record<string, number> = {
 
 async function getParish(): Promise<Parish | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/parish/`);
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -41,12 +41,28 @@ async function getParish(): Promise<Parish | null> {
   }
 }
 
+interface TransportRoute {
+  id: number;
+  label: string;
+  description: string;
+}
+
+async function getTransportRoutes(): Promise<TransportRoute[]> {
+  try {
+    const res = await fetch(`${API}/api/transport-routes`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
 export default async function InfoPage() {
-  const parish = await getParish();
+  const [parish, transportRoutes] = await Promise.all([getParish(), getTransportRoutes()]);
   let appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
   if (!appKey) {
     try {
-      const cfgRes = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300 } });
+      const cfgRes = await fetch(`${API}/api/public/site-config`);
       if (cfgRes.ok) {
         const cfg = await cfgRes.json();
         appKey = cfg.KAKAO_MAP_KEY ?? "";
@@ -94,99 +110,6 @@ export default async function InfoPage() {
         )}
       </div>
 
-      {sortedEntries.length > 0 && (() => {
-        const sundayEntries   = sortedEntries.filter((e) => e.day === "주일");
-        const saturdayEntries = sortedEntries.filter((e) => e.day === "토요일");
-        const holidayEntries  = sortedEntries.filter((e) => e.day === "공휴일");
-        const weekdayOrder = ["월요일", "화요일", "수요일", "목요일", "금요일"];
-        const weekdayByDay = weekdayOrder
-          .map((d) => ({ day: d, list: sortedEntries.filter((e) => e.day === d) }))
-          .filter((g) => g.list.length > 0);
-
-        // 평일을 같은 시간 패턴끼리 묶기 (예: 월·화·수·목 → 06:00, 금 → 06:00·19:30)
-        const weekdayGroups: { label: string; times: MassEntry[] }[] = [];
-        const seenPatterns = new Set<string>();
-        for (const { day, list } of weekdayByDay) {
-          const key = list.map((e) => `${e.time}|${e.note ?? ""}`).join(";");
-          if (seenPatterns.has(key)) continue;
-          seenPatterns.add(key);
-          const sameDays = weekdayByDay
-            .filter((g) => g.list.map((e) => `${e.time}|${e.note ?? ""}`).join(";") === key)
-            .map((g) => g.day.replace("요일", ""));
-          weekdayGroups.push({ label: sameDays.join("·"), times: list });
-        }
-
-        const renderTimes = (times: MassEntry[]) => (
-          <div className="flex-1 flex flex-wrap gap-x-3.5 gap-y-1">
-            {times.map((e, i) => (
-              <span key={i} className="text-sm">
-                <span className="font-semibold text-[var(--color-text)]">{e.time}</span>
-                {e.note && (
-                  <span className="text-[11px] text-[var(--color-text-muted)] ml-1">({e.note})</span>
-                )}
-              </span>
-            ))}
-          </div>
-        );
-
-        return (
-          <div className="mb-5 bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-2.5">
-              <span className="text-[var(--color-accent)]">✝</span>
-              <h2 className="font-serif font-bold text-[var(--color-primary)] text-base tracking-wide">미사 시간</h2>
-            </div>
-
-            <div className="divide-y divide-[var(--color-border)]/60">
-              {sundayEntries.length > 0 && (
-                <div className="px-5 py-3 flex items-baseline gap-4">
-                  <div className="w-20 sm:w-24 shrink-0">
-                    <span className="font-semibold text-sm text-[var(--color-primary)]">주일</span>
-                  </div>
-                  {renderTimes(sundayEntries)}
-                </div>
-              )}
-
-              {saturdayEntries.length > 0 && (
-                <div className="px-5 py-3 flex items-baseline gap-4">
-                  <div className="w-20 sm:w-24 shrink-0">
-                    <span className="font-semibold text-sm text-[var(--color-primary)]">토요일</span>
-                    <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5">주일 특전</span>
-                  </div>
-                  {renderTimes(saturdayEntries)}
-                </div>
-              )}
-
-              {weekdayGroups.map(({ label, times }) => (
-                <div key={label} className="px-5 py-3 flex items-baseline gap-4">
-                  <div className="w-20 sm:w-24 shrink-0">
-                    <span className="font-medium text-sm text-[var(--color-text)]">{label}</span>
-                  </div>
-                  {renderTimes(times)}
-                </div>
-              ))}
-
-              {holidayEntries.length > 0 && (
-                <div className="px-5 py-3 flex items-baseline gap-4">
-                  <div className="w-20 sm:w-24 shrink-0">
-                    <span className="font-medium text-sm text-[var(--color-text)]">공휴일</span>
-                  </div>
-                  {renderTimes(holidayEntries)}
-                </div>
-              )}
-            </div>
-
-            {parish?.mass_schedule?.note && (
-              <div className="px-5 py-2.5 bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] flex items-start gap-2">
-                <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5">ⓘ</span>
-                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                  {parish.mass_schedule.note}
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
       <div className="grid md:grid-cols-2 gap-5">
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
           <h2 className="font-serif font-bold text-[var(--color-primary)] mb-4">기본 정보</h2>
@@ -212,21 +135,129 @@ export default async function InfoPage() {
           </div>
         </div>
 
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+        {/* 미사 시간 — grid 우측 셀. 일정 없으면 빈 자리 차지 안 함 */}
+        {sortedEntries.length > 0 && (() => {
+          const sundayEntries   = sortedEntries.filter((e) => e.day === "주일");
+          const saturdayEntries = sortedEntries.filter((e) => e.day === "토요일");
+          const holidayEntries  = sortedEntries.filter((e) => e.day === "공휴일");
+          const weekdayOrder = ["월요일", "화요일", "수요일", "목요일", "금요일"];
+          const weekdayByDay = weekdayOrder
+            .map((d) => ({ day: d, list: sortedEntries.filter((e) => e.day === d) }))
+            .filter((g) => g.list.length > 0);
+
+          // 평일을 같은 시간 패턴끼리 묶기 (예: 월·화·수·목 → 06:00, 금 → 06:00·19:30)
+          const weekdayGroups: { label: string; times: MassEntry[] }[] = [];
+          const seenPatterns = new Set<string>();
+          for (const { day, list } of weekdayByDay) {
+            const key = list.map((e) => `${e.time}|${e.note ?? ""}`).join(";");
+            if (seenPatterns.has(key)) continue;
+            seenPatterns.add(key);
+            const sameDays = weekdayByDay
+              .filter((g) => g.list.map((e) => `${e.time}|${e.note ?? ""}`).join(";") === key)
+              .map((g) => g.day.replace("요일", ""));
+            weekdayGroups.push({ label: sameDays.join("·"), times: list });
+          }
+
+          const renderTimes = (times: MassEntry[]) => (
+            <div className="flex-1 flex flex-wrap gap-x-3.5 gap-y-1">
+              {times.map((e, i) => (
+                <span key={i} className="text-sm">
+                  <span className="font-semibold text-[var(--color-text)]">{e.time}</span>
+                  {e.note && (
+                    <span className="text-[11px] text-[var(--color-text-muted)] ml-1">({e.note})</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          );
+
+          return (
+            <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-2.5">
+                <span className="text-[var(--color-accent)]">✝</span>
+                <h2 className="font-serif font-bold text-[var(--color-primary)] text-base tracking-wide">미사 시간</h2>
+              </div>
+
+              <div className="divide-y divide-[var(--color-border)]/60">
+                {sundayEntries.length > 0 && (
+                  <div className="px-5 py-3 flex items-baseline gap-4">
+                    <div className="w-20 sm:w-24 shrink-0">
+                      <span className="font-semibold text-sm text-[var(--color-primary)]">주일</span>
+                    </div>
+                    {renderTimes(sundayEntries)}
+                  </div>
+                )}
+
+                {saturdayEntries.length > 0 && (
+                  <div className="px-5 py-3 flex items-baseline gap-4">
+                    <div className="w-20 sm:w-24 shrink-0">
+                      <span className="font-semibold text-sm text-[var(--color-primary)]">토요일</span>
+                      <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5">주일 특전</span>
+                    </div>
+                    {renderTimes(saturdayEntries)}
+                  </div>
+                )}
+
+                {weekdayGroups.map(({ label, times }) => (
+                  <div key={label} className="px-5 py-3 flex items-baseline gap-4">
+                    <div className="w-20 sm:w-24 shrink-0">
+                      <span className="font-medium text-sm text-[var(--color-text)]">{label}</span>
+                    </div>
+                    {renderTimes(times)}
+                  </div>
+                ))}
+
+                {holidayEntries.length > 0 && (
+                  <div className="px-5 py-3 flex items-baseline gap-4">
+                    <div className="w-20 sm:w-24 shrink-0">
+                      <span className="font-medium text-sm text-[var(--color-text)]">공휴일</span>
+                    </div>
+                    {renderTimes(holidayEntries)}
+                  </div>
+                )}
+              </div>
+
+              {parish?.mass_schedule?.note && (
+                <div className="px-5 py-2.5 bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] flex items-start gap-2">
+                  <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5">ⓘ</span>
+                  <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                    {parish.mass_schedule.note}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 md:col-span-2">
           <h2 className="font-serif font-bold text-[var(--color-primary)] mb-4">교통 안내</h2>
-          <div className="space-y-3 text-sm">
-            <div>
-              <p className="font-medium mb-1">🚌 버스</p>
-              <p className="text-[var(--color-text-muted)] leading-relaxed">
-                ○○번, ○○번 이용 → {name} 정류장 하차
-              </p>
+
+          {/* 출발지별 대중교통 카드 — admin/parish/info 에서 관리. 빈 상태면 카드 영역 숨김 */}
+          {transportRoutes.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {transportRoutes.map((route) => (
+                <div
+                  key={route.id}
+                  className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-warm)]/40"
+                >
+                  <p className="font-medium text-sm mb-1.5 flex items-center gap-1.5">
+                    <span aria-hidden>🚌</span>
+                    <span>{route.label}</span>
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] leading-relaxed whitespace-pre-wrap">
+                    {route.description}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="font-medium mb-1">🚗 자가용</p>
-              <p className="text-[var(--color-text-muted)] leading-relaxed">
-                성당 주차장 이용 가능 (주일 미사 시 혼잡할 수 있습니다)
-              </p>
-            </div>
+          )}
+
+          {/* 자가용은 모든 경우 공통 안내 */}
+          <div className="border-t border-[var(--color-border)] pt-3">
+            <p className="font-medium mb-1 text-sm">🚗 자가용</p>
+            <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+              성당 주차장 이용 가능 (주일 미사 시 혼잡할 수 있습니다)
+            </p>
           </div>
         </div>
       </div>
