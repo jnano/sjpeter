@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.146";
+export const CURRENT_VERSION = "1.5.147";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.147", date: "2026-05-18", tag: "인프라",
+    items: [
+      "AI 추출 시스템 P3 완성도 보강 3건:",
+      "  · attachments.source_bulletin_id (ON DELETE SET NULL) — 갤러리 사진 출처 추적, 주보 삭제 시 사진 보존",
+      "  · /admin/bulletin/stats AI 분석 통계 페이지 — 성공률·p50·p95·재시도·에러 패턴·event_type 분포·최근 5건",
+      "  · GET /api/bulletins/ai-stats 통계 endpoint",
+      "  · Alembic 도입 — alembic/env.py + 0001_baseline + main.py startup 자동 upgrade (단일 진입점)",
+      "  · 누락 모델 6개 추가 — AdminLog·EmailVerificationToken·PasswordResetToken·ParishPastor·ParishPriest·SearchTermCount",
+      "  · Bulletin.ai_retry_count·Meditation.source_bulletin_id·Vision.source_bulletin_id 모델 정의",
+      "  · 인덱스 drift 는 main.py startup CREATE INDEX 가 처리 (별도 마일스톤)",
+    ],
+  },
   {
     version: "1.5.146", date: "2026-05-18", tag: "기능",
     items: [

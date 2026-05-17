@@ -1,6 +1,28 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Date, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+
+
+class BulletinExtractedImage(Base):
+    """주보 PDF에서 추출한 사진 (관리자가 분류 → 건축 슬라이드/갤러리/무시).
+
+    status: pending(분류 대기) | routed(분류 완료) | ignored(무시)
+    routed_to: 분류 결과 메모 (예: "construction", "gallery:liturgy", "ignored")
+    """
+
+    __tablename__ = "bulletin_extracted_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_url = Column(String(500), nullable=False)        # /uploads/bulletin-extracted/{bulletin_id}/img-N.jpg
+    width = Column(Integer, nullable=False)
+    height = Column(Integer, nullable=False)
+    page_number = Column(Integer, nullable=False)         # 원본 PDF 페이지 번호 (1부터)
+    status = Column(String(20), default="pending", nullable=False)
+    routed_to = Column(String(200), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    routed_at = Column(DateTime, nullable=True)
 
 
 class Bulletin(Base):
@@ -25,5 +47,7 @@ class Bulletin(Base):
 
     # 통합검색용 PDF 본문 추출 텍스트
     body_text = Column(Text)
+    # AI 분석 일시 실패 자동 재시도 카운트 (Bedrock timeout 등)
+    ai_retry_count = Column(Integer, nullable=False, server_default="0")
 
     parish = relationship("Parish", backref="bulletins")

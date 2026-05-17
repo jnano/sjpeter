@@ -145,12 +145,20 @@ export default function BulletinListPage() {
             등록된 주보를 확인하고 삭제할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/admin/bulletin/new"
-          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          + 새 주보 등록
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/bulletin/stats"
+            className="border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            📊 AI 분석 통계
+          </Link>
+          <Link
+            href="/admin/bulletin/new"
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            + 새 주보 등록
+          </Link>
+        </div>
       </div>
 
       <BulkActionBar

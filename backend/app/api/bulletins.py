@@ -231,6 +231,95 @@ def bulletin_routed_counts_batch(
     return {"per_bulletin": per_bulletin, "sum": total}
 
 
+@router.get("/ai-stats")
+def ai_analysis_stats(
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """AI 분석 관찰성 지표 — 성공률·소요시간·재시도·에러 패턴·event_type 분포."""
+    # 상태별 분포
+    status_rows = db.execute(text(
+        "SELECT ai_status, COUNT(*) FROM bulletins WHERE ai_status IS NOT NULL GROUP BY ai_status"
+    )).fetchall()
+    by_status = {r[0]: r[1] for r in status_rows}
+    total_analyzed = sum(by_status.values())
+
+    # 소요시간(초): 완료된 분석만
+    duration_rows = db.execute(text("""
+        SELECT EXTRACT(EPOCH FROM (ai_finished_at - ai_started_at))::INT
+        FROM bulletins
+        WHERE ai_status='done' AND ai_started_at IS NOT NULL AND ai_finished_at IS NOT NULL
+        ORDER BY 1
+    """)).fetchall()
+    durations = [r[0] for r in duration_rows if r[0] is not None]
+
+    def percentile(values: list[int], p: float) -> int:
+        if not values:
+            return 0
+        idx = min(len(values) - 1, int(len(values) * p))
+        return values[idx]
+
+    duration_stats = {
+        "count": len(durations),
+        "avg": int(sum(durations) / len(durations)) if durations else 0,
+        "p50": percentile(durations, 0.5),
+        "p95": percentile(durations, 0.95),
+        "max": durations[-1] if durations else 0,
+    }
+
+    # 재시도 발생 분포
+    retry_rows = db.execute(text(
+        "SELECT ai_retry_count, COUNT(*) FROM bulletins WHERE ai_retry_count > 0 GROUP BY ai_retry_count"
+    )).fetchall()
+    retries = {r[0]: r[1] for r in retry_rows}
+
+    # 자주 발생한 에러 (최근 50건)
+    error_rows = db.execute(text("""
+        SELECT LEFT(ai_error, 80) AS err, COUNT(*) AS cnt
+        FROM bulletins WHERE ai_status='failed' AND ai_error IS NOT NULL
+        GROUP BY LEFT(ai_error, 80) ORDER BY cnt DESC LIMIT 10
+    """)).fetchall()
+    top_errors = [{"error": r[0], "count": r[1]} for r in error_rows]
+
+    # event_type 분포 (라우팅 결과)
+    type_rows = db.execute(text(
+        "SELECT COALESCE(event_type,'(미분류)') AS t, COUNT(*) FROM bulletin_extractions GROUP BY t ORDER BY 2 DESC"
+    )).fetchall()
+    by_event_type = [{"event_type": r[0], "count": r[1]} for r in type_rows]
+
+    # 최근 분석 5건
+    recent_rows = db.execute(text("""
+        SELECT id, issue_number, published_date, ai_status, ai_started_at, ai_finished_at,
+               ai_retry_count, LEFT(COALESCE(ai_error,''), 80) AS err
+        FROM bulletins
+        WHERE ai_status IS NOT NULL
+        ORDER BY COALESCE(ai_started_at, '1970-01-01'::TIMESTAMP) DESC
+        LIMIT 5
+    """)).fetchall()
+    recent = [
+        {
+            "id": r[0], "issue_number": r[1], "published_date": str(r[2]) if r[2] else None,
+            "ai_status": r[3],
+            "ai_started_at": r[4].isoformat() if r[4] else None,
+            "ai_finished_at": r[5].isoformat() if r[5] else None,
+            "ai_retry_count": r[6] or 0,
+            "ai_error": r[7] if r[7] else None,
+        }
+        for r in recent_rows
+    ]
+
+    return {
+        "total_analyzed": total_analyzed,
+        "by_status": by_status,
+        "success_rate": round(by_status.get("done", 0) / total_analyzed * 100, 1) if total_analyzed else 0.0,
+        "duration_seconds": duration_stats,
+        "retries": retries,
+        "top_errors": top_errors,
+        "by_event_type": by_event_type,
+        "recent": recent,
+    }
+
+
 @router.get("/{bulletin_id}/routed-counts")
 def bulletin_routed_counts(
     bulletin_id: int,
@@ -1144,6 +1233,8 @@ def route_extracted_image(
             file_url=f"/uploads/attachments/{stored}",
             file_size=file_size,
             is_image=True,
+            # 주보 삭제 시 SET NULL — 사진은 보존, 출처만 사라짐
+            source_bulletin_id=img.bulletin_id,
         ))
 
         img.status = "routed"

@@ -24,6 +24,8 @@ class Vision(Base):
     motto = Column(String(300), nullable=False)        # 한 줄 슬로건
     body = Column(Text, nullable=True)                  # 상세 본문 (선택, 줄바꿈 보존)
     is_current = Column(Boolean, default=False)
+    # AI 추출 출처 — 주보 삭제 시 cascade
+    source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
 
 
 class CommunityGroup(Base):
@@ -126,5 +128,7 @@ class Meditation(Base):
     background_gradient_size = Column(Integer, default=100, nullable=False)
     # 본문 폰트 크기 (px). 14 ~ 28 권장.
     body_font_size_px = Column(Integer, default=15, nullable=False)
+    # AI 추출 출처 — 주보 삭제 시 cascade
+    source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

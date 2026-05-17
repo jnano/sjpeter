@@ -71,7 +71,25 @@ def startup():
     from app.models import construction  # noqa: F401 — 성당 건축 공사 단계·일지
     create_tables()
     _migrate_add_columns()
+    _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
     _seed_initial_data()
+
+
+def _alembic_upgrade_to_head() -> None:
+    """alembic upgrade head 를 startup 에서 자동 실행 (단일 진입점 정책).
+    실패해도 app 기동을 막지 않음 — _migrate_add_columns 가 baseline 보장."""
+    try:
+        import os
+        from alembic.config import Config
+        from alembic import command
+        cfg_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+        if not os.path.exists(cfg_path):
+            return
+        cfg = Config(cfg_path)
+        command.upgrade(cfg, "head")
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("alembic upgrade 실패 (무시): %s", exc)
 
 
 def _migrate_add_columns():
@@ -924,6 +942,22 @@ def _migrate_add_columns():
             conn.execute(text(
                 "ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS "
                 "ai_retry_count INTEGER NOT NULL DEFAULT 0"
+            ))
+        except Exception:
+            pass
+
+        # 갤러리 라우팅 사진의 출처 추적 (SET NULL — 주보 삭제 시 사진 보존, 출처만 NULL)
+        try:
+            conn.execute(text(
+                "ALTER TABLE attachments ADD COLUMN IF NOT EXISTS "
+                "source_bulletin_id INTEGER REFERENCES bulletins(id) ON DELETE SET NULL"
+            ))
+        except Exception:
+            pass
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_attachments_source_bulletin_id "
+                "ON attachments(source_bulletin_id)"
             ))
         except Exception:
             pass
