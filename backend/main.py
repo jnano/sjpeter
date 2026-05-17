@@ -901,6 +901,23 @@ def _migrate_add_columns():
                 ))
             except Exception:
                 pass
+            # cascade DELETE 시 풀스캔 회피 인덱스
+            try:
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS ix_{tbl}_source_bulletin_id "
+                    f"ON {tbl}(source_bulletin_id)"
+                ))
+            except Exception:
+                pass
+
+        # AI 추출 → 사목지표 라우팅 추적 (다른 created_*_id 와 일관성)
+        try:
+            conn.execute(text(
+                "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS "
+                "created_vision_id INTEGER"
+            ))
+        except Exception:
+            pass
 
         # 묵상 대표 지정 + 배경 이미지 설정
         for col_sql in [

@@ -156,9 +156,17 @@ def reanalyze_bulletin(
     _admin: Admin = Depends(get_current_admin),
 ):
     """기존 주보를 다시 AI 분석. 파서 개선 후 0건 처리된 주보를 살리는 용도."""
-    bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
+    # SELECT FOR UPDATE 로 동시 reanalyze race 차단 (이미 processing 이면 409)
+    bulletin = (
+        db.query(Bulletin)
+        .filter(Bulletin.id == bulletin_id)
+        .with_for_update()
+        .first()
+    )
     if not bulletin:
         raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
+    if bulletin.ai_status == "processing":
+        raise HTTPException(status_code=409, detail="이미 분석이 진행 중입니다. 잠시 후 다시 시도해 주세요.")
 
     bulletin.ai_status = "processing"
     bulletin.ai_started_at = datetime.utcnow()
@@ -253,6 +261,7 @@ class ExtractionOut(BaseModel):
     created_notice_id: Optional[int] = None
     created_event_id: Optional[int] = None
     created_meditation_id: Optional[int] = None
+    created_vision_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -357,7 +366,10 @@ def _format_source_footer(bulletin: Bulletin) -> str:
 def _repin_latest_meditation(db: Session) -> None:
     """발행일이 가장 최근인 단 1개의 묵상만 is_current=TRUE 로 만든다.
     동일 날짜가 여러 개면 id가 가장 큰(나중 등록) 것을 선택.
-    옛 주보를 등록해도 옛 글이 대표가 되지 않고, 핀 중복도 방지."""
+    옛 주보를 등록해도 옛 글이 대표가 되지 않고, 핀 중복도 방지.
+
+    commit 은 호출자 책임 — savepoint(begin_nested) 내부에서도 안전하게 호출 가능하도록.
+    """
     from sqlalchemy import text as _text
     db.execute(_text("UPDATE meditations SET is_current = FALSE WHERE is_current = TRUE"))
     db.execute(_text("""
@@ -369,7 +381,6 @@ def _repin_latest_meditation(db: Session) -> None:
           LIMIT 1
         )
     """))
-    db.commit()
 
 
 def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], bulletin_id: int) -> list[BulletinExtraction]:
@@ -496,14 +507,16 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
     # is_ai_generated 표시는 member_id=NULL 로 추론 (notices.py:_to_notice_out).
     if event_type == "공지":
         notice_board = db.query(Board).filter(Board.slug == "notice", Board.is_active == True).first()
-        if not notice_board:
-            raise HTTPException(status_code=500, detail="'notice' 게시판이 없습니다. 게시판 설정을 확인하세요.")
+        # notice 게시판이 없거나 비활성이면 ai-extract 으로 graceful fallback (초기 셋업·운영 안전장치)
+        target = notice_board or ai_board
+        if not target:
+            raise HTTPException(status_code=500, detail="'notice'·'ai-extract' 게시판이 모두 없습니다. 게시판 설정을 확인하세요.")
         post = Post(
-            board_id=notice_board.id,
+            board_id=target.id,
             member_id=None,                # AI/admin 생성 표식
-            title=title,
+            title=title if notice_board else f"[{issue_label}] {title}",
             content=body_with_source,
-            is_published=True,
+            is_published=bool(notice_board),  # fallback 시 임시저장
             is_pinned=False,
             view_count=0,
             source_bulletin_id=bulletin.id,
@@ -511,7 +524,11 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         )
         db.add(post)
         db.flush()                         # post.id 확보
-        ext.created_notice_id = post.id    # 컬럼명은 created_notice_id 지만 실제로는 posts.id
+        if notice_board:
+            ext.created_notice_id = post.id    # 컬럼명은 created_notice_id 지만 실제로는 posts.id
+        else:
+            ext.target_board_id = target.id
+            ext.created_post_id = post.id
         ext.status = "approved"
         return ext
 
@@ -739,12 +756,17 @@ def bulk_approve_extractions(
         if ext.event_type == "지표":
             skipped.append({"id": ext.id, "reason": "지표는 approve-as-vision 으로 별도 처리"})
             continue
+        # savepoint 로 부분 실패 격리 — 한 건 실패해도 세션 unstable 되지 않음
+        sp = db.begin_nested()
         try:
             _apply_extraction_routing(db, ext)
+            sp.commit()
             approved.append(ext.id)
         except HTTPException as e:
+            sp.rollback()
             failed.append({"id": ext.id, "reason": e.detail})
         except Exception as e:
+            sp.rollback()
             failed.append({"id": ext.id, "reason": str(e)})
 
     db.commit()
@@ -757,6 +779,7 @@ class ExtractionPatchBody(BaseModel):
     event_date: Optional[date] = None
     location: Optional[str] = None
     event_type: Optional[str] = None
+    group_name: Optional[str] = None
 
 
 @router.patch("/extractions/{extraction_id}", response_model=ExtractionOut)
@@ -778,6 +801,7 @@ def update_extraction(
     if body.event_date is not None: ext.event_date = body.event_date
     if body.location is not None: ext.location = body.location
     if body.event_type is not None: ext.event_type = body.event_type
+    if body.group_name is not None: ext.group_name = body.group_name or None
     db.commit()
     db.refresh(ext)
     return ext
@@ -1174,13 +1198,14 @@ def approve_extraction_as_vision(
             {"y": year},
         )
 
-    db.execute(
+    row = db.execute(
         text(
             "INSERT INTO visions (year, motto, body, is_current, source_bulletin_id) "
-            "VALUES (:year, :motto, :body, :is_current, :src)"
+            "VALUES (:year, :motto, :body, :is_current, :src) RETURNING id"
         ),
         {"year": year, "motto": motto, "body": vision_body, "is_current": body.is_current, "src": ext.bulletin_id},
-    )
+    ).first()
+    ext.created_vision_id = row[0] if row else None
 
     ext.status = "approved"
     db.commit()

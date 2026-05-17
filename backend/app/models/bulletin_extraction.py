@@ -25,6 +25,7 @@ class BulletinExtraction(Base):
     created_notice_id = Column(Integer, nullable=True)      # 공지로 등록됐을 때 notices.id
     created_event_id = Column(Integer, nullable=True)       # 캘린더로 등록됐을 때 events.id
     created_meditation_id = Column(Integer, nullable=True)  # 묵상으로 등록됐을 때 meditations.id
+    created_vision_id = Column(Integer, nullable=True)      # 사목지표로 등록됐을 때 visions.id
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

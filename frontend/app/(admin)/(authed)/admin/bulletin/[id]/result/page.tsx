@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
+import ExtractedImagesSection from "@/components/admin/ExtractedImagesSection";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -85,12 +86,16 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
   const [error, setError] = useState("");
   const [reanalyzing, setReanalyzing] = useState(false);
 
+  // 분석이 hang 됐을 때 무한 폴링 방지. ai_started_at + 5분 초과 시 폴링 중단.
+  const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) { router.push("/admin"); return; }
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const pollingStartedAt = Date.now();
 
     async function load(initial: boolean) {
       try {
@@ -108,8 +113,14 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
         setBulletin(b);
         setExtractions(e);
 
-        // AI 분석이 진행 중이면 3초 후 다시 폴링
+        // AI 분석이 진행 중이면 3초 후 다시 폴링. 단, 서버 ai_started_at 또는 페이지 진입 후 5분 초과 시 중단.
         if (b.ai_status === "processing") {
+          const serverStartedMs = b.ai_started_at ? Date.parse(b.ai_started_at) : pollingStartedAt;
+          const elapsed = Math.max(Date.now() - pollingStartedAt, Date.now() - serverStartedMs);
+          if (elapsed > POLL_TIMEOUT_MS) {
+            setError("AI 분석이 5분 이상 걸리고 있습니다. ↻ 다시 분석 버튼을 눌러 재시도해 주세요.");
+            return;  // 폴링 중단
+          }
           timer = setTimeout(() => load(false), 3000);
         } else if (!initial) {
           // 분석이 막 끝난 경우 사이드바 뱃지 갱신
@@ -161,6 +172,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
     setExtractions((prev) => prev.filter((e) => e.id !== extId));
     notify(DataEvent.EXTRACTIONS_COUNT);
   }
+
 
   async function handleReanalyze() {
     const token = localStorage.getItem("admin_token");
@@ -378,6 +390,9 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
           })}
         </div>
       )}
+
+      {/* ── 추출된 사진 분류 섹션 (공통 컴포넌트) ── */}
+      <ExtractedImagesSection bulletinId={id} />
     </div>
   );
 }

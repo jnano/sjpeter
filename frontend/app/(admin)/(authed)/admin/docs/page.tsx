@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.144";
-export const LAST_UPDATED = "2026-05-17";
+export const CURRENT_VERSION = "1.5.145";
+export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,22 @@ export const LAST_UPDATED = "2026-05-17";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.145", date: "2026-05-18", tag: "기능",
+    items: [
+      "AI 추출 시스템 완성도 보강 9건 (P0+P1):",
+      "  · source_bulletin_id 인덱스 4개 (cascade DELETE 속도)",
+      "  · /admin/bulletin/[id]/result AI 분석 폴링 5분 timeout",
+      "  · 공지 분기 fallback (notice 게시판 부재 시 ai-extract 으로 graceful)",
+      "  · reanalyze 동시 실행 락 (SELECT FOR UPDATE + ai_status 검사 → 409)",
+      "  · bulletin_extractions.created_vision_id 컬럼 + RETURNING id 추적",
+      "  · ExtractionOut 응답에 created_vision_id 노출",
+      "  · ExtractionPatchBody + 인라인 편집 UI 에 group_name 필드",
+      "  · 인라인 편집 폼에 event_type 분류 셀렉트 (오추출 수정)",
+      "  · bulk-approve 각 건 savepoint 격리 (부분 실패 시 세션 안전)",
+      "  · _repin_latest_meditation commit 호출자 책임 (savepoint 호환)",
+    ],
+  },
   {
     version: "1.5.144", date: "2026-05-17", tag: "기능",
     items: [

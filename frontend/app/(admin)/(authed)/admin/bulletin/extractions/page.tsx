@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { DataEvent, notify } from "@/components/dataEvents";
+import ExtractedImagesSection from "@/components/admin/ExtractedImagesSection";
 
 interface VisionPayload {
   year: number;
@@ -55,8 +56,8 @@ export default function ExtractionsPage() {
   const [filterKind, setFilterKind] = useState<string>("all");
   // 인라인 편집 — extraction id → 편집 중인 필드들
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{ title: string; content: string; event_date: string; location: string }>({
-    title: "", content: "", event_date: "", location: "",
+  const [editForm, setEditForm] = useState<{ title: string; content: string; event_date: string; location: string; group_name: string; event_type: string }>({
+    title: "", content: "", event_date: "", location: "", group_name: "", event_type: "",
   });
 
   const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
@@ -104,7 +105,7 @@ export default function ExtractionsPage() {
     }
   }
 
-  async function approveAsEvent(ext: Extraction) {
+  async function approveAsEvent(ext: Extraction, mirrorBoardSlug?: string) {
     if (!ext.event_date) {
       setError(`"${ext.title}" 항목에 날짜가 없습니다. 캘린더 등록이 불가합니다.`);
       return;
@@ -114,7 +115,8 @@ export default function ExtractionsPage() {
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-event`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ board_slug: mirrorBoardSlug ?? null }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "캘린더 등록 실패");
       const updated: Extraction = await res.json();
@@ -182,6 +184,8 @@ export default function ExtractionsPage() {
       content: ext.content ?? "",
       event_date: ext.event_date ?? "",
       location: ext.location ?? "",
+      group_name: ext.group_name ?? "",
+      event_type: ext.event_type ?? "",
     });
   }
 
@@ -193,6 +197,8 @@ export default function ExtractionsPage() {
       body.content = editForm.content;
       body.event_date = editForm.event_date || null;
       body.location = editForm.location;
+      body.group_name = editForm.group_name || null;
+      if (editForm.event_type) body.event_type = editForm.event_type;
       const res = await fetch(`${API}/api/bulletins/extractions/${extId}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -443,6 +449,22 @@ export default function ExtractionsPage() {
                             placeholder="장소"
                             className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
                           />
+                          <select
+                            value={editForm.event_type}
+                            onChange={(e) => setEditForm((p) => ({ ...p, event_type: e.target.value }))}
+                            className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                          >
+                            <option value="">분류 선택…</option>
+                            {ALL_KINDS.map((k) => (
+                              <option key={k} value={k}>{k}</option>
+                            ))}
+                          </select>
+                          <input
+                            value={editForm.group_name}
+                            onChange={(e) => setEditForm((p) => ({ ...p, group_name: e.target.value }))}
+                            placeholder="모임·단체 (선택)"
+                            className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                          />
                         </div>
                         <div className="flex gap-2 pt-1">
                           <button
@@ -466,7 +488,7 @@ export default function ExtractionsPage() {
                         selectedBoardId={selectedBoard[ext.id]}
                         onSelectBoard={(bid) => setSelectedBoard((p) => ({ ...p, [ext.id]: bid }))}
                         onApprove={() => approve(ext)}
-                        onApproveAsEvent={() => approveAsEvent(ext)}
+                        onApproveAsEvent={(mirrorBoardSlug) => approveAsEvent(ext, mirrorBoardSlug)}
                         onApproveAsVision={(payload) => approveAsVision(ext, payload)}
                         onReject={() => reject(ext.id)}
                         onEdit={() => startEdit(ext)}
@@ -515,6 +537,9 @@ export default function ExtractionsPage() {
             </Link>
           </div>
         )}
+
+        {/* PDF에서 추출한 사진 — 특정 주보 컨텍스트일 때만 (?bulletin_id=N) */}
+        {bulletinId && <ExtractedImagesSection bulletinId={bulletinId} />}
       </div>
     </div>
   );
@@ -537,13 +562,16 @@ function ExtractionCard({
   selectedBoardId?: number;
   onSelectBoard: (id: number) => void;
   onApprove: () => void;
-  onApproveAsEvent: () => void;
+  onApproveAsEvent: (mirrorBoardSlug?: string) => void;
   onApproveAsVision: (payload: VisionPayload) => void;
   onReject: () => void;
   onEdit?: () => void;
   processing: boolean;
 }) {
   const isVision = ext.event_type === "지표";
+  // 캘린더 등록 시 같은 행사 카드를 게시판에 미러할지 옵션 (시나리오 A)
+  const [mirrorEnabled, setMirrorEnabled] = useState(false);
+  const [mirrorBoardSlug, setMirrorBoardSlug] = useState<string>("");
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
@@ -621,15 +649,45 @@ function ExtractionCard({
               {processing ? "처리 중…" : "게시판 등록"}
             </button>
           </div>
+          {/* 캘린더 등록 시 게시판에도 카드 미러할지 옵션 — events.id 를 가리키는 짧은 링크 카드만 생성 (본문 중복 없음) */}
+          {ext.event_date && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+              <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={mirrorEnabled}
+                  onChange={(e) => setMirrorEnabled(e.target.checked)}
+                  className="accent-emerald-600"
+                />
+                <span>게시판에도 카드 노출</span>
+              </label>
+              {mirrorEnabled && (
+                <select
+                  value={mirrorBoardSlug}
+                  onChange={(e) => setMirrorBoardSlug(e.target.value)}
+                  className="flex-1 border border-emerald-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">게시판 선택…</option>
+                  {boards.map((b) => (
+                    <option key={b.id} value={b.slug}>{b.name}</option>
+                  ))}
+                </select>
+              )}
+              <span className="text-emerald-700/70 text-[10px] shrink-0">본문 중복 없음 (캘린더가 권위)</span>
+            </div>
+          )}
           {/* 캘린더 등록 + 거부 행 */}
           <div className="flex gap-2">
             <button
-              onClick={onApproveAsEvent}
-              disabled={processing || !ext.event_date}
-              title={!ext.event_date ? "날짜 정보가 없어 캘린더 등록 불가" : ""}
+              onClick={() => onApproveAsEvent(mirrorEnabled ? mirrorBoardSlug : undefined)}
+              disabled={processing || !ext.event_date || (mirrorEnabled && !mirrorBoardSlug)}
+              title={
+                !ext.event_date ? "날짜 정보가 없어 캘린더 등록 불가" :
+                (mirrorEnabled && !mirrorBoardSlug) ? "미러 게시판을 선택하세요" : ""
+              }
               className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
             >
-              📅 캘린더 등록{!ext.event_date && " (날짜 없음)"}
+              📅 캘린더 등록{mirrorEnabled && mirrorBoardSlug && " + 게시판 카드"}{!ext.event_date && " (날짜 없음)"}
             </button>
             <button
               onClick={onReject}
