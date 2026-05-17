@@ -149,6 +149,18 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # posts.linked_event_id — 캘린더 이벤트 카드 연동 (시나리오 A)
+        try:
+            conn.execute(text(
+                "ALTER TABLE posts ADD COLUMN IF NOT EXISTS linked_event_id INTEGER "
+                "REFERENCES events(id) ON DELETE CASCADE"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_posts_linked_event_id ON posts(linked_event_id)"
+            ))
+        except Exception:
+            pass
+
         # boards 접근 제어 + 관리자 컬럼
         for ddl in [
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS members_only_write BOOLEAN DEFAULT TRUE",
@@ -876,6 +888,16 @@ def _migrate_add_columns():
             try:
                 conn.execute(text(
                     f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN DEFAULT FALSE"
+                ))
+            except Exception:
+                pass
+
+        # AI 추출 결과물 → 주보 역추적용 FK. ON DELETE CASCADE 로 주보 삭제 시 결과물 자동 정리.
+        for tbl in ["posts", "events", "meditations", "visions"]:
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS source_bulletin_id INTEGER "
+                    f"REFERENCES bulletins(id) ON DELETE CASCADE"
                 ))
             except Exception:
                 pass

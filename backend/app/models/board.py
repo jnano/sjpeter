@@ -15,7 +15,7 @@ class Board(Base):
     members_only_write = Column(Boolean, default=True)      # True: 회원만 쓰기
     members_only_read = Column(Boolean, default=False)      # True: 회원만 보기
     members_selected = Column(Boolean, default=False)       # True: 지정 회원만 접근
-    moderator_only_write = Column(Boolean, default=False)   # True: 게시판 관리자만 쓰기
+    moderator_only_write = Column(Boolean, default=False)   # True: 게시판 운영자 이상만 쓰기 (admin · 운영자 · 게시판 운영자)
     posts_per_page = Column(Integer, default=12)
     exclude_from_search = Column(Boolean, default=False)
     show_in_menu = Column(Boolean, default=True)            # True: 헤더 메뉴에 자동 노출
@@ -90,6 +90,11 @@ class Post(Base):
     # 한 줄 게시판(kind='line')용 메타 — 일반 게시판은 null
     intention_kind = Column(String(20), nullable=True)   # '위령' | '감사' | '청원' | '기타' 등
     intention_for = Column(String(200), nullable=True)    # 대상·의도 자유 텍스트
+    # 캘린더 이벤트와 연동된 카드 게시글: 본문은 짧은 링크만 보유, 원본은 events.{id}
+    # events 삭제 시 cascade 로 카드 자동 제거 (DB 중복 회피 정책)
+    linked_event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=True, index=True)
+    # AI 추출 결과물일 경우 원본 주보 id. 주보 삭제 시 cascade.
+    source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

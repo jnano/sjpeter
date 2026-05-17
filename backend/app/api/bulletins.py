@@ -15,8 +15,10 @@ from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.email import send_bulletin_notification
-from app.models.bulletin import Bulletin
+from app.models.bulletin import Bulletin, BulletinExtractedImage
 from app.models.bulletin_extraction import BulletinExtraction
+from app.models.page_photo import PagePhoto
+from app.models.attachment import Attachment
 from app.models.board import Board, Post
 from app.models.event_board_mapping import EventBoardMapping
 from app.models.member import Member
@@ -168,12 +170,57 @@ def reanalyze_bulletin(
     return {"ok": True, "ai_status": "processing"}
 
 
+@router.get("/{bulletin_id}/routed-counts")
+def bulletin_routed_counts(
+    bulletin_id: int,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """주보 삭제 시 cascade 로 함께 사라질 결과물 카운트.
+    프론트엔드 삭제 다이얼로그에서 미리 보여줘 사용자가 결정할 수 있게 함."""
+    bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
+    if not bulletin:
+        raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
+
+    return {
+        "extractions": db.execute(
+            text("SELECT COUNT(*) FROM bulletin_extractions WHERE bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+        "events": db.execute(
+            text("SELECT COUNT(*) FROM events WHERE source_bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+        "meditations": db.execute(
+            text("SELECT COUNT(*) FROM meditations WHERE source_bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+        "visions": db.execute(
+            text("SELECT COUNT(*) FROM visions WHERE source_bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+        "posts": db.execute(
+            text("SELECT COUNT(*) FROM posts WHERE source_bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+        "images": db.execute(
+            text("SELECT COUNT(*) FROM bulletin_extracted_images WHERE bulletin_id=:b"),
+            {"b": bulletin_id},
+        ).scalar() or 0,
+    }
+
+
 @router.delete("/{bulletin_id}")
 def delete_bulletin(
     bulletin_id: int,
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
+    """주보 삭제. FK CASCADE 로 다음이 함께 정리됨:
+    - bulletin_extractions
+    - bulletin_extracted_images
+    - source_bulletin_id 를 가진 posts/events/meditations/visions
+    """
     bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
     if not bulletin:
         raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
@@ -183,9 +230,6 @@ def delete_bulletin(
         if os.path.exists(file_path):
             os.remove(file_path)
 
-    db.query(BulletinExtraction).filter(
-        BulletinExtraction.bulletin_id == bulletin_id
-    ).delete(synchronize_session=False)
     db.delete(bulletin)
     db.commit()
     return {"ok": True}
@@ -268,6 +312,64 @@ def analyze_bulletin(
 #   - 행사·모임 + 날짜 → events 테이블
 #   - 그 외 → ai-extract 게시판 임시저장
 ROUTABLE_EVENT_TYPES = {"행사", "모임", "봉사", "순례", "피정", "강의", "기타"}
+
+
+def _format_event_card_body(
+    event_id: int,
+    title: str,
+    event_date,
+    location: str | None,
+    description: str | None,
+) -> str:
+    """캘린더 이벤트와 연동된 게시판 카드 본문.
+    본문은 짧은 메타 + 캘린더 deep-link 만 보유 — 본문 자체는 events.description 이 권위.
+    DB 중복 회피 정책 (시나리오 A)."""
+    WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
+    parts = [f"📅 **{title}**", ""]
+    if event_date:
+        wk = WEEKDAYS[event_date.weekday()]
+        parts.append(f"{event_date.strftime('%Y년 %m월 %d일')} ({wk})")
+    if location:
+        parts.append(f"📍 {location}")
+    parts.append("")
+    parts.append(f"→ [캘린더에서 자세히 보기](/calendar?event={event_id})")
+    if description:
+        parts.append("")
+        parts.append("---")
+        parts.append("*상세 내용은 캘린더 페이지에서 확인하실 수 있습니다.*")
+    return "\n".join(parts)
+
+
+def _format_source_footer(bulletin: Bulletin) -> str:
+    """AI 추출 콘텐츠 본문 끝에 붙일 출처 표기.
+    본문과 3줄 띄운 뒤 회색 작은 글씨로: '출처: 제N호 주보 (YYYY-MM-DD)'."""
+    issue_label = (
+        f"제{bulletin.issue_number}호"
+        if bulletin.issue_number
+        else bulletin.published_date.strftime("%Y.%m.%d")
+    )
+    return (
+        "\n\n\n\n"
+        f'<span style="color: gray;"><small>**출처: {issue_label} 주보** ({bulletin.published_date})</small></span>'
+    )
+
+
+def _repin_latest_meditation(db: Session) -> None:
+    """발행일이 가장 최근인 단 1개의 묵상만 is_current=TRUE 로 만든다.
+    동일 날짜가 여러 개면 id가 가장 큰(나중 등록) 것을 선택.
+    옛 주보를 등록해도 옛 글이 대표가 되지 않고, 핀 중복도 방지."""
+    from sqlalchemy import text as _text
+    db.execute(_text("UPDATE meditations SET is_current = FALSE WHERE is_current = TRUE"))
+    db.execute(_text("""
+        UPDATE meditations SET is_current = TRUE
+        WHERE id = (
+          SELECT id FROM meditations
+          WHERE is_published = TRUE
+          ORDER BY published_date DESC, id DESC
+          LIMIT 1
+        )
+    """))
+    db.commit()
 
 
 def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], bulletin_id: int) -> list[BulletinExtraction]:
@@ -364,33 +466,52 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
     title = ext.title or ""
     content_text = ext.content
     parsed_date = ext.event_date
+    # 모든 분기에서 본문 끝에 동일한 형식의 출처 표기를 붙임 (회색 작은 글씨, 3줄 띄움)
+    body_with_source = (content_text or "") + _format_source_footer(bulletin)
 
     # 1. 묵상 → meditations
     if event_type == "묵상":
         row = db.execute(
             _text(
-                "INSERT INTO meditations (title, body, published_date, is_published, created_at, updated_at) "
-                "VALUES (:title, :body, :pdate, TRUE, :ts, :ts) RETURNING id"
+                "INSERT INTO meditations (title, body, published_date, is_published, source_bulletin_id, created_at, updated_at) "
+                "VALUES (:title, :body, :pdate, TRUE, :src, :ts, :ts) RETURNING id"
             ),
             {
-                "title": title, "body": content_text or "",
-                "pdate": bulletin.published_date, "ts": published_ts,
+                "title": title, "body": body_with_source,
+                "pdate": bulletin.published_date, "src": bulletin.id, "ts": published_ts,
             },
         ).first()
-        ext.created_meditation_id = row[0] if row else None
+        new_id = row[0] if row else None
+        ext.created_meditation_id = new_id
         ext.status = "approved"
+        # 발행일 기준 최신만 대표(is_current)로 지정 — 옛 주보를 늦게 등록해도
+        # 옛 글이 자동으로 대표가 되지 않도록, 동시에 옛 핀이 남는 것도 방지.
+        if new_id:
+            _repin_latest_meditation(db)
         return ext
 
-    # 2. 공지 → notices
+    # 2. 공지 → posts (notice 게시판)
+    # /api/notices/* 는 모두 posts 테이블의 notice 게시판에서 읽으므로,
+    # 공지 INSERT 도 동일하게 posts 로 가야 공개 페이지에 노출됨.
+    # is_ai_generated 표시는 member_id=NULL 로 추론 (notices.py:_to_notice_out).
     if event_type == "공지":
-        row = db.execute(
-            _text(
-                "INSERT INTO notices (parish_id, title, content, is_pinned, is_ai_generated, created_at) "
-                "VALUES (:pid, :title, :content, FALSE, TRUE, :created) RETURNING id"
-            ),
-            {"pid": parish_id, "title": title, "content": content_text, "created": published_ts},
-        ).first()
-        ext.created_notice_id = row[0] if row else None
+        notice_board = db.query(Board).filter(Board.slug == "notice", Board.is_active == True).first()
+        if not notice_board:
+            raise HTTPException(status_code=500, detail="'notice' 게시판이 없습니다. 게시판 설정을 확인하세요.")
+        post = Post(
+            board_id=notice_board.id,
+            member_id=None,                # AI/admin 생성 표식
+            title=title,
+            content=body_with_source,
+            is_published=True,
+            is_pinned=False,
+            view_count=0,
+            source_bulletin_id=bulletin.id,
+            created_at=published_ts,
+        )
+        db.add(post)
+        db.flush()                         # post.id 확보
+        ext.created_notice_id = post.id    # 컬럼명은 created_notice_id 지만 실제로는 posts.id
         ext.status = "approved"
         return ext
 
@@ -403,14 +524,14 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         if mapping and mapping.use_calendar and parsed_date:
             row = db.execute(
                 _text(
-                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
-                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
+                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, source_bulletin_id, created_at) "
+                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :src, :created) RETURNING id"
                 ),
                 {
-                    "title": title, "desc": content_text,
+                    "title": title, "desc": body_with_source,
                     "edate": parsed_date, "eend": None,
                     "loc": ext.location, "cat": category, "kind": event_type,
-                    "created": published_ts,
+                    "src": bulletin.id, "created": published_ts,
                 },
             ).first()
             ext.created_event_id = row[0] if row else None
@@ -422,8 +543,9 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
             post = Post(
                 board_id=mapping.board_id, member_id=None,
                 title=f"[{issue_label}] {title}",
-                content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
+                content=body_with_source,
                 is_published=False,
+                source_bulletin_id=bulletin.id,
             )
             db.add(post)
             db.flush()
@@ -436,14 +558,14 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         if event_type in ("행사", "모임") and parsed_date:
             row = db.execute(
                 _text(
-                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, created_at) "
-                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :created) RETURNING id"
+                    "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, source_bulletin_id, created_at) "
+                    "VALUES (:title, :desc, :edate, :eend, :loc, :cat, TRUE, TRUE, :kind, :src, :created) RETURNING id"
                 ),
                 {
-                    "title": title, "desc": content_text,
+                    "title": title, "desc": body_with_source,
                     "edate": parsed_date, "eend": None,
                     "loc": ext.location, "cat": category, "kind": event_type,
-                    "created": published_ts,
+                    "src": bulletin.id, "created": published_ts,
                 },
             ).first()
             ext.created_event_id = row[0] if row else None
@@ -455,8 +577,9 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         post = Post(
             board_id=ai_board.id, member_id=None,
             title=f"[{issue_label}] {title}",
-            content=f"> **출처: {issue_label} 주보** ({bulletin.published_date})\n\n---\n\n{content_text or ''}",
+            content=body_with_source,
             is_published=False,
+            source_bulletin_id=bulletin.id,
         )
         db.add(post)
         db.flush()
@@ -569,6 +692,7 @@ def approve_extraction(
             title=f"[{issue_label}] {ext.title}" if issue_label else ext.title,
             content=ext.content or "",
             is_published=False,
+            source_bulletin_id=ext.bulletin_id,
         )
         db.add(post)
         db.flush()
@@ -680,7 +804,9 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
     진행 상태는 bulletins.ai_status 컬럼으로 노출 (processing → done|failed).
     """
     from app.core.database import SessionLocal
-    from app.services.pdf_extractor import extract_text, is_text_sparse, pdf_to_images_b64
+    from app.services.pdf_extractor import (
+        extract_text, is_text_sparse, pdf_to_images_b64, extract_embedded_images,
+    )
     from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images
 
     db = SessionLocal()
@@ -726,6 +852,13 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
         logger.info("[bulletin %d] 추출된 항목 %d건", bulletin_id, len(events) if events else 0)
 
         new_extractions = _route_and_save_events(db, bulletin, events or [], bulletin_id)
+
+        # 사진 추출 — 실패해도 메인 분석 결과는 보존
+        try:
+            _extract_and_save_images(db, bulletin_id, pdf_path)
+        except Exception as img_exc:
+            logger.warning("[bulletin %d] 이미지 추출 실패 (무시): %s", bulletin_id, img_exc)
+
         bulletin.ai_status = "done"
         bulletin.ai_finished_at = datetime.utcnow()
         db.commit()
@@ -750,6 +883,252 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
             db.rollback()
     finally:
         db.close()
+
+
+def _extract_and_save_images(db: Session, bulletin_id: int, pdf_path: str) -> int:
+    """주보 PDF에서 사진을 추출해 파일로 저장하고 DB에 등록.
+
+    저장 위치: uploads/bulletin-extracted/{bulletin_id}/img-N.{ext}
+    file_url:  /uploads/bulletin-extracted/{bulletin_id}/img-N.{ext}
+    """
+    from app.services.pdf_extractor import extract_embedded_images
+
+    images = extract_embedded_images(pdf_path, min_dim=200)
+    if not images:
+        logger.info("[bulletin %d] 추출된 사진 0건", bulletin_id)
+        return 0
+
+    save_dir = os.path.join(settings.UPLOAD_DIR, "bulletin-extracted", str(bulletin_id))
+    os.makedirs(save_dir, exist_ok=True)
+
+    saved = 0
+    for idx, img in enumerate(images, start=1):
+        ext = img["ext"]
+        filename = f"img-{idx}.{ext}"
+        file_path = os.path.join(save_dir, filename)
+        with open(file_path, "wb") as f:
+            f.write(img["bytes"])
+
+        db.add(BulletinExtractedImage(
+            bulletin_id=bulletin_id,
+            file_url=f"/uploads/bulletin-extracted/{bulletin_id}/{filename}",
+            width=img["width"],
+            height=img["height"],
+            page_number=img["page"],
+            status="pending",
+        ))
+        saved += 1
+    db.commit()
+    logger.info("[bulletin %d] 사진 %d장 추출·저장 완료", bulletin_id, saved)
+    return saved
+
+
+# ── 추출 사진 분류 endpoints ─────────────────────────────
+
+
+class ExtractedImageOut(BaseModel):
+    id: int
+    bulletin_id: int
+    file_url: str
+    width: int
+    height: int
+    page_number: int
+    status: str
+    routed_to: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{bulletin_id}/extracted-images", response_model=list[ExtractedImageOut])
+def list_extracted_images(
+    bulletin_id: int,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """주보 PDF에서 추출된 사진 목록 (관리자만)."""
+    return (
+        db.query(BulletinExtractedImage)
+        .filter(BulletinExtractedImage.bulletin_id == bulletin_id)
+        .order_by(BulletinExtractedImage.page_number, BulletinExtractedImage.id)
+        .all()
+    )
+
+
+class RouteImageBody(BaseModel):
+    target: str          # "construction" | "gallery" | "ignore"
+    gallery_slug: str | None = None  # target == "gallery" 일 때 필수
+
+
+@router.post("/extracted-images/{image_id}/route")
+def route_extracted_image(
+    image_id: int,
+    body: RouteImageBody,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """추출된 사진을 분류·등록.
+
+    - construction: page_photos 테이블에 slug='construction'으로 등록 (성전 건축 슬라이드)
+    - gallery: 지정된 boards.slug 갤러리에 새 게시글 생성 후 사진 첨부 (※ 추후 구현)
+    - ignore: 상태만 ignored로 변경, 파일은 보존
+    """
+    img = db.query(BulletinExtractedImage).filter(BulletinExtractedImage.id == image_id).first()
+    if not img:
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+
+    if body.target == "construction":
+        # page_photos 의 construction slug 다음 sort_order 계산
+        last = (
+            db.query(PagePhoto)
+            .filter(PagePhoto.page_slug == "construction")
+            .order_by(PagePhoto.sort_order.desc())
+            .first()
+        )
+        next_order = (last.sort_order + 1) if last else 0
+        db.add(PagePhoto(
+            page_slug="construction",
+            file_url=img.file_url,
+            alt=None,
+            sort_order=next_order,
+        ))
+        img.status = "routed"
+        img.routed_to = "construction"
+        img.routed_at = datetime.utcnow()
+        db.commit()
+        return {"ok": True, "routed_to": "construction"}
+
+    if body.target == "gallery":
+        if not body.gallery_slug:
+            raise HTTPException(status_code=400, detail="gallery_slug가 필요합니다.")
+        target_board = db.query(Board).filter(
+            Board.slug == body.gallery_slug, Board.is_active == True,
+        ).first()
+        if not target_board:
+            raise HTTPException(status_code=404, detail=f"갤러리 게시판을 찾을 수 없습니다: {body.gallery_slug}")
+
+        # 추출 파일을 attachments 디렉토리로 복사 (원본은 그대로 두어 다른 갤러리에도 또 보낼 수 있게)
+        src_path = img.file_url.lstrip("/")
+        if not os.path.exists(src_path):
+            raise HTTPException(status_code=500, detail=f"원본 파일이 없습니다: {src_path}")
+        ext = os.path.splitext(src_path)[1].lower() or ".jpg"
+        stored = f"{uuid.uuid4().hex}{ext}"
+        dst_dir = os.path.join(settings.UPLOAD_DIR, "attachments")
+        os.makedirs(dst_dir, exist_ok=True)
+        dst_path = os.path.join(dst_dir, stored)
+        with open(src_path, "rb") as fsrc, open(dst_path, "wb") as fdst:
+            fdst.write(fsrc.read())
+        file_size = os.path.getsize(dst_path)
+
+        # 갤러리 게시글 생성 — 본문은 짧은 캡션, 첨부에 이미지
+        bulletin = db.query(Bulletin).filter(Bulletin.id == img.bulletin_id).first()
+        issue_label = (
+            f"제{bulletin.issue_number}호"
+            if bulletin and bulletin.issue_number
+            else (bulletin.published_date.strftime("%Y.%m.%d") if bulletin else "")
+        )
+        title = f"[{issue_label}] 주보 사진" if issue_label else "주보 사진"
+        post_body = (
+            "주보에서 자동 추출된 사진입니다."
+            + (_format_source_footer(bulletin) if bulletin else "")
+        )
+        post = Post(
+            board_id=target_board.id,
+            member_id=None,
+            title=title,
+            content=post_body,
+            is_published=True,
+            is_pinned=False,
+            view_count=0,
+        )
+        db.add(post)
+        db.flush()
+        db.add(Attachment(
+            post_id=post.id,
+            original_name=os.path.basename(src_path),
+            stored_name=stored,
+            file_url=f"/uploads/attachments/{stored}",
+            file_size=file_size,
+            is_image=True,
+        ))
+
+        img.status = "routed"
+        img.routed_to = f"gallery:{body.gallery_slug}"
+        img.routed_at = datetime.utcnow()
+        db.commit()
+        return {"ok": True, "routed_to": img.routed_to, "post_id": post.id}
+
+    if body.target == "ignore":
+        img.status = "ignored"
+        img.routed_to = "ignored"
+        img.routed_at = datetime.utcnow()
+        db.commit()
+        return {"ok": True, "routed_to": "ignored"}
+
+    raise HTTPException(status_code=400, detail=f"알 수 없는 target: {body.target}")
+
+
+@router.post("/extracted-images/{image_id}/crop", response_model=ExtractedImageOut)
+async def crop_extracted_image(
+    image_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """admin이 frontend에서 잘라낸 사진으로 원본 파일을 덮어쓰고 width/height 갱신.
+    스캔본 주보에서 한 페이지 통째로 추출된 사진을 사용자가 직접 잘라 쓸 때 사용."""
+    img = db.query(BulletinExtractedImage).filter(BulletinExtractedImage.id == image_id).first()
+    if not img:
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="빈 파일입니다.")
+
+    # 원본 파일 경로에 덮어쓰기 (확장자 변경 안 함 — file_url 유지)
+    file_path = img.file_url.lstrip("/")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "wb") as f:
+        f.write(data)
+
+    # 새 width/height 측정 (Pillow 없으면 PyMuPDF 의 fitz.Pixmap 사용)
+    try:
+        import fitz
+        pix = fitz.Pixmap(file_path)
+        img.width = pix.width
+        img.height = pix.height
+    except Exception:
+        # 측정 실패 시 그대로 유지
+        pass
+
+    db.commit()
+    db.refresh(img)
+    return img
+
+
+@router.delete("/extracted-images/{image_id}")
+def delete_extracted_image(
+    image_id: int,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """추출된 사진 DB 레코드 + 파일 모두 삭제."""
+    img = db.query(BulletinExtractedImage).filter(BulletinExtractedImage.id == image_id).first()
+    if not img:
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+
+    file_path = img.file_url.lstrip("/")
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+    db.delete(img)
+    db.commit()
+    return {"ok": True}
 
 
 class ApproveAsVisionBody(BaseModel):
@@ -797,10 +1176,10 @@ def approve_extraction_as_vision(
 
     db.execute(
         text(
-            "INSERT INTO visions (year, motto, body, is_current) "
-            "VALUES (:year, :motto, :body, :is_current)"
+            "INSERT INTO visions (year, motto, body, is_current, source_bulletin_id) "
+            "VALUES (:year, :motto, :body, :is_current, :src)"
         ),
-        {"year": year, "motto": motto, "body": vision_body, "is_current": body.is_current},
+        {"year": year, "motto": motto, "body": vision_body, "is_current": body.is_current, "src": ext.bulletin_id},
     )
 
     ext.status = "approved"
@@ -809,9 +1188,16 @@ def approve_extraction_as_vision(
     return ext
 
 
+class ApproveAsEventBody(BaseModel):
+    """캘린더 등록 옵션. board_slug 지정 시 같은 행사를 가리키는 카드 게시글도 함께 생성.
+    카드 본문은 events.description 을 복사하지 않고 짧은 링크만 보유 → DB 중복 회피."""
+    board_slug: str | None = None
+
+
 @router.post("/extractions/{extraction_id}/approve-as-event", response_model=ExtractionOut)
 def approve_extraction_as_event(
     extraction_id: int,
+    body: ApproveAsEventBody | None = None,
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
@@ -822,23 +1208,60 @@ def approve_extraction_as_event(
         raise HTTPException(status_code=400, detail="이미 처리된 항목입니다.")
 
     category = _EVENT_CATEGORY.get(ext.event_type or "", "general")
+    event_kind = ext.event_type if ext.event_type in ("행사", "모임") else None
+    bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
+    desc_with_source = (ext.content or "") + (_format_source_footer(bulletin) if bulletin else "")
 
-    db.execute(
+    row = db.execute(
         text(
-            "INSERT INTO events (title, description, event_date, start_time, location, category, is_public) "
-            "VALUES (:title, :desc, :edate, :stime, :loc, :cat, TRUE)"
+            "INSERT INTO events (title, description, event_date, start_time, location, category, "
+            "is_public, is_ai_generated, event_kind, source_bulletin_id) "
+            "VALUES (:title, :desc, :edate, :stime, :loc, :cat, TRUE, TRUE, :kind, :src) RETURNING id"
         ),
         {
             "title": ext.title,
-            "desc": ext.content,
+            "desc": desc_with_source,
             "edate": ext.event_date,
             "stime": None,
             "loc": ext.location,
             "cat": category,
+            "kind": event_kind,
+            "src": ext.bulletin_id,
         },
-    )
-
+    ).first()
+    event_id = row[0] if row else None
+    ext.created_event_id = event_id
     ext.status = "approved"
+
+    # 게시판 카드 옵션 — 본문은 짧은 링크만 (시나리오 A)
+    board_slug = (body.board_slug if body else None) or None
+    if board_slug and event_id:
+        target_board = db.query(Board).filter(Board.slug == board_slug, Board.is_active == True).first()
+        if not target_board:
+            raise HTTPException(status_code=404, detail=f"게시판을 찾을 수 없습니다: {board_slug}")
+        card_body = _format_event_card_body(
+            event_id=event_id,
+            title=ext.title or "",
+            event_date=ext.event_date,
+            location=ext.location,
+            description=ext.content,
+        )
+        post = Post(
+            board_id=target_board.id,
+            member_id=None,
+            title=ext.title or "",
+            content=card_body,
+            is_published=True,
+            is_pinned=False,
+            view_count=0,
+            linked_event_id=event_id,
+            source_bulletin_id=ext.bulletin_id,
+        )
+        db.add(post)
+        db.flush()
+        ext.target_board_id = target_board.id
+        ext.created_post_id = post.id
+
     db.commit()
     db.refresh(ext)
     return ext

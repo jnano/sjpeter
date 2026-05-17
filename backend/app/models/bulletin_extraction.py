@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Date, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from app.core.database import Base
 
@@ -28,4 +28,8 @@ class BulletinExtraction(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    bulletin = relationship("Bulletin", backref="extractions")
+    # passive_deletes=True: DB 의 ON DELETE CASCADE 가 처리하므로 ORM 은 자식 NULL set 시도 금지.
+    bulletin = relationship(
+        "Bulletin",
+        backref=backref("extractions", passive_deletes=True),
+    )

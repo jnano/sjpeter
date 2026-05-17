@@ -39,9 +39,31 @@ export default function BulletinListPage() {
 
   useEffect(() => { fetchBulletins(); }, [fetchBulletins]);
 
+  async function buildDeleteWarning(id: number, token: string): Promise<string> {
+    try {
+      const res = await fetch(`${API}/api/bulletins/${id}/routed-counts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return "";
+      const c = await res.json();
+      const lines: string[] = [];
+      if (c.extractions) lines.push(`  · AI 추출 메타 ${c.extractions}건`);
+      if (c.events) lines.push(`  · 캘린더 행사 ${c.events}건`);
+      if (c.meditations) lines.push(`  · 묵상 ${c.meditations}건`);
+      if (c.visions) lines.push(`  · 사목지표 ${c.visions}건`);
+      if (c.posts) lines.push(`  · 게시글(공지·임시저장 등) ${c.posts}건`);
+      if (c.images) lines.push(`  · 추출 이미지 ${c.images}건`);
+      return lines.length > 0 ? `\n\n이 주보로부터 만들어진 다음 결과물도 함께 삭제됩니다:\n${lines.join("\n")}` : "";
+    } catch {
+      return "";
+    }
+  }
+
   async function handleDelete(id: number) {
-    if (!confirm("이 주보를 삭제하시겠습니까? 함께 저장된 PDF 파일도 삭제됩니다.")) return;
     const token = localStorage.getItem("admin_token");
+    if (!token) { router.push("/admin"); return; }
+    const warning = await buildDeleteWarning(id, token);
+    if (!confirm(`이 주보를 삭제하시겠습니까? PDF 파일도 삭제됩니다.${warning}`)) return;
     setDeleting(id);
     try {
       const res = await fetch(`${API}/api/bulletins/${id}`, {
@@ -62,8 +84,35 @@ export default function BulletinListPage() {
   async function handleBulkDelete() {
     const ids = Array.from(select.selected);
     if (ids.length === 0) return;
-    if (!confirm(`선택한 주보 ${ids.length}개를 삭제하시겠습니까?\nPDF 파일도 함께 삭제됩니다.`)) return;
     const token = localStorage.getItem("admin_token");
+    if (!token) { router.push("/admin"); return; }
+    // 다건 선택 시 각 주보별 카운트 합산
+    const counts = await Promise.all(ids.map(async (id) => {
+      try {
+        const r = await fetch(`${API}/api/bulletins/${id}/routed-counts`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return r.ok ? await r.json() : null;
+      } catch { return null; }
+    }));
+    const sum = counts.reduce((acc, c) => {
+      if (!c) return acc;
+      for (const k of ["extractions","events","meditations","visions","posts","images"]) {
+        acc[k] = (acc[k] || 0) + (c[k] || 0);
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    const warnLines: string[] = [];
+    if (sum.extractions) warnLines.push(`  · AI 추출 메타 ${sum.extractions}건`);
+    if (sum.events) warnLines.push(`  · 캘린더 행사 ${sum.events}건`);
+    if (sum.meditations) warnLines.push(`  · 묵상 ${sum.meditations}건`);
+    if (sum.visions) warnLines.push(`  · 사목지표 ${sum.visions}건`);
+    if (sum.posts) warnLines.push(`  · 게시글 ${sum.posts}건`);
+    if (sum.images) warnLines.push(`  · 추출 이미지 ${sum.images}건`);
+    const warning = warnLines.length > 0
+      ? `\n\n이 주보들로부터 만들어진 다음 결과물도 함께 삭제됩니다:\n${warnLines.join("\n")}`
+      : "";
+    if (!confirm(`선택한 주보 ${ids.length}개를 삭제하시겠습니까?\nPDF 파일도 함께 삭제됩니다.${warning}`)) return;
     setBulkDeleting(true);
     try {
       const results = await Promise.all(

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.143";
+export const CURRENT_VERSION = "1.5.144";
 export const LAST_UPDATED = "2026-05-17";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-17";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.144", date: "2026-05-17", tag: "기능",
+    items: [
+      "주보 삭제 시 분산 저장 결과물 cascade 삭제 — posts/events/meditations/visions 에 source_bulletin_id FK ON DELETE CASCADE 추가",
+      "AI 추출 데이터 전체 초기화 (bulletins·extractions·notices·events·meditations·visions·ai-extract posts)",
+      "/admin/bulletin 삭제 다이얼로그 — 함께 사라질 결과물 카운트 미리 보여줌 (routed-counts 엔드포인트)",
+      "Event ORM 모델 추가 (events 테이블 metadata 등록 — FK 무결성)",
+      "bulletin_extraction.bulletin relationship passive_deletes=True (DB CASCADE 신뢰)",
+    ],
+  },
   {
     version: "1.5.143", date: "2026-05-17", tag: "기능",
     items: [
