@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "성당 소개", description: `${p.name} 소개 — 세종시 최초 본당` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 const GOLD = "#B8933C";
 
@@ -54,7 +54,7 @@ const DAY_EN: Record<string, string> = {
 
 async function getParish(): Promise<ParishOut | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/parish/`);
     if (!res.ok) return null;
     return res.json();
   } catch {

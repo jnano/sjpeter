@@ -1,7 +1,7 @@
 // /groups, /groups/[slug] 페이지에서 사용하는 데이터 fetcher + 타입.
 // 사이드바는 /admin/menus의 'groups' 그룹으로 통합되어 SectionLayout이 처리.
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export interface CommunityGroup {
   id: number;

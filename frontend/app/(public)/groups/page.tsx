@@ -5,7 +5,7 @@ import SectionLayout from "@/components/SectionLayout";
 import { fetchGroups } from "./GroupsLayout";
 import { fetchParishMin } from "@/lib/parish";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {

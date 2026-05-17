@@ -10,7 +10,7 @@ import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Author {
   id: number;
@@ -60,7 +60,6 @@ async function getPosts(slug: string, page: number, token?: string): Promise<Pos
   try {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
     const res = await fetch(`${API}/api/boards/${slug}/posts?page=${page}`, {
-      next: { revalidate: 300 },
       headers,
     });
     if (!res.ok) return { posts: [], total: 0, posts_per_page: 12 };

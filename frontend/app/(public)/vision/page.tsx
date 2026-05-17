@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "사목지표", description: `${p.name} 역대 사목지표` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface VisionOut {
   id: number;
@@ -33,7 +33,7 @@ async function getVisions(): Promise<VisionOut[]> {
 
 async function getPastorName(): Promise<string | null> {
   try {
-    const res = await fetch(`${API}/api/parish-staff/`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/parish-staff/`);
     if (!res.ok) return null;
     const staff: { role: string; name: string }[] = await res.json();
     return staff.find((s) => s.role === "주임신부")?.name ?? null;

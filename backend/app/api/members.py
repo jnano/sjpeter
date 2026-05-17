@@ -49,6 +49,9 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = None
     receive_notification: bool = False
     password: str
+    # 영명축일 (선택). 입력 시 둘 다 필요.
+    name_day_month: Optional[int] = None
+    name_day_day: Optional[int] = None
 
 
 class LoginRequest(BaseModel):
@@ -72,6 +75,10 @@ class UpdateRequest(BaseModel):
     receive_notification: Optional[bool] = None
     current_password: Optional[str] = None
     password: Optional[str] = None
+    # 영명축일 — 둘 다 값일 때 저장, 한 쪽만이면 400, 둘 다 None이면 변경 없음.
+    # 비우기는 별도 DELETE /me/name-day 사용.
+    name_day_month: Optional[int] = None
+    name_day_day: Optional[int] = None
 
 
 class MemberOut(BaseModel):
@@ -87,6 +94,8 @@ class MemberOut(BaseModel):
     is_email_verified: bool = False
     interest_prompt_completed: bool = False
     notify_kakao: bool = False
+    name_day_month: Optional[int] = None
+    name_day_day: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -130,6 +139,28 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     password: str
+
+
+def _validate_name_day(month: int, day: int) -> None:
+    """영명축일 월·일 유효성 — 1~12 월, 해당 월의 실제 일수 안에 있는지 검사 (윤년 고려 안 함 → 2월은 29일까지 허용)."""
+    import calendar
+    if not (1 <= month <= 12):
+        raise HTTPException(status_code=400, detail="영명축일의 월은 1~12 사이여야 합니다.")
+    # 윤년 기준(2020)으로 최대 일수 산출 → 2월 29일 허용
+    max_day = calendar.monthrange(2020, month)[1]
+    if not (1 <= day <= max_day):
+        raise HTTPException(status_code=400, detail=f"{month}월은 1~{max_day}일 사이여야 합니다.")
+
+
+def _apply_name_day(target, month: Optional[int], day: Optional[int]) -> None:
+    """RegisterRequest/UpdateRequest의 name_day_month/day 페어 처리 — 한 쪽만이면 400."""
+    if month is None and day is None:
+        return  # 변경 없음
+    if month is None or day is None:
+        raise HTTPException(status_code=400, detail="영명축일은 월·일을 함께 입력해야 합니다.")
+    _validate_name_day(month, day)
+    target.name_day_month = month
+    target.name_day_day = day
 
 
 def _send_email(to_email: str, subject: str, body: str) -> None:
@@ -198,6 +229,7 @@ def register(request: Request, body: RegisterRequest, db: Session = Depends(get_
         receive_notification=body.receive_notification,
         hashed_password=hash_password(body.password),
     )
+    _apply_name_day(member, body.name_day_month, body.name_day_day)
     db.add(member)
     db.commit()
     db.refresh(member)
@@ -288,6 +320,8 @@ def _member_out(member: Member) -> MemberOut:
         is_email_verified=bool(member.is_email_verified),
         interest_prompt_completed=bool(getattr(member, "interest_prompt_completed", False)),
         notify_kakao=bool(getattr(member, "notify_kakao", False)),
+        name_day_month=getattr(member, "name_day_month", None),
+        name_day_day=getattr(member, "name_day_day", None),
         created_at=member.created_at,
     )
 
@@ -421,6 +455,17 @@ def update_me(
             if not body.current_password or not verify_password(body.current_password, current.hashed_password):
                 raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다.")
         current.hashed_password = hash_password(body.password)
+    _apply_name_day(current, body.name_day_month, body.name_day_day)
+    db.commit()
+    db.refresh(current)
+    return _member_out(current)
+
+
+@router.delete("/me/name-day", response_model=MemberOut)
+def clear_my_name_day(db: Session = Depends(get_db), current: Member = Depends(get_current_member)):
+    """영명축일 비우기 — 둘 다 NULL로 초기화."""
+    current.name_day_month = None
+    current.name_day_day = None
     db.commit()
     db.refresh(current)
     return _member_out(current)
@@ -818,7 +863,7 @@ def admin_reset_password(
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
-    """관리자·위임관리자 — 회원 비밀번호를 초기값(0629)으로 초기화."""
+    """관리자·운영자 — 회원 비밀번호를 초기값(0629)으로 초기화."""
     member = _get_member_or_404(member_id, db)
     member.hashed_password = hash_password("0629")
     db.commit()

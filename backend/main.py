@@ -28,7 +28,10 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://121.152.118.40:3000",  # LAN 접속 (같은 Wi-Fi 휴대폰)
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"],
@@ -105,6 +108,9 @@ def _migrate_add_columns():
             ("is_admin", "BOOLEAN DEFAULT FALSE"),
             ("interest_prompt_completed", "BOOLEAN DEFAULT FALSE NOT NULL"),
             ("notify_kakao", "BOOLEAN DEFAULT FALSE NOT NULL"),
+            # 영명축일 (월·일 별도 INT, 둘 다 NULL 허용. v1.5.141)
+            ("name_day_month", "INTEGER"),
+            ("name_day_day", "INTEGER"),
         ]:
             try:
                 conn.execute(text(

@@ -49,6 +49,8 @@ interface MemberInfo {
   has_password: boolean;
   is_admin: boolean;
   is_email_verified: boolean;
+  name_day_month: number | null;
+  name_day_day: number | null;
   created_at: string;
 }
 
@@ -229,6 +231,105 @@ function PhoneForm({ member, token, onSaved }: {
           </span>
         </span>
       </label>
+      {message && (
+        <p className={`text-xs px-3 py-2 rounded-lg ${
+          message.type === "ok"
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : "bg-red-50 text-red-700 border border-red-200"
+        }`}>
+          {message.text}
+        </p>
+      )}
+    </form>
+  );
+}
+
+// ── 영명축일 편집 폼 ───────────────────────────────────────
+function NameDayForm({ member, token, onSaved }: {
+  member: MemberInfo;
+  token: string;
+  onSaved: (m: MemberInfo) => void;
+}) {
+  const [month, setMonth] = useState<string>(member.name_day_month ? String(member.name_day_month) : "");
+  const [day, setDay] = useState<string>(member.name_day_day ? String(member.name_day_day) : "");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const origMonth = member.name_day_month ? String(member.name_day_month) : "";
+  const origDay = member.name_day_day ? String(member.name_day_day) : "";
+  const unchanged = month === origMonth && day === origDay;
+  const halfFilled = (month && !day) || (!month && day);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (unchanged) return;
+    if (halfFilled) {
+      setMessage({ type: "err", text: "영명축일은 월·일을 함께 선택해 주세요." });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      // 둘 다 비움 → DELETE, 둘 다 입력 → PUT
+      const both = month && day;
+      const url = `${API}/api/members/me${both ? "" : "/name-day"}`;
+      const init: RequestInit = {
+        method: both ? "PUT" : "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      };
+      if (both) {
+        init.body = JSON.stringify({ name_day_month: parseInt(month), name_day_day: parseInt(day) });
+      }
+      const res = await fetch(url, init);
+      const data = await res.json();
+      if (!res.ok) { setMessage({ type: "err", text: data.detail ?? "저장 실패" }); return; }
+      onSaved(data);
+      setMessage({ type: "ok", text: "저장되었습니다." });
+    } catch {
+      setMessage({ type: "err", text: "네트워크 오류가 발생했습니다." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-1.5">월</label>
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+          >
+            <option value="">선택 안 함</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>{m}월</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-1.5">일</label>
+          <select
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+          >
+            <option value="">선택 안 함</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={d}>{d}일</option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={saving || unchanged}
+          className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-40 transition-colors shrink-0"
+        >
+          {saving ? "저장 중…" : "저장"}
+        </button>
+      </div>
+      <p className="text-xs text-[var(--color-text-muted)]">세례명 성인의 축일. 둘 다 &quot;선택 안 함&quot;으로 두면 영명축일이 지워집니다.</p>
       {message && (
         <p className={`text-xs px-3 py-2 rounded-lg ${
           message.type === "ok"
@@ -655,6 +756,18 @@ export default function MypagePage() {
               <div>
                 <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">전화번호</h2>
                 <PhoneForm
+                  member={member}
+                  token={session?.accessToken as string}
+                  onSaved={(updated) => setMember(updated)}
+                />
+              </div>
+
+              <div className="border-t border-[var(--color-border)]" />
+
+              {/* 영명축일 */}
+              <div>
+                <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">영명축일</h2>
+                <NameDayForm
                   member={member}
                   token={session?.accessToken as string}
                   onSaved={(updated) => setMember(updated)}

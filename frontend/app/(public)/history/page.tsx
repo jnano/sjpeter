@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "우리의 역사", description: `${p.name} 창립부터 현재까지의 연표` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface HistoryItem {
   id: number;
@@ -23,7 +23,7 @@ interface HistoryItem {
 
 async function getHistory(): Promise<HistoryItem[]> {
   try {
-    const res = await fetch(`${API}/api/content/history`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/content/history`);
     if (!res.ok) return [];
     return res.json();
   } catch {

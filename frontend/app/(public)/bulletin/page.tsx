@@ -12,11 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "주보", description: `${p.name} 주보 — 이번 주 주보와 지난 주보 아카이브` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function getBulletins(): Promise<Bulletin[]> {
   try {
-    const res = await fetch(`${API}/api/bulletins/`, { next: { revalidate: 3600, tags: ["bulletins"] } });
+    const res = await fetch(`${API}/api/bulletins/`);
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -28,7 +28,7 @@ async function getKakaoKey(): Promise<string> {
   const envKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
   if (envKey) return envKey;
   try {
-    const res = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/api/public/site-config`);
     if (res.ok) {
       const cfg = await res.json();
       return cfg.KAKAO_MAP_KEY ?? "";

@@ -1,9 +1,33 @@
 import Link from "next/link";
-import SearchHero from "./SearchHero";
+import SearchHero from "@/components/SearchHero";
+import { buildMassRows, type MassEntry } from "@/lib/mass";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 const LIMIT = 10;
 const POPULAR_LIMIT = 5;
+
+// 검색 폼이 비어있을 때 회전하며 검색 유도하는 placeholder 문구
+const ROTATING_PLACEHOLDERS = ["오늘 미사시간은?", "오늘 복음 말씀은?", "주일 묵상글"];
+
+// "미사" 인텐트 트리거. 본당 사이트 맥락에서 "미사"는 사실상 전례 의미만 통용.
+function isMassIntent(q: string): boolean {
+  return q.includes("미사");
+}
+
+interface ParishMass {
+  name: string;
+  mass_schedule: { entries: MassEntry[]; note: string } | null;
+}
+
+async function fetchParishForMass(): Promise<ParishMass | null> {
+  try {
+    const r = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    if (!r.ok) return null;
+    return r.json();
+  } catch {
+    return null;
+  }
+}
 
 interface Author {
   id: number;
@@ -148,7 +172,7 @@ export default async function SearchPage({
               기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
             </p>
             <div className="mb-8">
-              <SearchHero initialQ="" />
+              <SearchHero initialQ="" rotatingPlaceholders={ROTATING_PLACEHOLDERS} />
             </div>
             {recommended.length > 0 && (
               <section>
@@ -176,8 +200,17 @@ export default async function SearchPage({
     );
   }
 
-  const [data, popular] = await Promise.all([fetchSearch(q, page), popularPromise]);
+  // 미사 인텐트면 본당 정보까지 병렬로 fetch — 검색 결과 상단에 미사 시간표 카드 노출
+  const massIntent = isMassIntent(q);
+  const [data, popular, parishMass] = await Promise.all([
+    fetchSearch(q, page),
+    popularPromise,
+    massIntent ? fetchParishForMass() : Promise.resolve(null),
+  ]);
   const totalPages = Math.ceil(data.total / LIMIT);
+  const massRows = parishMass?.mass_schedule?.entries
+    ? buildMassRows(parishMass.mass_schedule.entries)
+    : [];
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10">
@@ -191,13 +224,50 @@ export default async function SearchPage({
             기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
           </p>
           <div className="mb-6">
-            <SearchHero initialQ={q} />
+            <SearchHero initialQ={q} rotatingPlaceholders={ROTATING_PLACEHOLDERS} />
           </div>
           <p className="text-sm text-[var(--color-text-muted)] mb-6">
             <span className="font-medium text-[var(--color-primary)]">&ldquo;{q}&rdquo;</span>
             {" "}검색 결과{" "}
             {`${data.total.toLocaleString()}건`}
           </p>
+
+          {/* 미사 인텐트 카드 — "미사" 키워드 검색 시 본당 미사 시간표를 결과 상단에 노출 */}
+          {massIntent && massRows.length > 0 && (
+            <section className="mb-6 border border-[var(--color-primary)]/30 bg-[var(--color-surface-warm)] rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-[var(--color-border)]">
+                <h2 className="font-serif font-bold text-[var(--color-primary)] text-base flex items-center gap-2">
+                  <span className="text-[var(--color-accent)]">⏰</span>
+                  미사 시간
+                </h2>
+                <Link
+                  href="/info"
+                  className="text-xs text-[var(--color-primary)] font-medium hover:underline"
+                >
+                  찾아오시는 길 →
+                </Link>
+              </div>
+              <table className="text-sm w-full">
+                <tbody>
+                  {massRows.map((row) => (
+                    <tr key={row.label} className="align-top">
+                      <td className="text-[var(--color-text-muted)] pr-3 pb-1.5 whitespace-nowrap w-12 font-medium">
+                        {row.label}
+                      </td>
+                      <td className="pb-1.5 text-[var(--color-text)] leading-relaxed">
+                        {row.value}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {parishMass?.mass_schedule?.note && (
+                <p className="text-xs text-[var(--color-text-muted)] mt-2 leading-relaxed">
+                  ※ {parishMass.mass_schedule.note}
+                </p>
+              )}
+            </section>
+          )}
 
           {data.results.length === 0 ? (
             <div className="text-center py-16 text-[var(--color-text-muted)]">

@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "묵상 아카이브", description: `${p.name} 묵상 아카이브` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const PAGE_SIZE = 12;
 
 interface Meditation {

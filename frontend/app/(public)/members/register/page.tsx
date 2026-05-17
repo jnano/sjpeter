@@ -22,13 +22,16 @@ export default function RegisterPage() {
     receiveNotification: false,
     password: "",
     passwordConfirm: "",
+    nameDayMonth: "",  // "" | "1"~"12"
+    nameDayDay: "",    // "" | "1"~"31"
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const target = e.target as HTMLInputElement;
+    const { name, value, type } = target;
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? target.checked : value }));
   }
 
   function formatPhone(raw: string) {
@@ -52,6 +55,13 @@ export default function RegisterPage() {
       setError("비밀번호가 일치하지 않습니다.");
       return;
     }
+    // 영명축일은 둘 다 선택 또는 둘 다 비움
+    const ndm = form.nameDayMonth ? parseInt(form.nameDayMonth) : null;
+    const ndd = form.nameDayDay ? parseInt(form.nameDayDay) : null;
+    if ((ndm === null) !== (ndd === null)) {
+      setError("영명축일은 월·일을 함께 선택해 주세요.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -65,6 +75,8 @@ export default function RegisterPage() {
           phone: form.phone.trim() || null,
           receive_notification: form.receiveNotification,
           password: form.password,
+          name_day_month: ndm,
+          name_day_day: ndd,
         }),
       });
       const data = await res.json();
@@ -221,6 +233,38 @@ export default function RegisterPage() {
             {form.passwordConfirm && form.passwordConfirm !== form.password && (
               <p className="mt-1 text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
             )}
+          </div>
+
+          {/* 영명축일 (선택) — 월·일 함께 선택 또는 둘 다 비움 */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              영명축일 <span className="text-xs text-[var(--color-text-muted)] font-normal">(선택)</span>
+            </label>
+            <div className="flex gap-2">
+              <select
+                name="nameDayMonth"
+                value={form.nameDayMonth}
+                onChange={handleChange}
+                className={inputClass}
+              >
+                <option value="">월</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>{m}월</option>
+                ))}
+              </select>
+              <select
+                name="nameDayDay"
+                value={form.nameDayDay}
+                onChange={handleChange}
+                className={inputClass}
+              >
+                <option value="">일</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{d}일</option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">세례명 성인의 축일을 선택하세요. 나중에 프로필에서 수정할 수 있습니다.</p>
           </div>
 
           <button

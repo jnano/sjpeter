@@ -52,20 +52,21 @@ export default function MeditationCredits() {
   return (
     <Link
       href="/meditation"
-      className="relative block overflow-hidden border border-[var(--color-border)] rounded-xl bg-white hover:border-[var(--color-primary)] hover:shadow-sm transition-all duration-200 group"
+      className="relative block overflow-hidden hover:opacity-90 transition-opacity duration-200 group w-full h-full"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       aria-label="묵상 글 보기"
     >
-      {/* 라벨 */}
-      <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5">
+      {/* 라벨 — 좌상단 미세 padding */}
+      <div className="absolute top-0.5 left-1 z-10 flex items-center gap-1.5">
         <span className="text-[var(--color-accent)] text-base leading-none">✝</span>
         <span className="text-[11px] font-medium text-[var(--color-text-muted)] tracking-wide">
           묵상 글
         </span>
       </div>
 
-      {/* 흐르는 본문 영역 (다른 카드와 동일한 높이) */}
+      {/* 흐르는 본문 영역 — 외곽 height 유지(min-h-[88px]).
+          위/아래 fade gradient·라벨 padding 을 줄여 본문 visible 영역을 그만큼 확장. */}
       <div className="relative h-full min-h-[88px] overflow-hidden">
         <div
           className="absolute inset-x-3 text-center"
@@ -102,9 +103,9 @@ export default function MeditationCredits() {
         </div>
       </div>
 
-      {/* 페이드 그라디언트 (위/아래 가장자리) */}
-      <div className="absolute inset-x-0 top-0 h-7 bg-gradient-to-b from-white via-white/85 to-transparent pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none" />
+      {/* 페이드 그라디언트 — 위/아래 가장자리, 최소화 */}
+      <div className="absolute inset-x-0 top-0 h-3 bg-gradient-to-b from-white via-white/85 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none" />
     </Link>
   );
 }

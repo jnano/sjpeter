@@ -161,9 +161,9 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.4;
 }
 
-/* 포커스 링 — 접근성 */
+/* 포커스 링 — 접근성. 전례 시기별 테마색(--color-primary)으로 통일. --color-accent 는 시즌 무관 골드라 부적합. */
 :focus-visible {
-  outline: 3px solid var(--color-accent);
+  outline: 3px solid var(--color-primary);
   outline-offset: 2px;
 }
 

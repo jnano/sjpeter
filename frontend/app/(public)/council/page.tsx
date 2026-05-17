@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "사목평의회", description: `${p.name} 사목평의회 조직도 및 구성원 소개` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface CouncilMember {
   id: number;

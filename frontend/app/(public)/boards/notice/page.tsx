@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "공지·알림", description: `${p.name} 공지사항` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const PAGE_SIZE = 20;
 
 interface Notice {

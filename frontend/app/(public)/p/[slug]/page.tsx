@@ -8,7 +8,7 @@ import DynamicPageSections from "@/components/dynamic-page/DynamicPageSections";
 // 동적 페이지는 매 요청 시 fresh 데이터를 가져옴 — admin 편집 즉시 반영
 export const dynamic = "force-dynamic";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 type LayoutKind = "body" | "body_with_hero" | "sections";
 

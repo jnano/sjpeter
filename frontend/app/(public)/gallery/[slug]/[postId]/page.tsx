@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import { auth } from "@/auth";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
   id: number;

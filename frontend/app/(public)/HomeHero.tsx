@@ -51,7 +51,7 @@ export default function HomeHero({ parishName }: Props) {
   }, [slides.length]);
 
   return (
-    <div className="relative w-full aspect-[4/3] md:aspect-auto md:min-h-[260px] rounded-xl overflow-hidden border border-[var(--color-border)] group">
+    <div className="relative w-full h-36 md:h-full md:min-h-[260px] rounded-xl overflow-hidden border border-[var(--color-border)] group">
       {slides.map((s, i) => {
         const src = s.isFallback ? s.file_url : `${API}${s.file_url}`;
         return (
@@ -71,7 +71,8 @@ export default function HomeHero({ parishName }: Props) {
           />
         );
       })}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent p-3.5 z-10">
+      {/* 캡션 오버레이 — 모바일(검색창 아래 슬림 스트립)에서는 숨김 */}
+      <div className="hidden md:block absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent p-3.5 z-10">
         <p className="text-white font-serif font-bold text-sm leading-tight tracking-tight">
           {parishName}
         </p>

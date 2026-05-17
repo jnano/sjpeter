@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "주임신부님", description: `${p.name} 본당 가족 — 주임신부, 보좌신부, 수녀, 사무장` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Staff {
   id: number;

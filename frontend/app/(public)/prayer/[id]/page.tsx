@@ -10,7 +10,7 @@ import {
 import { fetchParishMin } from "@/lib/parish";
 import { prayerCategoryLabel } from "@/lib/prayer";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface PrayerOut extends MeditationContent {
   category: string;

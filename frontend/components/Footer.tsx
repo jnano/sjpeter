@@ -3,7 +3,7 @@ import { fetchServerMenus } from "./fetchServerMenus";
 import ReportLink from "./ReportLink";
 import type { MenuItem } from "./useNavigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function flattenServer(items: MenuItem[]): MenuItem[] {
   const out: MenuItem[] = [];
@@ -158,7 +158,7 @@ export default async function Footer() {
             )}
           </div>
 
-          {/* 바로가기 */}
+          {/* 바로가기 — quickLinks 그리드 아래 한 줄 띄우고 장애 신고 배치 */}
           <div>
             <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">바로가기</h3>
             <nav className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -181,6 +181,7 @@ export default async function Footer() {
           </div>
         </div>
 
+        {/* 구분선 + 저작권 중앙 */}
         <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)]">
           © {new Date().getFullYear()} {parish?.name ?? "세종성베드로성당"}. All rights reserved.
         </div>

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "가톨릭굿뉴스 매일미사 — 오늘의 복음",
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface GospelToday {
   date: string;
@@ -36,17 +36,13 @@ function formatDate(iso: string) {
 export default async function WordPage() {
   const gospel = await fetchGospel();
 
-  const subtitle = gospel
-    ? `${formatDate(gospel.date)}${gospel.liturgical_season ? " · " + gospel.liturgical_season : ""}`
-    : "오늘 선포되는 하느님의 말씀";
-
   const missaUrl = gospel
     ? `https://maria.catholic.or.kr/mi_pr/missa/missa.asp?goMonth=${gospel.date}`
     : "https://maria.catholic.or.kr/mi_pr/missa/missa.asp";
 
   return (
     <>
-      <PageHeader group="말씀과 기도" title="오늘의 복음" subtitle={subtitle} />
+      <PageHeader group="말씀과 기도" title="오늘의 복음" subtitle="오늘 선포되는 하느님의 말씀" />
       <SectionLayout group="word">
 
         {!gospel ? (
@@ -70,32 +66,29 @@ export default async function WordPage() {
 
             {/* 복음 본문 */}
             <div className="bg-[var(--color-primary)] text-white rounded-xl p-8">
-              <div className="flex items-baseline gap-3 mb-5">
-                <h2 className="font-sans font-bold text-xl text-white">복음</h2>
-                {gospel.gospel_reference && (
-                  <span className="text-white/70 text-sm">{gospel.gospel_reference}</span>
-                )}
+              <div className="flex items-start justify-between gap-3 pb-4 mb-5 border-b border-white/20">
+                <div className="flex items-baseline gap-3 min-w-0">
+                  <h2 className="font-sans font-bold text-xl text-white">복음</h2>
+                  {gospel.gospel_reference && (
+                    <span className="text-white/70 text-sm">{gospel.gospel_reference}</span>
+                  )}
+                </div>
+                {/* 날짜 + 전례 시기 — 카드 상단 우측 작은 글씨 */}
+                <div className="text-right text-white/60 text-[11px] leading-relaxed shrink-0">
+                  <div>{formatDate(gospel.date)}</div>
+                  {gospel.liturgical_season && <div>{gospel.liturgical_season}</div>}
+                </div>
               </div>
 
               {gospel.gospel_text ? (
-                <p className="leading-relaxed text-white/90 text-base whitespace-pre-line">
+                // 60대 신자 가독성 고려: 18px + leading 1.8 + 약간의 자간 + 100% 흰색
+                <p className="text-white text-[18px] leading-[1.8] tracking-wide whitespace-pre-line">
                   {gospel.gospel_text}
                 </p>
               ) : (
                 <p className="text-white/50 italic text-sm">복음 본문을 가져오지 못했습니다.</p>
               )}
             </div>
-
-            {/* 전례 정보 */}
-            {gospel.liturgical_season && (
-              <div className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl px-6 py-4 flex items-center gap-3">
-                <span className="text-[var(--color-accent)] text-lg">✝</span>
-                <div>
-                  <p className="text-xs text-[var(--color-text-muted)] mb-0.5">오늘의 전례</p>
-                  <p className="text-sm font-medium text-[var(--color-primary)]">{gospel.liturgical_season}</p>
-                </div>
-              </div>
-            )}
 
             {/* 전체 미사 독서 링크 */}
             <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 flex items-center justify-between gap-4">

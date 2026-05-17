@@ -95,47 +95,43 @@ def _parse_season(soup: BeautifulSoup) -> str | None:
 
 
 def _parse_gospel_text(soup: BeautifulSoup) -> str | None:
-    """복음 본문의 핵심 문단을 추출한다."""
-    text = soup.get_text(separator="\n")
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    """복음 본문 전체를 줄바꿈으로 이어 반환한다.
+    굿뉴스 missa 페이지는 각 전례 섹션(입당송/본기도/제1독서/.../복음/...)이
+    class='board_layout' 컨테이너로 분리되어 있어, ✠ 가 포함된 board_layout 하나만 골라
+    파싱하면 감사송/영성체송 등 후속 섹션의 누락 없이 정확한 복음 본문만 추출 가능.
 
-    # ✠ 표시 이후 본문 수집
-    gospel_start = None
-    for i, line in enumerate(lines):
-        if "✠" in line:
-            gospel_start = i
-            break
+    홈 위젯은 CSS line-clamp 로 미리보기, /word 상세 페이지는 전체 본문을 노출한다.
+    """
+    chapter_verse_re = re.compile(r'^[\d,\sㄱㄴ\-]+$')
 
-    if gospel_start is None:
-        return None
-
-    # ✠ 줄 이후에서 실제 복음 본문 문장 수집
-    # 전례 응답(◎ ○), 너무 짧은 줄, 다음 섹션 제목은 제외
-    _SKIP_PREFIXES = ("◎", "○", "✠", "※", "입당송", "본기도", "예물기도", "영성체송", "영성체 후")
-    gospel_lines = []
-    for line in lines[gospel_start + 1:]:
-        if any(line.startswith(p) for p in _SKIP_PREFIXES):
+    for div in soup.find_all(class_='board_layout'):
+        text = div.get_text(separator="\n", strip=True)
+        if "✠" not in text:
             continue
-        if len(line) < 8:
-            continue
-        # 다음 전례 섹션이 시작되면 중단
-        if re.match(r'^(입당송|본기도|제\s*\d+\s*독서|화답송|복음환호송|예물기도|영성체송|감사송|주님의\s*기도|영성체\s*후)', line):
-            break
-        gospel_lines.append(line)
-        # 약 150자 이상이면 충분
-        if sum(len(l) for l in gospel_lines) >= 150:
-            break
 
-    if not gospel_lines:
-        return None
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        result = []
+        skip_chapter_verse = False
+        for line in lines:
+            # ✠ 시작 헤더 라인 ("✠ 마르코가 전한 거룩한 복음입니다.") 건너뛰기
+            if line.startswith("✠"):
+                skip_chapter_verse = True
+                continue
+            # 헤더 직후의 장·절 라인 ("16,23ㄴ-28") 건너뛰기 — gospel_reference 필드와 중복
+            if skip_chapter_verse:
+                skip_chapter_verse = False
+                if chapter_verse_re.match(line):
+                    continue
+            # 회중 응답 ("◎ 그리스도님, 찬미합니다.") 건너뛰기
+            if line.startswith("◎") or line.startswith("○"):
+                continue
+            if len(line) < 2:
+                continue
+            result.append(line)
 
-    # 대표 문장: 첫 의미 있는 문단 1-2개
-    combined = " ".join(gospel_lines[:3])
-    # 너무 길면 첫 문장만
-    if len(combined) > 200:
-        sentences = re.split(r'(?<=[다했다니까요.])\s+', combined)
-        return sentences[0] if sentences else combined[:200]
-    return combined
+        return "\n".join(result) if result else None
+
+    return None
 
 
 # ── 엔드포인트 ─────────────────────────────────────────────

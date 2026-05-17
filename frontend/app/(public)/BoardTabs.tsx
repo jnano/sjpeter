@@ -24,14 +24,14 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
   if (!current) return null;
 
   return (
-    <div className="border border-[var(--color-border)] rounded-xl bg-white overflow-hidden">
+    <div className="rounded-xl bg-white overflow-hidden h-full flex flex-col">
       {/* 탭 헤더 */}
       <div className="flex items-stretch border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActive(t.key)}
-            className={`px-3.5 py-2.5 text-[13px] font-bold transition-colors border-b-2 -mb-px ${
+            className={`px-3 py-2 text-[12px] font-normal transition-colors border-b-2 -mb-px ${
               active === t.key
                 ? "text-[var(--color-primary)] border-[var(--color-primary)] bg-white"
                 : "text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-primary)]"
@@ -42,20 +42,21 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
         ))}
         <Link
           href={current.moreHref}
-          className="ml-auto self-center pr-4 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+          className="ml-auto self-center pr-4 text-[16px] leading-none text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+          aria-label="더 보기"
         >
-          더 보기 →
+          ⋯
         </Link>
       </div>
 
       {/* 게시글 목록 */}
       {current.items.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-text-muted)] text-center py-10">
+        <p className="text-[13px] text-[var(--color-text-muted)] text-center py-10 flex-1">
           등록된 글이 없습니다.
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--color-border)]/60">
-          {current.items.slice(0, 7).map((item) => (
+        <ul className="divide-y divide-[var(--color-border)]/60 flex-1">
+          {current.items.slice(0, 5).map((item) => (
             <li key={item.id}>
               <Link
                 href={item.href ?? `${current.itemBase}/${item.id}`}
@@ -70,16 +71,13 @@ export default function BoardTabs({ tabs }: { tabs: BoardTab[] }) {
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)]/40 shrink-0" />
                 )}
                 <span
-                  className={`flex-1 truncate text-[13px] ${
+                  className={`flex-1 truncate text-[11.7px] ${
                     item.is_pinned
                       ? "font-semibold text-[var(--color-text)]"
                       : "text-[var(--color-text)]"
                   }`}
                 >
                   {item.title}
-                </span>
-                <span className="text-[12px] text-[var(--color-text-muted)] shrink-0">
-                  {new Date(item.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
                 </span>
               </Link>
             </li>

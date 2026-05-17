@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "역대 수녀님", description: `${p.name}을 거쳐 가신 수녀님들` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Sister {
   id: number;
@@ -26,7 +26,7 @@ interface Sister {
 
 async function getSisters(): Promise<Sister[]> {
   try {
-    const res = await fetch(`${API}/api/archive/pastors?category=sister`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/archive/pastors?category=sister`);
     if (!res.ok) return [];
     return res.json();
   } catch {

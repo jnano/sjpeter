@@ -1,6 +1,6 @@
 import { cache } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type LiturgicalSeason =
   | "advent"

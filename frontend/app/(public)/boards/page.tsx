@@ -2,7 +2,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface Board {
   id: number;
@@ -15,13 +15,13 @@ interface Board {
 
 const BOARD_ICONS: Record<string, string> = {
   free:             "💬",
-  news:             "📰",
-  youth_council:    "✝️",
-  pastoral_council: "🕊️",
-  legio_mariae:     "📿",
-  photo:            "📷",
-  liturgy:          "⛪",
   notice:           "📢",
+  liturgy:          "⛪",
+  building:         "🏗️",
+  building_photo:   "🏛️",
+  events:           "📸",
+  "media-family":   "📣",
+  "build_offering": "🤲",
 };
 
 async function getBoards(): Promise<Board[]> {

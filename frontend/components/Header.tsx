@@ -359,12 +359,13 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
               );
             })}
 
-            {/* 검색 — 데스크톱 상시 노출 */}
+            {/* 검색 — 데스크톱 상시 노출. suppressHydrationWarning: 사파리 자동완성/스마트락이 __gcruniqueid 같은 속성을 hydration 전에 주입하는 경우 mismatch 무시 */}
             <form
               onSubmit={handleSearch}
               role="search"
               aria-label="사이트 검색"
               className="flex items-center ml-3"
+              suppressHydrationWarning
             >
               <div className="relative">
                 <span
@@ -386,6 +387,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                   placeholder="기도문·공지·주보 검색"
                   aria-label="검색어"
                   className="w-[142px] lg:w-[181px] pl-8 pr-3 py-1.5 text-sm rounded-full bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)] focus:bg-white transition-colors"
+                  suppressHydrationWarning
                 />
               </div>
             </form>

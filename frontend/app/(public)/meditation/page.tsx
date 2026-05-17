@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "묵상 글", description: `${p.name} 묵상 글` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function getCurrentMeditation(): Promise<MeditationContent | null> {
   try {

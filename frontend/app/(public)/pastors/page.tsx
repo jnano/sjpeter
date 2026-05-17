@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: "역대 신부님", description: `${p.name} 역대 신부님 소개` };
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Pastor {
   id: number;
@@ -26,7 +26,7 @@ interface Pastor {
 
 async function getPastors(): Promise<Pastor[]> {
   try {
-    const res = await fetch(`${API}/api/archive/pastors?category=priest`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/api/archive/pastors?category=priest`);
     if (!res.ok) return [];
     return res.json();
   } catch { return []; }
