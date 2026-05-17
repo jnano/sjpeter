@@ -191,7 +191,7 @@ def bulletin_routed_counts_batch(
 ):
     """다건 주보의 결과물 카운트를 한 번에 합산. /admin/bulletin 다중 삭제 다이얼로그용 (N+1 회피)."""
     if not body.bulletin_ids:
-        return {"per_bulletin": {}, "sum": {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}}
+        return {"per_bulletin": {}, "sum": {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}, "not_found": []}
 
     # SQLAlchemy expanding bindparam — IN 절에 list 안전하게 바인딩 (PG syntax error 방어)
     from sqlalchemy import bindparam
@@ -203,6 +203,14 @@ def bulletin_routed_counts_batch(
         rows = db.execute(stmt, {"ids": body.bulletin_ids}).fetchall()
         return {r[0]: r[1] for r in rows}
 
+    # 존재하는 주보 id 확인 (not_found 분리 — bulk-reject 와 일관성)
+    existing_rows = db.execute(
+        text("SELECT id FROM bulletins WHERE id IN :ids").bindparams(bindparam("ids", expanding=True)),
+        {"ids": body.bulletin_ids},
+    ).fetchall()
+    existing_ids = {r[0] for r in existing_rows}
+    not_found = [i for i in body.bulletin_ids if i not in existing_ids]
+
     ext_map = counts_by_col("bulletin_extractions", "bulletin_id")
     img_map = counts_by_col("bulletin_extracted_images", "bulletin_id")
     ev_map = counts_by_col("events", "source_bulletin_id")
@@ -213,6 +221,8 @@ def bulletin_routed_counts_batch(
     per_bulletin: dict[int, dict] = {}
     total = {"extractions": 0, "events": 0, "meditations": 0, "visions": 0, "posts": 0, "images": 0}
     for bid in body.bulletin_ids:
+        if bid not in existing_ids:
+            continue  # not_found 는 per_bulletin 에서 제외 (0 으로 오해 방지)
         row = {
             "extractions": ext_map.get(bid, 0),
             "events": ev_map.get(bid, 0),
@@ -225,7 +235,7 @@ def bulletin_routed_counts_batch(
         for k, v in row.items():
             total[k] += v
 
-    return {"per_bulletin": per_bulletin, "sum": total}
+    return {"per_bulletin": per_bulletin, "sum": total, "not_found": not_found}
 
 
 @router.get("/ai-stats")

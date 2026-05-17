@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.148";
+export const CURRENT_VERSION = "1.5.149";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.149", date: "2026-05-18", tag: "수정",
+    items: [
+      "AI 추출 시스템 추가 보강 3건:",
+      "  · result 페이지 polling timeout 후 '↻ 다시 분석' 버튼 강제 노출 — 막다른 골목 회피 (운영 영향)",
+      "  · AI 통계 페이지 '↻ 새로고침' 버튼 추가 + cache: no-store",
+      "  · routed-counts/batch 응답에 not_found 분리 (bulk-reject 와 일관성)",
+    ],
+  },
   {
     version: "1.5.148", date: "2026-05-18", tag: "수정",
     items: [

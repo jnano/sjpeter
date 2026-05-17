@@ -85,6 +85,8 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reanalyzing, setReanalyzing] = useState(false);
+  // 폴링 timeout 도달 — 백엔드 ai_status 는 여전히 processing 일 수 있지만 UI 에서 "다시 분석" 버튼 강제 노출.
+  const [pollingTimedOut, setPollingTimedOut] = useState(false);
 
   // 분석이 hang 됐을 때 무한 폴링 방지. ai_started_at + 5분 초과 시 폴링 중단.
   const POLL_TIMEOUT_MS = 5 * 60 * 1000;
@@ -119,6 +121,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
           const elapsed = Math.max(Date.now() - pollingStartedAt, Date.now() - serverStartedMs);
           if (elapsed > POLL_TIMEOUT_MS) {
             setError("AI 분석이 5분 이상 걸리고 있습니다. ↻ 다시 분석 버튼을 눌러 재시도해 주세요.");
+            setPollingTimedOut(true);  // "다시 분석" 버튼 강제 노출 (ai_status=processing 이어도)
             return;  // 폴링 중단
           }
           timer = setTimeout(() => load(false), 3000);
@@ -184,9 +187,16 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("재분석 요청 실패");
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "재분석 요청 실패");
+      }
       // 즉시 processing 상태로 갱신해 폴링 트리거
-      setBulletin((prev) => prev ? { ...prev, ai_status: "processing" } : prev);
+      setBulletin((prev) => prev ? { ...prev, ai_status: "processing", ai_started_at: new Date().toISOString() } : prev);
+      setPollingTimedOut(false);  // timeout 플래그 리셋
+      setError("");
+      // 폴링 재시작 — useEffect 가 ai_status 변경을 감지하지 않으므로 location.reload 가 간단
+      window.location.reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : "재분석 요청 실패");
     } finally {
@@ -263,7 +273,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
               <p className="text-xs text-red-600 mt-1">오류: {bulletin.ai_error}</p>
             )}
           </div>
-          {bulletin?.ai_status !== "processing" && (
+          {(bulletin?.ai_status !== "processing" || pollingTimedOut) && (
             <button
               onClick={handleReanalyze}
               disabled={reanalyzing}

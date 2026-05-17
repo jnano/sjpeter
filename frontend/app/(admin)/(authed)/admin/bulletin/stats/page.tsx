@@ -25,20 +25,31 @@ export default function AiStatsPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  async function loadStats(isRefresh: boolean = false) {
     const token = localStorage.getItem("admin_token");
     if (!token) { router.push("/admin"); return; }
-    fetch(`${API}/api/bulletins/ai-stats`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (r) => {
-        if (!r.ok) throw new Error("통계를 불러올 수 없습니다.");
-        return r.json();
-      })
-      .then(setStats)
-      .catch((e) => setError(e instanceof Error ? e.message : "오류"))
-      .finally(() => setLoading(false));
-  }, [router]);
+    if (isRefresh) setRefreshing(true);
+    try {
+      const r = await fetch(`${API}/api/bulletins/ai-stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error("통계를 불러올 수 없습니다.");
+      const data = await r.json();
+      setStats(data);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "오류");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useEffect(() => { loadStats(false); }, [router]);
 
   if (loading) return <div className="p-16 text-center text-[var(--color-text-muted)]">불러오는 중…</div>;
   if (error) return <div className="p-16 text-center text-red-600">{error}</div>;
@@ -58,9 +69,19 @@ export default function AiStatsPage() {
             주보 PDF 자동 분석의 관찰성 지표 — 성공률·소요시간·재시도·에러 패턴
           </p>
         </div>
-        <Link href="/admin/bulletin" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-          ← 주보 관리
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => loadStats(true)}
+            disabled={refreshing}
+            className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)] disabled:opacity-50"
+            title="통계 새로고침"
+          >
+            {refreshing ? "새로고침 중…" : "↻ 새로고침"}
+          </button>
+          <Link href="/admin/bulletin" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+            ← 주보 관리
+          </Link>
+        </div>
       </div>
 
       {stats.total_analyzed === 0 && (
