@@ -1,35 +1,27 @@
 import Link from "next/link";
-import MiniCalendar from "./MiniCalendar";
 import BannerSlider from "@/components/BannerSlider";
 import PhotoSlider from "./PhotoSlider";
 import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
 import HomeHero from "./HomeHero";
 import HomeConstructionWidget, { fetchConstructionSummary } from "./HomeConstructionWidget";
+import SearchHero from "@/components/SearchHero";
+import ChurchIcon from "@/components/icons/ChurchIcon";
+import GroupsIcon from "@/components/icons/GroupsIcon";
+import BulletinIcon from "@/components/icons/BulletinIcon";
+import { buildMassRows, formatTodayMass, type MassEntry } from "@/lib/mass";
 
 // admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
 export const dynamic = "force-dynamic";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-const WEEKDAYS = ["월요일", "화요일", "수요일", "목요일", "금요일"];
-const SHORT: Record<string, string> = {
-  "월요일": "월", "화요일": "화", "수요일": "수", "목요일": "목", "금요일": "금",
-};
-
-interface MassEntry { day: string; time: string; note: string; }
 interface Parish {
   name: string; phone: string | null; address: string | null;
   fax: string | null;
   mass_schedule: { entries: MassEntry[]; note: string; } | null;
 }
 interface Notice { id: number; title: string; is_pinned: boolean; created_at: string; }
-interface BoardPost {
-  id: number;
-  title: string;
-  created_at: string;
-}
-interface BoardPostList { posts: BoardPost[] }
 interface CalendarEvent {
   id: number;
   title: string;
@@ -45,20 +37,11 @@ interface GospelToday {
 }
 
 async function getParish(): Promise<Parish | null> {
-  try { const r = await fetch(`${API}/api/parish/`, { next: { revalidate: 3600 } }); return r.ok ? r.json() : null; } catch { return null; }
+  try { const r = await fetch(`${API}/api/parish/`); return r.ok ? r.json() : null; } catch { return null; }
 }
 async function getNotices(): Promise<Notice[]> {
-  try { const r = await fetch(`${API}/api/notices/`, { next: { revalidate: 300 } }); return r.ok ? r.json() : []; } catch { return []; }
+  try { const r = await fetch(`${API}/api/notices/`); return r.ok ? r.json() : []; } catch { return []; }
 }
-async function getBoardPosts(slug: string): Promise<BoardPost[]> {
-  try {
-    const r = await fetch(`${API}/api/boards/${slug}/posts?page=1`, { next: { revalidate: 300 } });
-    if (!r.ok) return [];
-    const data: BoardPostList = await r.json();
-    return data.posts ?? [];
-  } catch { return []; }
-}
-
 async function getUpcomingEvents(): Promise<CalendarEvent[]> {
   // 오늘부터 약 60일 — 이번 달 + 다음 달 fetch 후 다가오는 순으로 정렬
   const today = new Date();
@@ -70,7 +53,7 @@ async function getUpcomingEvents(): Promise<CalendarEvent[]> {
   try {
     const lists = await Promise.all(
       months.map((mm) =>
-        fetch(`${API}/api/events/?year=${mm.y}&month=${mm.m}`, { next: { revalidate: 300 } })
+        fetch(`${API}/api/events/?year=${mm.y}&month=${mm.m}`)
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
       ),
@@ -83,7 +66,7 @@ async function getUpcomingEvents(): Promise<CalendarEvent[]> {
 }
 async function getGospelToday(): Promise<GospelToday | null> {
   try {
-    const r = await fetch(`${API}/api/gospel/today`, { next: { revalidate: 3600 } });
+    const r = await fetch(`${API}/api/gospel/today`);
     if (!r.ok) return null;
     const json = await r.json();
     return json.success ? json.data : null;
@@ -98,65 +81,22 @@ async function getSiteConfig(): Promise<Record<string, string>> {
   } catch { return {}; }
 }
 
-function formatTime(t: string): string {
-  // 24시간 형식 — "8시 30분" / "17시" / "19시 30분"
-  const [h, m] = t.split(":").map(Number);
-  return m === 0 ? `${h}시` : `${h}시 ${String(m).padStart(2, "0")}분`;
-}
 
-function formatTimesRow(times: string[]): string {
-  const am = times.filter((t) => parseInt(t) < 12).map(formatTime);
-  const pm = times.filter((t) => parseInt(t) >= 12).map(formatTime);
-  return [...am, ...pm].join(", ");
-}
-
-function buildMassRows(entries: MassEntry[]): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-
-  const sunday = entries.filter((e) => e.day === "주일").map((e) => e.time);
-  if (sunday.length) rows.push({ label: "주일", value: formatTimesRow(sunday) });
-
-  const wdMap: Record<string, string[]> = {};
-  for (const e of entries) {
-    if (WEEKDAYS.includes(e.day)) {
-      (wdMap[e.day] ??= []).push(e.time);
-    }
-  }
-  const wdKeys = WEEKDAYS.filter((d) => wdMap[d]);
-  if (wdKeys.length) {
-    const first = JSON.stringify(wdMap[wdKeys[0]]);
-    const allSame = wdKeys.every((d) => JSON.stringify(wdMap[d]) === first);
-    if (allSame) {
-      rows.push({ label: "평일", value: formatTimesRow(wdMap[wdKeys[0]]) });
-    } else {
-      for (const day of wdKeys) {
-        rows.push({ label: SHORT[day], value: formatTimesRow(wdMap[day]) });
-      }
-    }
-  }
-
-  const sat = entries.filter((e) => e.day === "토요일").map((e) => e.time);
-  if (sat.length) rows.push({ label: "토요일", value: formatTimesRow(sat) });
-
-  return rows;
-}
-
-const QUICK_LINKS = [
-  { href: "/about", label: "성당 안내", icon: "⛪" },
-  { href: "/groups", label: "분과와 단체", icon: "🤝" },
-  { href: "/bulletin", label: "주보 보기", icon: "📖" },
+const QUICK_LINKS: { href: string; label: string; icon: React.ReactNode }[] = [
+  { href: "/about", label: "성당 안내", icon: <ChurchIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
+  { href: "/groups", label: "분과와 단체", icon: <GroupsIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
+  { href: "/bulletin", label: "주보 보기", icon: <BulletinIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
 ];
 
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, youthPosts, constructionSummary, siteConfig] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig] =
     await Promise.all([
       getParish(),
       getNotices(),
       getGospelToday(),
       getUpcomingEvents(),
-      getBoardPosts("youth_council"),
       fetchConstructionSummary(),
       getSiteConfig(),
     ]);
@@ -185,7 +125,12 @@ export default async function HomePage() {
 
   // ── 메인 3단 카드 마크업 (모드별 wrapper 분기 위해 변수로 추출) ──
   const gospelCardEl = (
-    <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
+    // 카드 전체가 /word 로 가는 단일 링크. 내부에는 중첩 a 금지(nested anchor)이므로 ⋯ 표시는 span 으로.
+    <Link
+      href="/word"
+      aria-label="오늘의 복음 전체 보기"
+      className="border border-[var(--color-border)] rounded-xl p-4 pb-[27px] flex flex-col bg-white hover:bg-[var(--color-primary)]/10 hover:shadow-sm hover:border-[var(--color-primary)]/40 transition-all h-full relative group"
+    >
       <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
         <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
           <span className="text-[var(--color-accent)]">✝</span>
@@ -199,53 +144,70 @@ export default async function HomePage() {
       </div>
       {gospel?.gospel_text ? (
         <>
-          <blockquote
-            className="text-[13px] text-[var(--color-text)] leading-relaxed flex-1 italic overflow-hidden"
-            style={{ display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" } as React.CSSProperties}
-          >
-            &ldquo;{gospel.gospel_text}&rdquo;
-          </blockquote>
+          {/* flex 확장은 wrapper, line-clamp는 blockquote — 둘이 같은 요소에 있으면
+              일부 환경에서 display:-webkit-box vs flex-item 충돌로 clamp가 무효화됨. */}
+          <div className="flex-1 min-h-0">
+            <blockquote className="text-[13px] text-[var(--color-text)] leading-relaxed italic line-clamp-2">
+              &ldquo;{gospel.gospel_text}&rdquo;
+            </blockquote>
+          </div>
           {gospel.gospel_reference && (
             <cite className="block text-[11px] text-[var(--color-text-muted)] mt-2 not-italic">
               — {gospel.gospel_reference}
             </cite>
           )}
-          <Link
-            href="/word"
-            className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+          {/* 카드 전체가 링크이므로 ⋯ 은 시각 단서용 span (별도 anchor 아님) */}
+          <span
+            aria-hidden
+            className="absolute bottom-1.5 right-3 text-[16px] leading-none text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors"
           >
-            전체 보기 →
-          </Link>
+            ⋯
+          </span>
         </>
       ) : (
         <p className="text-[13px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
           오늘의 말씀을 불러오는 중입니다…
         </p>
       )}
-    </div>
+    </Link>
   );
 
   // 시즌 배너 — /admin/banners 에서 placement="home_main" 으로 등록한
   // 활성 그룹의 이미지를 슬라이더로 노출. 1장이면 정적, 2장+ 시 5초 auto + 인디케이터.
   const bannerCardEl = <BannerSlider placement="home_main" />;
 
+  // 미사 카드 — 카드 자연 height 가 사진과 비슷해지도록 컴팩트하게.
+  // 핵심: table 의 flex-1 제거 (빈 공간 균등 분배로 행간이 부풀어 오르는 현상 차단).
   const massCardEl = (
-    <div className="border border-[var(--color-border)] rounded-xl p-4 flex flex-col bg-white hover:shadow-sm transition-shadow">
-      <div className="mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
+    <div className="border border-[var(--color-border)] rounded-xl p-3 flex flex-col bg-white hover:shadow-sm transition-shadow h-full">
+      <div className="mb-2 pb-2 border-b border-[var(--color-border)]">
         <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-          <span className="text-[var(--color-accent)]">⏰</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4"
+            aria-hidden
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M11.0055 2H12.9945C14.3805 1.99999 15.4828 1.99999 16.3716 2.0738C17.2819 2.14939 18.0575 2.30755 18.7658 2.67552C19.8617 3.24477 20.7552 4.13829 21.3245 5.23415C21.6925 5.94253 21.8506 6.71811 21.9262 7.62839C22 8.51722 22 9.6195 22 11.0055V12.9945C22 14.3805 22 15.4828 21.9262 16.3716C21.8506 17.2819 21.6925 18.0575 21.3245 18.7658C20.7552 19.8617 19.8617 20.7552 18.7658 21.3245C18.0575 21.6925 17.2819 21.8506 16.3716 21.9262C15.4828 22 14.3805 22 12.9945 22H11.0055C9.6195 22 8.51722 22 7.62839 21.9262C6.71811 21.8506 5.94253 21.6925 5.23415 21.3245C4.13829 20.7552 3.24477 19.8617 2.67552 18.7658C2.30755 18.0575 2.14939 17.2819 2.0738 16.3716C1.99999 15.4828 1.99999 14.3805 2 12.9945V11.0055C1.99999 9.61949 1.99999 8.51721 2.0738 7.62839C2.14939 6.71811 2.30755 5.94253 2.67552 5.23415C3.24477 4.13829 4.13829 3.24477 5.23415 2.67552C5.94253 2.30755 6.71811 2.14939 7.62839 2.0738C8.51721 1.99999 9.61949 1.99999 11.0055 2ZM7.79391 4.06694C7.00955 4.13207 6.53142 4.25538 6.1561 4.45035C5.42553 4.82985 4.82985 5.42553 4.45035 6.1561C4.25538 6.53142 4.13207 7.00955 4.06694 7.79391C4.0008 8.59025 4 9.60949 4 11.05V12.95C4 14.3905 4.0008 15.4097 4.06694 16.2061C4.13207 16.9905 4.25538 17.4686 4.45035 17.8439C4.82985 18.5745 5.42553 19.1702 6.1561 19.5497C6.53142 19.7446 7.00955 19.8679 7.79391 19.9331C8.59025 19.9992 9.60949 20 11.05 20H12.95C14.3905 20 15.4097 19.9992 16.2061 19.9331C16.9905 19.8679 17.4686 19.7446 17.8439 19.5497C18.5745 19.1702 19.1702 18.5745 19.5497 17.8439C19.7446 17.4686 19.8679 16.9905 19.9331 16.2061C19.9992 15.4097 20 14.3905 20 12.95V11.05C20 9.60949 19.9992 8.59025 19.9331 7.79391C19.8679 7.00955 19.7446 6.53142 19.5497 6.1561C19.1702 5.42553 18.5745 4.82985 17.8439 4.45035C17.4686 4.25538 16.9905 4.13207 16.2061 4.06694C15.4097 4.0008 14.3905 4 12.95 4H11.05C9.60949 4 8.59025 4.0008 7.79391 4.06694ZM11.8284 6.75736C12.3807 6.75736 12.8284 7.20507 12.8284 7.75736V12.7245L16.3553 14.0653C16.8716 14.2615 17.131 14.8391 16.9347 15.3553C16.7385 15.8716 16.1609 16.131 15.6447 15.9347L11.4731 14.349C11.085 14.2014 10.8284 13.8294 10.8284 13.4142V7.75736C10.8284 7.20507 11.2761 6.75736 11.8284 6.75736Z"
+              fill="#AE938D"
+            />
+          </svg>
           미사 시간
         </h2>
       </div>
       {massRows.length > 0 ? (
-        <table className="text-[13px] w-full flex-1">
+        <table className="text-[13px] w-full">
           <tbody>
             {massRows.map((row) => (
               <tr key={row.label} className="align-top">
-                <td className="text-[var(--color-text-muted)] pr-2 pb-1.5 whitespace-nowrap w-9 font-medium">
+                <td className="text-[var(--color-text-muted)] pr-2 pb-1 whitespace-nowrap w-9 font-medium">
                   {row.label}
                 </td>
-                <td className="pb-1.5 text-[var(--color-text)] leading-relaxed">
+                <td className="pb-1 text-[var(--color-text)] leading-snug">
                   {row.value}
                 </td>
               </tr>
@@ -253,18 +215,18 @@ export default async function HomePage() {
           </tbody>
         </table>
       ) : (
-        <p className="text-[13px] text-[var(--color-text-muted)] flex-1 flex items-center justify-center">
+        <p className="text-[13px] text-[var(--color-text-muted)] flex items-center justify-center py-2">
           미사 시간 정보가 없습니다.
         </p>
       )}
       {parish?.mass_schedule?.note && (
-        <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1 leading-snug">
           ※ {parish.mass_schedule.note}
         </p>
       )}
       <Link
         href="/info"
-        className="inline-block mt-2 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+        className="inline-block mt-1.5 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
       >
         찾아오시는 길 →
       </Link>
@@ -292,13 +254,6 @@ export default async function HomePage() {
         href: "/calendar",
       })),
     },
-    {
-      key: "youth",
-      label: "청년회",
-      moreHref: "/boards/youth_council",
-      itemBase: "/boards/youth_council",
-      items: youthPosts.map((p) => ({ id: p.id, title: p.title, is_pinned: false, created_at: p.created_at })),
-    },
   ];
 
   return (
@@ -308,25 +263,70 @@ export default async function HomePage() {
         <div className={`${CONTAINER} py-5 sm:py-7`}>
           <div className={`grid grid-cols-1 ${gridColsClass} gap-4`}>
 
-            {/* 큰 사진 (관리자 등록 배너 크로스페이드, 없으면 yakhoun.jpg) */}
-            <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
+            {/* 모바일: pill 검색창(상단) + 슬림 사진 스트립 / 데스크톱: 큰 사진(셀 채움) — HomeHero는 단일 인스턴스, 내부 responsive 클래스로 모드 전환 */}
+            {heroIsWide || !showBanner ? (
+              <div className="min-w-0 flex flex-col gap-3">
+                <div className="md:hidden">
+                  <SearchHero
+                    initialQ=""
+                    autoFocus={false}
+                    variant="pill"
+                    placeholder="무엇을 찾으시나요?"
+                    rotatingPlaceholders={
+                      parish?.mass_schedule?.entries
+                        ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
+                        : undefined
+                    }
+                  />
+                </div>
+                <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
+              </div>
+            ) : (
+              // even+배너: 사진·가운데·미사 모두 단일 cell 1행. 가운데 col은 안에서 [복음+배너] flex column.
+              <div className="min-w-0 flex flex-col gap-3">
+                <div className="md:hidden">
+                  <SearchHero
+                    initialQ=""
+                    autoFocus={false}
+                    variant="pill"
+                    placeholder="무엇을 찾으시나요?"
+                    rotatingPlaceholders={
+                      parish?.mass_schedule?.entries
+                        ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
+                        : undefined
+                    }
+                  />
+                </div>
+                <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
+              </div>
+            )}
 
             {/* wide(±배너): 우측 1fr 컬럼에 [복음·(배너)·미사] 스택.
-                even+배너:    가운데 컬럼에 [복음·배너] 스택, 미사는 별도 cell.
+                even+배너:    photo·mass row-span-2, gospel/banner는 가운데 col 위/아래 (직접 grid 자식).
                 even-plain:   가운데/우측이 [복음] [미사] 각각의 cell. */}
             {heroIsWide ? (
+              // 모바일: 복음 → 미사 → 배너 (배너/미사 순서 스왑)
+              // md+: 복음 → 배너 → 미사 (기본)
               <div className="flex flex-col gap-4 min-w-0">
                 {gospelCardEl}
-                {showBanner && bannerCardEl}
-                {massCardEl}
+                {showBanner && <div className="order-3 md:order-2">{bannerCardEl}</div>}
+                <div className="order-2 md:order-3">{massCardEl}</div>
               </div>
             ) : showBanner ? (
               <>
-                <div className="flex flex-col gap-4 min-w-0">
-                  {gospelCardEl}
-                  {bannerCardEl}
+                {/* 가운데 col — 단일 cell 안에서 [복음 + 배너] flex column으로 분할.
+                    복음이 flex-1로 남은 공간 차지 + 배너는 자기 비율 height — col 전체가 사진/미사와 같이 stretch.
+                    모바일에서는 grid 1col이라 자식들이 적층 (photo → [복음+배너] → mass → construction). */}
+                <div className="min-w-0 flex flex-col gap-4">
+                  <div className="flex-1 min-h-0">{gospelCardEl}</div>
+                  <div>{bannerCardEl}</div>
                 </div>
-                {massCardEl}
+                {/* mass: 오른쪽 col, 1행 cell */}
+                <div className="min-w-0">{massCardEl}</div>
+                {/* 모바일 전용: 미사 바로 다음에 새 성전 건축 위젯 (desktop은 아래 70/30 섹션에서 노출) */}
+                <div className="md:hidden min-w-0">
+                  <HomeConstructionWidget summary={constructionSummary} embedded />
+                </div>
               </>
             ) : (
               <>
@@ -342,21 +342,24 @@ export default async function HomePage() {
       {/* ── 빠른 메뉴 6개 ── */}
       <section>
         <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-6">
+          <div className="border-t border-[var(--color-border)] py-3">
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
               {QUICK_LINKS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 border border-[var(--color-border)] rounded-xl bg-white hover:border-[var(--color-primary)] hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200"
+                  className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
                 >
-                  <span className="text-2xl leading-none">{item.icon}</span>
-                  <span className="text-[12px] font-medium text-[var(--color-text)] text-center leading-tight">
+                  <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+                    {item.icon}
+                  </span>
+                  <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
                     {item.label}
                   </span>
                 </Link>
               ))}
-              <div className="col-span-3">
+              {/* 묵상글: section py-3 padding 을 가로질러 위·아래 구분선까지 닿게 — -my-3 으로 보정 */}
+              <div className="col-span-3 -my-3 flex">
                 <MeditationCredits />
               </div>
             </div>
@@ -364,16 +367,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── 공사 진행 현황 (등록된 단계가 있을 때만 노출) ── */}
-      <HomeConstructionWidget summary={constructionSummary} containerClassName={CONTAINER} />
-
-      {/* ── 게시판 탭(좌) + 미니 캘린더(우) ── */}
+      {/* ── 새 성전 건축(좌 70%) + 게시판 탭(우 30%) — 한 행에서 높이 매칭.
+            건축 위젯은 모바일에서 메인 3단 안쪽(미사 바로 아래)으로 이동했으므로 여기선 md+에서만 노출. ── */}
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-6">
-            <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4 md:items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4 md:items-stretch">
+              <div className="hidden md:block">
+                <HomeConstructionWidget summary={constructionSummary} embedded />
+              </div>
               <BoardTabs tabs={boardTabs} />
-              <MiniCalendar />
             </div>
           </div>
         </div>

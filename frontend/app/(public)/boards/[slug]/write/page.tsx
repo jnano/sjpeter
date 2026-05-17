@@ -38,14 +38,21 @@ export default function WritePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // 게시판이 공유 기능을 켰을 때만 '내글 공유 허용' 체크박스 노출
+  const [boardShareEnabled, setBoardShareEnabled] = useState(false);
+  const [shareAllowed, setShareAllowed] = useState(false);
 
-  // 게시판의 distinct 카테고리 — datalist 자동완성용
+  // 게시판 카테고리 + share_enabled fetch
   useEffect(() => {
     if (!slug) return;
     fetch(`${API}/api/boards/${slug}/categories`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data: string[]) => setKnownCategories(Array.isArray(data) ? data : []))
       .catch(() => setKnownCategories([]));
+    fetch(`${API}/api/boards/${slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: { share_enabled?: boolean } | null) => setBoardShareEnabled(!!b?.share_enabled))
+      .catch(() => setBoardShareEnabled(false));
   }, [slug]);
 
   function addFiles(incoming: FileList | null) {
@@ -92,7 +99,12 @@ export default function WritePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, content, category: category.trim() || null }),
+        body: JSON.stringify({
+          title,
+          content,
+          category: category.trim() || null,
+          share_allowed: boardShareEnabled && shareAllowed,
+        }),
       });
       const postData = await postRes.json();
       if (!postRes.ok) {
@@ -243,6 +255,19 @@ export default function WritePage() {
             </p>
           )}
         </div>
+
+        {/* 공유 허용 — 게시판이 공유 기능을 켠 경우에만 노출 */}
+        {boardShareEnabled && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={shareAllowed}
+              onChange={(e) => setShareAllowed(e.target.checked)}
+              className="rounded"
+            />
+            <span>이 글의 공유를 허용합니다 <span className="text-xs text-[var(--color-text-muted)]">(다른 사람이 공유 버튼으로 외부에 링크 전달 가능)</span></span>
+          </label>
+        )}
 
         <div className="flex gap-3 justify-end">
           <Link

@@ -780,6 +780,10 @@ def admin_deactivate_member(
     _admin: Admin = Depends(get_current_admin),
 ):
     member = _get_member_or_404(member_id, db)
+    # 자기 자신 비활성화 방지 — 세션 무효화로 admin 페이지 접근 자체가 막힘.
+    # 운영자(is_admin=True 회원)는 자기 자신과 같은 Member 행이므로 가드 필수.
+    if isinstance(_admin, Member) and _admin.id == member.id:
+        raise HTTPException(status_code=400, detail="자신을 비활성화할 수 없습니다.")
     member.is_active = False
     db.commit()
     db.refresh(member)
@@ -794,6 +798,9 @@ def admin_delete_member(
     _admin: Admin = Depends(get_current_admin),
 ):
     member = _get_member_or_404(member_id, db)
+    # 자기 자신 삭제 방지
+    if isinstance(_admin, Member) and _admin.id == member.id:
+        raise HTTPException(status_code=400, detail="자신을 삭제할 수 없습니다.")
     member_email = member.email
     from sqlalchemy import text
     # 댓글 → 게시글 → 회원 순서로 삭제 (FK 제약 우회)

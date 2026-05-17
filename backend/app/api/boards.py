@@ -57,6 +57,13 @@ class BoardIn(BaseModel):
     list_show_views: bool = True
     list_show_likes: bool = False
     list_show_comments: bool = True
+    list_show_shares: bool = False
+    # 공개 페이지 뷰 토글 노출 여부 (v1.5.138)
+    show_view_list: bool = True
+    show_view_card: bool = True
+    show_view_photo: bool = True
+    show_search_form: bool = True
+    share_enabled: bool = True
 
 
 class BoardUpdate(BaseModel):
@@ -80,6 +87,12 @@ class BoardUpdate(BaseModel):
     list_show_views: Optional[bool] = None
     list_show_likes: Optional[bool] = None
     list_show_comments: Optional[bool] = None
+    show_view_list: Optional[bool] = None
+    show_view_card: Optional[bool] = None
+    show_view_photo: Optional[bool] = None
+    show_search_form: Optional[bool] = None
+    list_show_shares: Optional[bool] = None
+    share_enabled: Optional[bool] = None
 
 
 class AllowedMemberOut(BaseModel):
@@ -113,6 +126,12 @@ class BoardOut(BaseModel):
     list_show_views: bool = True
     list_show_likes: bool = False
     list_show_comments: bool = True
+    show_view_list: bool = True
+    show_view_card: bool = True
+    show_view_photo: bool = True
+    show_search_form: bool = True
+    list_show_shares: bool = False
+    share_enabled: bool = True
     moderator: Optional[ModeratorOut] = None
     moderator_id: Optional[int] = None
     admin_group_id: Optional[int] = None
@@ -128,6 +147,7 @@ class PostIn(BaseModel):
     intention_kind: Optional[str] = None
     intention_for: Optional[str] = None
     category: Optional[str] = None
+    share_allowed: bool = False
 
 
 class AuthorOut(BaseModel):
@@ -176,6 +196,7 @@ class PostBoardInfo(BaseModel):
     name: str
     slug: str
     moderator_id: Optional[int] = None
+    share_enabled: bool = True
 
     class Config:
         from_attributes = True
@@ -194,6 +215,8 @@ class PostOut(BaseModel):
     category: Optional[str] = None
     like_count: int = 0
     liked_by_me: bool = False
+    share_allowed: bool = False
+    share_count: int = 0
     member: Optional[AuthorOut] = None
     comments: list[CommentOut] = []
     attachments: list[AttachmentOut] = []
@@ -239,6 +262,8 @@ class PostSummary(BaseModel):
     category: Optional[str] = None
     like_count: int = 0
     liked_by_me: bool = False
+    share_allowed: bool = False
+    share_count: int = 0
     member: Optional[AuthorOut] = None
 
     class Config:
@@ -1643,6 +1668,31 @@ def toggle_post_like(
     return out
 
 
+class ShareCountOut(BaseModel):
+    share_count: int
+
+
+@router.post("/api/boards/{slug}/posts/{post_id}/share", response_model=ShareCountOut)
+def increment_share_count(
+    slug: str,
+    post_id: int,
+    db: Session = Depends(get_db),
+):
+    """공유 버튼 클릭 시 카운트 +1. 인증 불필요(외부 공유 행위라 비로그인도 가능).
+    게시판 share_enabled + 글 share_allowed 모두 true일 때만 카운트 증가."""
+    board = _get_board_or_404(slug, db)
+    if not getattr(board, "share_enabled", True):
+        raise HTTPException(status_code=403, detail="이 게시판은 공유 기능을 사용하지 않습니다.")
+    post = db.query(Post).filter(Post.id == post_id, Post.board_id == board.id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    if not getattr(post, "share_allowed", False):
+        raise HTTPException(status_code=403, detail="작성자가 공유를 허용하지 않은 글입니다.")
+    post.share_count = (post.share_count or 0) + 1
+    db.commit()
+    return ShareCountOut(share_count=post.share_count)
+
+
 @router.put("/api/boards/{slug}/posts/{post_id}", response_model=PostOut)
 def update_post(
     slug: str,
@@ -1654,7 +1704,8 @@ def update_post(
     from app.core.admin_log import log_action
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
-    if current and post.member_id != current.id and board.moderator_id != current.id:
+    is_delegated_admin = bool(current and getattr(current, "is_admin", False))
+    if current and not is_delegated_admin and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
     is_admin_action = current is None  # get_current_author 가 슈퍼관리자면 None
     is_other_user_action = current is not None and post.member_id != current.id
@@ -1664,6 +1715,7 @@ def update_post(
     post.intention_kind = body.intention_kind
     post.intention_for = body.intention_for
     post.category = body.category
+    post.share_allowed = body.share_allowed
     db.commit()
     # admin / moderator 가 다른 사용자의 글을 수정한 경우만 감사 기록
     if is_admin_action or is_other_user_action:
@@ -1694,8 +1746,9 @@ def pin_post(
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
     is_super = current is None
+    is_delegated_admin = bool(current and getattr(current, "is_admin", False))
     is_moderator = current is not None and board.moderator_id == current.id
-    if not (is_super or is_moderator):
+    if not (is_super or is_delegated_admin or is_moderator):
         raise HTTPException(status_code=403, detail="고정 권한이 없습니다. 관리자만 변경할 수 있습니다.")
     post.is_pinned = bool(body.is_pinned)
     db.commit()
@@ -1724,7 +1777,8 @@ def delete_post(
     from app.core.admin_log import log_action
     board = _get_board_or_404(slug, db)
     post = _get_post_or_404(slug, post_id, db)
-    if current and post.member_id != current.id and board.moderator_id != current.id:
+    is_delegated_admin = bool(current and getattr(current, "is_admin", False))
+    if current and not is_delegated_admin and post.member_id != current.id and board.moderator_id != current.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 삭제할 수 있습니다.")
     is_admin_action = current is None
     is_other_user_action = current is not None and post.member_id != current.id
@@ -1780,7 +1834,8 @@ def update_comment(
     comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
-    if comment.member_id != current.id:
+    is_operator = bool(getattr(current, "is_admin", False))  # 운영자(is_admin=True 회원) — 모든 댓글 수정 가능
+    if comment.member_id != current.id and not is_operator:
         raise HTTPException(status_code=403, detail="본인 댓글만 수정할 수 있습니다.")
     if not body.content.strip():
         raise HTTPException(status_code=400, detail="댓글 내용을 입력해 주세요.")
@@ -1800,7 +1855,8 @@ def delete_comment(
     comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
-    if comment.member_id != current.id:
+    is_operator = bool(getattr(current, "is_admin", False))  # 운영자(is_admin=True 회원) — 모든 댓글 삭제 가능
+    if comment.member_id != current.id and not is_operator:
         raise HTTPException(status_code=403, detail="본인 댓글만 삭제할 수 있습니다.")
     db.delete(comment)
     db.commit()

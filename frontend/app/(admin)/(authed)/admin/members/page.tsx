@@ -5,7 +5,7 @@ import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useRouter } from "next/navigation";
 
-const API = "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Member {
   id: number;
@@ -44,6 +44,9 @@ export default function AdminMembersPage() {
   const [page, setPage] = useState(1);
   const [processing, setProcessing] = useState<Record<number, boolean>>({});
   const [isSuper, setIsSuper] = useState(false);
+  // 본인 행 보호 — admin_token 이 운영자(role=member) JWT 이면 sub 가 자기 member id.
+  // 슈퍼관리자는 Admin 테이블이라 Member 목록에 등장하지 않음(보호 불요).
+  const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -57,6 +60,13 @@ export default function AdminMembersPage() {
 
   useEffect(() => {
     setIsSuper(localStorage.getItem("admin_is_super") === "true");
+    try {
+      const t = localStorage.getItem("admin_token");
+      if (t) {
+        const payload = JSON.parse(atob(t.split(".")[1]));
+        if (payload?.role === "member") setCurrentMemberId(Number(payload.sub));
+      }
+    } catch {}
   }, []);
 
   const fetchMembers = useCallback(async () => {
@@ -148,7 +158,7 @@ export default function AdminMembersPage() {
 
   async function toggleAdminRole(member: Member) {
     const action = member.is_admin ? "revoke-admin" : "grant-admin";
-    const label = member.is_admin ? "관리 권한을 회수" : "관리 권한을 부여";
+    const label = member.is_admin ? "운영자 권한을 회수" : "운영자 권한을 부여";
     const needsPwWarning = !member.is_admin && member.social_provider && !member.has_password;
     const confirmMsg = needsPwWarning
       ? `"${member.nickname}" 회원에게 ${label}하시겠습니까?\n\n⚠️ 소셜 로그인 전용 계정입니다. 관리자 패널 로그인은 해당 회원이 비밀번호를 설정한 후에 가능합니다.`
@@ -381,6 +391,7 @@ export default function AdminMembersPage() {
               <div className="divide-y divide-[var(--color-border)]">
                 {data.items.map((member) => (
                   <MemberRow
+                    isSelf={currentMemberId !== null && member.id === currentMemberId}
                     key={member.id}
                     member={member}
                     processing={!!processing[member.id]}
@@ -441,6 +452,7 @@ function MemberRow({
   member,
   processing,
   isSuper,
+  isSelf,
   isSelected,
   onSelect,
   onToggle,
@@ -451,6 +463,7 @@ function MemberRow({
   member: Member;
   processing: boolean;
   isSuper: boolean;
+  isSelf: boolean;
   isSelected: boolean;
   onSelect: () => void;
   onToggle: () => void;
@@ -458,6 +471,7 @@ function MemberRow({
   onResetPassword: () => void;
   onDelete: () => void;
 }) {
+  const selfBlockedTitle = "자신에게는 적용할 수 없습니다.";
   return (
     <div className={`grid grid-cols-1 md:grid-cols-[auto_2fr_2fr_1fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 items-center transition-colors ${isSelected ? "bg-red-50/30" : "hover:bg-[var(--color-surface-warm)]"}`}>
       <input
@@ -470,7 +484,13 @@ function MemberRow({
       {/* 회원 */}
       <div className="flex items-center gap-3">
         {member.avatar_url ? (
-          <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+          /* 자체 업로드(상대 경로 /uploads/...)면 API 호스트를 prepend.
+             소셜 아바타(http로 시작)는 그대로 사용. */
+          <img
+            src={member.avatar_url.startsWith("http") ? member.avatar_url : `${API}${member.avatar_url}`}
+            alt=""
+            className="w-8 h-8 rounded-full object-cover"
+          />
         ) : (
           <div className="w-8 h-8 rounded-full bg-[var(--color-border)] flex items-center justify-center text-xs text-[var(--color-text-muted)] font-medium">
             {member.nickname[0]}
@@ -480,7 +500,7 @@ function MemberRow({
           <div className="flex items-center gap-1.5 flex-wrap">
             <p className="text-sm font-medium">{member.nickname}</p>
             {member.is_admin && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">관리자</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">운영자</span>
             )}
             {member.is_admin && !member.has_password && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium" title="관리자 패널 로그인을 위해 비밀번호 설정 필요">
@@ -525,20 +545,22 @@ function MemberRow({
         {isSuper && (
           <button
             onClick={onToggleAdmin}
-            disabled={processing}
-            className={`text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap border ${
+            disabled={processing || isSelf}
+            title={isSelf ? selfBlockedTitle : undefined}
+            className={`text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap border ${
               member.is_admin
                 ? "border-amber-300 text-amber-700 hover:bg-amber-50"
                 : "border-blue-200 text-blue-600 hover:bg-blue-50"
             }`}
           >
-            {member.is_admin ? "권한 회수" : "관리자 지정"}
+            {member.is_admin ? "권한 회수" : "운영자 지정"}
           </button>
         )}
         <button
           onClick={onToggle}
-          disabled={processing}
-          className="text-xs px-3 py-1.5 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface-warm)] disabled:opacity-50 transition-colors whitespace-nowrap"
+          disabled={processing || isSelf}
+          title={isSelf ? selfBlockedTitle : undefined}
+          className="text-xs px-3 py-1.5 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface-warm)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
           {processing ? "…" : member.is_active ? "비활성화" : "활성화"}
         </button>
@@ -551,8 +573,9 @@ function MemberRow({
         </button>
         <button
           onClick={onDelete}
-          disabled={processing}
-          className="text-xs px-3 py-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+          disabled={processing || isSelf}
+          title={isSelf ? selfBlockedTitle : undefined}
+          className="text-xs px-3 py-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           삭제
         </button>

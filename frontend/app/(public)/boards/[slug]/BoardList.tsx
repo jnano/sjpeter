@@ -27,7 +27,7 @@ function VideoBadge({ inline = false }: { inline?: boolean }) {
   );
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
   id: number;
@@ -41,21 +41,24 @@ function avatarSrc(url: string | null | undefined): string | null {
   return `${API}${url}`;
 }
 
-function AuthorChip({ author, size = "sm" }: { author: Author | null; size?: "sm" | "md" }) {
+function AuthorChip({ author, size = "sm", nameFirst = false }: { author: Author | null; size?: "sm" | "md"; nameFirst?: boolean }) {
   const dim = size === "md" ? "w-6 h-6" : "w-5 h-5";
   const src = avatarSrc(author?.avatar_url ?? null);
   const initial = (author?.nickname ?? "성").slice(0, 1);
+  const avatar = (
+    <span className={`${dim} rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden shrink-0`}>
+      {src ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={src} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{initial}</span>
+      )}
+    </span>
+  );
+  const name = <span className="truncate">{author?.nickname ?? "성당"}</span>;
   return (
     <span className="inline-flex items-center gap-1.5 min-w-0">
-      <span className={`${dim} rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden shrink-0`}>
-        {src ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={src} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{initial}</span>
-        )}
-      </span>
-      <span className="truncate">{author?.nickname ?? "성당"}</span>
+      {nameFirst ? <>{name}{avatar}</> : <>{avatar}{name}</>}
     </span>
   );
 }
@@ -67,6 +70,7 @@ interface Post {
   view_count: number;
   comment_count: number;
   like_count?: number;
+  share_count?: number;
   created_at: string;
   thumbnail_url: string | null;
   has_video?: boolean;
@@ -80,6 +84,8 @@ export interface BoardCols {
   list_show_views: boolean;
   list_show_likes: boolean;
   list_show_comments: boolean;
+  list_show_shares: boolean;
+  share_enabled: boolean;
 }
 
 interface Props {
@@ -87,7 +93,7 @@ interface Props {
   slug: string;
   currentPage: number;
   totalPages: number;
-  currentView: "list" | "photo";
+  currentView: "list" | "photo" | "card";
   cols: BoardCols;
   currentQ?: string;
   currentSort?: string;
@@ -134,6 +140,8 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
         </div>
       ) : currentView === "list" ? (
         <ListView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
+      ) : currentView === "card" ? (
+        <CardView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
       ) : (
         <PhotoView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
       )}
@@ -190,11 +198,6 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
             {post.has_video && <VideoBadge inline />}
           </span>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
-            {cols.list_show_author && (
-              <span className="hidden sm:inline-flex">
-                <AuthorChip author={post.member} />
-              </span>
-            )}
             {cols.list_show_date && (
               <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
             )}
@@ -204,10 +207,82 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
             {cols.list_show_likes && (
               <span className="hidden sm:inline" title="좋아요">♡ {post.like_count ?? 0}</span>
             )}
+            {cols.list_show_shares && cols.share_enabled && (
+              <span className="hidden sm:inline" title="공유">🔗 {post.share_count ?? 0}</span>
+            )}
+            {cols.list_show_author && (
+              <span className="hidden sm:inline-flex">
+                <AuthorChip author={post.member} nameFirst />
+              </span>
+            )}
           </div>
         </Link>
       ))}
     </div>
+  );
+}
+
+// 카드 뷰 — admin 글 관리 패널의 행 디자인 차용. 체크박스·관리 액션 제거.
+// 좌측 썸네일, 가운데 제목+메타(날짜·댓글·조회·좋아요), 우측 작성자(아바타+닉네임).
+function CardView({ posts, slug: _slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
+  return (
+    <ul className="space-y-1.5">
+      {posts.map((post) => {
+        const dateLabel = new Date(post.created_at).toLocaleDateString("ko-KR");
+        const metaParts: string[] = [];
+        if (cols.list_show_date) metaParts.push(dateLabel);
+        if (cols.list_show_comments && post.comment_count > 0) metaParts.push(`댓글 ${post.comment_count}`);
+        if (cols.list_show_views) metaParts.push(`조회 ${post.view_count}`);
+        if (cols.list_show_likes) metaParts.push(`♡ ${post.like_count ?? 0}`);
+        if (cols.list_show_shares && cols.share_enabled) metaParts.push(`🔗 ${post.share_count ?? 0}`);
+        const metaText = metaParts.join(" · ");
+        return (
+          <li
+            key={post.id}
+            className="bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 hover:border-[var(--color-primary)] transition-colors"
+          >
+            <Link href={hrefFor(post.id)} className="flex items-center gap-3 hover:text-[var(--color-primary)]">
+              {post.thumbnail_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={`${API}${post.thumbnail_url}`} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
+              ) : (
+                <span className="w-10 h-10 flex items-center justify-center bg-[var(--color-surface-warm)] rounded shrink-0 text-base">
+                  {post.has_video ? "🎬" : "📄"}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium flex items-center gap-1.5 min-w-0">
+                  {post.is_pinned && (
+                    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded font-semibold shrink-0">
+                      📌 고정
+                    </span>
+                  )}
+                  {!post.member && <AiBadge />}
+                  <span className="truncate">{post.title}</span>
+                  {cols.list_show_comments && post.comment_count > 0 && (
+                    <span className="text-[var(--color-primary)] text-xs shrink-0">[{post.comment_count}]</span>
+                  )}
+                  {post.thumbnail_url && (
+                    <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
+                  )}
+                  {post.has_video && <VideoBadge inline />}
+                </div>
+                {metaText && (
+                  <div className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
+                    {metaText}
+                  </div>
+                )}
+              </div>
+              {cols.list_show_author && (
+                <div className="text-xs text-[var(--color-text-muted)] shrink-0">
+                  <AuthorChip author={post.member} size="md" nameFirst />
+                </div>
+              )}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

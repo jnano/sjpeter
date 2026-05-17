@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 
 /**
  * 인증된 세션이 마운트되면 백엔드 /api/members/me 를 통해 is_admin 최신값을 NextAuth 토큰에 동기화.
- * 위임 관리자 권한이 부여/회수된 경우 재로그인 없이 즉시 반영하기 위한 컴포넌트.
+ * 운영자 권한이 부여/회수된 경우 재로그인 없이 즉시 반영하기 위한 컴포넌트.
  * 실제 is_admin 값 갱신은 auth.ts의 jwt callback (trigger==="update")에서 백엔드 재조회로 수행.
  *
  * 주의: NextAuth의 `update` 함수 reference는 매 렌더마다 새로 생성될 수 있어

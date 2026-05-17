@@ -57,7 +57,7 @@ def get_current_admin(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ):
-    """슈퍼 관리자(admin) 또는 위임 관리자(is_admin=True 회원) 모두 허용."""
+    """슈퍼 관리자(admin) 또는 운영자(is_admin=True 회원) 모두 허용."""
     from app.models.admin import Admin
     from app.models.member import Member
 

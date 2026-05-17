@@ -44,6 +44,12 @@ interface Board {
   list_show_views: boolean;
   list_show_likes: boolean;
   list_show_comments: boolean;
+  list_show_shares: boolean;
+  show_view_list: boolean;
+  show_view_card: boolean;
+  show_view_photo: boolean;
+  show_search_form: boolean;
+  share_enabled: boolean;
   moderator: Moderator | null;
   admin_group_id: number | null;
   allowed_members: AllowedMember[];
@@ -62,6 +68,14 @@ const LIST_COLUMN_LABELS: { key: keyof Board; label: string }[] = [
   { key: "list_show_views",    label: "조회수" },
   { key: "list_show_likes",    label: "좋아요수" },
   { key: "list_show_comments", label: "댓글수" },
+  { key: "list_show_shares",   label: "공유수" },
+];
+
+// 공개 페이지 뷰 토글 노출 여부 — 모두 false면 list 폴백, 1개만 true면 토글 자체 숨김
+const VIEW_OPTION_LABELS: { key: keyof Board; label: string }[] = [
+  { key: "show_view_list",  label: "목록" },
+  { key: "show_view_card",  label: "카드" },
+  { key: "show_view_photo", label: "사진" },
 ];
 
 function getAccessMode(b: Board): AccessMode {
@@ -927,6 +941,11 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
   const [listShow, setListShow] = useState<Set<string>>(
     () => new Set(LIST_COLUMN_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)),
   );
+  const [viewShow, setViewShow] = useState<Set<string>>(
+    () => new Set(VIEW_OPTION_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)),
+  );
+  const [showSearchForm, setShowSearchForm] = useState<boolean>(board.show_search_form ?? true);
+  const [shareEnabled, setShareEnabled] = useState<boolean>(board.share_enabled ?? true);
   const [allowedMembers, setAllowedMembers] = useState<AllowedMember[]>(board.allowed_members ?? []);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -941,8 +960,11 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
     setShowInMenu(board.show_in_menu ?? true);
     setPostsPerPage(board.posts_per_page);
     setListShow(new Set(LIST_COLUMN_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)));
+    setViewShow(new Set(VIEW_OPTION_LABELS.filter((c) => board[c.key]).map((c) => c.key as string)));
+    setShowSearchForm(board.show_search_form ?? true);
+    setShareEnabled(board.share_enabled ?? true);
     setAllowedMembers(board.allowed_members ?? []);
-  }, [board.name, board.description, board.kind, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members, board.list_show_number, board.list_show_author, board.list_show_date, board.list_show_views, board.list_show_likes, board.list_show_comments]);
+  }, [board.name, board.description, board.kind, board.members_only_read, board.members_only_write, board.members_selected, board.moderator_only_write, board.moderator, board.exclude_from_search, board.show_in_menu, board.posts_per_page, board.allowed_members, board.list_show_number, board.list_show_author, board.list_show_date, board.list_show_views, board.list_show_likes, board.list_show_comments, board.list_show_shares, board.show_view_list, board.show_view_card, board.show_view_photo, board.show_search_form, board.share_enabled]);
 
   async function save() {
     setSaving(true);
@@ -967,6 +989,12 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
           list_show_views: listShow.has("list_show_views"),
           list_show_likes: listShow.has("list_show_likes"),
           list_show_comments: listShow.has("list_show_comments"),
+          list_show_shares: listShow.has("list_show_shares"),
+          show_view_list: viewShow.has("show_view_list"),
+          show_view_card: viewShow.has("show_view_card"),
+          show_view_photo: viewShow.has("show_view_photo"),
+          show_search_form: showSearchForm,
+          share_enabled: shareEnabled,
         }),
       });
       if (res.ok) {
@@ -1166,6 +1194,51 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
               {c.label}
             </label>
           ))}
+        </div>
+
+        {/* 뷰 토글 노출 — 공개 페이지에서 어떤 뷰 버튼을 보일지 게시판별 선택.
+            모두 끄면 list 폴백, 1개만 켜면 토글 자체 숨김(공개 페이지가 자동 처리). */}
+        <div className="w-full flex flex-wrap items-center gap-x-4 gap-y-1 text-sm border-t border-gray-200 pt-3 mt-1">
+          <span className="text-xs font-semibold text-gray-600">뷰 선택지:</span>
+          {VIEW_OPTION_LABELS.map((c) => (
+            <label key={c.key as string} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={viewShow.has(c.key as string)}
+                onChange={(e) => {
+                  setViewShow((prev) => {
+                    const next = new Set(prev);
+                    if (e.target.checked) next.add(c.key as string);
+                    else next.delete(c.key as string);
+                    return next;
+                  });
+                }}
+                className="rounded"
+              />
+              {c.label}
+            </label>
+          ))}
+          <span className="text-[11px] text-gray-400 ml-2">
+            모두 끄면 목록만 노출, 하나만 켜면 토글 자체 숨김
+          </span>
+          <label className="flex items-center gap-1.5 cursor-pointer ml-auto">
+            <input
+              type="checkbox"
+              checked={showSearchForm}
+              onChange={(e) => setShowSearchForm(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-xs font-semibold text-gray-600">검색폼 표시</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={shareEnabled}
+              onChange={(e) => setShareEnabled(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-xs font-semibold text-gray-600">공유 기능 사용</span>
+          </label>
         </div>
 
         <div className="ml-auto flex items-center gap-3 w-full justify-end">

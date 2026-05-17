@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataEvent, notify } from "@/components/dataEvents";
 
-const API = "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 const LITURGICAL_SEASONS = [
   "대림 제1주일", "대림 제2주일", "대림 제3주일", "대림 제4주일",

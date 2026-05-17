@@ -42,6 +42,7 @@ interface BoardInfo {
   name: string;
   slug: string;
   moderator_id: number | null;
+  share_enabled?: boolean;
 }
 
 interface Post {
@@ -57,6 +58,8 @@ interface Post {
   board: BoardInfo | null;
   like_count?: number;
   liked_by_me?: boolean;
+  share_allowed?: boolean;
+  share_count?: number;
 }
 
 interface NeighborItem {
@@ -97,6 +100,7 @@ function Avatar({ author, size = 24 }: { author: Author | null; size?: number })
 interface CommentItemProps {
   comment: Comment;
   myId: number | null;
+  isOperator: boolean;  // admin/운영자 — 타인 댓글도 수정·삭제 가능
   editingId: number | null;
   editContent: string;
   replyingTo: number | null;
@@ -114,12 +118,13 @@ interface CommentItemProps {
 }
 
 function CommentItem({
-  comment, myId, editingId, editContent, replyingTo, replyContent,
+  comment, myId, isOperator, editingId, editContent, replyingTo, replyContent,
   submitting, session,
   onStartEdit, onSaveEdit, onCancelEdit, onDeleteComment, onSetEditContent,
   onReplyingTo, onSetReplyContent, onSubmitReply,
 }: CommentItemProps) {
   const isAuthor = myId !== null && comment.member.id === myId;
+  const canManage = isAuthor || isOperator;
   const isEditing = editingId === comment.id;
   const isReplying = replyingTo === comment.id;
 
@@ -141,7 +146,7 @@ function CommentItem({
                 답글
               </button>
             )}
-            {isAuthor && !isEditing && (
+            {canManage && !isEditing && (
               <>
                 <button onClick={() => onStartEdit(comment)} className="hover:text-[var(--color-primary)] transition-colors">수정</button>
                 <button onClick={() => onDeleteComment(comment.id)} className="hover:text-red-500 transition-colors">삭제</button>
@@ -204,7 +209,7 @@ function CommentItem({
                 </span>
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                   <span>{new Date(reply.created_at).toLocaleDateString("ko-KR")}</span>
-                  {myId !== null && reply.member.id === myId && (
+                  {(isOperator || (myId !== null && reply.member.id === myId)) && (
                     <button onClick={() => onDeleteComment(reply.id)} className="hover:text-red-500 transition-colors">삭제</button>
                   )}
                 </div>
@@ -246,6 +251,9 @@ export default function PostDetail({
   const [likeCount, setLikeCount] = useState<number>(post.like_count ?? 0);
   const [likedByMe, setLikedByMe] = useState<boolean>(post.liked_by_me ?? false);
   const [likeBusy, setLikeBusy] = useState(false);
+  const [shareCount, setShareCount] = useState<number>(post.share_count ?? 0);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareToast, setShareToast] = useState<string>("");
   // admin 토큰이 있으면 admin 으로 인식 — 공개 페이지에서도 글 수정·삭제 허용
   const [adminToken, setAdminToken] = useState<string | null>(null);
   useEffect(() => {
@@ -257,12 +265,56 @@ export default function PostDetail({
     } catch {}
   }, []);
 
-  const isAdmin = !!adminToken;
+  // 슈퍼관리자(admin 토큰) OR 운영자(session.isAdmin) — 권한 동등
+  const isDelegatedAdmin = !!(session as { isAdmin?: boolean } | null)?.isAdmin;
+  const isAdmin = !!adminToken || isDelegatedAdmin;
   // 글 수정·삭제·첨부 — admin 토큰 우선
   const authHeader = { Authorization: `Bearer ${adminToken ?? session?.accessToken ?? ""}` };
   // 댓글·좋아요는 백엔드가 회원 인증만 허용 — admin 토큰 거부됨(403)
   const memberAuthHeader = { Authorization: `Bearer ${session?.accessToken ?? ""}` };
   const myId = session?.memberId ?? null;
+
+  async function handleShare() {
+    if (shareBusy) return;
+    setShareBusy(true);
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/boards/${slug}/${post.id}`;
+    const title = post.title;
+    let ok = false;
+    try {
+      const nav = typeof window !== "undefined" ? (window.navigator as Navigator & { share?: (d: ShareData) => Promise<void> }) : null;
+      if (nav?.share) {
+        await nav.share({ title, url });
+        ok = true;
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setShareToast("링크가 복사되었습니다");
+        ok = true;
+      }
+    } catch (err) {
+      // Web Share API에서 사용자가 취소(AbortError)하면 카운트 증가시키지 않음
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      if (!isAbort) {
+        setShareToast("공유에 실패했습니다");
+      }
+    }
+    if (ok) {
+      try {
+        const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/share`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          setShareCount(data.share_count ?? shareCount + 1);
+        }
+      } catch {}
+    }
+    setShareBusy(false);
+  }
+
+  // 공유 토스트 자동 사라짐
+  useEffect(() => {
+    if (!shareToast) return;
+    const t = setTimeout(() => setShareToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [shareToast]);
 
   async function toggleLike() {
     if (!session?.accessToken) {
@@ -385,6 +437,70 @@ export default function PostDetail({
     }
   }
 
+  // admin/운영자 전용: 다른 게시판으로 이동 — admin/boards 패널과 동일한 prompt 패턴
+  async function movePost() {
+    const r = await fetch(`${API}/api/boards`);
+    const allBoards: { slug: string; name: string; is_active: boolean }[] = r.ok ? await r.json() : [];
+    const candidates = allBoards.filter((b) => b.slug !== slug && b.is_active);
+    if (candidates.length === 0) { alert("이동 가능한 다른 게시판이 없습니다."); return; }
+    const lines = candidates.map((b, i) => `${i + 1}. ${b.name} (${b.slug})`).join("\n");
+    const answer = window.prompt(`「${post.title}」을(를) 어느 게시판으로 이동할까요?\n번호 또는 slug 입력.\n\n${lines}`);
+    if (!answer) return;
+    const num = parseInt(answer);
+    const target = Number.isFinite(num) && num >= 1 && num <= candidates.length
+      ? candidates[num - 1]
+      : candidates.find((b) => b.slug === answer.trim());
+    if (!target) { alert("올바른 게시판을 선택하세요."); return; }
+    const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/move`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeader },
+      body: JSON.stringify({ target_slug: target.slug }),
+    });
+    if (res.ok) {
+      router.push(`/boards/${target.slug}/${post.id}`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.detail || "이동에 실패했습니다.");
+    }
+  }
+
+  // admin/운영자 전용: 다중 게시판 복사
+  async function copyPost() {
+    const r = await fetch(`${API}/api/boards`);
+    const allBoards: { slug: string; name: string; is_active: boolean }[] = r.ok ? await r.json() : [];
+    const candidates = allBoards.filter((b) => b.slug !== slug && b.is_active);
+    if (candidates.length === 0) { alert("복사 가능한 다른 게시판이 없습니다."); return; }
+    const lines = candidates.map((b, i) => `${i + 1}. ${b.name} (${b.slug})`).join("\n");
+    const answer = window.prompt(`「${post.title}」을(를) 어느 게시판들로 복사할까요?\n번호 또는 slug를 콤마로 구분.\n예: 1,3 또는 notice,free\n\n${lines}`);
+    if (!answer) return;
+    const tokens = answer.split(",").map((s) => s.trim()).filter(Boolean);
+    const target_slugs: string[] = [];
+    for (const tok of tokens) {
+      const n = parseInt(tok);
+      const t = Number.isFinite(n) && n >= 1 && n <= candidates.length
+        ? candidates[n - 1]
+        : candidates.find((b) => b.slug === tok);
+      if (t) target_slugs.push(t.slug);
+    }
+    if (target_slugs.length === 0) { alert("올바른 게시판을 선택하세요."); return; }
+    const res = await fetch(`${API}/api/boards/${slug}/posts/${post.id}/copy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader },
+      body: JSON.stringify({ target_slugs }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const created = data.created ?? [];
+      const failed = data.failed ?? [];
+      let msg = `${created.length}건 복사 완료`;
+      if (failed.length > 0) msg += `\n실패 ${failed.length}건: ${failed.map((f: { slug: string; reason: string }) => `${f.slug}(${f.reason})`).join(", ")}`;
+      alert(msg);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.detail || "복사에 실패했습니다.");
+    }
+  }
+
   return (
     <>
       {/* 제목 + 메타 */}
@@ -454,8 +570,28 @@ export default function PostDetail({
         );
       })()}
 
-      {/* 액션 바 */}
+      {/* 액션 바 — 권한별 노출:
+          이동·복사: admin/운영자만
+          수정·삭제: admin/운영자/게시판관리자/작성자 */}
       <div className="flex justify-end gap-2 mb-8 pt-4 border-t border-[var(--color-border)]">
+        {isAdmin && (
+          <>
+            <button
+              onClick={movePost}
+              className="px-4 py-1.5 border border-[var(--color-border)] text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors text-[var(--color-text-muted)]"
+              title="다른 게시판으로 이동"
+            >
+              이동
+            </button>
+            <button
+              onClick={copyPost}
+              className="px-4 py-1.5 border border-blue-200 text-xs font-medium rounded-lg hover:bg-blue-50 transition-colors text-blue-600"
+              title="다중 게시판으로 복사"
+            >
+              복사
+            </button>
+          </>
+        )}
         {canEditPost && (
           <>
             <Link
@@ -480,8 +616,8 @@ export default function PostDetail({
         </Link>
       </div>
 
-      {/* 추천 버튼 */}
-      <div className="flex justify-center my-6">
+      {/* 추천·공유 버튼 — 공유 버튼은 게시판 share_enabled && 글 share_allowed 일 때만 노출 */}
+      <div className="flex justify-center my-6 gap-3 relative">
         <button
           type="button"
           onClick={toggleLike}
@@ -497,6 +633,27 @@ export default function PostDetail({
           <span className="text-sm font-medium">추천</span>
           <span className="text-sm font-bold tabular-nums">{likeCount}</span>
         </button>
+        {post.board?.share_enabled && post.share_allowed && (
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={shareBusy}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 bg-white text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all ${shareBusy ? "opacity-60 cursor-wait" : ""}`}
+            aria-label="공유"
+          >
+            <span aria-hidden>🔗</span>
+            <span className="text-sm font-medium">공유</span>
+            <span className="text-sm font-bold tabular-nums">{shareCount}</span>
+          </button>
+        )}
+        {shareToast && (
+          <span
+            role="status"
+            className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-xs bg-[var(--color-text)] text-white px-3 py-1.5 rounded-full whitespace-nowrap shadow"
+          >
+            {shareToast}
+          </span>
+        )}
       </div>
 
       {/* 이전·다음 글 네비 */}
@@ -548,6 +705,7 @@ export default function PostDetail({
               key={comment.id}
               comment={comment}
               myId={myId}
+              isOperator={isAdmin}
               editingId={editingId}
               editContent={editContent}
               replyingTo={replyingTo}

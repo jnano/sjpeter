@@ -9,7 +9,7 @@ import SectionLayout from "@/components/SectionLayout";
 // admin에서 변경한 게시판/게시글이 새로고침 없이 반영되도록
 export const dynamic = "force-dynamic";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
   id: number;
@@ -50,6 +50,12 @@ interface Board {
   list_show_views: boolean;
   list_show_likes: boolean;
   list_show_comments: boolean;
+  show_view_list: boolean;
+  show_view_card: boolean;
+  show_view_photo: boolean;
+  show_search_form: boolean;
+  list_show_shares: boolean;
+  share_enabled: boolean;
 }
 
 async function getBoard(slug: string): Promise<Board | null> {
@@ -105,8 +111,11 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "comments", label: "댓글순" },
 ];
 
-// ViewToggle 제거 — 일반 게시판은 텍스트 목록만, 사진 그리드는 board.kind='gallery'
-// 게시판에서 /gallery/{slug} 로 분리됨 (v1.5.72).
+const VIEW_OPTIONS: { value: "list" | "card" | "photo"; label: string }[] = [
+  { value: "list",  label: "목록" },
+  { value: "card",  label: "카드" },
+  { value: "photo", label: "사진" },
+];
 
 export default async function BoardPage({
   params,
@@ -118,7 +127,8 @@ export default async function BoardPage({
   const { slug } = await params;
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
-  const currentView = sp.view === "photo" ? "photo" : "list";
+  const requestedView: "list" | "card" | "photo" =
+    sp.view === "photo" ? "photo" : sp.view === "card" ? "card" : "list";
   const q = (sp.q ?? "").trim();
   const sort = SORT_OPTIONS.some((o) => o.value === sp.sort) ? sp.sort! : "latest";
   const category = (sp.category ?? "").trim();
@@ -126,6 +136,15 @@ export default async function BoardPage({
   const [board, session] = await Promise.all([getBoard(slug), auth()]);
 
   if (!board) notFound();
+
+  // 활성 뷰 계산 — admin 토글이 켠 뷰들. 모두 꺼지면 list 폴백.
+  const activeViews = VIEW_OPTIONS.filter((v) => {
+    if (v.value === "list") return board.show_view_list;
+    if (v.value === "card") return board.show_view_card;
+    return board.show_view_photo;
+  });
+  const fallbackView = activeViews[0]?.value ?? "list";
+  const currentView = activeViews.some((v) => v.value === requestedView) ? requestedView : fallbackView;
 
   if (board.members_only_read && !session) {
     return (
@@ -247,32 +266,34 @@ export default async function BoardPage({
 
         {/* 게시판 자체 검색 + 정렬 */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
-            {currentView !== "list" && <input type="hidden" name="view" value={currentView} />}
-            {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
-            {category && <input type="hidden" name="category" value={category} />}
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="제목·본문 검색"
-              className="flex-1 min-w-0 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[var(--color-primary)]"
-            />
-            {q && (
-              <Link
-                href={`/boards/${slug}${currentView !== "list" ? `?view=${currentView}` : ""}`}
-                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
+          {board.show_search_form && (
+            <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
+              {currentView !== "list" && <input type="hidden" name="view" value={currentView} />}
+              {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
+              {category && <input type="hidden" name="category" value={category} />}
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                placeholder="제목·본문 검색"
+                className="flex-1 min-w-0 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[var(--color-primary)]"
+              />
+              {q && (
+                <Link
+                  href={`/boards/${slug}${currentView !== "list" ? `?view=${currentView}` : ""}`}
+                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
+                >
+                  지우기
+                </Link>
+              )}
+              <button
+                type="submit"
+                className="text-xs bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
               >
-                지우기
-              </Link>
-            )}
-            <button
-              type="submit"
-              className="text-xs bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
-            >
-              검색
-            </button>
-          </form>
+                검색
+              </button>
+            </form>
+          )}
           <div className="flex items-center gap-1.5 shrink-0">
             {SORT_OPTIONS.map((o) => {
               const qp = new URLSearchParams();
@@ -297,6 +318,34 @@ export default async function BoardPage({
               );
             })}
           </div>
+          {/* 뷰 형식 토글 — admin이 켠 뷰가 2개 이상일 때만 표시.
+              1개 이하면 선택지가 없으므로 토글 자체를 숨김 (UI 노이즈 제거). */}
+          {activeViews.length >= 2 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {activeViews.map((o) => {
+                const qp = new URLSearchParams();
+                if (q) qp.set("q", q);
+                if (sort !== "latest") qp.set("sort", sort);
+                if (category) qp.set("category", category);
+                if (o.value !== "list") qp.set("view", o.value);
+                const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
+                const active = currentView === o.value;
+                return (
+                  <Link
+                    key={o.value}
+                    href={href}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                      active
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                    }`}
+                  >
+                    {o.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 검색 결과 카운트 */}
@@ -319,6 +368,8 @@ export default async function BoardPage({
             list_show_views: board.list_show_views ?? true,
             list_show_likes: board.list_show_likes ?? false,
             list_show_comments: board.list_show_comments ?? true,
+            list_show_shares: board.list_show_shares ?? false,
+            share_enabled: board.share_enabled ?? true,
           }}
           currentQ={q}
           currentSort={sort}

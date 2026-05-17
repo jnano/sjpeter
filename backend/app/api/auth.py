@@ -25,7 +25,7 @@ class LoginResponse(BaseModel):
 
 
 class AdminLoginRequest(BaseModel):
-    identifier: str   # admin 아이디 또는 위임 관리자 이메일
+    identifier: str   # admin 아이디 또는 운영자 이메일
     password: str
     remember: bool = False  # "로그인 상태 유지" 체크 시 토큰 만료 7일
 
@@ -55,7 +55,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/admin-login", response_model=AdminLoginResponse)
 @limiter.limit("10/minute")
 def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session = Depends(get_db)):
-    """슈퍼 관리자(admin 아이디) 또는 위임 관리자(이메일) 통합 로그인."""
+    """슈퍼 관리자(admin 아이디) 또는 운영자(이메일) 통합 로그인."""
     from app.models.member import Member
 
     # 1. Admin 테이블에서 username 조회

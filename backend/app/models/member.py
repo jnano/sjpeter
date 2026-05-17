@@ -19,7 +19,7 @@ class Member(Base):
     avatar_url = Column(String(500), nullable=True)
 
     is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)   # 위임 관리자 여부
+    is_admin = Column(Boolean, default=False)   # 운영자 여부 (UI 라벨은 "운영자", DB 컬럼명은 호환 유지)
     is_email_verified = Column(Boolean, default=False)
     interest_prompt_completed = Column(Boolean, default=False, nullable=False)  # 관심분과 온보딩 응답 여부
     notify_kakao = Column(Boolean, default=False, nullable=False)               # 카톡 알림 수신 동의 (글로벌)

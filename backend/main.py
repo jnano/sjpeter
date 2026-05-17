@@ -157,6 +157,16 @@ def _migrate_add_columns():
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_views BOOLEAN NOT NULL DEFAULT TRUE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_likes BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_comments BOOLEAN NOT NULL DEFAULT TRUE",
+            # 공개 페이지 뷰 토글 노출 여부 (v1.5.138)
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_view_list BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_view_card BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_view_photo BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS show_search_form BOOLEAN NOT NULL DEFAULT TRUE",
+            # 게시글 공유 기능 (v1.5.140)
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS share_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE boards ADD COLUMN IF NOT EXISTS list_show_shares BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS share_allowed BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS share_count INTEGER NOT NULL DEFAULT 0",
             # posts 한 줄 메시지용 메타 필드
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_kind VARCHAR(20)",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",

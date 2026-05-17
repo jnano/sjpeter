@@ -47,6 +47,12 @@ export default function EditPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  const [boardShareEnabled, setBoardShareEnabled] = useState(false);
+  const [shareAllowed, setShareAllowed] = useState(false);
+  // 기존 글 데이터에서 PUT 시 손실 방지를 위해 보존할 필드
+  const [category, setCategory] = useState<string | null>(null);
+  const [intentionKind, setIntentionKind] = useState<string | null>(null);
+  const [intentionFor, setIntentionFor] = useState<string | null>(null);
   // admin 토큰 인식 — admin 이면 모든 글 수정 허용
   const [adminToken, setAdminToken] = useState<string | null>(null);
   useEffect(() => {
@@ -57,7 +63,8 @@ export default function EditPage() {
       if (t && exp && Date.now() < exp) setAdminToken(t);
     } catch {}
   }, []);
-  const isAdmin = !!adminToken;
+  const isDelegatedAdmin = !!(session as { isAdmin?: boolean } | null)?.isAdmin;
+  const isAdmin = !!adminToken || isDelegatedAdmin;
   const bearerToken = adminToken ?? session?.accessToken ?? "";
 
   useEffect(() => {
@@ -73,6 +80,11 @@ export default function EditPage() {
           setTitle(data.title ?? "");
           setContent(data.content ?? "");
           setExistingAttachments(data.attachments ?? []);
+          setBoardShareEnabled(!!data.board?.share_enabled);
+          setShareAllowed(!!data.share_allowed);
+          setCategory(data.category ?? null);
+          setIntentionKind(data.intention_kind ?? null);
+          setIntentionFor(data.intention_for ?? null);
         }
         setFetching(false);
       });
@@ -126,7 +138,14 @@ export default function EditPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${bearerToken}`,
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({
+          title,
+          content,
+          category,
+          intention_kind: intentionKind,
+          intention_for: intentionFor,
+          share_allowed: boardShareEnabled && shareAllowed,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -341,6 +360,18 @@ export default function EditPage() {
             </p>
           )}
         </div>
+
+        {boardShareEnabled && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={shareAllowed}
+              onChange={(e) => setShareAllowed(e.target.checked)}
+              className="rounded"
+            />
+            <span>이 글의 공유를 허용합니다 <span className="text-xs text-[var(--color-text-muted)]">(다른 사람이 공유 버튼으로 외부에 링크 전달 가능)</span></span>
+          </label>
+        )}
 
         <div className="flex gap-3 justify-end">
           <Link
