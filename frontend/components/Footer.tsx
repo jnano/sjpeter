@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchServerMenus } from "./fetchServerMenus";
+import ReportLink from "./ReportLink";
 import type { MenuItem } from "./useNavigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -171,6 +172,12 @@ export default async function Footer() {
                 </Link>
               ))}
             </nav>
+            <div className="mt-4 text-sm">
+              <ReportLink className="inline-flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
+                <span aria-hidden>🛠️</span>
+                <span>장애 신고</span>
+              </ReportLink>
+            </div>
           </div>
         </div>
 

@@ -103,6 +103,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/pages", label: "동적 페이지" },
       { href: "/admin/season", label: "전례 시기 테마" },
       { href: "/admin/settings", label: "사이트 설정" },
+      { href: "/admin/reports", label: "장애 신고" },
       { href: "/admin/logs", label: "활동 로그" },
       { href: "/admin/docs", label: "기술 문서" },
     ],

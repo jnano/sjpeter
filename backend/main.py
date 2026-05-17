@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
+from app.api import issue_reports
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -52,6 +53,7 @@ app.include_router(menus.router, prefix="/api")
 app.include_router(pages.router, prefix="/api")
 app.include_router(construction.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
+app.include_router(issue_reports.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -1039,6 +1041,28 @@ def _migrate_add_columns():
         # events.event_kind 컬럼 추가 (행사 | 모임 | null)
         conn.execute(text(
             "ALTER TABLE events ADD COLUMN IF NOT EXISTS event_kind VARCHAR(10)"
+        ))
+
+        # 장애 신고 (v1.5.139) — 비회원 가능, 페이지 URL 자동 수집, 운영자가 상태 관리
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS issue_reports (
+                id SERIAL PRIMARY KEY,
+                reporter_member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+                reporter_name VARCHAR(80),
+                reporter_email VARCHAR(200),
+                content TEXT NOT NULL,
+                page_url VARCHAR(500),
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                admin_note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_issue_reports_status ON issue_reports(status)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_issue_reports_created_at ON issue_reports(created_at DESC)"
         ))
 
         conn.commit()
