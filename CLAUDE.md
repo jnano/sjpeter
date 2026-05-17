@@ -19,7 +19,12 @@ cd backend && uvicorn main:app --reload
 
 # 프론트엔드 (포트 3000)
 cd frontend && npm run dev
+
+# Next.js Turbopack 캐시 손상 시 (require is not defined 등) — 한 명령에 처리
+cd frontend && npm run dev:fresh
 ```
+
+**Turbopack 캐시 이슈 자동 복구**: 클로드에게 `/reset-dev` 라고 입력하면 dev server 종료 → `.next` 삭제 → 재시작 자동 수행.
 
 ## 기술 스택
 | 레이어 | 기술 |

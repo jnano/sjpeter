@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.150";
+export const CURRENT_VERSION = "1.5.151";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.151", date: "2026-05-18", tag: "인프라",
+    items: [
+      "Next.js Turbopack 캐시 이슈 (require is not defined) 자동 복구 인프라:",
+      "  · frontend/package.json 에 'dev:fresh' 스크립트 추가 (rm -rf .next && next dev)",
+      "  · ~/.claude/commands/reset-dev.md slash command — /reset-dev 한 단어로 자동 복구",
+      "  · CLAUDE.md 서버 실행 섹션에 캐시 복구 안내 추가",
+    ],
+  },
   {
     version: "1.5.150", date: "2026-05-18", tag: "수정",
     items: [
