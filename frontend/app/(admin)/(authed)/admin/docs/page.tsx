@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.151";
+export const CURRENT_VERSION = "1.5.152";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.152", date: "2026-05-18", tag: "기능",
+    items: [
+      "PDF 추출 사진 분류 선택지를 모든 활성 게시판으로 확장",
+      "  · 기존: 갤러리 메뉴 + 건축 슬라이드 + 무시",
+      "  · 변경: optgroup 으로 '갤러리(📷)' / '게시판(📋)' 분리 표시 + 모든 활성 게시판 노출",
+      "  · ai-extract 등 시스템 전용 게시판은 자동 제외",
+    ],
+  },
   {
     version: "1.5.151", date: "2026-05-18", tag: "인프라",
     items: [
