@@ -208,6 +208,7 @@ export default function ExtractionsPage() {
   }
 
   async function reject(extId: number) {
+    if (!confirm("이 항목을 거부(삭제)할까요? 복구할 수 없습니다.")) return;
     setProcessing((p) => ({ ...p, [extId]: true }));
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${extId}/reject`, {
@@ -215,13 +216,46 @@ export default function ExtractionsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("거부 실패");
-      const updated: Extraction = await res.json();
-      setExtractions((prev) => prev.map((e) => (e.id === extId ? updated : e)));
+      // 백엔드가 행을 삭제하므로 목록에서도 제거
+      setExtractions((prev) => prev.filter((e) => e.id !== extId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(extId);
+        return next;
+      });
       notify(DataEvent.EXTRACTIONS_COUNT);
     } catch (err) {
       setError(err instanceof Error ? err.message : "거부에 실패했습니다.");
     } finally {
       setProcessing((p) => ({ ...p, [extId]: false }));
+    }
+  }
+
+  async function bulkReject() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`선택한 ${ids.length}건을 거부(삭제)할까요? 복구할 수 없습니다.`)) return;
+    setError(""); setInfo("");
+    setBulkProcessing(true);
+    try {
+      const res = await fetch(`${API}/api/bulletins/extractions/bulk-reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ extraction_ids: ids }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "일괄 거부 실패");
+      const result: { deleted: number[]; not_found: number[] } = await res.json();
+      const deletedSet = new Set(result.deleted);
+      setExtractions((prev) => prev.filter((e) => !deletedSet.has(e.id)));
+      setSelectedIds(new Set());
+      notify(DataEvent.EXTRACTIONS_COUNT);
+      const parts = [`거부(삭제) ${result.deleted.length}`];
+      if (result.not_found.length) parts.push(`없음 ${result.not_found.length}`);
+      setInfo(parts.join(" · "));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "일괄 거부에 실패했습니다.");
+    } finally {
+      setBulkProcessing(false);
     }
   }
 
@@ -350,6 +384,13 @@ export default function ExtractionsPage() {
               >
                 {bulkProcessing ? "처리 중…" : "선택 항목 일괄 승인 (자동 라우팅)"}
               </button>
+              <button
+                onClick={bulkReject}
+                disabled={selectedIds.size === 0 || bulkProcessing}
+                className="px-4 py-1.5 border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-40 text-sm font-medium rounded-lg transition-colors"
+              >
+                선택 항목 일괄 거부(삭제)
+              </button>
             </div>
           </div>
         )}
@@ -451,14 +492,8 @@ export default function ExtractionsPage() {
                   key={ext.id}
                   className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-5 py-4 flex items-center gap-3"
                 >
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      ext.status === "approved"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {ext.status === "approved" ? "승인" : "거부"}
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                    승인
                   </span>
                   <span className="text-sm font-medium">{ext.title}</span>
                   {ext.group_name && (

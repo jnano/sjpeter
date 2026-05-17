@@ -844,19 +844,45 @@ def approve_extraction_as_event(
     return ext
 
 
-@router.post("/extractions/{extraction_id}/reject", response_model=ExtractionOut)
+@router.post("/extractions/{extraction_id}/reject")
 def reject_extraction(
     extraction_id: int,
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
+    # 거부 = 즉시 삭제. rejected 행은 어디서도 조회·중복검사에 쓰이지 않아 보존 가치 없음.
     ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
     if not ext:
         raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
-    ext.status = "rejected"
+    db.delete(ext)
     db.commit()
-    db.refresh(ext)
-    return ext
+    return {"deleted": extraction_id}
+
+
+class BulkRejectBody(BaseModel):
+    extraction_ids: list[int]
+
+
+@router.post("/extractions/bulk-reject")
+def bulk_reject_extractions(
+    body: BulkRejectBody,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """여러 추출 항목을 일괄 거부(삭제)."""
+    if not body.extraction_ids:
+        return {"deleted": [], "not_found": []}
+
+    extractions = db.query(BulletinExtraction).filter(
+        BulletinExtraction.id.in_(body.extraction_ids)
+    ).all()
+    found_ids = {ext.id for ext in extractions}
+    not_found = [i for i in body.extraction_ids if i not in found_ids]
+
+    for ext in extractions:
+        db.delete(ext)
+    db.commit()
+    return {"deleted": sorted(found_ids), "not_found": not_found}
 
 
 # ── 헬퍼 ──────────────────────────────────────────────────

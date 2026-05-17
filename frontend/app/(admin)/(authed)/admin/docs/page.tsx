@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.142";
+export const CURRENT_VERSION = "1.5.143";
 export const LAST_UPDATED = "2026-05-17";
 
 // 버전 규칙:
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-17";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.143", date: "2026-05-17", tag: "기능",
+    items: [
+      "AI 추출 거부 = 즉시 삭제로 변경 — rejected status 보존 폐기 (이전 legacy 1건 정리)",
+      "/admin/bulletin/extractions 일괄 거부(삭제) 버튼 추가 — bulk-reject 엔드포인트",
+    ],
+  },
   {
     version: "1.5.142", date: "2026-05-17", tag: "인프라",
     items: ["/admin/docs CHANGELOG v1.5.138~141 동기화 + 백업"],

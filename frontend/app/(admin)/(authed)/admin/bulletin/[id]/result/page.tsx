@@ -157,8 +157,8 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error("거부 실패");
-    const updated: Extraction = await res.json();
-    setExtractions((prev) => prev.map((e) => (e.id === extId ? updated : e)));
+    // 백엔드가 행을 삭제하므로 목록에서도 제거
+    setExtractions((prev) => prev.filter((e) => e.id !== extId));
     notify(DataEvent.EXTRACTIONS_COUNT);
   }
 
@@ -346,9 +346,6 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
                               <span className="text-xs text-green-700 font-medium">
                                 ✓ 사목지표 등록 완료
                               </span>
-                            )}
-                            {ex.event_type === "지표" && ex.status === "rejected" && (
-                              <span className="text-xs text-gray-500">거부됨</span>
                             )}
                           </div>
                           {ex.content && (
