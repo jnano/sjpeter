@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.164";
+export const CURRENT_VERSION = "1.5.165";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.165", date: "2026-05-18", tag: "수정",
+    items: [
+      "AI 추출 데이터 created_at — 항상 주보 발행일(정오)로 저장",
+      "  · 과거 주보를 늦게 등록해도 등록 시점이 created_at 으로 박혀 정렬·표시가 어긋나던 문제 해소",
+      "  · 적용 대상: posts(ai-extract·매핑·갤러리 라우팅·이벤트 카드) · attachments(주보 출신) · events(AI 라우팅·승인) · meditations",
+      "  · 미적용: bulletin_extractions(추출 작업 기록) · visions(created_at 컬럼 없음) · notices(source_bulletin_id 없음, 현재 posts 로 일원화)",
+      "  · 신규 INSERT 7곳에 created_at=published_ts 명시 (2곳은 published_ts 변수 새로 계산)",
+      "  · 기존 데이터 일괄 UPDATE: posts 2건 + attachments 1건 정정. 백업: backups/cathedral_…_pre-ai-created-at-migration.sql",
+    ],
+  },
   {
     version: "1.5.164", date: "2026-05-18", tag: "디자인",
     items: [

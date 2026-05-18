@@ -721,6 +721,7 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
                 content=body_with_source,
                 is_published=False,
                 source_bulletin_id=bulletin.id,
+                created_at=published_ts,
             )
             db.add(post)
             db.flush()
@@ -755,6 +756,7 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
             content=body_with_source,
             is_published=False,
             source_bulletin_id=bulletin.id,
+            created_at=published_ts,
         )
         db.add(post)
         db.flush()
@@ -862,12 +864,15 @@ def approve_extraction(
             f"제{bulletin.issue_number}호" if bulletin and bulletin.issue_number
             else (bulletin.published_date.strftime("%Y.%m.%d") if bulletin else "")
         )
+        # AI 추출 데이터의 created_at 은 주보 발행일(정오)로 — 과거 주보 등록 시 등록 시점이 박혀 혼란 회피
+        published_ts = datetime.combine(bulletin.published_date, time(12, 0)) if bulletin else datetime.utcnow()
         post = Post(
             board_id=board.id, member_id=None,
             title=f"[{issue_label}] {ext.title}" if issue_label else ext.title,
             content=ext.content or "",
             is_published=False,
             source_bulletin_id=ext.bulletin_id,
+            created_at=published_ts,
         )
         db.add(post)
         db.flush()
@@ -1231,6 +1236,8 @@ def route_extracted_image(
             "주보에서 자동 추출된 사진입니다."
             + (_format_source_footer(bulletin) if bulletin else "")
         )
+        # AI 추출 데이터의 created_at 은 주보 발행일(정오)로 — 과거 주보 등록 시 등록 시점이 박혀 혼란 회피
+        published_ts = datetime.combine(bulletin.published_date, time(12, 0)) if bulletin else datetime.utcnow()
         post = Post(
             board_id=target_board.id,
             member_id=None,
@@ -1239,6 +1246,8 @@ def route_extracted_image(
             is_published=True,
             is_pinned=False,
             view_count=0,
+            source_bulletin_id=img.bulletin_id,
+            created_at=published_ts,
         )
         db.add(post)
         db.flush()
@@ -1251,6 +1260,7 @@ def route_extracted_image(
             is_image=True,
             # 주보 삭제 시 SET NULL — 사진은 보존, 출처만 사라짐
             source_bulletin_id=img.bulletin_id,
+            created_at=published_ts,
         ))
 
         img.status = "routed"
@@ -1412,12 +1422,14 @@ def approve_extraction_as_event(
     event_kind = ext.event_type if ext.event_type in ("행사", "모임") else None
     bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
     desc_with_source = (ext.content or "") + (_format_source_footer(bulletin) if bulletin else "")
+    # AI 추출 데이터의 created_at 은 주보 발행일(정오)로 — 과거 주보 등록 시 등록 시점이 박혀 혼란 회피
+    published_ts = datetime.combine(bulletin.published_date, time(12, 0)) if bulletin else datetime.utcnow()
 
     row = db.execute(
         text(
             "INSERT INTO events (title, description, event_date, start_time, location, category, "
-            "is_public, is_ai_generated, event_kind, source_bulletin_id) "
-            "VALUES (:title, :desc, :edate, :stime, :loc, :cat, TRUE, TRUE, :kind, :src) RETURNING id"
+            "is_public, is_ai_generated, event_kind, source_bulletin_id, created_at) "
+            "VALUES (:title, :desc, :edate, :stime, :loc, :cat, TRUE, TRUE, :kind, :src, :created) RETURNING id"
         ),
         {
             "title": ext.title,
@@ -1428,6 +1440,7 @@ def approve_extraction_as_event(
             "cat": category,
             "kind": event_kind,
             "src": ext.bulletin_id,
+            "created": published_ts,
         },
     ).first()
     event_id = row[0] if row else None
@@ -1457,6 +1470,7 @@ def approve_extraction_as_event(
             view_count=0,
             linked_event_id=event_id,
             source_bulletin_id=ext.bulletin_id,
+            created_at=published_ts,
         )
         db.add(post)
         db.flush()
