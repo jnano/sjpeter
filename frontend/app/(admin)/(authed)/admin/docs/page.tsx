@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.161";
+export const CURRENT_VERSION = "1.5.162";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.162", date: "2026-05-18", tag: "인프라",
+    items: [
+      "lib/api.ts — resolveClientApi() helper export",
+      "  · client component 에서 NEXT_PUBLIC_API_URL 빈 값 함정 회피용 공용 helper",
+      "  · /photos 의 inline 함수를 helper 로 이관 (중복 제거)",
+      "  · 기존 66곳 ?? 패턴은 현재 동작 중이라 회귀 회피 위해 유지 — 새 코드에서만 helper 사용 권장",
+    ],
+  },
   {
     version: "1.5.161", date: "2026-05-18", tag: "수정",
     items: [

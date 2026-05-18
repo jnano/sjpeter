@@ -1,5 +1,26 @@
 const API_BASE = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/**
+ * Client component 에서 백엔드 API base 를 안전하게 해석.
+ *
+ * `process.env.NEXT_PUBLIC_API_URL ?? "fallback"` 패턴은 빈 문자열을 못 잡아
+ * `${API}/api/...` 가 상대 경로 `/api/...` 로 평가되어 같은 origin(Next.js)으로
+ * 가버리는 함정이 있다. 이 helper 는:
+ *   1) env 값이 있고 trim 후에도 비어있지 않으면 그대로 사용
+ *   2) window 가 있으면 `${protocol}//${hostname}:8000` (LAN/공인 IP 대응)
+ *   3) 최후 fallback: http://localhost:8000
+ *
+ * 새 client 코드에서는 inline `process.env.NEXT_PUBLIC_API_URL` 대신 이 함수 사용 권장.
+ */
+export function resolveClientApi(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL;
+  if (env && env.trim()) return env;
+  if (typeof window !== "undefined" && window.location.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
+
 export async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
