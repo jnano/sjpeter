@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { resolveClientApi } from "@/lib/api";
@@ -8,6 +9,10 @@ import { resolveClientApi } from "@/lib/api";
 const PAGE_SIZE = 60;
 
 type Mode = "shuffle" | "grouped";
+
+function parseMode(v: string | null): Mode {
+  return v === "grouped" ? "grouped" : "shuffle";
+}
 
 interface PhotoItem {
   source: string;
@@ -34,17 +39,31 @@ function imgUrl(fileUrl: string): string {
 }
 
 export default function PhotosClient() {
-  const [mode, setMode] = useState<Mode>("shuffle");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // URL query 가 단일 진실원 — mode/seed 가 history 에 보존되어 뒤로가기 시 자동 복원.
+  const urlMode = parseMode(searchParams.get("mode"));
+  const urlSeed = searchParams.get("seed") ?? "";
+
+  const [mode, setMode] = useState<Mode>(urlMode);
   const [items, setItems] = useState<PhotoItem[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [seed, setSeed] = useState<string>("");
+  const [seed, setSeed] = useState<string>(urlSeed);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reqIdRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // 뒤로가기·앞으로가기 → URL 변경 감지 → state 동기화 (initial mount 후의 URL 변화만 처리)
+  useEffect(() => {
+    if (urlMode !== mode) setMode(urlMode);
+    if (urlSeed !== seed) setSeed(urlSeed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlMode, urlSeed]);
 
   const fetchPage = useCallback(
     async (nextOffset: number, currentMode: Mode, currentSeed: string, reset: boolean) => {
@@ -81,14 +100,28 @@ export default function PhotosClient() {
     [],
   );
 
+  // mode 또는 seed(URL 복원 시) 변경 시 초기화 + 첫 페이지 로드.
+  // seed 가 URL 에 이미 있으면 그 seed 로 첫 fetch — 같은 셔플 순서 복원.
   useEffect(() => {
     setItems([]);
     setOffset(0);
     setHasMore(true);
     setTotal(0);
-    setSeed("");
-    fetchPage(0, mode, "", true);
-  }, [mode, fetchPage]);
+    fetchPage(0, mode, mode === "shuffle" ? seed : "", true);
+    // mode/seed 둘 다 deps — URL 복원으로 둘 중 하나 바뀌면 재로드
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, seed]);
+
+  // 첫 shuffle fetch 응답에서 받은 seed 를 URL 에 박아 뒤로가기 시 같은 순서 유지.
+  // 이미 URL 에 seed 가 있으면 skip — 무한 router.replace 회피.
+  useEffect(() => {
+    if (mode !== "shuffle" || !seed) return;
+    if (searchParams.get("seed") === seed) return;
+    const qs = new URLSearchParams();
+    qs.set("mode", "shuffle");
+    qs.set("seed", seed);
+    router.replace(`/photos?${qs.toString()}`, { scroll: false });
+  }, [mode, seed, router, searchParams]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -105,6 +138,17 @@ export default function PhotosClient() {
     io.observe(el);
     return () => io.disconnect();
   }, [hasMore, loading, offset, mode, seed, fetchPage]);
+
+  // 모드 토글 — URL 도 함께 바꿔 history 보존. 새 모드는 항상 fresh seed 로 시작
+  // (셔플로 토글 시 옛 seed 들고가면 같은 순서 → 사용자가 새로 섞고 싶었을 가능성 무시).
+  const switchMode = useCallback((next: Mode) => {
+    setSeed("");
+    setMode(next);
+    const qs = new URLSearchParams();
+    qs.set("mode", next);
+    // shuffle 일 때 seed 는 다음 fetch 응답으로 채워져 다시 URL 동기화 됨
+    router.replace(`/photos?${qs.toString()}`, { scroll: false });
+  }, [router]);
 
   const groupedSections = useMemo(() => {
     if (mode !== "grouped") return [];
@@ -130,7 +174,7 @@ export default function PhotosClient() {
           <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white p-1 text-[13px]">
             <button
               type="button"
-              onClick={() => setMode("shuffle")}
+              onClick={() => switchMode("shuffle")}
               className={`rounded-full px-3 py-1 transition ${
                 mode === "shuffle"
                   ? "bg-[var(--color-primary)] text-white"
@@ -141,7 +185,7 @@ export default function PhotosClient() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("grouped")}
+              onClick={() => switchMode("grouped")}
               className={`rounded-full px-3 py-1 transition ${
                 mode === "grouped"
                   ? "bg-[var(--color-primary)] text-white"

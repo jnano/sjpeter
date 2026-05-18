@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.174";
+export const CURRENT_VERSION = "1.5.175";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.175", date: "2026-05-18", tag: "기능",
+    items: [
+      "/photos — '섞어서/모아서' 모드가 뒤로가기·앞으로가기에 유지",
+      "  · mode·seed 를 URL query (?mode=shuffle&seed=xxx) 로 동기화 — 브라우저 history 가 단일 진실원",
+      "  · 모드 토글 시 router.replace 로 URL 업데이트 (history push 아님 — 토글 반복으로 뒤로가기 회로 막힘 회피)",
+      "  · 첫 shuffle fetch 응답의 seed 를 URL 에 자동 박음 → 같은 셔플 순서 복원 (다시 섞이지 않음)",
+      "  · 뒤로가기 → URL 변경 → useSearchParams 변경 → state sync → fetch 재실행",
+      "  · 모드 토글은 seed 비움 → 새 모드는 항상 fresh seed (사용자가 다시 섞고 싶을 가능성 존중)",
+    ],
+  },
   {
     version: "1.5.174", date: "2026-05-18", tag: "수정",
     items: [
