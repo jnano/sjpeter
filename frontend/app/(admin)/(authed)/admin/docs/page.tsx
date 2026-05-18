@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.172";
+export const CURRENT_VERSION = "1.5.173";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.173", date: "2026-05-18", tag: "수정",
+    items: [
+      "/photos — 무한 retry loop + SQL placeholder 충돌 두 건 해소",
+      "  · 증상 1: 첫 fetch 실패(예: rate limit) 시 hasMore 유지 → IntersectionObserver 가 또 trigger → 무한 retry → 새 한도(2000/min)까지 도달 → 200/min 올려도 '변화 없음'",
+      "  · 수정 1: PhotosClient fetchPage catch 에서 setHasMore(false) — 자동 retry 중단, 사용자가 모드 토글·새로고침으로 명시 재시도",
+      "  · 증상 2: photos.py SQL 주석의 '{slug}' 표기가 Python str.format() placeholder 로 인식 → KeyError 500",
+      "  · 수정 2: 주석 표기를 '<slug>' 로 변경 (SQL 코드는 || b.slug 그대로)",
+      "  · 검증: list_photos 직접 호출 200, items 정상 반환",
+    ],
+  },
   {
     version: "1.5.172", date: "2026-05-18", tag: "인프라",
     items: [

@@ -70,6 +70,9 @@ export default function PhotosClient() {
       } catch (e) {
         if (myReqId === reqIdRef.current) {
           setError(e instanceof Error ? e.message : "사진을 불러오지 못했습니다.");
+          // 에러 시 더 이상 자동 fetch 안 함 — IntersectionObserver 가 trigger 해도 멈춤.
+          // (없으면 fetch 실패 → hasMore 유지 → observer 또 trigger → retry loop → rate limit 초과)
+          setHasMore(false);
         }
       } finally {
         if (myReqId === reqIdRef.current) setLoading(false);

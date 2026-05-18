@@ -71,8 +71,9 @@ WITH unioned AS (
   UNION ALL
 
   -- 2) 공개 게시판 첨부 이미지 (주보 추출 포함 — source_bulletin_id 로 라벨 분기)
-  -- click_href: 게시판이 메뉴에 '/gallery/{slug}' 로 등록됐으면 갤러리 경로로 보내고(사이드바 매칭),
-  --             아니면 '/boards/{slug}' fallback. 사용자가 /photos → 게시글로 이동 시 사이드바 누락 회피.
+  -- click_href: 게시판이 메뉴에 '/gallery/<slug>' 로 등록됐으면 갤러리 경로로 보내고(사이드바 매칭),
+  --             아니면 '/boards/<slug>' fallback. 사용자가 /photos → 게시글로 이동 시 사이드바 누락 회피.
+  -- (str.format() 의 placeholder 충돌 회피 위해 주석에 <slug> 표기 — 코드는 || b.slug)
   SELECT CASE WHEN a.source_bulletin_id IS NOT NULL THEN 'bulletin' ELSE 'attachment' END,
          a.id::int, a.file_url, a.created_at,
          CASE WHEN a.source_bulletin_id IS NOT NULL THEN '주보' ELSE b.name END,
