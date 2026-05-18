@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
+import rehypeRaw from "rehype-raw";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -120,7 +122,8 @@ export default function MarkdownContent({ content, size = "sm" }: Props) {
       prose-img:rounded-lg prose-img:border prose-img:border-[var(--color-border)]
       prose-hr:border-[var(--color-border)]`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           img({ src, alt }) {
             if (!src) return null;

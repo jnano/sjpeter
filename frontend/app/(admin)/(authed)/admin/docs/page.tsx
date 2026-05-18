@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.152";
+export const CURRENT_VERSION = "1.5.153";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.153", date: "2026-05-18", tag: "수정",
+    items: [
+      "MarkdownContent 에 remarkBreaks 적용 — single newline 도 줄바꿈으로 렌더링",
+      "  · 캘린더 상세 모달 등 AI 추출 본문의 줄바꿈이 한 덩어리로 보이던 문제 해결",
+      "  · DB 의 \\n 은 정상 저장되어 있었으나 markdown 표준이 single newline 을 공백으로 처리해 발생",
+      "  · MeditationCard 와 일관성 확보 (이미 remarkBreaks 사용 중)",
+    ],
+  },
   {
     version: "1.5.152", date: "2026-05-18", tag: "기능",
     items: [
