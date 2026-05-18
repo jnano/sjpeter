@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     SITE_URL: str = "http://localhost:3000"
 
+    # 분당 IP별 요청 한도 (slowapi default_limits).
+    # 운영 기본 200/min, dev 는 .env 에서 1000+ 등 상향 권장 — /photos 무한스크롤·admin 다중 패널이 쉽게 한도 초과.
+    RATE_LIMIT_PER_MINUTE: int = 200
+
     class Config:
         env_file = ".env"
 

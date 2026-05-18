@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.171";
+export const CURRENT_VERSION = "1.5.172";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.172", date: "2026-05-18", tag: "인프라",
+    items: [
+      "slowapi 분당 요청 한도를 환경변수화 (HTTP 429 회피)",
+      "  · 증상: /photos 무한스크롤·admin 다중 패널이 빠르게 200/min 한도 초과 → 429",
+      "  · 변경: settings.RATE_LIMIT_PER_MINUTE (default 200, dev .env 에서 상향 가능)",
+      "  · main.py 의 Limiter default_limits 를 settings 기반으로 분기",
+      "  · dev .env: RATE_LIMIT_PER_MINUTE=2000 (운영은 .env 미지정 → 200 기본)",
+    ],
+  },
   {
     version: "1.5.171", date: "2026-05-18", tag: "수정",
     items: [
