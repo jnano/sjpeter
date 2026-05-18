@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.155";
+export const CURRENT_VERSION = "1.5.156";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.156", date: "2026-05-18", tag: "기능",
+    items: [
+      "AI 추출 검토 화면에 '📅 날짜별 분리' 버튼 추가",
+      "  · 본문에서 M/D(요일) 패턴 자동 탐지 (예: 5/20(수), 6/5(금))",
+      "  · 미리보기 confirm → 같은 제목·내용으로 N개 항목 분리 (event_date 만 다름)",
+      "  · 발행일 기준 연도, 6개월 이상 이전이면 다음 해로 자동 처리",
+      "  · POST /api/bulletins/extractions/{id}/split-by-dates (dry_run 지원)",
+    ],
+  },
   {
     version: "1.5.155", date: "2026-05-18", tag: "기능",
     items: [

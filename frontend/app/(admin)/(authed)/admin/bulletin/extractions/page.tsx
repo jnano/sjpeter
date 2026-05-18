@@ -215,6 +215,48 @@ export default function ExtractionsPage() {
     }
   }
 
+  async function splitByDates(extId: number) {
+    setError("");
+    // 1단계: 미리보기 — 본문에서 발견된 날짜 수 확인
+    try {
+      const previewRes = await fetch(`${API}/api/bulletins/extractions/${extId}/split-by-dates`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ dry_run: true }),
+      });
+      if (!previewRes.ok) {
+        const detail = await previewRes.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "분리 미리보기 실패");
+      }
+      const preview = await previewRes.json();
+      const dates: string[] = preview.dates ?? [];
+      if (dates.length < 2) {
+        alert("분리할 날짜 패턴이 부족합니다.");
+        return;
+      }
+      const confirmed = confirm(
+        `본문에서 ${dates.length}개의 날짜를 발견했습니다:\n` +
+        dates.join(", ") + "\n\n같은 제목·내용으로 각 날짜에 별도 항목으로 분리하시겠습니까?"
+      );
+      if (!confirmed) return;
+      // 2단계: 실제 분리
+      const res = await fetch(`${API}/api/bulletins/extractions/${extId}/split-by-dates`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ dry_run: false }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "분리 실패");
+      }
+      await loadExtractions();
+      notify(DataEvent.EXTRACTIONS_COUNT);
+      setInfo(`${dates.length}개 항목으로 분리 완료`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "분리에 실패했습니다.");
+    }
+  }
+
   async function reject(extId: number) {
     if (!confirm("이 항목을 거부(삭제)할까요? 복구할 수 없습니다.")) return;
     setProcessing((p) => ({ ...p, [extId]: true }));
@@ -494,6 +536,7 @@ export default function ExtractionsPage() {
                         onApproveAsVision={(payload) => approveAsVision(ext, payload)}
                         onReject={() => reject(ext.id)}
                         onEdit={() => startEdit(ext)}
+                        onSplitByDates={() => splitByDates(ext.id)}
                         processing={!!processing[ext.id]}
                       />
                     )}
@@ -557,6 +600,7 @@ function ExtractionCard({
   onApproveAsVision,
   onReject,
   onEdit,
+  onSplitByDates,
   processing,
 }: {
   ext: Extraction;
@@ -568,6 +612,7 @@ function ExtractionCard({
   onApproveAsVision: (payload: VisionPayload) => void;
   onReject: () => void;
   onEdit?: () => void;
+  onSplitByDates?: () => void;
   processing: boolean;
 }) {
   const isVision = ext.event_type === "지표";
@@ -601,6 +646,15 @@ function ExtractionCard({
               className="text-xs text-[var(--color-primary)] hover:underline"
             >
               편집
+            </button>
+          )}
+          {onSplitByDates && !isVision && (
+            <button
+              onClick={onSplitByDates}
+              className="text-xs text-emerald-700 hover:underline"
+              title="본문에서 M/D 날짜 패턴을 찾아 같은 제목으로 여러 항목 분리"
+            >
+              📅 날짜별 분리
             </button>
           )}
         </div>

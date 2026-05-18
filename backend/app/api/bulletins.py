@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import re
 import uuid
 from datetime import date, datetime, time
 from difflib import SequenceMatcher
@@ -1495,6 +1496,110 @@ def bulk_reject_extractions(
         db.delete(ext)
     db.commit()
     return {"deleted": sorted(found_ids), "not_found": not_found}
+
+
+class SplitByDatesBody(BaseModel):
+    dry_run: bool = True  # True: 미리보기만, False: 실제 분리 적용
+
+
+# 본문에 등장하는 'M/D' 또는 'M/D(요일)' 패턴 — 같은 행사에 여러 날짜가 나열될 때
+_DATE_PATTERN = re.compile(r'(\b\d{1,2})/(\d{1,2})(?:\s*\(([월화수목금토일])요?일?\))?')
+
+
+def _extract_dates_from_text(text: str, base_year: int, base_date: "date | None") -> list[date]:
+    """본문에서 M/D 또는 M/D(요일) 패턴을 모두 찾아 date 리스트로 변환.
+    base_year: 기본 연도. M/D 가 base_date 보다 6개월 이상 이전이면 다음 해로 처리.
+    중복 제거, 발행순 정렬."""
+    if not text:
+        return []
+    results: list[date] = []
+    seen: set[tuple[int, int]] = set()
+    for m in _DATE_PATTERN.finditer(text):
+        try:
+            mo = int(m.group(1))
+            dy = int(m.group(2))
+            if not (1 <= mo <= 12 and 1 <= dy <= 31):
+                continue
+            if (mo, dy) in seen:
+                continue
+            seen.add((mo, dy))
+            year = base_year
+            try:
+                d = date(year, mo, dy)
+            except ValueError:
+                continue
+            # base_date 보다 6개월 이상 이전이면 다음 해로 (예: 발행 12월, 본문에 1월 = 다음해)
+            if base_date and (base_date - d).days > 180:
+                try:
+                    d = date(year + 1, mo, dy)
+                except ValueError:
+                    continue
+            results.append(d)
+        except (ValueError, IndexError):
+            continue
+    results.sort()
+    return results
+
+
+@router.post("/extractions/{extraction_id}/split-by-dates")
+def split_extraction_by_dates(
+    extraction_id: int,
+    body: SplitByDatesBody | None = None,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """추출 항목의 본문에서 'M/D(요일)' 패턴을 찾아 같은 제목으로 여러 날짜의 별도 항목으로 분리.
+    dry_run=True (기본) → 미리보기만, False → 실제 분리 적용."""
+    ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
+    if not ext:
+        raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
+    if ext.status != "pending":
+        raise HTTPException(status_code=400, detail="이미 처리된 항목은 분리할 수 없습니다.")
+
+    bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
+    base_date = bulletin.published_date if bulletin else None
+    base_year = base_date.year if base_date else datetime.now().year
+
+    dates = _extract_dates_from_text(ext.content or "", base_year, base_date)
+    if len(dates) < 2:
+        raise HTTPException(status_code=400, detail="본문에서 2개 이상의 날짜 패턴을 찾지 못했습니다.")
+
+    dry = body.dry_run if body else True
+    if dry:
+        return {
+            "preview": True,
+            "dates": [d.isoformat() for d in dates],
+            "count": len(dates),
+            "message": f"본문에서 {len(dates)}개의 날짜를 발견했습니다.",
+        }
+
+    # 실제 분리 — 원본의 event_date 를 첫 날짜로, 나머지는 새 extraction 으로 INSERT
+    ext.event_date = dates[0]
+    new_extractions: list[BulletinExtraction] = []
+    for d in dates[1:]:
+        new_ext = BulletinExtraction(
+            bulletin_id=ext.bulletin_id,
+            title=ext.title,
+            content=ext.content,
+            group_name=ext.group_name,
+            event_date=d,
+            location=ext.location,
+            event_type=ext.event_type,
+            status="pending",
+            fingerprint=_fingerprint(
+                ext.group_name, d.isoformat(), ext.event_type,
+                ext.title, bulletin_id=ext.bulletin_id,
+            ),
+        )
+        db.add(new_ext)
+        new_extractions.append(new_ext)
+    db.commit()
+    return {
+        "preview": False,
+        "split_count": len(dates),
+        "original_id": ext.id,
+        "new_ids": [n.id for n in new_extractions],
+    }
 
 
 # ── 헬퍼 ──────────────────────────────────────────────────
