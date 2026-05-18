@@ -510,6 +510,40 @@ def _format_event_card_body(
     return "\n".join(parts)
 
 
+# 묵상 본문 끝에 흔히 박혀오는 '글 | 작성자' 표기를 잡기 위한 정규식.
+# 구분자 후보: | (ASCII pipe) · │ (U+2502) · ｜ (U+FF5C) · ㅣ (U+3163 한글 모음 — 사용자가 자주 혼동) · ： · : · · (middle dot) · -.
+_MEDITATION_AUTHOR_RE = re.compile(r'^\s*글\s*[|│｜ㅣ：:·\-]\s*(.+?)\s*$')
+
+
+def _extract_meditation_author(body: str) -> tuple[str, Optional[str]]:
+    """묵상 본문 끝의 '글 | 작성자' 한 줄을 추출.
+
+    반환: (정제된 본문, 추출된 작성자 or None).
+    매치 실패 시 원본 body 그대로 + None — 본문 손실 방지.
+
+    동작:
+      1) 본문을 줄 단위로 split
+      2) 끝에서부터 빈 줄을 건너뛴 첫 비어있지 않은 줄을 검사
+      3) 정규식 매치되면 그 줄을 잘라내고, 트레일링 빈 줄도 정리
+    """
+    if not body:
+        return body, None
+    lines = body.splitlines()
+    i = len(lines) - 1
+    while i >= 0 and not lines[i].strip():
+        i -= 1
+    if i < 0:
+        return body, None
+    m = _MEDITATION_AUTHOR_RE.match(lines[i])
+    if not m:
+        return body, None
+    author = m.group(1).strip()
+    new_lines = lines[:i]
+    while new_lines and not new_lines[-1].strip():
+        new_lines.pop()
+    return "\n".join(new_lines), author
+
+
 def _format_source_footer(bulletin: Bulletin) -> str:
     """AI 추출 콘텐츠 본문 끝에 붙일 출처 표기.
     본문과 3줄 띄운 뒤 회색 작은 글씨로: '출처: 제N호 주보 (YYYY.MM.DD)'.
@@ -640,13 +674,16 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
 
     # 1. 묵상 → meditations
     if event_type == "묵상":
+        # 본문 끝의 '글 | 작성자' 표기는 author 컬럼으로 분리, 본문에서는 제거.
+        cleaned_text, meditation_author = _extract_meditation_author(content_text or "")
+        meditation_body = cleaned_text + _format_source_footer(bulletin)
         row = db.execute(
             _text(
-                "INSERT INTO meditations (title, body, published_date, is_published, source_bulletin_id, created_at, updated_at) "
-                "VALUES (:title, :body, :pdate, TRUE, :src, :ts, :ts) RETURNING id"
+                "INSERT INTO meditations (title, body, author, published_date, is_published, source_bulletin_id, created_at, updated_at) "
+                "VALUES (:title, :body, :author, :pdate, TRUE, :src, :ts, :ts) RETURNING id"
             ),
             {
-                "title": title, "body": body_with_source,
+                "title": title, "body": meditation_body, "author": meditation_author,
                 "pdate": bulletin.published_date, "src": bulletin.id, "ts": published_ts,
             },
         ).first()

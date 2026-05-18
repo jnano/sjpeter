@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.166";
+export const CURRENT_VERSION = "1.5.167";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.167", date: "2026-05-18", tag: "기능",
+    items: [
+      "주보 묵상 추출 — 본문 끝 '글 | 작성자' 표기를 author 컬럼으로 자동 분리",
+      "  · 정규식 매치: '글' + (| / │ / ｜ / ㅣ / ： / : / · / -) + 작성자",
+      "  · 매치 시 본문 정제 + author 저장, 미매치 시 원본 그대로 (본문 손실 방지)",
+      "  · 추출된 본문은 출처 footer 와 함께 깔끔히 저장. 트레일링 빈 줄 정리.",
+      "  · 적용 위치: _apply_extraction_routing 묵상 분기 (신규 INSERT 시)",
+      "  · 기존 묵상 1건(id=17) 일괄 마이그 — author='주임신부 김준영 안드레아' 추출, 본문 정제",
+      "  · admin/content meditation 탭에 이미 author 입력 폼 존재 — 추가 작업 없음",
+    ],
+  },
   {
     version: "1.5.166", date: "2026-05-18", tag: "인프라",
     items: [
