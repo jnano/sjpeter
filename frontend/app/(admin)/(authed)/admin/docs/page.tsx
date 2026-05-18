@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.173";
+export const CURRENT_VERSION = "1.5.174";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.174", date: "2026-05-18", tag: "수정",
+    items: [
+      "/photos click_href — board.kind 기반 prefix (menus._compute_href 와 동일 정책)",
+      "  · 이전(v1.5.171): menu_items.href LOOKUP — menu_items.href 컬럼이 stale 일 수 있어 menus API 응답과 불일치",
+      "  · 변경: boards.kind='gallery' 면 /gallery/ prefix, 아니면 /boards/. menus._compute_href 와 동일 정책",
+      "  · 효과: liturgy·events·building_photo 모두 /gallery/{slug}/{id} 로 정확히 가서 사이드바 매칭 성공",
+    ],
+  },
   {
     version: "1.5.173", date: "2026-05-18", tag: "수정",
     items: [
