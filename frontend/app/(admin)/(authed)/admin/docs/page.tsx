@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.165";
+export const CURRENT_VERSION = "1.5.166";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.166", date: "2026-05-18", tag: "인프라",
+    items: [
+      "게시판/게시글/임시저장 삭제 — 첨부 unlink 실패를 로그로 남김",
+      "  · 기존: try/except: pass 로 silent 무시 → 대량 정리 시 어떤 파일이 안 지워졌는지 추적 불가",
+      "  · 변경: 파일 누락은 info, unlink 예외는 warning 로그 (post_id·attachment_id·path·err 포함)",
+      "  · 게시글 삭제 동작 자체는 그대로 — 디스크 정리 실패가 DB 삭제를 막지 않음",
+    ],
+  },
   {
     version: "1.5.165", date: "2026-05-18", tag: "수정",
     items: [

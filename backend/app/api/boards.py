@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -17,6 +18,8 @@ from app.models.attachment import Attachment
 from app.models.member import Member
 from app.models.admin import Admin
 from app.models.event_board_mapping import EventBoardMapping
+
+logger = logging.getLogger(__name__)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_EXTS = IMAGE_EXTS | {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".hwp", ".zip", ".txt"}
@@ -352,6 +355,11 @@ class DraftOut(BaseModel):
 
 class DraftMoveBody(BaseModel):
     board_slug: str
+
+
+class DraftEditBody(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
 
 
 # ── 검색 ────────────────────────────────────────────────
@@ -1084,6 +1092,30 @@ def move_draft(post_id: int, body: DraftMoveBody, db: Session = Depends(get_db),
     return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
 
 
+@router.patch("/api/boards/drafts/{post_id}", response_model=DraftOut)
+def edit_draft(post_id: int, body: DraftEditBody, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    """임시저장 게시글 제목·본문 편집 (게시 전 검토용)."""
+    from app.core.admin_log import log_action, get_admin_identifier
+    post = db.query(Post).filter(Post.id == post_id, Post.is_published == False).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
+    old_title = post.title
+    if body.title is not None:
+        new_title = body.title.strip()
+        if not new_title:
+            raise HTTPException(status_code=400, detail="제목은 비울 수 없습니다.")
+        post.title = new_title
+    if body.content is not None:
+        post.content = body.content
+    db.commit()
+    log_action(
+        db, get_admin_identifier(admin),
+        action="draft_edit", target_type="post", target_id=post.id,
+        detail=f"'{old_title[:80]}' → '{post.title[:80]}'",
+    )
+    return db.query(Post).options(joinedload(Post.board)).filter(Post.id == post_id).first()
+
+
 @router.delete("/api/boards/drafts/{post_id}", status_code=204)
 def delete_draft(post_id: int, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
     from app.core.admin_log import log_action, get_admin_identifier
@@ -1091,6 +1123,7 @@ def delete_draft(post_id: int, db: Session = Depends(get_db), admin = Depends(ge
     if not post:
         raise HTTPException(status_code=404, detail="임시저장 게시글을 찾을 수 없습니다.")
     title = post.title[:100] if post.title else ""
+    _remove_post_attachment_files(post)
     db.delete(post)
     db.commit()
     log_action(
@@ -1387,6 +1420,15 @@ def delete_board(slug: str, db: Session = Depends(get_db), _: Admin = Depends(ge
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
+    # cascade로 posts·attachments DB row는 자동 제거되지만 디스크 파일은 남으므로 먼저 정리
+    posts = (
+        db.query(Post)
+        .options(joinedload(Post.attachments))
+        .filter(Post.board_id == board.id)
+        .all()
+    )
+    for p in posts:
+        _remove_post_attachment_files(p)
     db.delete(board)
     db.commit()
 
@@ -1523,7 +1565,7 @@ def create_post(
     is_super_admin = current is None
     if board.moderator_only_write and not is_super_admin:
         if board.moderator_id != current.id and not getattr(current, "is_admin", False):
-            raise HTTPException(status_code=403, detail="게시판 관리자만 글을 작성할 수 있습니다.")
+            raise HTTPException(status_code=403, detail="게시판 운영자 이상만 글을 작성할 수 있습니다.")
     # 선택 회원 게시판: 작성도 허용 명단만 (admin 은 제외)
     if not is_super_admin:
         _check_selected_access(board, current, db)
@@ -1784,6 +1826,7 @@ def delete_post(
     is_other_user_action = current is not None and post.member_id != current.id
     snapshot_title = post.title
     snapshot_author = post.member_id
+    _remove_post_attachment_files(post)
     db.delete(post)
     db.commit()
     if is_admin_action or is_other_user_action:
@@ -1983,6 +2026,28 @@ def delete_attachment(
 
 
 # ── 내부 헬퍼 ────────────────────────────────────────────
+
+
+def _remove_post_attachment_files(post: Post) -> None:
+    """게시글 삭제 전 호출 — attachments에 등록된 디스크 파일을 정리.
+    cascade로 DB row는 자동 제거되지만 디스크 파일은 그대로 남아 고아 파일이 누적됨.
+    파일 삭제 실패는 게시글 삭제를 막지 않되 warning 로그로 남겨 사후 추적 가능하게 함."""
+    for att in post.attachments or []:
+        file_path = att.file_url.lstrip("/")
+        if not os.path.exists(file_path):
+            logger.info(
+                "attachment file already missing: post_id=%s attachment_id=%s path=%s",
+                post.id, att.id, file_path,
+            )
+            continue
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            logger.warning(
+                "attachment file unlink failed: post_id=%s attachment_id=%s path=%s err=%s",
+                post.id, att.id, file_path, e,
+            )
+
 
 def _get_board_or_404(slug: str, db: Session) -> Board:
     board = db.query(Board).filter(Board.slug == slug, Board.is_active == True).first()
