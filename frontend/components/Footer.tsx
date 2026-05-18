@@ -196,25 +196,41 @@ export default async function Footer() {
           </div>
         </div>
 
-        {/* 관련 사이트(외부 링크) — admin 이 show_in_footer 그룹에 등록한 항목들. 항목 없으면 영역 미노출 */}
+        {/* 관련 사이트(외부 링크) — admin 이 show_in_footer 그룹에 등록한 항목들. 항목 없으면 영역 미노출.
+            각 항목에 image_url 이 있으면 원형 사진 + 라벨, 없으면 라벨만 (graceful fallback). */}
         {footerGroups.length > 0 && (
           <div className="mt-10 pt-6 border-t border-[var(--color-border)]">
             {footerGroups.map((g) => (
-              <div key={g.id} className="mb-4 last:mb-0">
+              <div key={g.id} className="mb-6 last:mb-0">
                 <h3 className="font-serif font-bold text-[var(--color-primary)] mb-3 text-sm">{g.label}</h3>
-                <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                  {flattenServer(g.items).map((it) => (
-                    <a
-                      key={it.id}
-                      href={it.is_external ? (it.external_url ?? it.href) : it.href}
-                      target={it.is_external ? "_blank" : undefined}
-                      rel={it.is_external ? "noopener noreferrer" : undefined}
-                      className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors inline-flex items-center gap-1"
-                    >
-                      {it.label}
-                      {it.is_external && <span aria-hidden className="text-[10px] opacity-60">↗</span>}
-                    </a>
-                  ))}
+                <nav className="flex flex-wrap gap-x-5 gap-y-4 text-sm">
+                  {flattenServer(g.items).map((it) => {
+                    const href = it.is_external ? (it.external_url ?? it.href) : it.href;
+                    const img = it.image_url
+                      ? (it.image_url.startsWith("http") ? it.image_url : `${API}${it.image_url}`)
+                      : null;
+                    return (
+                      <a
+                        key={it.id}
+                        href={href}
+                        target={it.is_external ? "_blank" : undefined}
+                        rel={it.is_external ? "noopener noreferrer" : undefined}
+                        className="group inline-flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                      >
+                        {img && (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={img}
+                            alt={it.label}
+                            loading="lazy"
+                            className="h-9 w-9 rounded-full object-cover border border-[var(--color-border)] group-hover:border-[var(--color-primary)] transition-colors"
+                          />
+                        )}
+                        <span>{it.label}</span>
+                        {it.is_external && <span aria-hidden className="text-[10px] opacity-60">↗</span>}
+                      </a>
+                    );
+                  })}
                 </nav>
               </div>
             ))}

@@ -57,6 +57,7 @@ class MenuItemOut(BaseModel):
     static_page_slug: Optional[str] = None
     board_id: Optional[int] = None
     external_url: Optional[str] = None
+    image_url: Optional[str] = None  # 대표 사진 (footer 원형 표시 등)
     # 호환성 응답 필드 (자동 계산)
     href: str = ""
     is_external: bool = False
@@ -461,5 +462,57 @@ def delete_sidebar_image(group_id: int, db: Session = Depends(get_db), _: Admin 
             except Exception:
                 pass
     g.sidebar_image_url = None
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/items/{item_id}/image", response_model=MenuItemOut)
+def upload_item_image(
+    item_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """메뉴 항목 대표 사진 업로드 (footer 원형 표시 등). sidebar-image 와 동일 정책."""
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="메뉴 항목을 찾을 수 없습니다.")
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+    folder = "uploads/menu_items"
+    os.makedirs(folder, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}{ext}"
+    path = os.path.join(folder, fname)
+    # 옛 파일은 새로 저장 후 정리 — 중간 실패 시 옛 파일 손실 회피
+    old_url = item.image_url
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+    item.image_url = f"/{path}"
+    db.commit()
+    db.refresh(item)
+    if old_url:
+        old_path = old_url.lstrip("/")
+        if os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+    return _build_item_out(item, db)
+
+
+@router.delete("/items/{item_id}/image")
+def delete_item_image(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="메뉴 항목을 찾을 수 없습니다.")
+    if item.image_url:
+        path = item.image_url.lstrip("/")
+        if os.path.isfile(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+    item.image_url = None
     db.commit()
     return {"ok": True}

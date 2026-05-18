@@ -546,6 +546,13 @@ def _migrate_add_columns():
         except Exception:
             pass
         try:
+            # 메뉴 항목 대표 사진 (footer 원형 표시 등). NULL=텍스트만 노출.
+            conn.execute(text(
+                "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)"
+            ))
+        except Exception:
+            pass
+        try:
             # NULL이면 자동 비율(현재 aspect-[5/4]), 값이 있으면 그 px로 고정 + object-cover
             conn.execute(text(
                 "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS sidebar_height_px INTEGER"

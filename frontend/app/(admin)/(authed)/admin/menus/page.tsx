@@ -19,6 +19,7 @@ interface MenuItem {
   static_page_slug: string | null;
   board_id: number | null;
   external_url: string | null;
+  image_url: string | null;
   // 응답 전용
   href: string;
   is_external: boolean;
@@ -728,6 +729,40 @@ function ItemEditor({
   const [staticSlug, setStaticSlug] = useState(item?.static_page_slug ?? "");
   const [boardId, setBoardId] = useState<number | null>(item?.board_id ?? null);
   const [externalUrl, setExternalUrl] = useState(item?.external_url ?? "");
+  const [imageUrl, setImageUrl] = useState<string | null>(item?.image_url ?? null);
+
+  async function uploadItemImage(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!item?.id) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    const token = localStorage.getItem("admin_token");
+    const res = await fetch(`${API}/api/menus/items/${item.id}/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setImageUrl(data.image_url);
+    } else {
+      alert("이미지 업로드 실패");
+    }
+    e.target.value = "";
+  }
+
+  async function deleteItemImage() {
+    if (!item?.id) return;
+    if (!confirm("대표 사진을 삭제하시겠습니까?")) return;
+    const token = localStorage.getItem("admin_token");
+    const res = await fetch(`${API}/api/menus/items/${item.id}/image`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setImageUrl(null);
+    else alert("삭제 실패");
+  }
 
   // 같은 그룹의 1단계 항목들 (parent 선택지)
   const parentChoices = (groups.find((g) => g.id === groupId)?.items ?? []).filter((x) => x.id !== item?.id);
@@ -892,6 +927,39 @@ function ItemEditor({
                 ))}
               </select>
             </div>
+          )}
+
+          {/* 대표 사진 — 새 항목은 저장 후 사진 업로드 가능 (item.id 필요) */}
+          {item?.id && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">대표 사진 (footer 원형 표시 등)</label>
+              {imageUrl ? (
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl.startsWith("/uploads/") ? `${API}${imageUrl}` : imageUrl}
+                    alt={label || "대표 사진"}
+                    className="h-16 w-16 rounded-full object-cover border border-gray-200"
+                  />
+                  <label className="text-xs text-blue-600 hover:underline cursor-pointer">
+                    교체
+                    <input type="file" accept="image/*" onChange={uploadItemImage} className="hidden" />
+                  </label>
+                  <button type="button" onClick={deleteItemImage} className="text-xs text-red-600 hover:underline">제거</button>
+                </div>
+              ) : (
+                <label className="inline-block text-xs px-3 py-2 border border-gray-300 rounded cursor-pointer hover:bg-gray-50">
+                  파일 선택
+                  <input type="file" accept="image/*" onChange={uploadItemImage} className="hidden" />
+                </label>
+              )}
+              <p className="text-xs text-gray-400 mt-1">
+                Footer 의 외부 링크 영역 등에서 원형으로 표시됩니다. JPG · PNG · WebP.
+              </p>
+            </div>
+          )}
+          {!item?.id && (
+            <p className="text-xs text-gray-400">대표 사진은 항목을 저장한 뒤 업로드할 수 있습니다.</p>
           )}
 
           {/* 활성 */}

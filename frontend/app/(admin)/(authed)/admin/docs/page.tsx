@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.176";
+export const CURRENT_VERSION = "1.5.177";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.177", date: "2026-05-18", tag: "기능",
+    items: [
+      "/admin/menus — 메뉴 항목별 대표 사진 업로드 + Footer 원형 출력",
+      "  · menu_items.image_url 컬럼 신설 (VARCHAR 500, NULL 허용)",
+      "  · 백엔드: POST /api/menus/items/{id}/image (파일), DELETE /api/menus/items/{id}/image",
+      "  · 업로드 경로: /uploads/menu_items/ — sidebar 그룹 이미지(/uploads/menu_groups/)와 분리",
+      "  · admin/menus 항목 편집 모달에 대표 사진 미리보기·교체·제거 UI (item.id 있을 때만 노출)",
+      "  · Footer '관련 사이트' 영역에서 image_url 있는 항목은 h-9 w-9 rounded-full + 호버 시 primary 보더, 없으면 라벨만",
+      "  · 새 항목 만들기 시점에는 사진 업로드 안 됨 — 저장 후 다시 열어 업로드 (안내 문구 표시)",
+    ],
+  },
   {
     version: "1.5.176", date: "2026-05-18", tag: "기능",
     items: [

@@ -20,6 +20,7 @@ export interface MenuItem {
   static_page_slug: string | null;
   board_id: number | null;
   external_url: string | null;
+  image_url: string | null;
   children: MenuItem[];
 }
 

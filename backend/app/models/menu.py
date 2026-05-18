@@ -46,3 +46,5 @@ class MenuItem(Base):
     # href: 응답 시 _compute_href로 매번 도출 — 저장은 캐시 용도
     href = Column(String(500), nullable=False)
     is_external = Column(Boolean, default=False)                 # link_type='external'과 동기 (응답 호환)
+    # 외부 링크 등의 대표 사진(원형 표시용). NULL이면 텍스트만 노출. /uploads/menu_images/...
+    image_url = Column(String(500), nullable=True)
