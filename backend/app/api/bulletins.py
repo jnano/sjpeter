@@ -374,13 +374,17 @@ def delete_bulletin(
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
-    """주보 삭제. FK CASCADE 로 다음이 함께 정리됨:
-    - bulletin_extractions
-    - bulletin_extracted_images
-    - source_bulletin_id 를 가진 posts/events/meditations/visions
-    추가로: PDF 파일 + bulletin-extracted/{id} 디렉터리(추출 이미지) 디스크 정리.
+    """주보 삭제. 다음이 함께 정리됨:
+    - bulletin_extractions / bulletin_extracted_images (DB CASCADE)
+    - events / meditations / visions (source_bulletin_id CASCADE)
+    - source_bulletin_id 를 가진 posts — ORM 으로 명시 삭제 (attachments.post_id 가
+      NO ACTION 이라 DB CASCADE 만으론 ForeignKeyViolation. ORM lifecycle 안에서
+      Post.attachments cascade="all, delete-orphan" 가 attachment 도 함께 정리).
+    - PDF 파일 + bulletin-extracted/{id} 디렉터리 + 각 post 의 attachment 디스크 파일.
     """
     import shutil
+    # boards.py 의 디스크 unlink 헬퍼 재사용 (circular 회피 위해 함수 안에서 import)
+    from app.api.boards import _remove_post_attachment_files
 
     bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
     if not bulletin:
@@ -398,6 +402,21 @@ def delete_bulletin(
             shutil.rmtree(extracted_dir)
         except Exception as exc:
             logger.warning("[bulletin %d] 추출 이미지 디렉터리 삭제 실패: %s", bulletin_id, exc)
+
+    # source_bulletin_id 를 가진 posts 를 ORM 으로 명시 정리.
+    # attachments 의 디스크 파일 unlink 한 뒤 Post 를 삭제 — Post.attachments cascade 가
+    # attachment DB row 까지 자동 제거. db.delete(bulletin) 전에 처리해야 FK 충돌 회피.
+    from sqlalchemy.orm import joinedload
+    bulletin_posts = (
+        db.query(Post)
+        .options(joinedload(Post.attachments))
+        .filter(Post.source_bulletin_id == bulletin_id)
+        .all()
+    )
+    for p in bulletin_posts:
+        _remove_post_attachment_files(p)
+        db.delete(p)
+    db.flush()
 
     db.delete(bulletin)
     db.commit()

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.167";
+export const CURRENT_VERSION = "1.5.168";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.168", date: "2026-05-18", tag: "수정",
+    items: [
+      "주보 삭제 500 에러 — ForeignKeyViolation 해소",
+      "  · 증상: 자르기해서 갤러리 라우팅된 사진이 있는 주보 삭제 시 500 (Failed to fetch)",
+      "  · 원인: posts.source_bulletin_id CASCADE → posts 삭제 시도 → attachments.post_id NO ACTION 가 거절",
+      "  · 해결: delete_bulletin 에서 source_bulletin_id 로 연결된 posts 를 ORM 으로 명시 삭제",
+      "  · _remove_post_attachment_files 재사용 (boards.py) → 디스크 파일 unlink + Post.attachments cascade 로 DB row 정리",
+      "  · 이전에 보고된 '자르기 사진이 주보 삭제 후에도 남음' 증상도 동시 해소",
+    ],
+  },
   {
     version: "1.5.167", date: "2026-05-18", tag: "기능",
     items: [
