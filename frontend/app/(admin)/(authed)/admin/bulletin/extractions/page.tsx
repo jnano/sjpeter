@@ -38,6 +38,22 @@ interface Board {
 
 const ALL_KINDS = ["묵상", "지표", "공지", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"] as const;
 
+// 본문에 등장하는 'M/D' 또는 'M/D(요일)' 패턴 — 백엔드 _DATE_PATTERN 과 동일.
+// (월, 일) 쌍으로 dedupe 후 유효 범위(1~12, 1~31) 안인 것만 카운트.
+const DATE_PATTERN = /(\b\d{1,2})\/(\d{1,2})(?:\s*\(([월화수목금토일])요?일?\))?/g;
+
+function countDistinctDatesInText(text: string | null | undefined): number {
+  if (!text) return 0;
+  const seen = new Set<string>();
+  for (const m of text.matchAll(DATE_PATTERN)) {
+    const mo = parseInt(m[1], 10);
+    const dy = parseInt(m[2], 10);
+    if (mo < 1 || mo > 12 || dy < 1 || dy > 31) continue;
+    seen.add(`${mo}-${dy}`);
+  }
+  return seen.size;
+}
+
 export default function ExtractionsPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -619,6 +635,9 @@ function ExtractionCard({
   // 캘린더 등록 시 같은 행사 카드를 게시판에 미러할지 옵션 (시나리오 A)
   const [mirrorEnabled, setMirrorEnabled] = useState(false);
   const [mirrorBoardSlug, setMirrorBoardSlug] = useState<string>("");
+  // 본문에 서로 다른 날짜가 2개 이상 있을 때만 '날짜별 분리' 버튼 노출.
+  // 백엔드 _DATE_PATTERN(bulletins.py)·_extract_dates_from_text 와 동일한 정규식·dedupe.
+  const distinctDateCount = countDistinctDatesInText(ext.content);
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
@@ -648,11 +667,11 @@ function ExtractionCard({
               편집
             </button>
           )}
-          {onSplitByDates && !isVision && (
+          {onSplitByDates && !isVision && distinctDateCount >= 2 && (
             <button
               onClick={onSplitByDates}
               className="text-xs text-emerald-700 hover:underline"
-              title="본문에서 M/D 날짜 패턴을 찾아 같은 제목으로 여러 항목 분리"
+              title={`본문에서 ${distinctDateCount}개의 M/D 날짜 패턴이 발견됨 — 같은 제목으로 여러 항목으로 분리`}
             >
               📅 날짜별 분리
             </button>

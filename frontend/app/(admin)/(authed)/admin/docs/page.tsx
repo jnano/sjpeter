@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.168";
+export const CURRENT_VERSION = "1.5.169";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.169", date: "2026-05-18", tag: "디자인",
+    items: [
+      "/admin/bulletin/extractions — '날짜별 분리' 버튼 가시성 조건 추가",
+      "  · 이전: 모든 추출 건(vision 제외)에 항상 표시 → 단일 날짜 항목에선 의미 없음",
+      "  · 변경: 본문에 서로 다른 M/D 패턴이 2개 이상일 때만 노출",
+      "  · 백엔드 _DATE_PATTERN 과 동일한 정규식·(월,일) 쌍 dedupe 로 프론트 카운트",
+      "  · 버튼 title 에 '본문에서 N개의 M/D 날짜 패턴이 발견됨' 표시",
+    ],
+  },
   {
     version: "1.5.168", date: "2026-05-18", tag: "수정",
     items: [
