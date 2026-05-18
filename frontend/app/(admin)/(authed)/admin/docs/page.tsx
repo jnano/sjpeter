@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.177";
+export const CURRENT_VERSION = "1.5.178";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.178", date: "2026-05-18", tag: "디자인",
+    items: [
+      "Footer '관련 사이트' — 바로가기 칼럼 안 장애 신고 아래로 이동",
+      "  · 이전: 3-col grid 바깥 전체 폭 영역",
+      "  · 변경: 3번째 칼럼(바로가기) 안 → quickLinks → 장애 신고 → 관련 사이트 순",
+      "  · 좁은 칼럼 폭에 맞춰 h-8 사진 + 작은 간격(gap-x-3) 으로 압축",
+      "  · 그룹 라벨은 h3 → h4(text-xs), separator 도 mt-5 pt-4 로 약화",
+    ],
+  },
   {
     version: "1.5.177", date: "2026-05-18", tag: "기능",
     items: [
