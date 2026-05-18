@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.169";
+export const CURRENT_VERSION = "1.5.170";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,20 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.170", date: "2026-05-18", tag: "수정",
+    items: [
+      "AI 추출 라우팅 — 캘린더 events (title, event_date) 중복 INSERT 방지",
+      "  · 증상: 매주 주보에 같은 행사가 추출돼 캘린더에 중복 카드 (5/20·5/22·6/5 '구역 미사' 2개씩)",
+      "  · 원인: _apply_extraction_routing 3a/3c 분기가 source_bulletin 무관 중복 검사 없음",
+      "  · 변경: _find_existing_event helper — 같은 (title, event_date) 가 있으면 기존 id 재사용",
+      "  · approve_extraction_as_event(사용자 명시 액션)는 의도 존중 — 검사 안 함",
+      "  · split-by-dates 도 자동 보호 (분리 후 새 extraction 들이 같은 라우팅 경로 거침)",
+      "  · 기존 중복 3건(id=204,205,206) cleanup. 백업: cathedral_…_pre-dedupe-cleanup.sql",
+      "/photos — 'test' 슬러그 page_photos 3건 정리",
+      "  · 사용자에게 '삭제된 줄 아는 사진'으로 노출되던 page_photo_slugs.test (slug, 사진 3장, 디스크 파일) 일괄 삭제",
+    ],
+  },
   {
     version: "1.5.169", date: "2026-05-18", tag: "디자인",
     items: [

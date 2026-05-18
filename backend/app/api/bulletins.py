@@ -563,6 +563,23 @@ def _extract_meditation_author(body: str) -> tuple[str, Optional[str]]:
     return "\n".join(new_lines), author
 
 
+def _find_existing_event(db: Session, title: str, event_date) -> Optional[int]:
+    """같은 (title, event_date) events 가 이미 있으면 그 id 반환, 없으면 None.
+
+    AI 자동 라우팅(_apply_extraction_routing)·split-by-dates 가 매 주보마다 같은 행사를
+    중복 등록하는 것을 막기 위한 사전 검사용. source_bulletin_id 와 무관하게 검사 —
+    같은 날짜·제목이면 다른 주보에서 추출돼도 중복으로 간주.
+
+    참고: 사용자가 직접 액션(approve_extraction_as_event)으로 등록하는 경로는 검사 안 함.
+    사용자가 의도적으로 같은 행사를 두 번 등록하는 경우를 막지 않기 위함.
+    """
+    row = db.execute(
+        text("SELECT id FROM events WHERE title = :t AND event_date = :d LIMIT 1"),
+        {"t": title, "d": event_date},
+    ).first()
+    return row[0] if row else None
+
+
 def _format_source_footer(bulletin: Bulletin) -> str:
     """AI 추출 콘텐츠 본문 끝에 붙일 출처 표기.
     본문과 3줄 띄운 뒤 회색 작은 글씨로: '출처: 제N호 주보 (YYYY.MM.DD)'.
@@ -751,8 +768,17 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         mapping = db.query(EventBoardMapping).filter(EventBoardMapping.event_type == event_type).first()
         category = "community" if event_type == "모임" else "general"
 
-        # 3a. 캘린더 매핑 + 날짜 있음 → events
+        # 3a. 캘린더 매핑 + 날짜 있음 → events (중복이면 skip + 기존 id 재사용)
         if mapping and mapping.use_calendar and parsed_date:
+            existing_id = _find_existing_event(db, title, parsed_date)
+            if existing_id:
+                ext.created_event_id = existing_id
+                ext.status = "approved"
+                logger.info(
+                    "[ext %s] skip duplicate event (3a): (%r, %s) → existing id=%d",
+                    ext.id, title, parsed_date, existing_id,
+                )
+                return ext
             row = db.execute(
                 _text(
                     "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, source_bulletin_id, created_at) "
@@ -786,8 +812,17 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
             ext.status = "approved"
             return ext
 
-        # 3c. 매핑 없음 + 행사·모임 + 날짜 → events (디폴트)
+        # 3c. 매핑 없음 + 행사·모임 + 날짜 → events (디폴트). 중복이면 skip + 기존 id 재사용
         if event_type in ("행사", "모임") and parsed_date:
+            existing_id = _find_existing_event(db, title, parsed_date)
+            if existing_id:
+                ext.created_event_id = existing_id
+                ext.status = "approved"
+                logger.info(
+                    "[ext %s] skip duplicate event (3c): (%r, %s) → existing id=%d",
+                    ext.id, title, parsed_date, existing_id,
+                )
+                return ext
             row = db.execute(
                 _text(
                     "INSERT INTO events (title, description, event_date, end_date, location, category, is_public, is_ai_generated, event_kind, source_bulletin_id, created_at) "
