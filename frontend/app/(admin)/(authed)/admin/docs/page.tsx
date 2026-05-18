@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.153";
+export const CURRENT_VERSION = "1.5.154";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.154", date: "2026-05-18", tag: "기능",
+    items: [
+      "/calendar 상세 모달 — 운영자 이상 권한으로 행사 인라인 수정·삭제",
+      "  · 권한: admin_token (슈퍼관리자) 또는 session.isAdmin (운영자)",
+      "  · 수정: 모달 내 인라인 폼 (제목·날짜·시간·장소·설명) → PUT /api/events/{id}",
+      "  · 삭제: confirm 후 DELETE → 로컬 state 갱신 + 모달 닫기",
+    ],
+  },
   {
     version: "1.5.153", date: "2026-05-18", tag: "수정",
     items: [

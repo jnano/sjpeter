@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import PageHeader from "@/components/PageHeader";
 import BannerSlider from "@/components/BannerSlider";
 import SectionSidebar from "@/components/SectionSidebar";
 import { useNavigation } from "@/components/useNavigation";
+import MarkdownContent from "@/components/MarkdownContent";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -661,6 +663,99 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState<Event | null>(null);
   const [loading, setLoading] = useState(false);
   const [filterKind, setFilterKind] = useState("all");
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    title: string; event_date: string; end_date: string;
+    start_time: string; location: string; description: string;
+  }>({ title: "", event_date: "", end_date: "", start_time: "", location: "", description: "" });
+
+  // 운영자 이상 권한 — 슈퍼관리자(admin_token) OR 운영자(session.isAdmin)
+  const { data: session } = useSession();
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("admin_token");
+      const expStr = localStorage.getItem("admin_token_exp");
+      const exp = expStr ? Number(expStr) : 0;
+      if (t && exp && Date.now() < exp) setAdminToken(t);
+    } catch {}
+  }, []);
+  const isDelegatedAdmin = !!(session as { isAdmin?: boolean } | null)?.isAdmin;
+  const canManage = !!adminToken || isDelegatedAdmin;
+  const authToken = adminToken ?? (session as { accessToken?: string } | null)?.accessToken ?? "";
+
+  function startEditEvent() {
+    if (!selected) return;
+    setEditForm({
+      title: selected.title,
+      event_date: selected.event_date,
+      end_date: selected.end_date ?? "",
+      start_time: selected.start_time ?? "",
+      location: selected.location ?? "",
+      description: selected.description ?? "",
+    });
+    setEditing(true);
+  }
+
+  async function handleSaveEvent() {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/events/${selected.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title.trim(),
+          description: editForm.description,
+          event_date: editForm.event_date,
+          end_date: editForm.end_date || null,
+          start_time: editForm.start_time || null,
+          location: editForm.location || null,
+          category: selected.category,
+          is_public: true,
+          event_kind: selected.event_kind ?? null,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "저장 실패");
+      }
+      const updated = await res.json();
+      setEvents((prev) => prev.map((e) => (e.id === selected.id ? { ...e, ...updated } : e)));
+      setSelected({ ...selected, ...updated });
+      setEditing(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteEvent() {
+    if (!selected) return;
+    if (!confirm(`'${selected.title}' 행사를 삭제하시겠습니까?\n복구할 수 없습니다.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API}/api/events/${selected.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "삭제 실패");
+      }
+      // 로컬 state 에서 제거 + 모달 닫기
+      setEvents((prev) => prev.filter((e) => e.id !== selected.id));
+      setSelected(null);
+      setEditing(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "삭제에 실패했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  }
   // 빠른 년월 선택 팝오버
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState<number>(today.getFullYear());
@@ -984,10 +1079,10 @@ export default function CalendarPage() {
         {selected && (
           <div
             className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-            onClick={() => setSelected(null)}
+            onClick={() => { setSelected(null); setEditing(false); }}
           >
             <div
-              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl"
+              className={`bg-white rounded-2xl p-6 w-full shadow-xl ${editing ? "max-w-md" : "max-w-sm"}`}
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-start justify-between mb-4">
@@ -1013,9 +1108,97 @@ export default function CalendarPage() {
                 </p>
                 {selected.location && <p>📍 {selected.location}</p>}
                 {selected.description && (
-                  <p className="text-[var(--color-text)] whitespace-pre-wrap mt-3">{selected.description}</p>
+                  <div className="mt-3">
+                    <MarkdownContent content={selected.description} />
+                  </div>
                 )}
               </div>
+
+              {canManage && !editing && (
+                <div className="mt-5 pt-4 border-t border-[var(--color-border)] flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={startEditEvent}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteEvent}
+                    disabled={deleting}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    {deleting ? "삭제 중…" : "삭제"}
+                  </button>
+                </div>
+              )}
+
+              {canManage && editing && (
+                <div className="mt-4 space-y-2 border-t border-[var(--color-border)] pt-4">
+                  <p className="text-xs font-semibold text-[var(--color-primary)]">편집 중</p>
+                  <input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="제목"
+                    className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      value={editForm.event_date}
+                      onChange={(e) => setEditForm((p) => ({ ...p, event_date: e.target.value }))}
+                      className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={editForm.end_date}
+                      onChange={(e) => setEditForm((p) => ({ ...p, end_date: e.target.value }))}
+                      placeholder="종료일 (선택)"
+                      className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      value={editForm.start_time}
+                      onChange={(e) => setEditForm((p) => ({ ...p, start_time: e.target.value }))}
+                      placeholder="시간 (예: 19:30)"
+                      className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                    />
+                    <input
+                      value={editForm.location}
+                      onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))}
+                      placeholder="장소"
+                      className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                    />
+                  </div>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                    rows={6}
+                    placeholder="설명"
+                    className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm resize-y"
+                  />
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveEvent}
+                      disabled={saving || !editForm.title.trim() || !editForm.event_date}
+                      className="flex-1 text-xs px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-md font-medium hover:bg-[var(--color-primary-light)] disabled:opacity-50"
+                    >
+                      {saving ? "저장 중…" : "저장"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(false)}
+                      disabled={saving}
+                      className="text-xs px-3 py-1.5 border border-[var(--color-border)] rounded-md disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
