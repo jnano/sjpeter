@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.159";
+export const CURRENT_VERSION = "1.5.160";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.160", date: "2026-05-18", tag: "기능",
+    items: [
+      "/photos — 등록된 모든 사진 모아보기 페이지 신설",
+      "  · 출처 통합: page_photos · 공개 게시판 첨부 · 주보 추출 · 역대 사목자/수녀 · 본당 출신 사제 · 본당 가족 · 공사 단계/일지 (7개)",
+      "  · 권한: members_only_read / exclude_from_search / is_active=false 게시판 자동 제외, 회원 프로필 사진 미포함",
+      "  · '섞어서 / 모아서' 모드 토글 — 시드 기반 결정론적 셔플(페이지 넘어가도 중복·누락 없음)",
+      "  · 반명함 비율(3:4) 격자 + 여백 0 + 무한 스크롤(IntersectionObserver, rootMargin 400px)",
+      "  · 모바일 4열 / sm 6열 / md 8열 / lg 10열, 클릭 시 등록 위치(게시글·페이지·아카이브)로 이동",
+      "  · 백엔드: GET /api/photos?mode=shuffle|grouped&offset&limit&seed (UNION ALL + window COUNT)",
+      "  · 메뉴: '사진 갤러리' 그룹 첫 항목으로 등록",
+    ],
+  },
   {
     version: "1.5.159", date: "2026-05-18", tag: "수정",
     items: [

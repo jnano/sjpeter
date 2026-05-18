@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes
+from app.api import issue_reports, transport_routes, photos
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -58,6 +58,7 @@ app.include_router(construction.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
+app.include_router(photos.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
