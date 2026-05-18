@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.157";
+export const CURRENT_VERSION = "1.5.158";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.158", date: "2026-05-18", tag: "수정",
+    items: [
+      "/vision 페이지 '올해' 배지 — 최근 등록 1건만 부여",
+      "  · 기존: DB 의 is_current=TRUE 인 모든 행에 배지 (여러 건이 함께 노출 가능)",
+      "  · 변경: year DESC + id DESC 정렬 첫 번째 1건에만 배지",
+      "  · 신규 vision 등록 시 자동으로 배지가 새 항목으로 이동",
+    ],
+  },
   {
     version: "1.5.157", date: "2026-05-18", tag: "수정",
     items: [

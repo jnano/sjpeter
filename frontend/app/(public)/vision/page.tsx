@@ -7,7 +7,7 @@ import { fetchParishMin } from "@/lib/parish";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "사목지표", description: `${p.name} 역대 사목지표` };
+  return { title: "사목 지표", description: `${p.name} 역대 사목지표` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
@@ -44,7 +44,9 @@ async function getPastorName(): Promise<string | null> {
 
 export default async function VisionPage() {
   const [visions, pastorName] = await Promise.all([getVisions(), getPastorName()]);
-  const current = visions.find((v) => v.is_current) ?? visions[0];
+  // 최근 등록된 1건만 "올해" 로 표시 — year 우선, 동률이면 id 가 큰 (마지막 INSERT) 항목.
+  // DB 의 is_current 값은 무시하여 운영자가 새 vision 등록 시 자동으로 배지가 이동.
+  const current = [...visions].sort((a, b) => b.year - a.year || b.id - a.id)[0];
 
   return (
     <>
@@ -74,34 +76,39 @@ export default async function VisionPage() {
           <h2 className="font-serif font-bold text-[var(--color-primary)]">역대 사목지표</h2>
         </div>
         <div className="divide-y divide-[var(--color-border)]">
-          {visions.map((v) => (
-            <div
-              key={v.id}
-              className={`flex items-center gap-6 px-6 py-4 ${
-                v.is_current ? "bg-blue-50" : "hover:bg-[var(--color-surface-warm)]"
-              } transition-colors`}
-            >
-              <span
-                className={`text-sm font-bold w-12 shrink-0 ${
-                  v.is_current ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
-                }`}
+          {visions.map((v) => {
+            // "올해" 배지는 페이지 상단에 노출된 current(가장 최근 등록 1건) 와 일치하는 행에만.
+            // DB 의 is_current 가 여러 건 TRUE 인 경우에도 표시는 1건으로 보정.
+            const isLatest = v.id === current?.id;
+            return (
+              <div
+                key={v.id}
+                className={`flex items-center gap-6 px-6 py-4 ${
+                  isLatest ? "bg-blue-50" : "hover:bg-[var(--color-surface-warm)]"
+                } transition-colors`}
               >
-                {v.year}
-              </span>
-              <span
-                className={`font-serif ${
-                  v.is_current ? "font-bold text-[var(--color-primary)]" : ""
-                }`}
-              >
-                &ldquo;{v.motto}&rdquo;
-              </span>
-              {v.is_current && (
-                <span className="ml-auto text-xs bg-[var(--color-primary)] text-white px-2 py-0.5 rounded-full">
-                  올해
+                <span
+                  className={`text-sm font-bold w-12 shrink-0 ${
+                    isLatest ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                  }`}
+                >
+                  {v.year}
                 </span>
-              )}
-            </div>
-          ))}
+                <span
+                  className={`font-serif ${
+                    isLatest ? "font-bold text-[var(--color-primary)]" : ""
+                  }`}
+                >
+                  &ldquo;{v.motto}&rdquo;
+                </span>
+                {isLatest && (
+                  <span className="ml-auto text-xs bg-[var(--color-primary)] text-white px-2 py-0.5 rounded-full">
+                    올해
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
