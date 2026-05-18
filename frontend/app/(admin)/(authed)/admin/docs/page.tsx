@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.179";
+export const CURRENT_VERSION = "1.5.180";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.180", date: "2026-05-18", tag: "수정",
+    items: [
+      "/admin/content 분과·단체 저장 500 에러 — slug 빈 문자열 UniqueViolation 해소",
+      "  · 증상: 단체 항목 '저장' 클릭 시 500 → CORS 헤더 누락 → 'Failed to fetch'",
+      "  · 원인: editForm.slug='' 그대로 PUT → unique index 'ix_community_groups_slug' 위반 (빈 문자열이 이미 여러 행에 있음)",
+      "  · 수정: CommunityGroupIn 에 field_validator 추가 — 빈 문자열을 None 으로 자동 정규화",
+      "  · 적용 필드: slug · link_url · board_slug · description · activity_time · activities",
+      "  · 효과: frontend 가 '' 보내든 null 보내든 일관되게 NULL 저장",
+    ],
+  },
   {
     version: "1.5.179", date: "2026-05-18", tag: "기능",
     items: [

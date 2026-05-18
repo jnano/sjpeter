@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, or_, and_
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date, datetime
 from app.core.database import get_db
@@ -148,6 +148,15 @@ class CommunityGroupIn(BaseModel):
     slug: Optional[str] = None
     activities: Optional[str] = None
     photo_display_mode: Optional[str] = "slideshow"
+
+    @field_validator("slug", "link_url", "board_slug", "description", "activity_time", "activities", mode="before")
+    @classmethod
+    def _empty_to_none(cls, v):
+        """빈 문자열을 None 으로 정규화. slug 는 unique index 가 있어 빈 문자열이 여러 행에 못 들어감 (UniqueViolation 회피).
+        다른 nullable 필드도 같은 정책으로 일관 처리 — frontend 가 빈 string 보내든 null 보내든 동일하게 저장."""
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 class CommunityGroupOut(BaseModel):
