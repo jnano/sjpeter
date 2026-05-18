@@ -47,6 +47,7 @@ export interface MenuGroup {
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;
+  show_in_footer: boolean;
   items: MenuItem[];
 }
 
@@ -108,7 +109,8 @@ export function useNavigation(): NavData {
     return best;
   }
 
-  const sidebarOnly = groups.filter((g) => !g.show_in_header);
+  // footer 전용 그룹(show_in_footer=true 이고 헤더에도 안 보이는)은 사이드바 매칭 풀에서 제외 — 외부 링크 모음은 본문 사이드바와 무관.
+  const sidebarOnly = groups.filter((g) => !g.show_in_header && !g.show_in_footer);
   const headerVisible = groups.filter((g) => g.show_in_header);
   const currentGroup = matchInGroups(sidebarOnly) ?? matchInGroups(headerVisible);
 

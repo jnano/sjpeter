@@ -539,6 +539,13 @@ def _migrate_add_columns():
         except Exception:
             pass
         try:
+            # TRUE면 footer 의 '관련 사이트' 영역에 노출. 헤더와 독립적.
+            conn.execute(text(
+                "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS show_in_footer BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
+        try:
             # NULL이면 자동 비율(현재 aspect-[5/4]), 값이 있으면 그 px로 고정 + object-cover
             conn.execute(text(
                 "ALTER TABLE menu_groups ADD COLUMN IF NOT EXISTS sidebar_height_px INTEGER"

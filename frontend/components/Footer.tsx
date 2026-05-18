@@ -2,6 +2,7 @@ import Link from "next/link";
 import { fetchServerMenus } from "./fetchServerMenus";
 import ReportLink from "./ReportLink";
 import type { MenuItem } from "./useNavigation";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -21,6 +22,7 @@ interface Parish {
   address: string | null;
   phone: string | null;
   fax: string | null;
+  logo_url: string | null;
   mass_schedule: { entries: MassEntry[]; note: string } | null;
 }
 
@@ -108,6 +110,10 @@ export default async function Footer() {
     label: allItems.find((it) => it.href === q.href)?.label ?? q.fallback,
   }));
 
+  // footer 전용 그룹(show_in_footer=true) — '관련 사이트' 같은 외부 링크 모음.
+  // admin/menus 에서 토글로 켠 그룹만 노출. 항목이 없으면 영역 자체 미렌더.
+  const footerGroups = menus.filter((g) => g.show_in_footer && g.items.length > 0);
+
   return (
     <footer className="bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
       <div className="max-w-6xl mx-auto px-4 py-10">
@@ -116,7 +122,16 @@ export default async function Footer() {
           {/* 성당 정보 */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[var(--color-accent)] text-xl">✝</span>
+              {parish?.logo_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={parish.logo_url.startsWith("http") ? parish.logo_url : `${API}${parish.logo_url}`}
+                  alt={parish?.name ?? "세종성베드로성당"}
+                  className="h-7 w-7 object-contain"
+                />
+              ) : (
+                <CrossIcon className="text-[var(--color-accent)] text-xl" />
+              )}
               <span className="font-serif font-bold text-[var(--color-primary)] text-lg">
                 {parish?.name ?? "세종성베드로성당"}
               </span>
@@ -180,6 +195,31 @@ export default async function Footer() {
             </div>
           </div>
         </div>
+
+        {/* 관련 사이트(외부 링크) — admin 이 show_in_footer 그룹에 등록한 항목들. 항목 없으면 영역 미노출 */}
+        {footerGroups.length > 0 && (
+          <div className="mt-10 pt-6 border-t border-[var(--color-border)]">
+            {footerGroups.map((g) => (
+              <div key={g.id} className="mb-4 last:mb-0">
+                <h3 className="font-serif font-bold text-[var(--color-primary)] mb-3 text-sm">{g.label}</h3>
+                <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                  {flattenServer(g.items).map((it) => (
+                    <a
+                      key={it.id}
+                      href={it.is_external ? (it.external_url ?? it.href) : it.href}
+                      target={it.is_external ? "_blank" : undefined}
+                      rel={it.is_external ? "noopener noreferrer" : undefined}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors inline-flex items-center gap-1"
+                    >
+                      {it.label}
+                      {it.is_external && <span aria-hidden className="text-[10px] opacity-60">↗</span>}
+                    </a>
+                  ))}
+                </nav>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 구분선 + 저작권 중앙 */}
         <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)]">

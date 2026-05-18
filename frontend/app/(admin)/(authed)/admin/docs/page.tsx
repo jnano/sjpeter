@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.175";
+export const CURRENT_VERSION = "1.5.176";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.176", date: "2026-05-18", tag: "기능",
+    items: [
+      "Footer '관련 사이트' 영역 — 외부 링크를 DB 관리 시스템으로 (menu_groups 확장)",
+      "  · menu_groups.show_in_footer 컬럼 신설 (Boolean, default false) — 헤더와 독립적",
+      "  · admin/menus 의 그룹 편집 화면에 Footer 표시 토글 추가",
+      "  · Footer.tsx 가 show_in_footer=true 인 그룹들을 '바로가기' 영역 아래 새 섹션으로 렌더",
+      "  · 외부 링크는 새 탭 + '↗' 마커 표시. 항목 없으면 영역 자체 미노출",
+      "  · useNavigation: footer 전용 그룹은 사이드바 매칭 풀에서 제외 (외부 링크 모음이 본문 사이드바로 안 새도록)",
+      "  · '관련 사이트' 그룹 신설(id=10, key=related_sites). '수호성인 찾기' 메뉴(id=72) 를 본당 공동체 → 관련 사이트로 이동",
+      "  · 향후 가톨릭 외부 자료 늘릴 때 admin/menus 에서 같은 UI 로 추가 가능",
+    ],
+  },
   {
     version: "1.5.175", date: "2026-05-18", tag: "기능",
     items: [

@@ -181,6 +181,7 @@ class MenuGroupIn(BaseModel):
     sort_order: int = 0
     is_active: bool = True
     show_in_header: bool = True
+    show_in_footer: bool = False
 
 
 class MenuGroupOut(MenuGroupIn):

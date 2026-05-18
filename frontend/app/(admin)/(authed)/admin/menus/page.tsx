@@ -39,6 +39,7 @@ interface MenuGroup {
   sort_order: number;
   is_active: boolean;
   show_in_header: boolean;
+  show_in_footer: boolean;
   items: MenuItem[];
 }
 
@@ -168,7 +169,7 @@ export default function AdminMenusPage() {
     const res = await fetch(`${API}/api/menus/groups`, {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ key, label, sort_order: groups.length, is_active: true, show_in_header: true, sidebar_width_px: 220 }),
+      body: JSON.stringify({ key, label, sort_order: groups.length, is_active: true, show_in_header: true, show_in_footer: false, sidebar_width_px: 220 }),
     });
     if (res.ok) { const g = await res.json(); setSelectedGroupId(g.id); await load(); notify(DataEvent.MENUS); flash("그룹이 추가되었습니다."); }
     else alert((await res.json()).detail || "추가 실패");
@@ -185,6 +186,7 @@ export default function AdminMenusPage() {
       landing_href: merged.landing_href,
       sort_order: merged.sort_order,
       is_active: merged.is_active, show_in_header: merged.show_in_header,
+      show_in_footer: merged.show_in_footer,
     };
     const res = await fetch(`${API}/api/menus/groups/${g.id}`, {
       method: "PUT",
@@ -475,6 +477,16 @@ export default function AdminMenusPage() {
                   </label>
                   <p className="text-xs text-gray-400 mt-1">
                     체크 해제 시 헤더 dropdown에는 안 나오지만, 해당 경로 페이지에서 좌측 사이드바로 표시됩니다.
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Footer 영역에 표시</label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={selectedGroup.show_in_footer} onChange={(e) => updateGroup(selectedGroup, { show_in_footer: e.target.checked })} />
+                    <span>{selectedGroup.show_in_footer ? "Footer에 표시 (관련 사이트·외부 링크 등)" : "Footer 미표시"}</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mt-1">
+                    외부 사이트 링크 모음 같은 그룹은 헤더 OFF + Footer ON 으로 설정하면 사이드바에도 노출되지 않고 footer 에만 노출됩니다.
                   </p>
                 </div>
                 <div className="sm:col-span-2">

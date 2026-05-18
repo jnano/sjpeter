@@ -19,6 +19,8 @@ class MenuGroup(Base):
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     show_in_header = Column(Boolean, default=True)               # FALSE면 헤더 dropdown 안 나옴 (사이드바 전용)
+    # TRUE면 footer 의 '관련 사이트' 영역에 노출. 헤더와 독립 — 외부 자료 모음은 보통 (header=False, footer=True)
+    show_in_footer = Column(Boolean, nullable=False, server_default="false")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
