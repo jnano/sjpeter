@@ -43,10 +43,10 @@ async function getPastorName(): Promise<string | null> {
 }
 
 export default async function VisionPage() {
-  const [visions, pastorName] = await Promise.all([getVisions(), getPastorName()]);
-  // 최근 등록된 1건만 "올해" 로 표시 — year 우선, 동률이면 id 가 큰 (마지막 INSERT) 항목.
-  // DB 의 is_current 값은 무시하여 운영자가 새 vision 등록 시 자동으로 배지가 이동.
-  const current = [...visions].sort((a, b) => b.year - a.year || b.id - a.id)[0];
+  const [rawVisions, pastorName] = await Promise.all([getVisions(), getPastorName()]);
+  // 정렬: year DESC, 동률이면 id DESC — 최근 등록이 항상 위. 목록·current 동일 적용.
+  const visions = [...rawVisions].sort((a, b) => b.year - a.year || b.id - a.id);
+  const current = visions[0];
 
   return (
     <>
