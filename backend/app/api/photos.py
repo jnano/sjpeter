@@ -17,8 +17,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.site_settings import get_setting
 
 router = APIRouter(prefix="/photos", tags=["photos"])
+
+ALLOWED_VIEW_SCOPES = ("public", "members")
+
+
+def _resolve_view_scope() -> str:
+    raw = (get_setting("PHOTOS_VIEW_SCOPE", "public") or "public").strip().lower()
+    return raw if raw in ALLOWED_VIEW_SCOPES else "public"
 
 DEFAULT_LIMIT = 60
 MAX_LIMIT = 120
@@ -40,6 +48,11 @@ class PhotosOut(BaseModel):
     total: int
     seed: str
     mode: str
+    view_scope: str
+
+
+class PhotosAccessOut(BaseModel):
+    view_scope: str
 
 
 # 공통 UNION 본문 — ORDER BY 만 모드에 따라 바뀜.
@@ -171,4 +184,15 @@ def list_photos(
         total=total,
         seed=active_seed,
         mode=mode,
+        view_scope=_resolve_view_scope(),
     )
+
+
+@router.get("/access", response_model=PhotosAccessOut)
+def get_access():
+    """페이지 접근 권한 정보만 반환 (SSR 분기용 경량 endpoint).
+
+    실제 권한 차단은 프론트 SSR 가 담당 — 페이지 권한이 'members' + 비로그인이면 안내 박스 렌더.
+    사진 데이터 자체는 항상 게시판 권한 정책에 따라 필터링됨(권한과 무관하게 비공개 사진은 안 노출).
+    """
+    return PhotosAccessOut(view_scope=_resolve_view_scope())

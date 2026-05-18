@@ -34,6 +34,10 @@ const SELECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: "even",       label: "3등분 · 시즌 배너 표시" },
     { value: "even-plain", label: "3등분 (배너 없음)" },
   ],
+  PHOTOS_VIEW_SCOPE: [
+    { value: "public",  label: "공개 — 누구나 접근 가능" },
+    { value: "members", label: "회원만 — 비로그인은 안내 후 로그인 필요" },
+  ],
 };
 
 export default function SettingsPage() {

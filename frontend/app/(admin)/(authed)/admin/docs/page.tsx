@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.162";
+export const CURRENT_VERSION = "1.5.163";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,20 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.163", date: "2026-05-18", tag: "기능",
+    items: [
+      "/photos — 페이지 접근 권한 설정 (공개 / 회원만)",
+      "  · site_settings.PHOTOS_VIEW_SCOPE 키 신설 (기본 public)",
+      "  · 공개: 기존 동작 (게시판 권한 따라 필터링)",
+      "  · 회원만 + 비로그인: 인라인 안내 박스 + '로그인하러 가기' 버튼 (callbackUrl=/photos)",
+      "  · 회원만 + 로그인: PhotosClient 렌더 (기존 동작 그대로)",
+      "  · 사진 데이터 자체는 페이지 권한과 무관하게 항상 게시판 정책 따라 필터링",
+      "  · 백엔드: GET /api/photos/access 경량 endpoint + PhotosOut.view_scope",
+      "  · 어드민: /admin/settings 사이트 그룹에 라디오 select 노출",
+      "  · 페이지 구조: server component(page.tsx) → 분기 → client component(PhotosClient.tsx)",
+    ],
+  },
   {
     version: "1.5.162", date: "2026-05-18", tag: "인프라",
     items: [
