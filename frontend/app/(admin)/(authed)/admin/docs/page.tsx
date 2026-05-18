@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.170";
+export const CURRENT_VERSION = "1.5.171";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.171", date: "2026-05-18", tag: "수정",
+    items: [
+      "/photos — 게시판 이동 시 사이드바 누락 해소",
+      "  · 증상: /photos 사진 클릭 → /boards/{slug}/{id} → SectionLayout 의 useNavigation 이 메뉴 매칭 실패 → currentGroup=null → 사이드바·칩 모두 사라짐",
+      "  · 원인: '전례 사진'(liturgy)·'성전 건축 사진'(building_photo) 은 메뉴에 /gallery/{slug} 로 등록 — /boards/{slug} prefix 와 매칭 안 됨",
+      "  · 변경: photos.py SQL 의 click_href 가 menu_items 에서 '/gallery/{slug}' 가 등록된 경우 그 경로로 분기, 아니면 '/boards/{slug}' fallback",
+      "  · 효과: 갤러리성 게시판의 사진 클릭이 메뉴와 동일 경로로 가서 사이드바 정상 노출",
+      "  · 잔여: events 게시판은 메뉴에 미등록 → 별도 확인 필요 (관리자 결정)",
+    ],
+  },
   {
     version: "1.5.170", date: "2026-05-18", tag: "수정",
     items: [
