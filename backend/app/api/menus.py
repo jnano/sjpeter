@@ -478,8 +478,8 @@ def upload_item_image(
     if not item:
         raise HTTPException(status_code=404, detail="메뉴 항목을 찾을 수 없습니다.")
     ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
-    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
-        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".svg"):
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다 (JPG·PNG·WebP·SVG).")
     folder = "uploads/menu_items"
     os.makedirs(folder, exist_ok=True)
     fname = f"{uuid.uuid4().hex}{ext}"

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.178";
+export const CURRENT_VERSION = "1.5.179";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.179", date: "2026-05-18", tag: "기능",
+    items: [
+      "관련 사이트 대표 사진 — SVG 형식 허용",
+      "  · backend: 허용 ext 에 .svg 추가",
+      "  · admin: file input accept 에 image/svg+xml,.svg 명시 + 안내 문구 갱신",
+      "  · 보안: <img> 태그로만 렌더해 SVG 내부 script 비활성 (XSS 회피)",
+    ],
+  },
   {
     version: "1.5.178", date: "2026-05-18", tag: "디자인",
     items: [

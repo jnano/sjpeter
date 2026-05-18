@@ -943,7 +943,7 @@ function ItemEditor({
                   />
                   <label className="text-xs text-blue-600 hover:underline cursor-pointer">
                     교체
-                    <input type="file" accept="image/*" onChange={uploadItemImage} className="hidden" />
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml,.svg" onChange={uploadItemImage} className="hidden" />
                   </label>
                   <button type="button" onClick={deleteItemImage} className="text-xs text-red-600 hover:underline">제거</button>
                 </div>
@@ -954,7 +954,7 @@ function ItemEditor({
                 </label>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Footer 의 외부 링크 영역 등에서 원형으로 표시됩니다. JPG · PNG · WebP.
+                Footer 의 외부 링크 영역 등에서 원형으로 표시됩니다. JPG · PNG · WebP · SVG.
               </p>
             </div>
           )}
