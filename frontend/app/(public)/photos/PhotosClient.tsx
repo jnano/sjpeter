@@ -121,7 +121,7 @@ export default function PhotosClient() {
     <main className="min-h-screen bg-white">
       <PageHeader
         group="사진 기록"
-        title="모든 사진"
+        title="모든 날 모든 기억"
         subtitle="등록된 모든 사진을 한 곳에서 — 클릭하면 원래 자리로 이동합니다"
         action={
           <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-white p-1 text-[13px]">

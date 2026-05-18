@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.163";
+export const CURRENT_VERSION = "1.5.164";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.164", date: "2026-05-18", tag: "디자인",
+    items: [
+      "/photos 라벨 변경 — '모든 사진' → '모든 날 모든 기억'",
+      "  · 메뉴(menu_items) · PhotosClient PageHeader · 안내 박스 PageHeader 3곳 동시 변경",
+    ],
+  },
   {
     version: "1.5.163", date: "2026-05-18", tag: "기능",
     items: [
