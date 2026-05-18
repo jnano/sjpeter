@@ -378,7 +378,10 @@ def delete_bulletin(
     - bulletin_extractions
     - bulletin_extracted_images
     - source_bulletin_id 를 가진 posts/events/meditations/visions
+    추가로: PDF 파일 + bulletin-extracted/{id} 디렉터리(추출 이미지) 디스크 정리.
     """
+    import shutil
+
     bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
     if not bulletin:
         raise HTTPException(status_code=404, detail="주보를 찾을 수 없습니다.")
@@ -387,6 +390,14 @@ def delete_bulletin(
         file_path = bulletin.pdf_url.lstrip("/")
         if os.path.exists(file_path):
             os.remove(file_path)
+
+    # 추출 이미지 디렉터리 정리 (DB cascade 와 별개로 디스크 파일·폴더 삭제)
+    extracted_dir = os.path.join(settings.UPLOAD_DIR, "bulletin-extracted", str(bulletin_id))
+    if os.path.isdir(extracted_dir):
+        try:
+            shutil.rmtree(extracted_dir)
+        except Exception as exc:
+            logger.warning("[bulletin %d] 추출 이미지 디렉터리 삭제 실패: %s", bulletin_id, exc)
 
     db.delete(bulletin)
     db.commit()

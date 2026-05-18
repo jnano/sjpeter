@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.156";
+export const CURRENT_VERSION = "1.5.157";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.157", date: "2026-05-18", tag: "수정",
+    items: [
+      "delete_bulletin 시 uploads/bulletin-extracted/{id} 디렉터리 자동 정리",
+      "  · DB cascade 와 별개로 디스크 폴더가 남던 문제 해결 (shutil.rmtree)",
+      "  · 이전 잔여 폴더 4개 (22·23·35·36) 수동 정리",
+    ],
+  },
   {
     version: "1.5.156", date: "2026-05-18", tag: "기능",
     items: [
