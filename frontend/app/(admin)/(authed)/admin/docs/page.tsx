@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.160";
+export const CURRENT_VERSION = "1.5.161";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.161", date: "2026-05-18", tag: "수정",
+    items: [
+      "/photos — API base 해석 강건화 (env 빈 값일 때도 절대 URL 보장)",
+      "  · resolveApiBase() 헬퍼: NEXT_PUBLIC_API_URL → window.location → localhost:8000 폴백",
+      "  · 이전: ?? 폴백은 빈 문자열 못 잡아 상대 경로 /api/photos 로 가서 Next.js 404",
+      "  · LAN/공인 IP 접속에서도 hostname 그대로 8000 포트 사용",
+    ],
+  },
   {
     version: "1.5.160", date: "2026-05-18", tag: "기능",
     items: [

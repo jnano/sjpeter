@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+function resolveApiBase(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL;
+  if (env && env.trim()) return env;
+  if (typeof window !== "undefined" && window.location.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
 const PAGE_SIZE = 60;
 
 type Mode = "shuffle" | "grouped";
@@ -30,7 +37,7 @@ interface PhotosResponse {
 function imgUrl(fileUrl: string): string {
   if (!fileUrl) return "";
   if (fileUrl.startsWith("http")) return fileUrl;
-  return `${API}${fileUrl}`;
+  return `${resolveApiBase()}${fileUrl}`;
 }
 
 export default function PhotosPage() {
@@ -58,7 +65,7 @@ export default function PhotosPage() {
           limit: String(PAGE_SIZE),
         });
         if (currentMode === "shuffle" && currentSeed) params.set("seed", currentSeed);
-        const res = await fetch(`${API}/api/photos?${params.toString()}`, { cache: "no-store" });
+        const res = await fetch(`${resolveApiBase()}/api/photos?${params.toString()}`, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data: PhotosResponse = await res.json();
         if (myReqId !== reqIdRef.current) return; // 더 새 요청이 진행 중이면 폐기
