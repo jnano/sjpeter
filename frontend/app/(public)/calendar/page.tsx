@@ -179,12 +179,13 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 // ── 월간 뷰 — 한 주 행 ──────────────────
 
 function WeekRow({
-  weekCells, year, month, events, todayStr, onSelect,
+  weekCells, year, month, events, todayStr, onSelect, onCreateForDate,
 }: {
   weekCells: (number | null)[];
   year: number; month: number;
   events: Event[]; todayStr: string;
   onSelect: (e: Event) => void;
+  onCreateForDate?: (dateStr: string) => void;
 }) {
   const weekDates = weekCells.map(d => d ? cellToStr(year, month, d) : null);
   const spans = computeSpans(events, weekDates);
@@ -209,6 +210,8 @@ function WeekRow({
       {weekCells.map((day, i) => {
         const d = weekDates[i];
         const isToday = d === todayStr;
+        const clickable = !!(d && onCreateForDate);
+        const NumberEl = clickable ? "button" : "span";
         return (
           <div
             key={`n${i}`}
@@ -216,14 +219,17 @@ function WeekRow({
             className={`px-1.5 pt-1.5 pb-0.5 ${i < 6 ? "border-r border-[var(--color-border)]" : ""}`}
           >
             {day !== null && (
-              <span className={`text-xs font-medium w-6 h-6 rounded-full inline-flex items-center justify-center ${
-                isToday ? "bg-[var(--color-primary)] text-white"
-                : i === 0 ? "text-red-500"
-                : i === 6 ? "text-blue-500"
-                : "text-[var(--color-text)]"
-              }`}>
+              <NumberEl
+                {...(clickable ? { onClick: () => onCreateForDate!(d!), title: "이 날짜에 일정 추가" } : {})}
+                className={`text-xs font-medium w-6 h-6 rounded-full inline-flex items-center justify-center ${
+                  isToday ? "bg-[var(--color-primary)] text-white"
+                  : i === 0 ? "text-red-500"
+                  : i === 6 ? "text-blue-500"
+                  : "text-[var(--color-text)]"
+                } ${clickable ? "hover:bg-[var(--color-primary)] hover:text-white cursor-pointer transition-colors" : ""}`}
+              >
                 {day}
-              </span>
+              </NumberEl>
             )}
           </div>
         );
@@ -291,11 +297,12 @@ function WeekRow({
 // ── 월간 뷰 ─────────────────────────────
 
 function MonthView({
-  year, month, events, todayStr, onSelect,
+  year, month, events, todayStr, onSelect, onCreateForDate,
 }: {
   year: number; month: number;
   events: Event[]; todayStr: string;
   onSelect: (e: Event) => void;
+  onCreateForDate?: (dateStr: string) => void;
 }) {
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDow = new Date(year, month - 1, 1).getDay();
@@ -331,6 +338,7 @@ function MonthView({
           events={events}
           todayStr={todayStr}
           onSelect={onSelect}
+          onCreateForDate={onCreateForDate}
         />
       ))}
     </div>
@@ -340,10 +348,11 @@ function MonthView({
 // ── 주간 뷰 ─────────────────────────────
 
 function WeekView({
-  weekStart, events, todayStr, onSelect,
+  weekStart, events, todayStr, onSelect, onCreateForDate,
 }: {
   weekStart: Date; events: Event[]; todayStr: string;
   onSelect: (e: Event) => void;
+  onCreateForDate?: (dateStr: string) => void;
 }) {
   const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const dateStrs = dates.map(dateToStr);
@@ -373,14 +382,29 @@ function WeekView({
               <div className={`text-[11px] font-medium mb-0.5 ${i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-[var(--color-text-muted)]"}`}>
                 {WEEKDAYS[i]}
               </div>
-              <span className={`text-sm font-semibold w-7 h-7 rounded-full inline-flex items-center justify-center ${
-                isToday ? "bg-[var(--color-primary)] text-white"
-                : i === 0 ? "text-red-500"
-                : i === 6 ? "text-blue-500"
-                : "text-[var(--color-text)]"
-              }`}>
-                {d.getDate()}
-              </span>
+              {onCreateForDate ? (
+                <button
+                  onClick={() => onCreateForDate(ds)}
+                  title="이 날짜에 일정 추가"
+                  className={`text-sm font-semibold w-7 h-7 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors hover:bg-[var(--color-primary)] hover:text-white ${
+                    isToday ? "bg-[var(--color-primary)] text-white"
+                    : i === 0 ? "text-red-500"
+                    : i === 6 ? "text-blue-500"
+                    : "text-[var(--color-text)]"
+                  }`}
+                >
+                  {d.getDate()}
+                </button>
+              ) : (
+                <span className={`text-sm font-semibold w-7 h-7 rounded-full inline-flex items-center justify-center ${
+                  isToday ? "bg-[var(--color-primary)] text-white"
+                  : i === 0 ? "text-red-500"
+                  : i === 6 ? "text-blue-500"
+                  : "text-[var(--color-text)]"
+                }`}>
+                  {d.getDate()}
+                </span>
+              )}
             </div>
           );
         })}
@@ -449,10 +473,11 @@ function WeekView({
 // ── 일간 뷰 ─────────────────────────────
 
 function DayView({
-  date, events, todayStr, onSelect,
+  date, events, todayStr, onSelect, onCreateForDate,
 }: {
   date: Date; events: Event[]; todayStr: string;
   onSelect: (e: Event) => void;
+  onCreateForDate?: (dateStr: string) => void;
 }) {
   const dateStr = dateToStr(date);
   const isToday = dateStr === todayStr;
@@ -478,7 +503,7 @@ function DayView({
         }`}>
           {date.getDate()}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-sm text-[var(--color-text-muted)]">
             {date.getFullYear()}년 {date.getMonth() + 1}월
           </p>
@@ -486,6 +511,14 @@ function DayView({
             {WEEKDAYS[dow]}요일 {isToday && <span className="ml-1 text-xs text-[var(--color-primary)]">(오늘)</span>}
           </p>
         </div>
+        {onCreateForDate && (
+          <button
+            onClick={() => onCreateForDate(dateStr)}
+            className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)] transition-colors"
+          >
+            + 일정 추가
+          </button>
+        )}
       </div>
 
       {dayEvents.length === 0 ? (
@@ -546,9 +579,10 @@ function DayView({
 // ── 목록 뷰 ─────────────────────────────
 
 function ListView({
-  events, onSelect,
+  events, onSelect, onCreateForDate,
 }: {
   events: Event[]; onSelect: (e: Event) => void;
+  onCreateForDate?: () => void;
 }) {
   const sorted = [...events].sort(compareEvents);
   // 날짜별 그룹
@@ -563,11 +597,30 @@ function ListView({
     return (
       <div className="bg-white border border-[var(--color-border)] rounded-xl p-12 text-center">
         <p className="text-sm text-[var(--color-text-muted)]">등록된 일정이 없습니다.</p>
+        {onCreateForDate && (
+          <button
+            onClick={onCreateForDate}
+            className="mt-4 text-xs px-4 py-2 rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)] transition-colors"
+          >
+            + 새 일정 추가
+          </button>
+        )}
       </div>
     );
   }
 
   return (
+    <>
+    {onCreateForDate && (
+      <div className="mb-3 flex justify-end">
+        <button
+          onClick={onCreateForDate}
+          className="text-xs px-3 py-1.5 rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)] transition-colors"
+        >
+          + 새 일정 추가
+        </button>
+      </div>
+    )}
     <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden divide-y divide-[var(--color-border)]">
       {Array.from(groups.entries()).map(([dateStr, evs]) => {
         const d = new Date(dateStr);
@@ -613,6 +666,7 @@ function ListView({
         );
       })}
     </div>
+    </>
   );
 }
 
@@ -670,6 +724,13 @@ export default function CalendarPage() {
     title: string; event_date: string; end_date: string;
     start_time: string; location: string; description: string;
   }>({ title: "", event_date: "", end_date: "", start_time: "", location: "", description: "" });
+  // 신규 등록 모달 (운영자 이상이 캘린더 날짜를 클릭하면 열림)
+  const [creatingDate, setCreatingDate] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState<{
+    title: string; event_date: string; end_date: string;
+    start_time: string; location: string; description: string;
+    category: string; event_kind: string;
+  }>({ title: "", event_date: "", end_date: "", start_time: "", location: "", description: "", category: "general", event_kind: "행사" });
 
   // 운영자 이상 권한 — 슈퍼관리자(admin_token) OR 운영자(session.isAdmin)
   const { data: session } = useSession();
@@ -728,6 +789,52 @@ export default function CalendarPage() {
       setEditing(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : "저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openCreateForDate(dateStr: string) {
+    if (!canManage) return;
+    setCreateForm({
+      title: "", event_date: dateStr, end_date: "", start_time: "",
+      location: "", description: "", category: "general", event_kind: "행사",
+    });
+    setCreatingDate(dateStr);
+  }
+
+  async function handleCreateEvent() {
+    if (!creatingDate) return;
+    if (!createForm.title.trim() || !createForm.event_date) {
+      alert("제목과 날짜는 필수입니다.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/events/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: createForm.title.trim(),
+          description: createForm.description || null,
+          event_date: createForm.event_date,
+          end_date: createForm.end_date || null,
+          start_time: createForm.start_time || null,
+          location: createForm.location || null,
+          category: createForm.category,
+          is_public: true,
+          event_kind: createForm.event_kind || null,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail ?? "등록 실패");
+      }
+      const created = await res.json();
+      setEvents((prev) => [...prev, created]);
+      setCreatingDate(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "등록에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -1056,6 +1163,7 @@ export default function CalendarPage() {
             events={filtered}
             todayStr={todayStr}
             onSelect={setSelected}
+            onCreateForDate={canManage ? openCreateForDate : undefined}
           />
         ) : viewMode === "week" ? (
           <WeekView
@@ -1063,6 +1171,7 @@ export default function CalendarPage() {
             events={filtered}
             todayStr={todayStr}
             onSelect={setSelected}
+            onCreateForDate={canManage ? openCreateForDate : undefined}
           />
         ) : viewMode === "day" ? (
           <DayView
@@ -1070,9 +1179,14 @@ export default function CalendarPage() {
             events={filtered}
             todayStr={todayStr}
             onSelect={setSelected}
+            onCreateForDate={canManage ? openCreateForDate : undefined}
           />
         ) : (
-          <ListView events={filtered} onSelect={setSelected} />
+          <ListView
+            events={filtered}
+            onSelect={setSelected}
+            onCreateForDate={canManage ? () => openCreateForDate(todayStr) : undefined}
+          />
         )}
 
         {/* 상세 모달 */}
@@ -1199,6 +1313,112 @@ export default function CalendarPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* 신규 등록 모달 — 운영자 이상이 캘린더 날짜를 클릭하면 열림 */}
+        {creatingDate && canManage && (
+          <div
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            onClick={() => !saving && setCreatingDate(null)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg font-bold text-[var(--color-primary)]">새 일정 추가</h3>
+                <button
+                  onClick={() => !saving && setCreatingDate(null)}
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                >✕</button>
+              </div>
+              <div className="space-y-2">
+                <input
+                  value={createForm.title}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="제목 *"
+                  className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  autoFocus
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={createForm.event_date}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, event_date: e.target.value }))}
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={createForm.end_date}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, end_date: e.target.value }))}
+                    placeholder="종료일 (선택)"
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={createForm.start_time}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, start_time: e.target.value }))}
+                    placeholder="시간 (예: 19:30)"
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    value={createForm.location}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="장소"
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={createForm.event_kind}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, event_kind: e.target.value }))}
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                  >
+                    <option value="행사">분류: 행사</option>
+                    <option value="모임">분류: 모임</option>
+                    <option value="">분류 없음</option>
+                  </select>
+                  <select
+                    value={createForm.category}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value }))}
+                    className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                  >
+                    <option value="general">카테고리: 일반</option>
+                    <option value="liturgy">카테고리: 전례</option>
+                    <option value="community">카테고리: 공동체</option>
+                    <option value="education">카테고리: 교육</option>
+                    <option value="special">카테고리: 특별행사</option>
+                  </select>
+                </div>
+                <textarea
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
+                  rows={5}
+                  placeholder="설명 (선택)"
+                  className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm resize-y"
+                />
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateEvent}
+                    disabled={saving || !createForm.title.trim() || !createForm.event_date}
+                    className="flex-1 text-xs px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-md font-medium hover:bg-[var(--color-primary-light)] disabled:opacity-50"
+                  >
+                    {saving ? "등록 중…" : "등록"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreatingDate(null)}
+                    disabled={saving}
+                    className="text-xs px-3 py-1.5 border border-[var(--color-border)] rounded-md disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

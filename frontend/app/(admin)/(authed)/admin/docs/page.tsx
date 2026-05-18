@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.154";
+export const CURRENT_VERSION = "1.5.155";
 export const LAST_UPDATED = "2026-05-18";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.155", date: "2026-05-18", tag: "기능",
+    items: [
+      "/calendar — 운영자 이상이 캘린더 날짜 클릭 시 일정 등록",
+      "  · 월간/주간 뷰: 날짜 숫자 호버·클릭 → 신규 등록 모달 (그 날짜로 자동 인입)",
+      "  · 일간 뷰: 헤더 우측 '+ 일정 추가' 버튼",
+      "  · 목록 뷰: 상단 '+ 새 일정 추가' 버튼 (오늘 날짜 인입)",
+      "  · 폼: 제목·시작일·종료일·시간·장소·분류(행사/모임)·카테고리·설명",
+    ],
+  },
   {
     version: "1.5.154", date: "2026-05-18", tag: "기능",
     items: [
