@@ -17,7 +17,12 @@ router = APIRouter(prefix="/menus", tags=["menus"])
 
 
 def _compute_href(item: MenuItem, db: Session) -> str:
-    """link_type에 따라 href를 도출. 매 응답 시 호출하여 fresh URL 보장 (slug 변경 대응)."""
+    """link_type에 따라 href를 도출. 매 응답 시 호출하여 fresh URL 보장 (slug 변경 대응).
+
+    external/page는 참조 필드가 비어 있으면 빈 문자열 반환 — 옛 fallback(href 컬럼 사용)은
+    데이터 부정합(예: SQL 직접 INSERT) 을 침묵시키는 문제가 있어 제거 (v1.5.183).
+    board는 보드 삭제 시점에 메뉴가 끊기지 않도록 기존 href를 graceful fallback으로 유지.
+    """
     if item.link_type == "board" and item.board_id:
         b = db.query(Board).filter(Board.id == item.board_id).first()
         if not b:
@@ -26,9 +31,9 @@ def _compute_href(item: MenuItem, db: Session) -> str:
         prefix = "/gallery" if getattr(b, "kind", None) == "gallery" else "/boards"
         return f"{prefix}/{b.slug}"
     if item.link_type == "external":
-        return item.external_url or item.href or ""
+        return item.external_url or ""
     if item.link_type == "page":
-        return item.static_page_slug or item.href or ""
+        return item.static_page_slug or ""
     return item.href or ""
 
 

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.182";
+export const CURRENT_VERSION = "1.5.183";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.183", date: "2026-05-19", tag: "수정",
+    items: [
+      "menu_items 부정합 차단 — link_type ↔ 참조필드 일관성 강제",
+      "  · 증상: link_type='external' + external_url=NULL 인 잘못된 행이 backend href fallback으로 '동작'해 admin UI에서 부정합 발견 불가",
+      "  · 원인: 본인이 직접 SQL INSERT로 메뉴를 만들 때 admin API의 검증을 우회 + _compute_href 의 'external_url or href' fallback이 잘못된 상태를 침묵시킴",
+      "  · 정리: /saints(id=76), /photos(id=69) 잔여 [외부] 행 삭제 → 사용자가 admin에서 만든 정상 [페이지] 행만 유지",
+      "  · backend/app/api/menus.py:_compute_href — external/page 의 href fallback 제거 (board는 보드 삭제 graceful 처리 유지)",
+      "  · backend/main.py — DB CHECK 제약 menu_items_link_consistency 추가 (external→external_url, page→static_page_slug, board→board_id 필수)",
+      "  · 효과: 앞으로 SQL 직접 INSERT 도 차단, 잘못된 상태는 즉시 빈 링크로 노출되어 발견",
+      "  · 후속 안내: /admin/menus 에서 본당 공동체의 '세례명·축일 사전'(/saints) 이 비활성 상태입니다. 노출하려면 '활성' 체크 후 저장.",
+    ],
+  },
   {
     version: "1.5.182", date: "2026-05-19", tag: "기능",
     items: [

@@ -589,6 +589,25 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        # link_type ↔ 참조필드 일관성 제약 (v1.5.183)
+        # external → external_url 필수, page → static_page_slug 필수, board → board_id 필수
+        # 부정합 행이 남아 있으면 ALTER 실패 → 운영자가 정리 후 재시도해야 함
+        try:
+            conn.execute(text(
+                "ALTER TABLE menu_items DROP CONSTRAINT IF EXISTS menu_items_link_consistency"
+            ))
+            conn.execute(text("""
+                ALTER TABLE menu_items ADD CONSTRAINT menu_items_link_consistency CHECK (
+                    (link_type = 'external' AND external_url IS NOT NULL AND external_url <> '')
+                    OR (link_type = 'page' AND static_page_slug IS NOT NULL AND static_page_slug <> '')
+                    OR (link_type = 'board' AND board_id IS NOT NULL)
+                )
+            """))
+        except Exception as _exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "menu_items_link_consistency 제약 추가 실패 (부정합 행 잔존 가능): %s", _exc
+            )
         try:
             # NULL이면 자동 비율(현재 aspect-[5/4]), 값이 있으면 그 px로 고정 + object-cover
             conn.execute(text(
