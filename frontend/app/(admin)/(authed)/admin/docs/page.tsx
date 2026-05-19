@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.191";
+export const CURRENT_VERSION = "1.5.192";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.192", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 토글 — 위치를 사이드바 상단 이미지 위로 이동, 모양은 단순 rounded 버튼으로 복원",
+      "  · 모양: border + rounded + bg-white 단순 박스 (v1.5.185 형태)",
+      "  · 위치: 사이드바 영역 안 사진 직전 (mb-3 으로 사진과 간격)",
+      "  · 사이드바 wrapper 폭을 sidebar_width_px 로 고정 → collapsed 여도 wrapper 자리는 유지되어 토글이 그 자리에 그대로 보임 (사이드바만 hidden)",
+      "  · SectionLayout 표준·/calendar 자체 구현 양쪽 동일 적용",
+    ],
+  },
   {
     version: "1.5.191", date: "2026-05-19", tag: "수정",
     items: [
