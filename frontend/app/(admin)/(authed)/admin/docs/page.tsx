@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.199";
+export const CURRENT_VERSION = "1.5.200";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.200", date: "2026-05-19", tag: "디자인",
+    items: [
+      "/gallery/[slug] loading.tsx 추가 — '목록으로' 진입 시 footer 잔상 완전 해소",
+      "  · v1.5.199(클릭 즉시 scroll-top) 의 보강. Next.js App Router 의 자동 loading UI 로 RSC 응답 도착 전 즉시 표시",
+      "  · 구성: PageHeader 자리 스페이서 + 사이드바 폭 reserve + 6개 aspect-square 사진 skeleton (실제 그리드 grid-cols-2 sm:grid-cols-3 gap-3 구조 그대로 → mount 시 layout shift 최소)",
+      "  · 효과: 갤러리 게시판(전례·행사)의 클릭→로딩→마운트 동안 이전 페이지 잔상 없이 매끄러운 전환",
+    ],
+  },
   {
     version: "1.5.199", date: "2026-05-19", tag: "수정",
     items: [
