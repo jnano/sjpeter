@@ -49,8 +49,9 @@ export function useSidebarCollapsed(): [boolean, () => void] {
 }
 
 /**
- * 사이드바 접기/펼치기 토글 버튼 — 단순 rounded 박스 모양.
- * 데스크탑(md+) 한정 노출. 부모가 위치를 결정한다 (사이드바 영역 안 상단에 두는 게 권장).
+ * 사이드바 접기/펼치기 토글 — PageHeader 하단 구분선에 걸친 「아래로 처진 탭」 모양.
+ * absolute 로 띄워 layout 공간을 차지하지 않음 — 사이드바 사진이 밀려 내려가지 않는다.
+ * 데스크탑(md+) 한정 노출. **부모에 md:relative 필요** (absolute 기준점).
  * SectionLayout 외에 SectionSidebar 를 자체 호출하는 페이지(/calendar 등)에서도 사용.
  */
 export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
@@ -61,7 +62,8 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
       aria-pressed={collapsed}
       aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
       title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-      className="hidden md:inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+      style={{ top: "calc(-2rem - 1px)" }}
+      className="hidden md:inline-flex items-center gap-1 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
     >
       <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
       <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
@@ -112,15 +114,14 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
         {/* 사이드바 영역 — 데스크탑 폭은 sidebar_width_px 로 고정.
-            collapsed 여도 wrapper 폭은 유지(토글이 사이드바 자리에 그대로 보이도록). */}
+            collapsed 여도 wrapper 폭은 유지(토글이 사이드바 자리에 그대로 보이도록).
+            md:relative 는 토글(absolute) 의 위치 기준점. */}
         <div
-          className="shrink-0 md:w-[var(--sidebar-w)]"
+          className="shrink-0 md:w-[var(--sidebar-w)] md:relative"
           style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
         >
-          {/* 토글 — 데스크탑 한정, 사이드바 상단 이미지 위에 위치 */}
-          <div className="hidden md:block mb-3">
-            <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-          </div>
+          {/* 토글 — absolute 라 layout 공간 차지 안 함, PageHeader 구분선에 걸침 */}
+          <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
           {/* SectionSidebar — collapsed 시 데스크탑에서 숨김. 모바일은 column chips 라 항상 표시. */}
           <div className={collapsed ? "md:hidden" : ""}>
             <SectionSidebar

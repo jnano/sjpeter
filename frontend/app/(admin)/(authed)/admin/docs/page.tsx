@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.192";
+export const CURRENT_VERSION = "1.5.193";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.193", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 토글 — 「PageHeader 구분선에 걸친 탭」 모양으로 복원 + 사이드바 영역에 absolute 배치",
+      "  · 모양: border-t-0 + rounded-b-md + bg-white + top:calc(-2rem - 1px) (v1.5.187/188 형태)",
+      "  · 위치: 사이드바 wrapper 안 absolute → layout 공간을 차지하지 않아 사이드바 사진이 밀려 내려가지 않음",
+      "  · 기준점: 사이드바 wrapper 에 md:relative 추가 (absolute 자식 위치)",
+      "  · SectionLayout 표준·/calendar 양쪽 동일 적용",
+    ],
+  },
   {
     version: "1.5.192", date: "2026-05-19", tag: "디자인",
     items: [

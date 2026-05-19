@@ -1093,12 +1093,10 @@ export default function CalendarPage() {
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
             <div
-              className="shrink-0 md:w-[var(--sidebar-w)]"
+              className="shrink-0 md:w-[var(--sidebar-w)] md:relative"
               style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
             >
-              <div className="hidden md:block mb-3">
-                <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-              </div>
+              <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
               <div className={collapsed ? "md:hidden" : ""}>
                 <SectionSidebar
                   groupTitle={currentGroup.label}
