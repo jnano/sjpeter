@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.198";
+export const CURRENT_VERSION = "1.5.199";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.199", date: "2026-05-19", tag: "수정",
+    items: [
+      "게시글 상세 '목록으로' — footer 잔상 깜빡임 해소",
+      "  · 증상: 갤러리 게시판(전례·행사)에서 '목록으로' 클릭 시 RSC 응답 대기 중(~0.3s) 이전 페이지의 footer 위치가 그대로 보이다 새 페이지 mount 후 상단으로 점프 → 깜빡임 인식",
+      "  · 원인: Next.js App Router 의 client-side navigation 동작 — 새 페이지 RSC 응답 도착 전까지 이전 화면 유지. 갤러리는 본문이 길어 footer 위치가 다른 게시판보다 두드러짐",
+      "  · 수정: Link onClick 에서 window.scrollTo({top:0, behavior:'instant'}) 즉시 호출 → 클릭 즉시 상단으로 시각 이동 → 페이지 전환이 매끄러움",
+      "  · 모든 게시판에 동일 적용",
+    ],
+  },
   {
     version: "1.5.198", date: "2026-05-19", tag: "수정",
     items: [
