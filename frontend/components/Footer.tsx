@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { fetchServerMenus } from "./fetchServerMenus";
 import ReportLink from "./ReportLink";
@@ -188,10 +189,13 @@ export default async function Footer() {
               ))}
             </nav>
             <div className="mt-4 text-sm">
-              <ReportLink className="inline-flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
-                <span aria-hidden>🛠️</span>
-                <span>장애 신고</span>
-              </ReportLink>
+              {/* ReportLink 는 useSearchParams 사용 → Suspense 로 감싸 정적 prerender 시 CSR bail-out 차단 회피 */}
+              <Suspense fallback={null}>
+                <ReportLink className="inline-flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
+                  <span aria-hidden>🛠️</span>
+                  <span>장애 신고</span>
+                </ReportLink>
+              </Suspense>
             </div>
 
             {/* 관련 사이트(외부 링크) — show_in_footer 그룹에 등록한 항목들.

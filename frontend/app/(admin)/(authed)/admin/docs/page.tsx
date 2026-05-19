@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.201";
+export const CURRENT_VERSION = "1.5.202";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.202", date: "2026-05-19", tag: "수정",
+    items: [
+      "운영 빌드(npm run build) 차단 오류 2건 해결 — 첫 prod 빌드 성공 (~22s, 54 routes)",
+      "  · pastor/page.tsx:53 — <PageHeader> 의 required subtitle 누락 → '본당의 영성을 이끄시는 사목자' 추가",
+      "  · components/Footer.tsx — <ReportLink>(useSearchParams 사용) 가 <Suspense> 미감싸 → 모든 페이지의 정적 prerender 차단(CSR bail-out). <Suspense fallback={null}> 로 감쌈",
+      "  · 검증: npm run build 성공. Compiled 11.0s + TS 9.9s + Page generation 0.7s (54/54)",
+      "  · 모든 페이지가 ƒ(Dynamic, server-rendered on demand) — force-dynamic 패턴과 일치",
+    ],
+  },
   {
     version: "1.5.201", date: "2026-05-19", tag: "인프라",
     items: [

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -49,11 +50,11 @@ export default async function PastorPage() {
 
   return (
     <>
-      <PageHeader group="성당 소개" title="주임신부님" />
+      <PageHeader group="성당 소개" title="주임신부님" subtitle="본당의 영성을 이끄시는 사목자" />
       <SectionLayout group="about">
         {all.length === 0 ? (
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)]">
-            <p className="text-3xl mb-2">✝</p>
+            <p className="text-3xl mb-2"><CrossIcon /></p>
             <p className="text-sm">아직 등록된 본당 가족 정보가 없습니다.</p>
             <p className="text-xs mt-1">관리자 페이지에서 등록할 수 있습니다.</p>
           </div>
@@ -115,7 +116,7 @@ function StoryRow({
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-5xl text-[var(--color-border-dark)]">
-                ✝
+                <CrossIcon />
               </div>
             )}
           </div>
