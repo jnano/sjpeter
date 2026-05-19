@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.190";
+export const CURRENT_VERSION = "1.5.191";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.191", date: "2026-05-19", tag: "수정",
+    items: [
+      "/calendar 에 사이드바 접기 토글 누락 — 보완",
+      "  · 원인: /calendar 는 SectionLayout 을 우회하고 SectionSidebar 를 자체 호출하기 때문",
+      "  · 수정: SectionLayout 의 useSidebarCollapsed 훅과 SidebarCollapseTab 컴포넌트를 export 로 분리 → /calendar 에서 import 사용",
+      "  · 동일 localStorage 키('section-sidebar-collapsed')를 공유하므로 다른 페이지에서 접은 상태가 그대로 유지됨",
+      "  · 사이드바 wrapper 에 collapsed 시 md:hidden + 본문 div 에 md:relative + 토글 컴포넌트 한 줄 추가",
+    ],
+  },
   {
     version: "1.5.190", date: "2026-05-19", tag: "수정",
     items: [

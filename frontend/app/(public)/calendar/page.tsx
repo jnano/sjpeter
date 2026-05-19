@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import PageHeader from "@/components/PageHeader";
 import BannerSlider from "@/components/BannerSlider";
 import SectionSidebar from "@/components/SectionSidebar";
+import { SidebarCollapseTab, useSidebarCollapsed } from "@/components/SectionLayout";
 import { useNavigation } from "@/components/useNavigation";
 import MarkdownContent from "@/components/MarkdownContent";
 
@@ -705,6 +706,7 @@ export default function CalendarPage() {
   const today = new Date();
   const todayStr = dateToStr(today);
   const { currentGroup } = useNavigation();
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   // 모바일(<768px)에서는 월간 그리드가 답답해 첫 진입 시 자동 'list' 뷰로.
   // 사용자가 다른 뷰 토글하면 그대로 사용.
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -1090,16 +1092,21 @@ export default function CalendarPage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
-            <SectionSidebar
-              groupTitle={currentGroup.label}
-              imageSrc={currentGroup.sidebar_image_url ?? undefined}
-              widthPx={currentGroup.sidebar_width_px}
-              heightPx={currentGroup.sidebar_height_px ?? undefined}
-              imagePosition={currentGroup.sidebar_image_position}
-              items={currentGroup.items}
-            />
+            <div className={collapsed ? "md:hidden" : ""}>
+              <SectionSidebar
+                groupTitle={currentGroup.label}
+                imageSrc={currentGroup.sidebar_image_url ?? undefined}
+                widthPx={currentGroup.sidebar_width_px}
+                heightPx={currentGroup.sidebar_height_px ?? undefined}
+                imagePosition={currentGroup.sidebar_image_position}
+                items={currentGroup.items}
+              />
+            </div>
           )}
-          <div className="flex-1 min-w-0 mt-6 md:mt-0">
+          <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
+            {currentGroup && currentGroup.items.length > 0 && (
+              <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
+            )}
             <BannerSlider placement="calendar_top" className="mb-6" />
         {/* 보기 모드 토글 + 오늘 */}
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">

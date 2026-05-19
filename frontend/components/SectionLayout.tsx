@@ -19,7 +19,7 @@ interface Props {
 /** 데스크탑 사이드바 접힘 상태 — 전역 (localStorage). 같은 키를 다른 탭/페이지가 공유. */
 const COLLAPSE_KEY = "section-sidebar-collapsed";
 
-function useSidebarCollapsed(): [boolean, () => void] {
+export function useSidebarCollapsed(): [boolean, () => void] {
   // SSR/첫 렌더는 false(=펼침) 로 시작해 hydration mismatch 회피.
   // mount 후 localStorage 값을 동기화.
   const [collapsed, setCollapsed] = useState(false);
@@ -46,6 +46,28 @@ function useSidebarCollapsed(): [boolean, () => void] {
   }
 
   return [collapsed, toggle];
+}
+
+/**
+ * PageHeader 하단 구분선에 걸친 「아래로 처진 탭」 모양의 사이드바 접기/펼치기 토글.
+ * 데스크탑(md+) 한정 노출. 부모는 position: relative 이어야 한다 (top 음수로 끌어올림).
+ * SectionLayout 외에 SectionSidebar 를 자체 호출하는 페이지(/calendar 등)에서도 사용.
+ */
+export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={collapsed}
+      aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+      title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+      style={{ top: "calc(-2rem - 1px)" }}
+      className="hidden md:inline-flex items-center gap-1 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+    >
+      <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+      <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+    </button>
+  );
 }
 
 /**
@@ -102,21 +124,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           />
         </div>
         <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
-          {/* 데스크탑(md+) 한정: 탭을 SectionLayout 상단(컨테이너의 py-8 만큼)으로 끌어올려
-              PageHeader 하단 구분선(border-b)에 직접 걸친 「아래로 처진 탭」 모양으로 표시.
-              border-t-0 + bg-white 로 PageHeader 구분선이 탭의 위쪽 모서리처럼 자연스럽게 이어진다. */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-pressed={collapsed}
-            aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-            title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-            style={{ top: "calc(-2rem - 1px)" }}
-            className="hidden md:inline-flex items-center gap-1 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
-          >
-            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-            <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
-          </button>
+          <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
           {autoHero && <AutoPageHero />}
           {children}
         </div>
