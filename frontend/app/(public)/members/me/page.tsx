@@ -49,6 +49,7 @@ interface MemberInfo {
   has_password: boolean;
   is_admin: boolean;
   is_email_verified: boolean;
+  social_provider: string | null;
   name_day_month: number | null;
   name_day_day: number | null;
   created_at: string;

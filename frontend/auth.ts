@@ -47,12 +47,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: String(data.member.id),
           email: data.member.email,
           name: displayName,
+          image: data.member.avatar_url ?? null,
           accessToken: data.access_token,
           isAdmin: !!data.member.is_admin,
           interestPromptCompleted: !!data.member.interest_prompt_completed,
           remember,
           expiresIn: Number(data.expires_in) || 12 * 3600,
-        } as { id: string; email: string; name: string; accessToken: string; isAdmin: boolean; interestPromptCompleted: boolean; remember: boolean; expiresIn: number };
+        } as { id: string; email: string; name: string; image: string | null; accessToken: string; isAdmin: boolean; interestPromptCompleted: boolean; remember: boolean; expiresIn: number };
       },
     }),
   ],
@@ -121,6 +122,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.interestPromptCompleted = u.interestPromptCompleted ?? false;
         token.remember = u.remember ?? false;
         token.absoluteExpiry = Date.now() + (u.expiresIn ?? 12 * 3600) * 1000;
+        // Credentials 로그인 시 header 의 아바타·이름 동기화 — backend avatar_url 을 token.picture 로
+        if (user.name) token.name = user.name;
+        if (user.image) {
+          const img = user.image as string;
+          token.picture = img.startsWith("/") ? `${API}${img}` : img;
+        } else {
+          token.picture = null;
+        }
         return token;
       }
 

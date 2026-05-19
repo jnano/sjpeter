@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.204";
-export const LAST_UPDATED = "2026-05-19";
+export const CURRENT_VERSION = "1.5.205";
+export const LAST_UPDATED = "2026-05-20";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.205", date: "2026-05-20", tag: "수정",
+    items: [
+      "Credentials(일반) 로그인 — 헤더 우측 아바타 누락 해소",
+      "  · 증상: 일반 회원 로그인 시 헤더 우측에 이름 첫 글자만 표시되고 프로필 사진 안 보임. 소셜 로그인은 정상",
+      "  · 원인: auth.ts Credentials authorize 가 image(avatar_url) 를 안 넘겼고, jwt callback Credentials 분기에서도 token.picture 미설정 → session.user.image 가 항상 undefined",
+      "  · 수정: authorize return 에 image=data.member.avatar_url 추가. jwt callback 에서 token.name + token.picture 명시 설정 (상대 경로 /uploads/... 는 ${API} 절대 URL 로 변환)",
+      "  · MemberInfo 타입에 social_provider 필드 추가 — v1.5.203 의 frontend social_provider 체크 type 정합",
+      "  · 적용을 위해 prod 재빌드 필요. 사용자는 한 번 로그아웃 후 재로그인하면 새 token 으로 picture 반영",
+    ],
+  },
   {
     version: "1.5.204", date: "2026-05-19", tag: "디자인",
     items: [
