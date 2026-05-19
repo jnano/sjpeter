@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.203";
+export const CURRENT_VERSION = "1.5.204";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.204", date: "2026-05-19", tag: "디자인",
+    items: [
+      "이메일 인증·비밀번호 재설정 메일 — HTML 버튼 디자인 적용",
+      "  · 증상: 메일 본문에 verify URL 이 plain 텍스트로만 표시 → Gmail/Naver 등에서 자동 링크화 안 되거나 클릭 어려움",
+      "  · 수정: _send_email 시그니처에 html_body 추가 → multipart/alternative 로 plain + HTML 동시 첨부 (HTML 우선, plain fallback)",
+      "  · 디자인: brand primary(#1a365d) 헤더 + 흰 카드 + 「이메일 인증하기」/「비밀번호 재설정하기」 CTA 버튼 + 푸터 백업 링크",
+      "  · 인라인 CSS 로 작성 — Gmail·Naver 가 외부 stylesheet 를 제거하므로 style 속성 직접 사용. 시즌별 색상 변동과 무관한 고정 색",
+      "  · _send_verification_email, _send_reset_email 두 함수 모두 동일 템플릿 사용",
+    ],
+  },
   {
     version: "1.5.203", date: "2026-05-19", tag: "수정",
     items: [

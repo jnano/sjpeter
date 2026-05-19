@@ -163,8 +163,12 @@ def _apply_name_day(target, month: Optional[int], day: Optional[int]) -> None:
     target.name_day_day = day
 
 
-def _send_email(to_email: str, subject: str, body: str) -> None:
-    """이메일 발송. SMTP 미설정 시 콘솔 출력."""
+def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> None:
+    """이메일 발송. SMTP 미설정 시 콘솔 출력.
+
+    html_body 가 주어지면 multipart/alternative 로 plain + HTML 두 가지를 모두 첨부.
+    메일 클라이언트가 HTML 을 우선 표시. plain 은 미지원 클라이언트·spam filter 점수용 fallback.
+    """
     smtp_user = get_setting("SMTP_USER")
     smtp_password = get_setting("SMTP_PASSWORD")
     if not smtp_user or not smtp_password:
@@ -175,7 +179,10 @@ def _send_email(to_email: str, subject: str, body: str) -> None:
         msg["Subject"] = subject
         msg["From"] = get_setting("SMTP_FROM") or smtp_user
         msg["To"] = to_email
+        # plain → html 순서 (multipart/alternative 는 마지막 part 가 우선 표시)
         msg.attach(MIMEText(body, "plain", "utf-8"))
+        if html_body:
+            msg.attach(MIMEText(html_body, "html", "utf-8"))
         smtp_host = get_setting("SMTP_HOST", "smtp.gmail.com")
         smtp_port = int(get_setting("SMTP_PORT", "587"))
         with smtplib.SMTP(smtp_host, smtp_port) as server:
@@ -188,26 +195,106 @@ def _send_email(to_email: str, subject: str, body: str) -> None:
         raise HTTPException(status_code=500, detail="이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.")
 
 
+# ── 메일 HTML 템플릿 (공통) ─────────────────────────────────────────
+# 인라인 CSS — 대부분의 메일 클라이언트(특히 Gmail·Naver) 가 외부 stylesheet 를 제거하므로
+# style 속성으로 직접 작성. 색상은 brand primary(#1a365d) 고정 (시즌별 변경 영향 X).
+
+def _mail_button_html(label: str, url: str) -> str:
+    return (
+        f'<a href="{url}" '
+        'style="display:inline-block;padding:14px 36px;background:#1a365d;color:#ffffff;'
+        'text-decoration:none;border-radius:8px;font-size:15px;font-weight:600;'
+        'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Apple SD Gothic Neo\',sans-serif;">'
+        f'{label}</a>'
+    )
+
+
+def _mail_layout_html(title: str, greeting_html: str, body_html: str, button_html: str, footer_note: str = "") -> str:
+    """메일 본문 공통 레이아웃 — 깔끔한 단색·단일 컬럼."""
+    footer = (
+        f'<p style="margin:24px 0 0;color:#9ca3af;font-size:12px;line-height:1.6;">{footer_note}</p>'
+        if footer_note else ""
+    )
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>{title}</title></head>
+<body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo',sans-serif;color:#1f2937;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="background:#f5f5f4;padding:40px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+        <tr>
+          <td style="background:#1a365d;padding:24px 32px;text-align:center;">
+            <div style="color:#ffffff;font-size:16px;font-weight:600;letter-spacing:0.5px;">세종성베드로성당</div>
+            <div style="color:#cbd5e1;font-size:12px;margin-top:4px;">St. Peter's Cathedral, Sejong</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 32px 32px;">
+            <h1 style="margin:0 0 20px;font-size:20px;color:#1a365d;font-weight:700;">{title}</h1>
+            <p style="margin:0 0 12px;font-size:15px;line-height:1.7;">{greeting_html}</p>
+            <div style="font-size:15px;line-height:1.7;color:#374151;">{body_html}</div>
+            <div style="text-align:center;margin:32px 0 8px;">{button_html}</div>
+            {footer}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fafaf9;padding:18px 32px;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;">© 2026 세종성베드로성당. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
 def _send_reset_email(to_email: str, reset_url: str, nickname: str) -> None:
-    """비밀번호 재설정 이메일 발송."""
-    _send_email(
-        to_email,
-        "[세종성베드로성당] 비밀번호 재설정 안내",
+    """비밀번호 재설정 이메일 발송 — HTML 버튼 + plain 텍스트 fallback."""
+    plain = (
         f"안녕하세요, {nickname}님.\n\n비밀번호 재설정 링크가 요청되었습니다.\n"
         f"아래 링크를 클릭하여 새 비밀번호를 설정하세요 (유효 시간: 1시간).\n\n{reset_url}\n\n"
-        "본인이 요청하지 않으셨다면 이 메일을 무시하세요.\n\n세종성베드로성당 드림",
+        "본인이 요청하지 않으셨다면 이 메일을 무시하세요.\n\n세종성베드로성당 드림"
     )
+    html = _mail_layout_html(
+        title="비밀번호 재설정",
+        greeting_html=f"안녕하세요, <strong>{nickname}</strong> 님.",
+        body_html=(
+            "비밀번호 재설정이 요청되었습니다.<br>"
+            "아래 버튼을 눌러 새 비밀번호를 설정해 주세요. "
+            "<span style=\"color:#9ca3af;\">(유효 시간: 1시간)</span>"
+        ),
+        button_html=_mail_button_html("비밀번호 재설정하기", reset_url),
+        footer_note=(
+            "본인이 요청하지 않으셨다면 이 메일을 무시해 주세요.<br>"
+            f"버튼이 작동하지 않으면 다음 주소를 직접 입력해 주세요: <span style=\"color:#6b7280;word-break:break-all;\">{reset_url}</span>"
+        ),
+    )
+    _send_email(to_email, "[세종성베드로성당] 비밀번호 재설정 안내", plain, html_body=html)
 
 
 def _send_verification_email(to_email: str, verify_url: str, nickname: str) -> None:
-    """이메일 인증 메일 발송."""
-    _send_email(
-        to_email,
-        "[세종성베드로성당] 이메일 주소 인증 안내",
+    """이메일 인증 메일 발송 — HTML 버튼 + plain 텍스트 fallback."""
+    plain = (
         f"안녕하세요, {nickname}님.\n\n세종성베드로성당 홈페이지에 가입해 주셔서 감사합니다.\n"
         f"아래 링크를 클릭하여 이메일 주소를 인증해 주세요 (유효 시간: 24시간).\n\n{verify_url}\n\n"
-        "세종성베드로성당 드림",
+        "세종성베드로성당 드림"
     )
+    html = _mail_layout_html(
+        title="이메일 주소 인증",
+        greeting_html=f"안녕하세요, <strong>{nickname}</strong> 님.",
+        body_html=(
+            "세종성베드로성당 홈페이지에 가입해 주셔서 감사합니다.<br>"
+            "아래 버튼을 눌러 이메일 주소를 인증해 주세요. "
+            "<span style=\"color:#9ca3af;\">(유효 시간: 24시간)</span>"
+        ),
+        button_html=_mail_button_html("이메일 인증하기", verify_url),
+        footer_note=(
+            "본인이 가입하지 않으셨다면 이 메일을 무시해 주세요.<br>"
+            f"버튼이 작동하지 않으면 다음 주소를 직접 입력해 주세요: <span style=\"color:#6b7280;word-break:break-all;\">{verify_url}</span>"
+        ),
+    )
+    _send_email(to_email, "[세종성베드로성당] 이메일 주소 인증 안내", plain, html_body=html)
 
 
 # ── 공개 엔드포인트 ──────────────────────────────────────
