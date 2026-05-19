@@ -228,10 +228,13 @@ export default function PostDetail({
   post,
   slug,
   neighbors,
+  boardKind,
 }: {
   post: Post;
   slug: string;
   neighbors?: NeighborsOut;
+  /** 게시판 종류 — 'gallery' 면 목록 경로를 /gallery/{slug} 로 보내 redirect 우회. */
+  boardKind?: string;
 }) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -239,7 +242,8 @@ export default function PostDetail({
   // 목록에서 from=encoded(qs) 를 받아 삭제·취소 시 그 페이지·필터로 복귀
   const backToListHref = (() => {
     const from = searchParams?.get("from");
-    return from ? `/boards/${slug}?${from}` : `/boards/${slug}`;
+    const base = boardKind === "gallery" ? `/gallery/${slug}` : `/boards/${slug}`;
+    return from ? `${base}?${from}` : base;
   })();
   const [comments, setComments] = useState<Comment[]>(post.comments);
   const [newComment, setNewComment] = useState("");

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.197";
+export const CURRENT_VERSION = "1.5.198";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.198", date: "2026-05-19", tag: "수정",
+    items: [
+      "갤러리 게시판 '목록으로' — redirect 우회로 깜빡임·딜레이·scroll 튕김 해소",
+      "  · 증상(v1.5.197 도입 부작용): 갤러리 게시글 상세에서 '목록으로' 클릭 시 /boards/{slug} → 307 → /gallery/{slug} 추가 round-trip 발생 → 깜빡임 + 약간의 딜레이 + scroll 위치가 상단으로 튕김",
+      "  · 수정: PostDetail 의 backToListHref 가 처음부터 올바른 경로로 가도록 boardKind prop 추가 — 갤러리면 /gallery/{slug} 로 직행",
+      "  · PostPage(서버) 에서 getBoardKind() 로 kind 를 추가 fetch 후 prop 전달",
+      "  · /boards/[slug] 의 redirect(v1.5.197) 는 직접 URL 접근·외부 링크 대비 안전망으로 그대로 유지",
+    ],
+  },
   {
     version: "1.5.197", date: "2026-05-19", tag: "수정",
     items: [
