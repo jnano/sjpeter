@@ -349,16 +349,27 @@ def _migrate_add_columns():
                 bio_short TEXT,
                 patronage VARCHAR(200),
                 rank_within_name INTEGER DEFAULT 0 NOT NULL,
+                popularity INTEGER DEFAULT 0 NOT NULL,
                 is_active BOOLEAN DEFAULT TRUE NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW() NOT NULL,
                 updated_at TIMESTAMP DEFAULT NOW() NOT NULL
             )
         """))
+        # 기존 테이블에 popularity 컬럼 보강 (v1.5.182)
+        try:
+            conn.execute(text(
+                "ALTER TABLE saints ADD COLUMN IF NOT EXISTS popularity INTEGER DEFAULT 0 NOT NULL"
+            ))
+        except Exception:
+            pass
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_saints_korean_name ON saints(korean_name)"
         ))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_saints_feast ON saints(feast_month, feast_day)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_saints_popularity ON saints(popularity DESC)"
         ))
 
         # legacy 신부님 사진 테이블 / 컬럼 제거 (parish_staff로 이전됨)
@@ -1406,8 +1417,120 @@ def _seed_initial_data():
                 db.bulk_save_objects(objs)
                 db.commit()
 
+        # 성인 인기·중요도 자동 시드 (popularity 합계가 0일 때만 1회 실행)
+        # v1.5.182 — 사도·복음사가·박사·교황·대천사·한국 흔한 세례명·명시 핵심 항목
+        from sqlalchemy import text as _text, func as _func
+        if db.query(_func.coalesce(_func.sum(Saint.popularity), 0)).scalar() == 0:
+            _seed_saint_popularity(db)
+
     finally:
         db.close()
+
+
+def _seed_saint_popularity(db) -> None:
+    """한 번만 실행. 모든 단계는 GREATEST(popularity, X)로 누적 → 최댓값 보존."""
+    from sqlalchemy import text as _text
+
+    # 1) title 키워드 기반 일괄 부여
+    title_rules = [
+        ("%사도%", 80),
+        ("%복음사가%", 75),
+        ("%복음 사가%", 75),
+        ("%대천사%", 70),
+        ("%박사%", 65),
+        ("%교황%", 50),
+    ]
+    for pat, score in title_rules:
+        db.execute(_text(
+            "UPDATE saints SET popularity = GREATEST(popularity, :s) WHERE title ILIKE :p"
+        ), {"s": score, "p": pat})
+
+    # 2) 한국에서 흔한 세례명 보너스 — +25 누적 (cap 100)
+    common_names = [
+        # 사도·복음사가
+        "베드로", "바오로", "안드레아", "야고보", "요한", "토마스", "마태오",
+        "필립보", "빌립보", "바르톨로메오", "시몬", "유다", "마티아",
+        "마르코", "루카",
+        # 성모·여성 성인
+        "마리아", "안나", "마르타", "모니카", "데레사", "테레사", "클라라",
+        "체칠리아", "세실리아", "아녜스", "루치아", "마리아 막달레나",
+        "엘리사벳", "엘리사베타",
+        # 교부·수도자·박사 등 남성 성인
+        "요셉", "베네딕토", "도미니코", "프란치스코", "안토니오", "안또니오",
+        "아우구스티노", "그레고리오", "암브로시오", "예로니모", "이냐시오",
+        "알폰소", "비오", "가브리엘", "미카엘", "라파엘", "마르티노",
+        # 한국 순교 성인
+        "김대건", "정하상", "황석두",
+    ]
+    db.execute(
+        _text(
+            "UPDATE saints SET popularity = LEAST(100, popularity + 25) "
+            "WHERE korean_name = ANY(:names)"
+        ),
+        {"names": common_names},
+    )
+
+    # 3) 명시 핵심 항목 (이름, 월, 일, score) — GREATEST 로 최댓값 보존
+    pinned = [
+        # 사도·복음사가 주축
+        ("베드로", 6, 29, 100), ("바오로", 6, 29, 100),
+        ("안드레아", 11, 30, 95), ("요한", 12, 27, 95),
+        ("야고보", 7, 25, 92), ("마태오", 9, 21, 92),
+        ("토마스", 7, 3, 92), ("마르코", 4, 25, 92),
+        ("루카", 10, 18, 92),
+        # 성모 마리아 — CDCC 시드는 "성모 마리아" 단일 항목(8/15)으로 등록되어 있음
+        ("성모 마리아", 8, 15, 100),
+        # (참고: 1/1 천주의 모친, 12/8 원죄없으신 등 보편 전례력 항목은 별도 등록 시 추가)
+        ("마리아", 1, 1, 100), ("마리아", 8, 15, 100), ("마리아", 12, 8, 100),
+        ("마리아", 9, 8, 90), ("마리아", 5, 31, 88),
+        # 한국 인물 (특별 가중)
+        ("김대건", 7, 5, 100), ("정하상", 9, 20, 90),
+        # 성 요셉
+        ("요셉", 3, 19, 98),
+        # 대표 수도자·박사·교부
+        ("프란치스코", 10, 4, 95),
+        ("베네딕토", 7, 11, 90),
+        ("아우구스티노", 8, 28, 92), ("그레고리오", 9, 3, 88),
+        ("암브로시오", 12, 7, 88), ("예로니모", 9, 30, 88),
+        ("토마스", 1, 28, 90),  # 토마스 아퀴나스
+        ("이냐시오", 7, 31, 88),  # 로욜라
+        ("안토니오", 6, 13, 88),  # 파도바
+        ("도미니코", 8, 8, 85),
+        ("비오", 9, 23, 85),
+        # 여성 성인 핵심
+        ("데레사", 10, 15, 92),  # 아빌라
+        ("데레사", 10, 1, 92),   # 리지외 (소화)
+        ("데레사", 9, 5, 88),    # 캘커타
+        ("마리아 막달레나", 7, 22, 88),
+        ("안나", 7, 26, 85),
+        ("모니카", 8, 27, 85),
+        ("클라라", 8, 11, 82),
+        ("체칠리아", 11, 22, 80),
+        ("아녜스", 1, 21, 80),
+        ("루치아", 12, 13, 80),
+        # 대천사 3분
+        ("미카엘", 9, 29, 92), ("가브리엘", 9, 29, 88), ("라파엘", 9, 29, 88),
+        # 마르타
+        ("마르타", 7, 29, 80),
+        # 엘리사벳
+        ("엘리사벳", 11, 17, 78),
+    ]
+    for name, m, d, score in pinned:
+        db.execute(
+            _text(
+                "UPDATE saints SET popularity = GREATEST(popularity, :s) "
+                "WHERE korean_name = :n AND feast_month = :m AND feast_day = :d"
+            ),
+            {"s": score, "n": name, "m": m, "d": d},
+        )
+
+    # 4) 한국 순교자 기념일 (9/20) — 항목별 최소 80 보장
+    db.execute(_text(
+        "UPDATE saints SET popularity = GREATEST(popularity, 80) "
+        "WHERE feast_month = 9 AND feast_day = 20"
+    ))
+
+    db.commit()
 
 
 @app.get("/api/health")

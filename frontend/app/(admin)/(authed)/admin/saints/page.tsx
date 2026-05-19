@@ -17,6 +17,7 @@ interface Saint {
   bio_short: string | null;
   patronage: string | null;
   rank_within_name: number;
+  popularity: number;
   is_active: boolean;
 }
 
@@ -36,6 +37,7 @@ const emptyForm = {
   bio_short: "",
   patronage: "",
   rank_within_name: 0,
+  popularity: 0,
   is_active: true,
 };
 
@@ -51,6 +53,7 @@ function payloadOf(f: FormState) {
     bio_short: f.bio_short.trim() || null,
     patronage: f.patronage.trim() || null,
     rank_within_name: Number(f.rank_within_name) || 0,
+    popularity: Math.max(0, Math.min(100, Number(f.popularity) || 0)),
     is_active: !!f.is_active,
   };
 }
@@ -145,6 +148,7 @@ export default function AdminSaintsPage() {
       bio_short: s.bio_short ?? "",
       patronage: s.patronage ?? "",
       rank_within_name: s.rank_within_name,
+      popularity: s.popularity,
       is_active: s.is_active,
     });
   }
@@ -326,6 +330,17 @@ export default function AdminSaintsPage() {
               className="border border-[var(--color-border)] rounded px-2 py-1 text-sm"
             />
           </label>
+          <label className="text-xs grid gap-1 sm:col-span-2">
+            인기·중요도 (0~100, 높을수록 검색 결과 상단)
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={form.popularity}
+              onChange={(e) => setForm({ ...form, popularity: Number(e.target.value) })}
+              className="border border-[var(--color-border)] rounded px-2 py-1 text-sm w-32"
+            />
+          </label>
           <div className="sm:col-span-2 flex items-center justify-end gap-2 mt-1">
             <button
               type="button"
@@ -425,6 +440,7 @@ export default function AdminSaintsPage() {
                 <th className="px-2 py-2 text-left">라틴 원어</th>
                 <th className="px-2 py-2 text-left w-24">축일</th>
                 <th className="px-2 py-2 text-left">신분</th>
+                <th className="px-2 py-2 text-right w-14">인기</th>
                 <th className="px-2 py-2 w-32"></th>
               </tr>
             </thead>
@@ -486,6 +502,18 @@ export default function AdminSaintsPage() {
                         className="border border-[var(--color-border)] rounded px-1 py-0.5 text-sm w-full"
                       />
                     </td>
+                    <td className="px-2 py-2 text-right">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={editForm.popularity}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, popularity: Number(e.target.value) })
+                        }
+                        className="border border-[var(--color-border)] rounded px-1 py-0.5 text-xs w-14 text-right"
+                      />
+                    </td>
                     <td className="px-2 py-2 flex gap-1 justify-end">
                       <button
                         onClick={() => handleUpdate(s.id)}
@@ -518,6 +546,19 @@ export default function AdminSaintsPage() {
                       {s.feast_month}월 {s.feast_day}일
                     </td>
                     <td className="px-2 py-2 text-xs">{s.title ?? "—"}</td>
+                    <td className="px-2 py-2 text-right text-xs tabular-nums">
+                      <span
+                        className={
+                          s.popularity >= 80
+                            ? "font-semibold text-[var(--color-primary)]"
+                            : s.popularity > 0
+                              ? "text-[var(--color-text)]"
+                              : "text-[var(--color-text-muted)]"
+                        }
+                      >
+                        {s.popularity}
+                      </span>
+                    </td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">
                       <button
                         onClick={() => startEdit(s)}

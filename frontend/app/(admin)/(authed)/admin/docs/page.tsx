@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.181";
+export const CURRENT_VERSION = "1.5.182";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.182", date: "2026-05-19", tag: "기능",
+    items: [
+      "성인 사전 — 가중치 기반 정렬 + 인기 뱃지",
+      "  · saints.popularity INTEGER(0~100) 컬럼 추가 — 자동 시드 + admin 수정 가능",
+      "  · 자동 가중치: 사도 80·복음사가 75·대천사 70·박사 65·교황 50 + 한국 흔한 세례명 +25 (cap 100)",
+      "  · 명시 핵심: 베드로/바오로 6/29, 요셉 3/19, 성모 마리아 8/15, 김대건 7/5 등 50여 항목",
+      "  · API: /api/saints/?sort=popular|name|feast (default popular) — list·by-name·by-feast·suggest 모두 popularity 적용",
+      "  · /saints 공개 페이지: 정렬 토글(인기/이름/축일) + popularity ≥ 80 카드에 ★ 뱃지",
+      "  · /admin/saints: 목록·등록·수정에 '인기' 컬럼 추가 (인기 ≥ 80 강조 표시)",
+    ],
+  },
   {
     version: "1.5.181", date: "2026-05-19", tag: "기능",
     items: [

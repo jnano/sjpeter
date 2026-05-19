@@ -29,7 +29,16 @@ interface Saint {
   title: string | null;
   bio_short: string | null;
   patronage: string | null;
+  popularity: number;
 }
+
+const SORT_OPTIONS = ["popular", "name", "feast"] as const;
+type SortOption = (typeof SORT_OPTIONS)[number];
+const SORT_LABEL: Record<SortOption, string> = {
+  popular: "인기순",
+  name: "이름순",
+  feast: "축일순",
+};
 
 interface SaintListOut {
   items: Saint[];
@@ -62,11 +71,12 @@ function compressedRange(current: number, total: number): (number | "…")[] {
   return out;
 }
 
-function pageHref(page: number, q: string, month: string): string {
+function pageHref(page: number, q: string, month: string, sort: SortOption): string {
   const params = new URLSearchParams();
   if (page > 1) params.set("page", String(page));
   if (q) params.set("q", q);
   if (month) params.set("month", month);
+  if (sort !== "popular") params.set("sort", sort);
   const qs = params.toString();
   return qs ? `/saints?${qs}` : "/saints";
 }
@@ -78,17 +88,20 @@ function formatFeast(m: number, d: number): string {
 export default async function SaintsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; month?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; month?: string; sort?: string }>;
 }) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
   const q = (sp.q ?? "").trim();
   const monthNum = parseInt(sp.month ?? "");
   const month = Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12 ? String(monthNum) : "";
+  const sortRaw = (sp.sort ?? "popular") as SortOption;
+  const sort: SortOption = (SORT_OPTIONS as readonly string[]).includes(sortRaw) ? sortRaw : "popular";
 
   const params = new URLSearchParams({
     page: String(page),
     limit: String(PAGE_SIZE),
+    sort,
   });
   if (q) params.set("q", q);
   if (month) params.set("month", month);
@@ -104,10 +117,28 @@ export default async function SaintsPage({
         subtitle="세례명으로 축일과 라틴 원어명을 찾아보세요"
       />
       <SectionLayout group="word">
+        {/* 정렬 토글 */}
+        <div className="mb-3 flex items-center gap-2 text-xs">
+          <span className="text-[var(--color-text-muted)]">정렬</span>
+          {SORT_OPTIONS.map((s) => (
+            <Link
+              key={s}
+              href={pageHref(1, q, month, s)}
+              className={`px-2.5 py-1 rounded-full border transition-colors ${
+                sort === s
+                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                  : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+              }`}
+            >
+              {SORT_LABEL[s]}
+            </Link>
+          ))}
+        </div>
+
         {/* 월 필터 칩 */}
         <nav className="mb-4 flex flex-wrap gap-1.5" aria-label="축일 월 필터">
           <Link
-            href={pageHref(1, q, "")}
+            href={pageHref(1, q, "", sort)}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               !month
                 ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -119,7 +150,7 @@ export default async function SaintsPage({
           {MONTHS.map((m) => (
             <Link
               key={m}
-              href={pageHref(1, q, String(m))}
+              href={pageHref(1, q, String(m), sort)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 month === String(m)
                   ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -140,6 +171,7 @@ export default async function SaintsPage({
           aria-label="세례명 검색"
         >
           {month && <input type="hidden" name="month" value={month} />}
+          {sort !== "popular" && <input type="hidden" name="sort" value={sort} />}
           <input
             type="search"
             name="q"
@@ -149,7 +181,7 @@ export default async function SaintsPage({
           />
           {q && (
             <Link
-              href={pageHref(1, "", month)}
+              href={pageHref(1, "", month, sort)}
               className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
             >
               지우기
@@ -193,8 +225,17 @@ export default async function SaintsPage({
                 className="border border-[var(--color-border)] rounded-lg px-4 py-3 bg-white hover:border-[var(--color-primary)] transition-colors"
               >
                 <div className="flex items-baseline justify-between gap-2 mb-1">
-                  <h3 className="font-serif text-lg text-[var(--color-primary)] leading-tight">
+                  <h3 className="font-serif text-lg text-[var(--color-primary)] leading-tight flex items-center gap-1.5">
                     {s.korean_name}
+                    {s.popularity >= 80 && (
+                      <span
+                        title="대표 성인"
+                        aria-label="대표 성인"
+                        className="text-amber-500 text-sm"
+                      >
+                        ★
+                      </span>
+                    )}
                   </h3>
                   <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">
                     {formatFeast(s.feast_month, s.feast_day)}
@@ -218,7 +259,7 @@ export default async function SaintsPage({
           <nav className="flex justify-center items-center gap-1 mt-8" aria-label="페이지 이동">
             {page > 1 && (
               <Link
-                href={pageHref(page - 1, q, month)}
+                href={pageHref(page - 1, q, month, sort)}
                 className="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-gray-50 transition-colors"
                 aria-label="이전 페이지"
               >
@@ -237,7 +278,7 @@ export default async function SaintsPage({
               ) : (
                 <Link
                   key={p}
-                  href={pageHref(p, q, month)}
+                  href={pageHref(p, q, month, sort)}
                   className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                     p === page
                       ? "bg-[var(--color-primary)] text-white"
@@ -251,7 +292,7 @@ export default async function SaintsPage({
             )}
             {page < totalPages && (
               <Link
-                href={pageHref(page + 1, q, month)}
+                href={pageHref(page + 1, q, month, sort)}
                 className="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-gray-50 transition-colors"
                 aria-label="다음 페이지"
               >

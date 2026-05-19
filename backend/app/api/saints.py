@@ -17,7 +17,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, desc, or_
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_admin
@@ -37,6 +37,7 @@ class SaintIn(BaseModel):
     bio_short: Optional[str] = None
     patronage: Optional[str] = Field(None, max_length=200)
     rank_within_name: int = 0
+    popularity: int = Field(0, ge=0, le=100)
     is_active: bool = True
 
 
@@ -50,6 +51,7 @@ class SaintOut(BaseModel):
     bio_short: Optional[str]
     patronage: Optional[str]
     rank_within_name: int
+    popularity: int
     is_active: bool
     created_at: datetime
 
@@ -71,15 +73,31 @@ def _base_query(db: Session, *, include_inactive: bool = False):
     return q
 
 
+SORT_OPTIONS = {"popular", "name", "feast"}
+
+
+def _order_by(sort: str):
+    """정렬 키 묶음 반환. popular(default) = 인기 ↓ → 이름 → 축일."""
+    if sort == "name":
+        return [asc(Saint.korean_name), asc(Saint.feast_month), asc(Saint.feast_day), asc(Saint.id)]
+    if sort == "feast":
+        return [asc(Saint.feast_month), asc(Saint.feast_day), desc(Saint.popularity), asc(Saint.korean_name), asc(Saint.id)]
+    # popular (default)
+    return [desc(Saint.popularity), asc(Saint.korean_name), asc(Saint.feast_month), asc(Saint.feast_day), asc(Saint.id)]
+
+
 @router.get("/", response_model=SaintListOut)
 def list_saints(
     q: Optional[str] = Query(None, description="한글명/라틴명 부분 일치"),
     month: Optional[int] = Query(None, ge=1, le=12),
     day: Optional[int] = Query(None, ge=1, le=31),
+    sort: str = Query("popular", description="popular | name | feast"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
+    if sort not in SORT_OPTIONS:
+        sort = "popular"
     query = _base_query(db)
     if q:
         like = f"%{q.strip()}%"
@@ -90,7 +108,7 @@ def list_saints(
         query = query.filter(Saint.feast_day == day)
     total = query.count()
     items = (
-        query.order_by(asc(Saint.korean_name), asc(Saint.feast_month), asc(Saint.feast_day), asc(Saint.id))
+        query.order_by(*_order_by(sort))
         .offset((page - 1) * limit)
         .limit(limit)
         .all()
@@ -104,13 +122,17 @@ def suggest_names(
     limit: int = Query(10, ge=1, le=30),
     db: Session = Depends(get_db),
 ):
-    """입력 prefix와 일치하는 distinct 한글 세례명 자동완성 후보."""
+    """입력 prefix와 일치하는 distinct 한글 세례명 자동완성 후보.
+
+    같은 이름 중 popularity 최댓값 기준으로 정렬 → 인기 세례명이 먼저.
+    """
+    from sqlalchemy import func as _func
     like = f"{q.strip()}%"
     rows = (
-        db.query(Saint.korean_name)
+        db.query(Saint.korean_name, _func.max(Saint.popularity).label("pop"))
         .filter(Saint.is_active.is_(True), Saint.korean_name.ilike(like))
-        .distinct()
-        .order_by(asc(Saint.korean_name))
+        .group_by(Saint.korean_name)
+        .order_by(desc("pop"), asc(Saint.korean_name))
         .limit(limit)
         .all()
     )
@@ -119,11 +141,20 @@ def suggest_names(
 
 @router.get("/by-name/{korean_name}", response_model=List[SaintOut])
 def by_name(korean_name: str, db: Session = Depends(get_db)):
-    """동일 세례명 성인 전부 (예: '베드로' → 사도·교부·순교자 등)."""
+    """동일 세례명 성인 전부 (예: '베드로' → 사도·교부·순교자 등).
+
+    정렬: popularity ↓ → rank_within_name ↑ → 축일 ↑.
+    """
     return (
         _base_query(db)
         .filter(Saint.korean_name == korean_name)
-        .order_by(asc(Saint.rank_within_name), asc(Saint.feast_month), asc(Saint.feast_day), asc(Saint.id))
+        .order_by(
+            desc(Saint.popularity),
+            asc(Saint.rank_within_name),
+            asc(Saint.feast_month),
+            asc(Saint.feast_day),
+            asc(Saint.id),
+        )
         .all()
     )
 
@@ -138,7 +169,12 @@ def by_feast(
     q = _base_query(db).filter(Saint.feast_month == month)
     if day is not None:
         q = q.filter(Saint.feast_day == day)
-    return q.order_by(asc(Saint.feast_day), asc(Saint.korean_name), asc(Saint.id)).all()
+    return q.order_by(
+        asc(Saint.feast_day),
+        desc(Saint.popularity),
+        asc(Saint.korean_name),
+        asc(Saint.id),
+    ).all()
 
 
 @router.get("/{saint_id}", response_model=SaintOut)

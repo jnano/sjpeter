@@ -23,6 +23,8 @@ class Saint(Base):
     patronage = Column(String(200), nullable=True)
     # 한 세례명에 여러 성인이 있을 때 추천 순위 (낮을수록 상단)
     rank_within_name = Column(Integer, default=0, nullable=False)
+    # 범용 인기·중요도 (높을수록 상단). 0~100. 자동 시드 + admin 수정 가능.
+    popularity = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
