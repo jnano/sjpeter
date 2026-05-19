@@ -113,11 +113,15 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
-        {/* 사이드바 영역 — 펼침 시에만 데스크탑에 표시. collapsed 시 md:hidden 으로
-            완전히 사라져 본문이 풀폭으로 확장된다. 모바일은 column chips 라 항상 표시. */}
+        {/* 사이드바 영역 — collapsed 시 width 0 + opacity 0 로 transition.
+            md:overflow-hidden 으로 내용이 깔끔하게 잘리고, 본문은 flex 재계산으로 자연스럽게 확장.
+            모바일은 md:* 한정이라 영향 없음(상단 chips 그대로). */}
         <div
-          className={`shrink-0 md:w-[var(--sidebar-w)] md:relative ${collapsed ? "md:hidden" : ""}`}
+          className={`shrink-0 md:relative md:overflow-hidden md:transition-[width,opacity] md:duration-300 md:ease-out ${
+            collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
+          }`}
           style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
+          aria-hidden={collapsed ? true : undefined}
         >
           <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
           <SectionSidebar

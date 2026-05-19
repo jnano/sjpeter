@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.194";
+export const CURRENT_VERSION = "1.5.195";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.195", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기/펼치기 — 300ms width+opacity 트랜지션",
+      "  · 사이드바 wrapper 에 md:transition-[width,opacity] duration-300 ease-out 적용",
+      "  · collapsed: md:w-0 + md:opacity-0 + md:overflow-hidden",
+      "  · 펼침: md:w-[var(--sidebar-w)] + md:opacity-100",
+      "  · 본문은 flex-1 의 자연스러운 재계산으로 함께 부드럽게 확장/축소",
+      "  · 모바일은 md:* 한정이라 영향 없음(상단 chips 그대로)",
+      "  · aria-hidden={collapsed} 로 접근성 보조 표시 추가",
+      "  · SectionLayout 표준·/calendar 양쪽 동일 적용",
+    ],
+  },
   {
     version: "1.5.194", date: "2026-05-19", tag: "디자인",
     items: [
