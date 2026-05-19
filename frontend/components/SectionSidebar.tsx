@@ -209,7 +209,10 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   return (
     <aside
       ref={asideRef}
-      className="w-full shrink-0 md:max-w-[var(--sidebar-w)] md:sticky md:self-start md:top-28"
+      // md+ 에서는 max-width 가 아니라 명시적 width 로 폭을 고정 — w-full + shrink-0 + max-w 조합이
+      // flex item 직속/wrapper 끼움 두 환경에서 다르게 그려지는 문제(/calendar 자체 구현 vs SectionLayout)를
+      // 회피한다. 모바일은 w-full 유지 (column 레이아웃에서 자연스러운 풀폭).
+      className="w-full shrink-0 md:w-[var(--sidebar-w)] md:sticky md:self-start md:top-28"
       style={{
         ["--sidebar-w" as string]: `${widthPx}px`,
         // overflow를 잡지 않음 — 자식 popup(absolute left-full)이 사이드바 박스를

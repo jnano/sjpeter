@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.189";
+export const CURRENT_VERSION = "1.5.190";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.190", date: "2026-05-19", tag: "수정",
+    items: [
+      "SectionSidebar 폭 — flex item 직속/wrapper 끼움 두 환경에서 불일치 문제 해소",
+      "  · 증상: /calendar(SectionSidebar 자체 호출) vs /boards/notice(SectionLayout 경유)에서 사이드바 폭이 크게 다르게 그려짐",
+      "  · 원인: w-full + shrink-0 + max-w-[170px] 조합에서 aside 가 flex item 직속이면 w-full(=flex-basis 100%)이 max-w cap을 우회하는 케이스 발생 — wrapper div 가 한 단계 끼면 wrapper 가 flex item 이 되어 정상 cap",
+      "  · 수정: md:max-w-[var(--sidebar-w)] → md:w-[var(--sidebar-w)] 로 변경 (명시적 width). 두 환경에서 동일 폭 보장",
+      "  · 모바일은 w-full 유지 (column 레이아웃에서 자연스러운 풀폭)",
+    ],
+  },
   {
     version: "1.5.189", date: "2026-05-19", tag: "디자인",
     items: [
