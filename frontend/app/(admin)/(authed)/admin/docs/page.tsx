@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.193";
+export const CURRENT_VERSION = "1.5.194";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.194", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 — 데스크탑에서 본문 풀폭 확장",
+      "  · 증상: 접어도 사이드바 wrapper 폭(170px)이 그대로 남아 본문이 확장되지 않음",
+      "  · 수정: 사이드바 wrapper 에 collapsed 시 md:hidden 적용 → 데스크탑에서 wrapper 자체가 사라져 본문이 풀폭",
+      "  · 펼치기 토글: 본문 영역에 별도 absolute 로 표시 (collapsed 시 사이드바 자리가 없으므로) — 본문 div 에 md:relative + collapsed 조건부 렌더",
+      "  · 모바일은 영향 없음 — wrapper 의 md:hidden 은 md+ 한정",
+      "  · SectionLayout 표준·/calendar 양쪽 동일 적용",
+    ],
+  },
   {
     version: "1.5.193", date: "2026-05-19", tag: "디자인",
     items: [

@@ -113,28 +113,25 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
-        {/* 사이드바 영역 — 데스크탑 폭은 sidebar_width_px 로 고정.
-            collapsed 여도 wrapper 폭은 유지(토글이 사이드바 자리에 그대로 보이도록).
-            md:relative 는 토글(absolute) 의 위치 기준점. */}
+        {/* 사이드바 영역 — 펼침 시에만 데스크탑에 표시. collapsed 시 md:hidden 으로
+            완전히 사라져 본문이 풀폭으로 확장된다. 모바일은 column chips 라 항상 표시. */}
         <div
-          className="shrink-0 md:w-[var(--sidebar-w)] md:relative"
+          className={`shrink-0 md:w-[var(--sidebar-w)] md:relative ${collapsed ? "md:hidden" : ""}`}
           style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
         >
-          {/* 토글 — absolute 라 layout 공간 차지 안 함, PageHeader 구분선에 걸침 */}
           <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-          {/* SectionSidebar — collapsed 시 데스크탑에서 숨김. 모바일은 column chips 라 항상 표시. */}
-          <div className={collapsed ? "md:hidden" : ""}>
-            <SectionSidebar
-              groupTitle={currentGroup.label}
-              imageSrc={currentGroup.sidebar_image_url ?? undefined}
-              widthPx={currentGroup.sidebar_width_px}
-              heightPx={currentGroup.sidebar_height_px ?? undefined}
-              imagePosition={currentGroup.sidebar_image_position}
-              items={currentGroup.items}
-            />
-          </div>
+          <SectionSidebar
+            groupTitle={currentGroup.label}
+            imageSrc={currentGroup.sidebar_image_url ?? undefined}
+            widthPx={currentGroup.sidebar_width_px}
+            heightPx={currentGroup.sidebar_height_px ?? undefined}
+            imagePosition={currentGroup.sidebar_image_position}
+            items={currentGroup.items}
+          />
         </div>
-        <div className="flex-1 min-w-0 mt-6 md:mt-0">
+        <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
+          {/* 데스크탑 collapsed 시: 본문 영역 좌상단에 펼치기 토글 (사이드바 자리가 없으므로) */}
+          {collapsed && <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />}
           {autoHero && <AutoPageHero />}
           {children}
         </div>

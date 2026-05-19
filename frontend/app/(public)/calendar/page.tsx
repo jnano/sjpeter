@@ -1093,23 +1093,24 @@ export default function CalendarPage() {
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
             <div
-              className="shrink-0 md:w-[var(--sidebar-w)] md:relative"
+              className={`shrink-0 md:w-[var(--sidebar-w)] md:relative ${collapsed ? "md:hidden" : ""}`}
               style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
             >
               <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-              <div className={collapsed ? "md:hidden" : ""}>
-                <SectionSidebar
-                  groupTitle={currentGroup.label}
-                  imageSrc={currentGroup.sidebar_image_url ?? undefined}
-                  widthPx={currentGroup.sidebar_width_px}
-                  heightPx={currentGroup.sidebar_height_px ?? undefined}
-                  imagePosition={currentGroup.sidebar_image_position}
-                  items={currentGroup.items}
-                />
-              </div>
+              <SectionSidebar
+                groupTitle={currentGroup.label}
+                imageSrc={currentGroup.sidebar_image_url ?? undefined}
+                widthPx={currentGroup.sidebar_width_px}
+                heightPx={currentGroup.sidebar_height_px ?? undefined}
+                imagePosition={currentGroup.sidebar_image_position}
+                items={currentGroup.items}
+              />
             </div>
           )}
-          <div className="flex-1 min-w-0 mt-6 md:mt-0">
+          <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
+            {collapsed && currentGroup && currentGroup.items.length > 0 && (
+              <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
+            )}
             <BannerSlider placement="calendar_top" className="mb-6" />
         {/* 보기 모드 토글 + 오늘 */}
         <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
