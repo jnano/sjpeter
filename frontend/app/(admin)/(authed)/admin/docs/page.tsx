@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.188";
+export const CURRENT_VERSION = "1.5.189";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.189", date: "2026-05-19", tag: "디자인",
+    items: [
+      "/calendar 본문 컨테이너 폭을 SectionLayout 표준에 맞춤 (max-w-6xl → max-w-5xl)",
+      "  · 증상: '공지사항(/boards/notice)' 과 '행사 일정(/calendar)' 의 사이드바 위치·본문 폭이 어긋남",
+      "  · 원인: 두 페이지 모두 같은 menu_group(알림과 게시판, sidebar_width_px=170) 인데 /calendar 만 자체 max-w-6xl 컨테이너 사용 → 사이드바 자체 폭은 같아도 컨테이너 폭이 달라 시각적 어긋남",
+      "  · 수정: /calendar 의 컨테이너를 max-w-5xl 로 변경 → SectionLayout 표준과 일치",
+      "  · 검토 결과: 사이드바와 폭 불일치 페이지는 /calendar 단 한 곳. 나머지 max-w-3xl·4xl·6xl 사용 페이지(/meditation/archive·/sitemap·/search·write/edit·/members/me 등)는 모두 사이드바 없는 독립 페이지로 의도된 폭",
+    ],
+  },
   {
     version: "1.5.188", date: "2026-05-19", tag: "디자인",
     items: [
