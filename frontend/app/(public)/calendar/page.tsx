@@ -1093,21 +1093,23 @@ export default function CalendarPage() {
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
             <div
-              className={`shrink-0 md:relative md:overflow-hidden md:transition-[width,opacity] md:duration-300 md:ease-out ${
+              className={`shrink-0 md:relative md:transition-[width,opacity] md:duration-300 md:ease-out ${
                 collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
               }`}
               style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
               aria-hidden={collapsed ? true : undefined}
             >
               <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-              <SectionSidebar
-                groupTitle={currentGroup.label}
-                imageSrc={currentGroup.sidebar_image_url ?? undefined}
-                widthPx={currentGroup.sidebar_width_px}
-                heightPx={currentGroup.sidebar_height_px ?? undefined}
-                imagePosition={currentGroup.sidebar_image_position}
-                items={currentGroup.items}
-              />
+              <div className="md:overflow-hidden">
+                <SectionSidebar
+                  groupTitle={currentGroup.label}
+                  imageSrc={currentGroup.sidebar_image_url ?? undefined}
+                  widthPx={currentGroup.sidebar_width_px}
+                  heightPx={currentGroup.sidebar_height_px ?? undefined}
+                  imagePosition={currentGroup.sidebar_image_position}
+                  items={currentGroup.items}
+                />
+              </div>
             </div>
           )}
           <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">

@@ -114,24 +114,26 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
         {/* 사이드바 영역 — collapsed 시 width 0 + opacity 0 로 transition.
-            md:overflow-hidden 으로 내용이 깔끔하게 잘리고, 본문은 flex 재계산으로 자연스럽게 확장.
-            모바일은 md:* 한정이라 영향 없음(상단 chips 그대로). */}
+            wrapper 에는 overflow-visible (default) — 토글(absolute, top:-2rem) 이 잘리지 않도록.
+            SectionSidebar 자체만 inner div 의 overflow-hidden 으로 깔끔하게 잘림. */}
         <div
-          className={`shrink-0 md:relative md:overflow-hidden md:transition-[width,opacity] md:duration-300 md:ease-out ${
+          className={`shrink-0 md:relative md:transition-[width,opacity] md:duration-300 md:ease-out ${
             collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
           }`}
           style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
           aria-hidden={collapsed ? true : undefined}
         >
           <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-          <SectionSidebar
-            groupTitle={currentGroup.label}
-            imageSrc={currentGroup.sidebar_image_url ?? undefined}
-            widthPx={currentGroup.sidebar_width_px}
-            heightPx={currentGroup.sidebar_height_px ?? undefined}
-            imagePosition={currentGroup.sidebar_image_position}
-            items={currentGroup.items}
-          />
+          <div className="md:overflow-hidden">
+            <SectionSidebar
+              groupTitle={currentGroup.label}
+              imageSrc={currentGroup.sidebar_image_url ?? undefined}
+              widthPx={currentGroup.sidebar_width_px}
+              heightPx={currentGroup.sidebar_height_px ?? undefined}
+              imagePosition={currentGroup.sidebar_image_position}
+              items={currentGroup.items}
+            />
+          </div>
         </div>
         <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
           {/* 데스크탑 collapsed 시: 본문 영역 좌상단에 펼치기 토글 (사이드바 자리가 없으므로) */}

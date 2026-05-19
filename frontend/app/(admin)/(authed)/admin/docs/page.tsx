@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.195";
+export const CURRENT_VERSION = "1.5.196";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.196", date: "2026-05-19", tag: "수정",
+    items: [
+      "사이드바 토글 누락(v1.5.195 부작용) 보완",
+      "  · 증상: width+opacity 트랜지션 추가하며 wrapper 에 md:overflow-hidden 을 줬는데, 토글(absolute, top:calc(-2rem-1px)) 이 wrapper 밖으로 튀어나간 부분이 잘려서 안 보임",
+      "  · 수정: wrapper 의 md:overflow-hidden 제거 → SectionSidebar 만 inner div 의 md:overflow-hidden 으로 잘림 처리",
+      "  · 토글은 wrapper 의 default overflow-visible 안에서 PageHeader 구분선 위로 자유롭게 노출",
+      "  · 트랜지션 자체는 v1.5.195 그대로 유지",
+    ],
+  },
   {
     version: "1.5.195", date: "2026-05-19", tag: "디자인",
     items: [
