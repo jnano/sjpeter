@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.196";
+export const CURRENT_VERSION = "1.5.197";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.197", date: "2026-05-19", tag: "수정",
+    items: [
+      "갤러리 종류 게시판 — /boards/{slug} → /gallery/{slug} 자동 리다이렉트",
+      "  · 증상: 전례 사진(/boards/liturgy) 등 갤러리 게시판의 게시글 상세에서 '목록으로' 클릭 시 list 뷰로 표시되고 사이드바도 누락",
+      "  · 원인: PostDetail 의 backToListHref 가 항상 /boards/{slug} 로 하드코딩 + /boards/[slug] 페이지는 갤러리 종류여도 list 뷰 기본 + 메뉴 매칭 안 됨",
+      "  · 수정: /boards/[slug] 진입 시 board.kind === 'gallery' 이면 /gallery/{slug} 로 redirect (page·q·sort·category 쿼리 보존)",
+      "  · 결과: '목록으로' 클릭 → /boards/{slug} → 307 → /gallery/{slug} → 사이드바 + photo 그리드 정상",
+    ],
+  },
   {
     version: "1.5.196", date: "2026-05-19", tag: "수정",
     items: [

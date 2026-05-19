@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import LineBoard from "./LineBoard";
@@ -137,6 +137,19 @@ export default async function BoardPage({
 
   if (!board) notFound();
 
+  // 갤러리 종류 게시판은 사진 그리드 뷰가 자연스러운 진입점.
+  // /boards/{slug} 로 들어와도 /gallery/{slug} 로 통일 (사이드바·photo view·메뉴 매칭 일관성).
+  // 게시글 상세의 「목록으로」링크가 항상 /boards/{slug} 로 가도 여기서 redirect 되어 정상 화면.
+  if (board.kind === "gallery") {
+    const qs = new URLSearchParams();
+    if (sp.page) qs.set("page", sp.page);
+    if (sp.q) qs.set("q", sp.q);
+    if (sp.sort) qs.set("sort", sp.sort);
+    if (sp.category) qs.set("category", sp.category);
+    const suffix = qs.toString();
+    redirect(`/gallery/${slug}${suffix ? `?${suffix}` : ""}`);
+  }
+
   // 활성 뷰 계산 — admin 토글이 켠 뷰들. 모두 꺼지면 list 폴백.
   const activeViews = VIEW_OPTIONS.filter((v) => {
     if (v.value === "list") return board.show_view_list;
@@ -170,8 +183,10 @@ export default async function BoardPage({
 
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const memberId = (session as { memberId?: number } | null)?.memberId ?? null;
+  // 운영자 권한: admin / 운영자(is_admin 회원) / 게시판 운영자
+  const isOperator = !!(session as { isAdmin?: boolean } | null)?.isAdmin;
   const canWrite = board.moderator_only_write
-    ? memberId !== null && memberId === board.moderator_id
+    ? memberId !== null && (memberId === board.moderator_id || isOperator)
     : !board.members_only_write || !!session;
 
   // 한 줄 메시지 게시판은 별도 UI로 분기 (목록·작성·추천을 카드 그리드로 노출)
