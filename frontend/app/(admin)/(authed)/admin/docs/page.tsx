@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.184";
+export const CURRENT_VERSION = "1.5.185";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.185", date: "2026-05-19", tag: "기능",
+    items: [
+      "사이드바 접기/펼치기 토글 — 모든 SectionLayout 페이지에 적용",
+      "  · 본문 좌상단에 「« 메뉴 접기」/「» 메뉴 펼치기」 버튼 (데스크탑 md+ 한정 노출)",
+      "  · 상태 저장: localStorage 키 'section-sidebar-collapsed' — 전역(한 번 접으면 다른 페이지에서도 접힘)",
+      "  · 모바일은 사이드바가 본문 위에 column 으로 와 navigation 필수 → 토글 영향 없음",
+      "  · 매칭 메뉴 그룹이 없거나 chipsOnly 모드면 토글 미노출 (의미 없음)",
+      "  · 접근성: aria-pressed + aria-label/title 라벨",
+      "  · 의도: /photos·/calendar 등 사이드바 추가 후에도 사용자가 풀폭 보기를 선택 가능",
+    ],
+  },
   {
     version: "1.5.184", date: "2026-05-19", tag: "디자인",
     items: [

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import SectionSidebar from "./SectionSidebar";
 import AutoPageHero from "./AutoPageHero";
 import { useNavigation } from "./useNavigation";
@@ -16,16 +16,53 @@ interface Props {
   chipsOnly?: boolean;
 }
 
+/** 데스크탑 사이드바 접힘 상태 — 전역 (localStorage). 같은 키를 다른 탭/페이지가 공유. */
+const COLLAPSE_KEY = "section-sidebar-collapsed";
+
+function useSidebarCollapsed(): [boolean, () => void] {
+  // SSR/첫 렌더는 false(=펼침) 로 시작해 hydration mismatch 회피.
+  // mount 후 localStorage 값을 동기화.
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+    } catch {
+      /* localStorage 차단 환경 무시 */
+    }
+  }, []);
+
+  function toggle() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  return [collapsed, toggle];
+}
+
 /**
  * 섹션 페이지 공통 2단 레이아웃.
  * useNavigation으로 현재 pathname이 속한 menu_group을 자동 매칭하여
  * 좌측 사이드바(메뉴 admin 관리) + 우측 본문 렌더.
  * chipsOnly=true 이면 사이드바 없이 풀폭 + 가로 칩 메뉴만 표시.
+ *
+ * 데스크탑(md+) 한정: 본문 좌상단의 「메뉴 접기/펼치기」 토글로 사이드바를
+ * 숨기고 본문을 확장할 수 있다. 상태는 localStorage 전역.
+ * 모바일은 사이드바가 본문 위에 column 으로 오므로 토글 영향 받지 않음.
  */
 export default function SectionLayout({ children, autoHero = true, chipsOnly = false }: Props) {
   const { currentGroup } = useNavigation();
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
-  // 매칭된 그룹이 없거나 항목이 없으면 사이드바·칩 모두 생략
+  // 매칭된 그룹이 없거나 항목이 없으면 사이드바·칩·토글 모두 생략
   if (!currentGroup || currentGroup.items.length === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -35,7 +72,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
     );
   }
 
-  // chipsOnly: 풀폭 본문 + 본문 위 가로 칩 메뉴
+  // chipsOnly: 풀폭 본문 + 본문 위 가로 칩 메뉴 — 사이드바 자체가 없어 토글 의미 없음
   if (chipsOnly) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -53,15 +90,30 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
-        <SectionSidebar
-          groupTitle={currentGroup.label}
-          imageSrc={currentGroup.sidebar_image_url ?? undefined}
-          widthPx={currentGroup.sidebar_width_px}
-          heightPx={currentGroup.sidebar_height_px ?? undefined}
-          imagePosition={currentGroup.sidebar_image_position}
-          items={currentGroup.items}
-        />
+        {/* 사이드바: 모바일은 항상 표시(상단 column), 데스크탑은 collapsed면 숨김 */}
+        <div className={collapsed ? "md:hidden" : ""}>
+          <SectionSidebar
+            groupTitle={currentGroup.label}
+            imageSrc={currentGroup.sidebar_image_url ?? undefined}
+            widthPx={currentGroup.sidebar_width_px}
+            heightPx={currentGroup.sidebar_height_px ?? undefined}
+            imagePosition={currentGroup.sidebar_image_position}
+            items={currentGroup.items}
+          />
+        </div>
         <div className="flex-1 min-w-0 mt-6 md:mt-0">
+          {/* 데스크탑(md+) 한정 사이드바 접기/펼치기 토글 */}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="hidden md:inline-flex items-center gap-1 mb-3 text-xs px-2.5 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            aria-pressed={collapsed}
+            aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+            title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+          >
+            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+            <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+          </button>
           {autoHero && <AutoPageHero />}
           {children}
         </div>
