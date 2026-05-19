@@ -101,24 +101,21 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
             items={currentGroup.items}
           />
         </div>
-        <div className="flex-1 min-w-0 mt-6 md:mt-0">
-          {/* 데스크탑(md+) 한정: 가로 구분선 + 그 위에 걸친 「탭」 모양 토글.
-              구분선은 본문 영역 폭에 그어지고, 탭의 흰 배경이 그 부분만 가려
-              "탭 아래로 처진 + 구분선이 탭 양옆으로만 보이는" 모양이 된다. */}
-          <div className="hidden md:block relative mb-5">
-            <div className="border-t border-[var(--color-border)]" />
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-pressed={collapsed}
-              aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-              title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-              className="absolute left-4 top-0 inline-flex items-center gap-1 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
-            >
-              <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-              <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
-            </button>
-          </div>
+        <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
+          {/* 데스크탑(md+) 한정: 탭을 SectionLayout 상단(컨테이너의 py-8 만큼)으로 끌어올려
+              PageHeader 하단 구분선(border-b)에 직접 걸친 「아래로 처진 탭」 모양으로 표시.
+              border-t-0 + bg-white 로 PageHeader 구분선이 탭의 위쪽 모서리처럼 자연스럽게 이어진다. */}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-pressed={collapsed}
+            aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+            title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+            className="hidden md:inline-flex items-center gap-1 absolute -top-8 left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+            <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+          </button>
           {autoHero && <AutoPageHero />}
           {children}
         </div>

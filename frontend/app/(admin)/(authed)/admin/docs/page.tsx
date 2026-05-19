@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.186";
+export const CURRENT_VERSION = "1.5.187";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.187", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 토글 — PageHeader 하단 구분선에 직접 걸친 「탭」 모양으로 위치 변경",
+      "  · 이전(v1.5.186): 본문 안 자체 가로 구분선 위에 탭 — 구분선이 한 줄 더 있어 시각적 부담",
+      "  · 변경: 본문 안 자체 구분선 제거 + 탭만 absolute -top-8 로 SectionLayout 상단(py-8 만큼)에 끌어올림",
+      "  · 결과: PageHeader 의 border-b 가 탭의 위쪽 모서리처럼 자연스럽게 이어짐 (border-t-0 + bg-white)",
+      "  · 본문 div 에 md:relative 추가 — absolute 탭의 위치 기준점",
+    ],
+  },
   {
     version: "1.5.186", date: "2026-05-19", tag: "디자인",
     items: [
