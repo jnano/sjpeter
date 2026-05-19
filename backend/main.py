@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes, photos
+from app.api import issue_reports, transport_routes, photos, saints
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -59,6 +59,7 @@ app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
+app.include_router(saints.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -70,6 +71,7 @@ def startup():
     from app.models import bulletin_extraction  # noqa: F401 — 테이블 등록
     from app.models import member_interest  # noqa: F401 — 회원 관심분과
     from app.models import construction  # noqa: F401 — 성당 건축 공사 단계·일지
+    from app.models import saint  # noqa: F401 — 가톨릭 성인 사전 (세례명 → 축일)
     create_tables()
     _migrate_add_columns()
     _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
@@ -333,6 +335,30 @@ def _migrate_add_columns():
         """))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_construction_journal_date ON construction_journal(entry_date DESC)"
+        ))
+
+        # 가톨릭 성인 사전 — 세례명으로 축일 조회
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS saints (
+                id SERIAL PRIMARY KEY,
+                korean_name VARCHAR(80) NOT NULL,
+                latin_name VARCHAR(120),
+                feast_month INTEGER NOT NULL,
+                feast_day INTEGER NOT NULL,
+                title VARCHAR(80),
+                bio_short TEXT,
+                patronage VARCHAR(200),
+                rank_within_name INTEGER DEFAULT 0 NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_saints_korean_name ON saints(korean_name)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_saints_feast ON saints(feast_month, feast_day)"
         ))
 
         # legacy 신부님 사진 테이블 / 컬럼 제거 (parish_staff로 이전됨)
@@ -1347,6 +1373,37 @@ def _seed_initial_data():
                     slug="construction", label="공사 일지", public_href="/construction",
                     description="/construction 상단 히어로 이미지 (정점 사진 슬라이드쇼)", sort_order=6,
                 ))
+                db.commit()
+
+        # 성인 사전 초기 데이터 (saints_seed.json — 한국 천주교 보편 전례력 사실 데이터)
+        from app.models.saint import Saint
+        if not db.query(Saint).first():
+            import json as _json
+            from pathlib import Path as _Path
+            seed_path = _Path(__file__).resolve().parent / "app" / "data" / "saints_seed.json"
+            if seed_path.exists():
+                with seed_path.open(encoding="utf-8") as f:
+                    seeds = _json.load(f)
+                # prefix(성/성녀/복자/복녀)는 title 앞에 합쳐 표기, 신분 정보 보존
+                title_prefix_map = {"성": None, "성녀": None, "복자": "복자", "복녀": "복녀"}
+                objs = []
+                for r in seeds:
+                    title_parts = []
+                    p = r.get("prefix")
+                    extra = title_prefix_map.get(p) if p else None
+                    if extra:
+                        title_parts.append(extra)
+                    if r.get("title"):
+                        title_parts.append(r["title"])
+                    title = ", ".join(title_parts) if title_parts else None
+                    objs.append(Saint(
+                        korean_name=r["korean_name"],
+                        latin_name=r.get("latin_name"),
+                        feast_month=r["feast_month"],
+                        feast_day=r["feast_day"],
+                        title=title,
+                    ))
+                db.bulk_save_objects(objs)
                 db.commit()
 
     finally:

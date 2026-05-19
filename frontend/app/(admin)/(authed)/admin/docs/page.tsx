@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.180";
-export const LAST_UPDATED = "2026-05-18";
+export const CURRENT_VERSION = "1.5.181";
+export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-18";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.181", date: "2026-05-19", tag: "기능",
+    items: [
+      "세례명·축일 사전 (Phase 1) — /saints 공개 페이지 + /admin/saints 관리",
+      "  · saints 테이블 신설: korean_name, latin_name, feast_month, feast_day, title, bio_short, patronage, rank_within_name",
+      "  · 시드 1,626명 자동 주입 — 한국 천주교 보편 전례력 사실(이름·라틴명·축일·신분) 한정",
+      "  · 출처: 가톨릭교리통신교육회(CDCC) 목록 참고, 생애·출생지·순교지 등 사이트 고유 표기는 미수집(저작권·DB권리 회피)",
+      "  · API: GET /api/saints/ 검색·페이지네이션, /suggest 자동완성, /by-name/{name} 동명 후보, /by-feast 축일별, /{id} 상세 + admin CRUD",
+      "  · /saints 공개 페이지: 한글명/라틴명 검색 + 월별 필터 칩 + 페이지네이션 + 카드 그리드 (말씀과 기도 그룹)",
+      "  · /admin/saints 관리: 검색·월 필터·인라인 수정·다중선택 삭제·신규 등록",
+      "  · 메뉴 항목 'word' 그룹에 '세례명·축일 사전' 추가",
+    ],
+  },
   {
     version: "1.5.180", date: "2026-05-18", tag: "수정",
     items: [

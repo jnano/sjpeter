@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/content?tab=vision", label: "사목지표" },
       { href: "/admin/content?tab=meditation", label: "주일 말씀" },
       { href: "/admin/prayers", label: "기도문" },
+      { href: "/admin/saints", label: "성인 사전" },
     ],
   },
   {
