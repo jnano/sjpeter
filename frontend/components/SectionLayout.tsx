@@ -111,7 +111,8 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
             aria-pressed={collapsed}
             aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
             title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-            className="hidden md:inline-flex items-center gap-1 absolute -top-8 left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+            style={{ top: "calc(-2rem - 1px)" }}
+            className="hidden md:inline-flex items-center gap-1 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
           >
             <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
             <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>

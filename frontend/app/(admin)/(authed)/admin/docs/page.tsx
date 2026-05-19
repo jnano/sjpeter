@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.187";
+export const CURRENT_VERSION = "1.5.188";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.188", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 탭 — 위쪽으로 「뚫린」 모양 보정",
+      "  · 증상: 탭이 PageHeader 구분선과 정확히 같은 y 좌표에 있어 1px border 가 탭 위쪽 가장자리에 살짝 비침",
+      "  · 수정: 탭의 top 을 calc(-2rem - 1px) 로 1px 더 위로 올려 PageHeader border 가 탭의 흰 배경에 완전히 덮이게 함",
+      "  · 결과: 탭이 위로 열려 있고, PageHeader 구분선은 탭 양옆에서만 보이는 모양",
+    ],
+  },
   {
     version: "1.5.187", date: "2026-05-19", tag: "디자인",
     items: [
