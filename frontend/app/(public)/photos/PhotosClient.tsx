@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import { resolveClientApi } from "@/lib/api";
 
 const PAGE_SIZE = 60;
@@ -198,6 +199,7 @@ export default function PhotosClient() {
         }
       />
 
+      <SectionLayout autoHero={false}>
       <div className="py-2">
         {total > 0 && (
           <div className="px-2 pb-2 text-center text-[12px] text-[var(--color-text-muted)]">
@@ -238,6 +240,7 @@ export default function PhotosClient() {
           <div className="py-12 text-center text-sm text-[var(--color-text-muted)]">등록된 사진이 없습니다.</div>
         )}
       </div>
+      </SectionLayout>
     </main>
   );
 }

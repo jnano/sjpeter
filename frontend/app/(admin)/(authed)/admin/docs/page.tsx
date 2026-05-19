@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.183";
+export const CURRENT_VERSION = "1.5.184";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.184", date: "2026-05-19", tag: "디자인",
+    items: [
+      "/photos — 메뉴에 연결되면 해당 그룹 사이드바 자동 표시",
+      "  · 변경 전: 의도적으로 풀폭 (사이드바 없음)",
+      "  · 변경: PhotosClient 본문을 SectionLayout 으로 감싸서 useNavigation 자동 매칭 활성화",
+      "  · 결과: '본당 공동체' 메뉴 그룹에 등록된 /photos 가 그 그룹 사이드바(모든날 모든순간·사목 지표 등)와 함께 노출",
+      "  · 메뉴에 등록 안 된 경우는 SectionLayout 의 fallback(풀폭)으로 자연스럽게 동작",
+      "  · autoHero=false — PhotosClient 자체가 PageHeader+사진을 갖고 있어 hero 슬라이드쇼는 생략",
+      "  · /calendar 는 자체 SectionSidebar 패턴 사용 중이라 별개 처리 (이번 변경 범위 밖)",
+    ],
+  },
   {
     version: "1.5.183", date: "2026-05-19", tag: "수정",
     items: [
