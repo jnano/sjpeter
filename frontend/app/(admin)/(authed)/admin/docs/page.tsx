@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.185";
+export const CURRENT_VERSION = "1.5.186";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.186", date: "2026-05-19", tag: "디자인",
+    items: [
+      "사이드바 접기 토글 — 「구분선에 걸친 아래 탭」 모양으로 시각화",
+      "  · 본문 영역 상단에 가로 구분선 1줄 + 그 위에 걸친 흰 배경 탭 버튼",
+      "  · 탭 모양: border-t-0 + rounded-b-md + bg-white — 구분선이 탭 양옆에서만 보이고 탭 부분에서 끊긴 효과",
+      "  · 위치: 본문 좌측 상단(left-4) — 사이드바와 본문 경계 근처라 자연스러운 시선 흐름",
+      "  · 동작/접근성/저장은 v1.5.185 그대로 (localStorage 전역, aria-pressed/label)",
+    ],
+  },
   {
     version: "1.5.185", date: "2026-05-19", tag: "기능",
     items: [

@@ -102,18 +102,23 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           />
         </div>
         <div className="flex-1 min-w-0 mt-6 md:mt-0">
-          {/* 데스크탑(md+) 한정 사이드바 접기/펼치기 토글 */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="hidden md:inline-flex items-center gap-1 mb-3 text-xs px-2.5 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            aria-pressed={collapsed}
-            aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-            title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-          >
-            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-            <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
-          </button>
+          {/* 데스크탑(md+) 한정: 가로 구분선 + 그 위에 걸친 「탭」 모양 토글.
+              구분선은 본문 영역 폭에 그어지고, 탭의 흰 배경이 그 부분만 가려
+              "탭 아래로 처진 + 구분선이 탭 양옆으로만 보이는" 모양이 된다. */}
+          <div className="hidden md:block relative mb-5">
+            <div className="border-t border-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-pressed={collapsed}
+              aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+              title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+              className="absolute left-4 top-0 inline-flex items-center gap-1 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+            >
+              <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+              <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+            </button>
+          </div>
           {autoHero && <AutoPageHero />}
           {children}
         </div>
