@@ -594,8 +594,8 @@ export default function MypagePage() {
             </div>
           )}
 
-          {/* 이메일 미인증 안내 (소셜 가입자 제외) */}
-          {!member.is_email_verified && member.has_password && (
+          {/* 이메일 미인증 안내 — 소셜 가입자는 OAuth provider 가 이메일을 검증하므로 제외 */}
+          {!member.is_email_verified && member.has_password && !member.social_provider && (
             <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-4">
               <span className="text-blue-500 text-lg mt-0.5">📧</span>
               <div className="flex-1 min-w-0">

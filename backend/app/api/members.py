@@ -278,6 +278,9 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
             member.social_id = body.provider_id
             if body.avatar_url and not member.avatar_url:
                 member.avatar_url = body.avatar_url
+            # Google·Kakao 가 검증한 이메일이므로 자동 verified 처리
+            if not member.is_email_verified:
+                member.is_email_verified = True
             db.commit()
 
     if not member:
@@ -290,6 +293,8 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
             social_provider=body.provider,
             social_id=body.provider_id,
             avatar_url=body.avatar_url,
+            # social 가입자는 OAuth provider 가 이메일을 검증한 상태 → 자동 verified
+            is_email_verified=True,
         )
         db.add(member)
         db.commit()

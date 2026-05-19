@@ -114,9 +114,24 @@ def update_setting(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_super_admin),
 ):
+    """설정값 저장 — 없는 키는 새로 생성(upsert). 비밀값 빈 입력은 기존값 유지."""
     row = db.query(SiteSetting).filter(SiteSetting.key == key).first()
     if not row:
-        raise HTTPException(status_code=404, detail="설정 항목을 찾을 수 없습니다.")
+        # 신규 키 — NOT NULL 컬럼(label, group_name, is_secret) default 채우고 row 생성
+        secret_markers = ("SECRET", "PASSWORD", "TOKEN", "KEY", "APIKEY")
+        is_secret = any(m in key.upper() for m in secret_markers)
+        row = SiteSetting(
+            key=key,
+            value=body.value or "",
+            label=key,            # 임시 label, admin 에서 수정 가능
+            group_name="기타",
+            is_secret=is_secret,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        invalidate(key)
+        return _to_out(row)
 
     # 비밀값: 빈 문자열이나 None이면 기존값 유지
     if row.is_secret and not body.value:

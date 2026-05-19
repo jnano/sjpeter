@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.202";
+export const CURRENT_VERSION = "1.5.203";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.203", date: "2026-05-19", tag: "수정",
+    items: [
+      "운영 prod 시연 중 발견된 회원·설정 관련 이슈 일괄 해결",
+      "  · /admin/settings 저장 실패 — site_settings 비어 있을 때 PATCH 가 404. upsert 패턴으로 변경 + NOT NULL 컬럼(label/group_name/is_secret) default 자동 채움 (SMTP_PASSWORD 같은 키는 이름에 SECRET/PASSWORD/TOKEN/KEY 포함 시 자동 is_secret=true)",
+      "  · social 가입자 이메일 인증 무한 안내 — Google/Kakao OAuth provider 가 이미 검증한 이메일임에도 is_email_verified=false 로 저장돼 마이페이지에 인증 안내가 계속 표시. social-login 핸들러에서 신규/연동 모두 is_email_verified=true 자동 처리. 기존 social 회원 3명도 DB UPDATE 로 일괄 verified 처리",
+      "  · 마이페이지 안내 조건 보강 — member.social_provider 있으면 인증 안내 미표시 (이중 안전망)",
+      "  · NextAuth UntrustedHost (prod 한정) — 임시 회피: AUTH_TRUST_HOST=true 환경변수. 운영에서는 NEXTAUTH_URL=https://도메인 으로 자동 trust",
+    ],
+  },
   {
     version: "1.5.202", date: "2026-05-19", tag: "수정",
     items: [
