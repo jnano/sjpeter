@@ -27,9 +27,8 @@ def _compute_href(item: MenuItem, db: Session) -> str:
         b = db.query(Board).filter(Board.id == item.board_id).first()
         if not b:
             return item.href or ""
-        # 갤러리 종류 게시판은 사진 그리드 라우트로 매핑
-        prefix = "/gallery" if getattr(b, "kind", None) == "gallery" else "/boards"
-        return f"{prefix}/{b.slug}"
+        # 모든 게시판이 /boards/{slug} 단일 라우트 (v1.5.201) — kind 에 따라 페이지 안에서 view 자동 선택
+        return f"/boards/{b.slug}"
     if item.link_type == "external":
         return item.external_url or ""
     if item.link_type == "page":

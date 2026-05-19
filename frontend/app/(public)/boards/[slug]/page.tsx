@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import LineBoard from "./LineBoard";
@@ -127,8 +127,9 @@ export default async function BoardPage({
   const { slug } = await params;
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
-  const requestedView: "list" | "card" | "photo" =
-    sp.view === "photo" ? "photo" : sp.view === "card" ? "card" : "list";
+  // sp.view 가 명시되면 그것, 없으면 게시판 종류에 따라 디폴트 결정 (gallery → photo, 그 외 → list)
+  const explicitView: "list" | "card" | "photo" | null =
+    sp.view === "photo" ? "photo" : sp.view === "card" ? "card" : sp.view === "list" ? "list" : null;
   const q = (sp.q ?? "").trim();
   const sort = SORT_OPTIONS.some((o) => o.value === sp.sort) ? sp.sort! : "latest";
   const category = (sp.category ?? "").trim();
@@ -137,26 +138,16 @@ export default async function BoardPage({
 
   if (!board) notFound();
 
-  // 갤러리 종류 게시판은 사진 그리드 뷰가 자연스러운 진입점.
-  // /boards/{slug} 로 들어와도 /gallery/{slug} 로 통일 (사이드바·photo view·메뉴 매칭 일관성).
-  // 게시글 상세의 「목록으로」링크가 항상 /boards/{slug} 로 가도 여기서 redirect 되어 정상 화면.
-  if (board.kind === "gallery") {
-    const qs = new URLSearchParams();
-    if (sp.page) qs.set("page", sp.page);
-    if (sp.q) qs.set("q", sp.q);
-    if (sp.sort) qs.set("sort", sp.sort);
-    if (sp.category) qs.set("category", sp.category);
-    const suffix = qs.toString();
-    redirect(`/gallery/${slug}${suffix ? `?${suffix}` : ""}`);
-  }
-
   // 활성 뷰 계산 — admin 토글이 켠 뷰들. 모두 꺼지면 list 폴백.
   const activeViews = VIEW_OPTIONS.filter((v) => {
     if (v.value === "list") return board.show_view_list;
     if (v.value === "card") return board.show_view_card;
     return board.show_view_photo;
   });
-  const fallbackView = activeViews[0]?.value ?? "list";
+  // 디폴트 뷰: 갤러리 종류 게시판은 photo, 그 외는 list (활성 뷰에 없으면 첫 활성 뷰로 폴백)
+  const kindDefault: "list" | "photo" = board.kind === "gallery" ? "photo" : "list";
+  const requestedView = explicitView ?? kindDefault;
+  const fallbackView = activeViews.some((v) => v.value === kindDefault) ? kindDefault : (activeViews[0]?.value ?? "list");
   const currentView = activeViews.some((v) => v.value === requestedView) ? requestedView : fallbackView;
 
   if (board.members_only_read && !session) {

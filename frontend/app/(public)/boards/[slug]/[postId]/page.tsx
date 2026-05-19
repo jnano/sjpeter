@@ -95,17 +95,16 @@ export default async function PostPage({
   const { slug, postId } = await params;
   const session = await auth();
   const token = (session as { accessToken?: string } | null)?.accessToken;
-  const [post, neighbors, boardKind] = await Promise.all([
+  const [post, neighbors] = await Promise.all([
     getPost(slug, postId, token),
     getNeighbors(slug, postId, token),
-    getBoardKind(slug),
   ]);
 
   if (!post) notFound();
 
   return (
     <SectionLayout autoHero={false}>
-      <PostDetail post={post} slug={slug} neighbors={neighbors} boardKind={boardKind ?? "default"} />
+      <PostDetail post={post} slug={slug} neighbors={neighbors} />
     </SectionLayout>
   );
 }

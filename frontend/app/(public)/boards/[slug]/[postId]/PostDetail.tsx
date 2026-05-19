@@ -228,22 +228,19 @@ export default function PostDetail({
   post,
   slug,
   neighbors,
-  boardKind,
 }: {
   post: Post;
   slug: string;
   neighbors?: NeighborsOut;
-  /** 게시판 종류 — 'gallery' 면 목록 경로를 /gallery/{slug} 로 보내 redirect 우회. */
-  boardKind?: string;
 }) {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // 목록에서 from=encoded(qs) 를 받아 삭제·취소 시 그 페이지·필터로 복귀
+  // 목록에서 from=encoded(qs) 를 받아 삭제·취소 시 그 페이지·필터로 복귀.
+  // 갤러리 종류 게시판도 /boards/{slug} 라우트에서 photo 뷰로 표시되므로 경로는 단일 (v1.5.201).
   const backToListHref = (() => {
     const from = searchParams?.get("from");
-    const base = boardKind === "gallery" ? `/gallery/${slug}` : `/boards/${slug}`;
-    return from ? `${base}?${from}` : base;
+    return from ? `/boards/${slug}?${from}` : `/boards/${slug}`;
   })();
   const [comments, setComments] = useState<Comment[]>(post.comments);
   const [newComment, setNewComment] = useState("");
@@ -614,15 +611,6 @@ export default function PostDetail({
         )}
         <Link
           href={backToListHref}
-          onClick={() => {
-            // RSC 응답 대기 중 이전 페이지의 스크롤 위치(footer 부근)가 잔상으로 남아
-            // 새 페이지 mount 후 갑자기 상단으로 점프하는 깜빡임을 회피.
-            // 클릭 즉시 상단으로 강제 이동하면 잔상 없이 매끄럽게 전환된다.
-            // (갤러리 게시판에서 특히 두드러지지만 모든 게시판에 동일 적용)
-            if (typeof window !== "undefined") {
-              window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-            }
-          }}
           className="px-4 py-1.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors"
         >
           목록으로

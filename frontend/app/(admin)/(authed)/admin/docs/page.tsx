@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.200";
+export const CURRENT_VERSION = "1.5.201";
 export const LAST_UPDATED = "2026-05-19";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-19";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.201", date: "2026-05-19", tag: "인프라",
+    items: [
+      "갤러리/일반 게시판 라우트 통합 — /gallery → /boards 흡수 (근본 정리)",
+      "  · 배경: v1.5.197~200 으로 보조 패치(redirect·boardKind·scroll-top·loading.tsx)를 쌓았으나 깜빡임이 가중. 원인은 '글 상세(/boards) ↔ 갤러리 목록(/gallery)' 의 segment 비대칭으로, 매번 layout 통째 unmount + RSC 0.3s 잔상 발생",
+      "  · 통합: 모든 게시판이 /boards/{slug} 단일 라우트로. board.kind==='gallery' 이면 /boards/[slug] 페이지가 자동으로 photo 그리드 뷰를 디폴트로 표시 (BoardList 의 기존 photo view 재사용)",
+      "  · 백엔드 menus.py: board 메뉴 href 매핑에서 /gallery 분기 제거 → 항상 /boards/{slug}",
+      "  · /gallery/[slug]·/[postId]·/write 3개 페이지: redirect-only 페이지로 단순화 (옛 URL 호환). loading.tsx 제거",
+      "  · 보조 패치 원복: /boards/[slug] 의 v1.5.197 redirect 제거, PostDetail 의 boardKind prop·scroll-top onClick(v1.5.198~199) 제거, PostPage 의 getBoardKind fetch 제거",
+      "  · 결과: '목록으로' 클릭 시 segment 전환이 일어나지 않아 깜빡임·footer 잔상·skeleton 등 모든 증상이 근본적으로 사라짐",
+    ],
+  },
   {
     version: "1.5.200", date: "2026-05-19", tag: "디자인",
     items: [
