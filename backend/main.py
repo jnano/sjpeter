@@ -1215,7 +1215,7 @@ def _migrate_add_columns():
         conn.execute(text("""
             INSERT INTO site_settings (key, label, description, is_secret, group_name) VALUES
             ('SITE_URL',              '사이트 URL',            '이메일 링크 등에 사용되는 홈페이지 주소',         FALSE, '사이트'),
-            ('SMTP_FROM',             '발신자 이름/주소',       '예: 베드로성당 <noreply@peter.com>',                   FALSE, '사이트'),
+            ('SMTP_FROM',             '발신자 이름/주소',       '예: 성베드로성당 <noreply@peter.com>',                  FALSE, '사이트'),
             ('SMTP_HOST',             'SMTP 서버',             '예: smtp.gmail.com',                            FALSE, '이메일'),
             ('SMTP_PORT',             'SMTP 포트',             '일반적으로 587 (TLS)',                           FALSE, '이메일'),
             ('SMTP_USER',             'SMTP 계정',             '발송에 사용할 이메일 계정',                       FALSE, '이메일'),
