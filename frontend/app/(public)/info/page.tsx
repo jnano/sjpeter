@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import KakaoMap from "./KakaoMap";
 import { fetchParishMin } from "@/lib/parish";
 
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "오시는 길", description: `${p.name} 찾아오시는 길 — 주소, 연락처, 지도` };
+  return { title: "찾아오시는 길", description: `${p.name} 찾아오시는 길 — 주소, 연락처, 지도` };
 }
 
 // 좌표가 바뀌면 바로 반영돼야 하므로 캐시하지 않는다
@@ -59,16 +60,16 @@ async function getTransportRoutes(): Promise<TransportRoute[]> {
 
 export default async function InfoPage() {
   const [parish, transportRoutes] = await Promise.all([getParish(), getTransportRoutes()]);
-  let appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "";
-  if (!appKey) {
-    try {
-      const cfgRes = await fetch(`${API}/api/public/site-config`);
-      if (cfgRes.ok) {
-        const cfg = await cfgRes.json();
-        appKey = cfg.KAKAO_MAP_KEY ?? "";
-      }
-    } catch {}
-  }
+  // KAKAO_MAP_KEY 는 site_settings DB 단일 source — process.env fallback 사용 안 함.
+  // admin /admin/settings 의 OAuth 그룹에서 입력. 비어 있으면 지도 영역만 안내 메시지로 대체.
+  let appKey = "";
+  try {
+    const cfgRes = await fetch(`${API}/api/public/site-config`);
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      appKey = cfg.KAKAO_MAP_KEY ?? "";
+    }
+  } catch {}
 
   const name = parish?.name ?? "세종성베드로성당";
   const address = parish?.address ?? "세종특별자치시 도움5로 00";
@@ -101,7 +102,7 @@ export default async function InfoPage() {
                 <p className="text-sm mt-1">{address}</p>
                 <p className="text-xs mt-3 text-[var(--color-border-dark)]">
                   {!appKey || appKey === "여기에_JavaScript_키_입력"
-                    ? ".env.local의 NEXT_PUBLIC_KAKAO_MAP_KEY를 설정하면 지도가 표시됩니다"
+                    ? "관리자 > 사이트 설정 > OAuth 그룹에서 카카오맵 JavaScript 키를 입력하면 지도가 표시됩니다"
                     : "관리자 > 성당 정보에서 지도 좌표를 입력하면 지도가 표시됩니다"}
                 </p>
               </div>
@@ -174,7 +175,7 @@ export default async function InfoPage() {
           return (
             <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
               <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-2.5">
-                <span className="text-[var(--color-accent)]">✝</span>
+                <CrossIcon className="text-[var(--color-accent)]" />
                 <h2 className="font-serif font-bold text-[var(--color-primary)] text-base tracking-wide">미사 시간</h2>
               </div>
 

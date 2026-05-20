@@ -18,15 +18,16 @@ VISION_MODEL = "global.anthropic.claude-sonnet-4-6"
 
 def _get_client():
     from app.core.site_settings import get_setting
-    from app.core.config import settings
     from botocore.config import Config
+    # AWS 자격증명은 site_settings DB 단일 source — process.env / settings.AWS_* fallback 사용 안 함.
+    # admin /admin/settings 의 AI 그룹에서 입력. 비어 있으면 Bedrock 호출 시 인증 실패 → AI 추출 기능만 비활성.
     # Vision 모델(이미지 다수 포함)은 60초 기본 read_timeout으로 부족 → 5분으로 확장
     bedrock_config = Config(read_timeout=300, connect_timeout=20, retries={"max_attempts": 2})
     return boto3.client(
         service_name="bedrock-runtime",
-        region_name=get_setting("AWS_REGION", settings.AWS_REGION),
-        aws_access_key_id=get_setting("AWS_ACCESS_KEY_ID", settings.AWS_ACCESS_KEY_ID),
-        aws_secret_access_key=get_setting("AWS_SECRET_ACCESS_KEY", settings.AWS_SECRET_ACCESS_KEY),
+        region_name=get_setting("AWS_REGION"),
+        aws_access_key_id=get_setting("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=get_setting("AWS_SECRET_ACCESS_KEY"),
         config=bedrock_config,
     )
 
