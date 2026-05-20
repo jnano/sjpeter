@@ -198,13 +198,11 @@ export default function SetupPage() {
               </p>
               <Field
                 label="본당 이름"
-                hint="예: 세종성베드로성당"
                 value={form.parish_name}
                 onChange={(v) => setField("parish_name", v)}
               />
               <Field
                 label="본당 영문명 (선택)"
-                hint="예: St. Peter's Cathedral"
                 value={form.parish_name_en}
                 onChange={(v) => setField("parish_name_en", v)}
               />
