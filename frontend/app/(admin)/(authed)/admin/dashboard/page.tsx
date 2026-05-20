@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import OnboardingChecklist from "@/components/admin/OnboardingChecklist";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -39,6 +40,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">대시보드</h1>
         <p className="text-sm text-gray-500 mt-1">사이트 현황을 한눈에 확인합니다.</p>
       </div>
+
+      {/* 첫 운영 가이드 (필수 항목 모두 완료 시 자동 숨김) */}
+      <OnboardingChecklist />
 
       {/* 임시저장 알림 (있을 때만) */}
       {draftCount > 0 && (
