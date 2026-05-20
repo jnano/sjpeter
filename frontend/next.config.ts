@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
       { source: "/boards/photo/:postId(\\d+)", destination: "/gallery/events/:postId", permanent: true },
     ];
   },
+  // backend uploads 를 same-origin 프록시 — fetch·canvas readback 시 CORS 회피용
+  async rewrites() {
+    const backend = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    return [
+      { source: "/uploads/:path*", destination: `${backend}/uploads/:path*` },
+    ];
+  },
   images: {
     dangerouslyAllowLocalIP: true,
     remotePatterns: [

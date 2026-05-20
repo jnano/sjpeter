@@ -32,6 +32,10 @@ export default function DraftsPage() {
   const [eventKind, setEventKind] = useState<Record<number, "행사" | "모임">>({});
   const [eventLocation, setEventLocation] = useState<Record<number, string>>({});
 
+  // 인라인 수정 상태
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{ title: string; content: string }>({ title: "", content: "" });
+
   const authHeaders = () => {
     const token = localStorage.getItem("admin_token");
     return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -151,6 +155,43 @@ export default function DraftsPage() {
         setMovingId(null);
         setMoveTarget((t) => { const n = { ...t }; delete n[id]; return n; });
       } else alert("이동에 실패했습니다.");
+    } finally {
+      setProcessing((p) => ({ ...p, [id]: false }));
+    }
+  }
+
+  // ── 수정 (인라인) ─────────────────────────────────────
+  function startEdit(draft: Draft) {
+    setEditingId(draft.id);
+    setEditForm({ title: draft.title, content: draft.content });
+    setMovingId(null);
+    setPublishingId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(id: number) {
+    if (!editForm.title.trim()) {
+      alert("제목은 비울 수 없습니다.");
+      return;
+    }
+    setProcessing((p) => ({ ...p, [id]: true }));
+    try {
+      const res = await fetch(`${API}/api/boards/drafts/${id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ title: editForm.title, content: editForm.content }),
+      });
+      if (res.ok) {
+        const updated: Draft = await res.json();
+        setDrafts((d) => d.map((x) => (x.id === id ? updated : x)));
+        setEditingId(null);
+      } else {
+        const detail = await res.json().catch(() => ({}));
+        alert(detail.detail ?? "수정 저장 실패");
+      }
     } finally {
       setProcessing((p) => ({ ...p, [id]: false }));
     }
@@ -429,13 +470,49 @@ export default function DraftsPage() {
                           {draft.board.name}
                         </span>
                       </div>
-                      <h3 className="font-medium text-[var(--color-text)] truncate">{draft.title}</h3>
-                      <p className="text-sm text-[var(--color-text-muted)] mt-0.5 line-clamp-2">
-                        {draft.content.slice(0, 120)}{draft.content.length > 120 ? "…" : ""}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
-                        {new Date(draft.created_at).toLocaleString("ko-KR")}
-                      </p>
+                      {editingId === draft.id ? (
+                        <div className="space-y-2 mt-1">
+                          <input
+                            value={editForm.title}
+                            onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                            placeholder="제목"
+                            className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white"
+                          />
+                          <textarea
+                            value={editForm.content}
+                            onChange={(e) => setEditForm((p) => ({ ...p, content: e.target.value }))}
+                            rows={6}
+                            placeholder="본문"
+                            className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white resize-y font-mono"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => saveEdit(draft.id)}
+                              disabled={processing[draft.id]}
+                              className="text-xs px-3 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white disabled:opacity-50"
+                            >
+                              {processing[draft.id] ? "저장 중…" : "저장"}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              disabled={processing[draft.id]}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] disabled:opacity-50"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="font-medium text-[var(--color-text)] truncate">{draft.title}</h3>
+                          <p className="text-sm text-[var(--color-text-muted)] mt-0.5 line-clamp-2">
+                            {draft.content.slice(0, 120)}{draft.content.length > 120 ? "…" : ""}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
+                            {new Date(draft.created_at).toLocaleString("ko-KR")}
+                          </p>
+                        </>
+                      )}
                     </div>
 
                     {/* 단건 액션 버튼 */}
@@ -451,6 +528,13 @@ export default function DraftsPage() {
                           }`}
                         >
                           {isPicking ? "접기" : "게시"}
+                        </button>
+                        <button
+                          onClick={() => editingId === draft.id ? cancelEdit() : startEdit(draft)}
+                          disabled={processing[draft.id] || bulkProcessing}
+                          className="text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          {editingId === draft.id ? "닫기" : "수정"}
                         </button>
                         <button
                           onClick={() => { setMovingId(movingId === draft.id ? null : draft.id); setPublishingId(null); }}
