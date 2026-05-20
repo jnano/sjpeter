@@ -455,7 +455,13 @@ def analyze_bulletin(
     _admin: Admin = Depends(get_current_admin),
 ):
     from app.services.pdf_extractor import extract_text, is_text_sparse, pdf_to_images_b64
-    from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images
+    from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images, is_ai_available
+
+    if not is_ai_available():
+        raise HTTPException(
+            status_code=503,
+            detail="AI 분석이 비활성 상태입니다. 관리자 > 사이트 설정 > AI 그룹에서 AWS Bedrock 키를 입력하세요."
+        )
 
     bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
     if not bulletin:
@@ -1085,13 +1091,21 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
     from app.services.pdf_extractor import (
         extract_text, is_text_sparse, pdf_to_images_b64, extract_embedded_images,
     )
-    from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images
+    from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images, is_ai_available
 
     db = SessionLocal()
     started = datetime.utcnow()
     try:
         bulletin = db.query(Bulletin).filter(Bulletin.id == bulletin_id).first()
         if not bulletin or not bulletin.pdf_url:
+            return
+
+        # AWS Bedrock 키가 비어 있으면 AI 추출 비활성 — 업로드 자체는 성공, 분석만 스킵
+        if not is_ai_available():
+            bulletin.ai_status = "disabled"
+            bulletin.ai_finished_at = datetime.utcnow()
+            bulletin.ai_error = "AI 비활성 — 관리자 > 사이트 설정 > AI 그룹에서 AWS Bedrock 키를 입력하세요."
+            db.commit()
             return
 
         # 분석 시작 표시 (UI 폴링용)

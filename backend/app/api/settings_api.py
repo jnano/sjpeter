@@ -62,6 +62,25 @@ def public_config(db: Session = Depends(get_db)):
 
     return result
 
+
+@internal_router.get("/api/public/feature-flags")
+def feature_flags():
+    """각 외부 서비스 키 설정 여부 — secret 값은 노출하지 않고 활성/비활성만 반환.
+
+    다른 본당 배포 시 admin UI 가 키 입력 전까지 비활성 상태로 안내하기 위해 사용.
+    """
+    def has(k: str) -> bool:
+        return bool((get_setting(k) or "").strip())
+
+    return {
+        "ai_enabled": has("AWS_ACCESS_KEY_ID") and has("AWS_SECRET_ACCESS_KEY") and has("AWS_REGION"),
+        "smtp_enabled": has("SMTP_USER") and has("SMTP_PASSWORD"),
+        "google_oauth_enabled": has("GOOGLE_CLIENT_ID") and has("GOOGLE_CLIENT_SECRET"),
+        "kakao_oauth_enabled": has("KAKAO_CLIENT_ID") and has("KAKAO_CLIENT_SECRET"),
+        "kakao_map_enabled": has("KAKAO_MAP_KEY"),
+    }
+
+
 _MASKED = "••••••••"
 
 

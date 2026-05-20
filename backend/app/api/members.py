@@ -163,6 +163,11 @@ def _apply_name_day(target, month: Optional[int], day: Optional[int]) -> None:
     target.name_day_day = day
 
 
+def is_smtp_available() -> bool:
+    """site_settings 의 SMTP_USER 와 SMTP_PASSWORD 가 모두 설정되어 있으면 True."""
+    return bool((get_setting("SMTP_USER") or "").strip() and (get_setting("SMTP_PASSWORD") or "").strip())
+
+
 def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> None:
     """이메일 발송. SMTP 미설정 시 콘솔 출력.
 
@@ -308,6 +313,9 @@ def register(request: Request, body: RegisterRequest, db: Session = Depends(get_
     if db.query(Member).filter(Member.email == body.email).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다.")
 
+    # SMTP 미설정 시 이메일 인증 단계 자동 스킵 — 다른 본당이 SMTP 입력 전이라도 가입 가능
+    smtp_ok = is_smtp_available()
+
     member = Member(
         email=body.email,
         name=body.name.strip() if body.name else None,
@@ -315,17 +323,19 @@ def register(request: Request, body: RegisterRequest, db: Session = Depends(get_
         phone=body.phone.strip() if body.phone else None,
         receive_notification=body.receive_notification,
         hashed_password=hash_password(body.password),
+        is_email_verified=not smtp_ok,  # SMTP 없으면 가입 즉시 활성, 있으면 메일 인증 대기
     )
     _apply_name_day(member, body.name_day_month, body.name_day_day)
     db.add(member)
     db.commit()
     db.refresh(member)
 
-    # 인증 이메일 발송 (실패해도 가입은 완료)
-    try:
-        _issue_and_send_verification(member, db)
-    except Exception:
-        pass
+    # 인증 이메일 발송 — SMTP 설정된 경우에만. 실패해도 가입은 완료
+    if smtp_ok:
+        try:
+            _issue_and_send_verification(member, db)
+        except Exception:
+            pass
 
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),

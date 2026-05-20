@@ -24,7 +24,15 @@ export default function BulletinListPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
   const select = useBulkSelect(bulletins.map((b) => b.id));
+
+  useEffect(() => {
+    fetch(`${API}/api/public/feature-flags`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => setAiEnabled(d?.ai_enabled ?? false))
+      .catch(() => setAiEnabled(false));
+  }, []);
 
   const fetchBulletins = useCallback(async () => {
     const token = localStorage.getItem("admin_token");
@@ -138,6 +146,13 @@ export default function BulletinListPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
+      {aiEnabled === false && (
+        <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          ⚠️ <strong>AI 분석 비활성</strong> — 주보 업로드는 가능하지만 자동 추출(공지·행사·모임) 은 동작하지 않습니다.
+          <Link href="/admin/settings" className="underline ml-1 font-medium">사이트 설정 → AI 그룹</Link>
+          에서 AWS Bedrock 키를 입력하면 활성화됩니다.
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)]">주보 관리</h1>

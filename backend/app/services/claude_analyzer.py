@@ -16,6 +16,19 @@ TEXT_MODEL   = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 VISION_MODEL = "global.anthropic.claude-sonnet-4-6"
 
 
+def is_ai_available() -> bool:
+    """site_settings 의 AWS 3개 키가 모두 설정되어 있으면 True.
+
+    이 함수가 False 면 주보 AI 추출 기능은 비활성 — 핵심 기능(업로드·아카이브·게시판)은 영향 없음.
+    """
+    from app.core.site_settings import get_setting
+    return bool(
+        (get_setting("AWS_ACCESS_KEY_ID") or "").strip()
+        and (get_setting("AWS_SECRET_ACCESS_KEY") or "").strip()
+        and (get_setting("AWS_REGION") or "").strip()
+    )
+
+
 def _get_client():
     from app.core.site_settings import get_setting
     from botocore.config import Config

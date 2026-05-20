@@ -1,8 +1,10 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function LoginForm() {
   const router = useRouter();
@@ -15,6 +17,15 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<"google" | "kakao" | null>(null);
+  // 키 미설정 시 소셜 버튼 자동 숨김 (다른 본당이 OAuth 키 입력 전까지 노출 차단)
+  const [flags, setFlags] = useState<{ google_oauth_enabled?: boolean; kakao_oauth_enabled?: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/public/feature-flags`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setFlags)
+      .catch(() => setFlags({}));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,35 +69,43 @@ function LoginForm() {
         </div>
       )}
 
-      {/* 소셜 로그인 버튼 */}
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => handleSocial("google")}
-          disabled={!!socialLoading}
-          className="w-full flex items-center justify-center gap-3 py-2.5 border border-[var(--color-border)] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm font-medium"
-        >
-          <GoogleIcon />
-          {socialLoading === "google" ? "연결 중…" : "Google로 계속하기"}
-        </button>
+      {/* 소셜 로그인 버튼 — admin 이 OAuth 키 입력한 경우에만 노출 */}
+      {(flags?.google_oauth_enabled || flags?.kakao_oauth_enabled) && (
+        <>
+          <div className="space-y-3">
+            {flags.google_oauth_enabled && (
+              <button
+                type="button"
+                onClick={() => handleSocial("google")}
+                disabled={!!socialLoading}
+                className="w-full flex items-center justify-center gap-3 py-2.5 border border-[var(--color-border)] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                <GoogleIcon />
+                {socialLoading === "google" ? "연결 중…" : "Google로 계속하기"}
+              </button>
+            )}
 
-        <button
-          type="button"
-          onClick={() => handleSocial("kakao")}
-          disabled={!!socialLoading}
-          className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#FEE500] hover:bg-[#FDD835] rounded-lg transition-colors disabled:opacity-50 text-sm font-medium text-[#3C1E1E]"
-        >
-          <KakaoIcon />
-          {socialLoading === "kakao" ? "연결 중…" : "카카오로 계속하기"}
-        </button>
-      </div>
+            {flags.kakao_oauth_enabled && (
+              <button
+                type="button"
+                onClick={() => handleSocial("kakao")}
+                disabled={!!socialLoading}
+                className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#FEE500] hover:bg-[#FDD835] rounded-lg transition-colors disabled:opacity-50 text-sm font-medium text-[#3C1E1E]"
+              >
+                <KakaoIcon />
+                {socialLoading === "kakao" ? "연결 중…" : "카카오로 계속하기"}
+              </button>
+            )}
+          </div>
 
-      {/* 구분선 */}
-      <div className="flex items-center gap-3 my-2">
-        <div className="flex-1 h-px bg-[var(--color-border)]" />
-        <span className="text-xs text-[var(--color-text-muted)]">또는 이메일로 로그인</span>
-        <div className="flex-1 h-px bg-[var(--color-border)]" />
-      </div>
+          {/* 구분선 */}
+          <div className="flex items-center gap-3 my-2">
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+            <span className="text-xs text-[var(--color-text-muted)]">또는 이메일로 로그인</span>
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+          </div>
+        </>
+      )}
 
       {/* 이메일 로그인 */}
       <form onSubmit={handleSubmit} className="space-y-4">
