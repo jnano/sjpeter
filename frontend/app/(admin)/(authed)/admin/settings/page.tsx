@@ -161,6 +161,11 @@ export default function SettingsPage() {
           <div className="divide-y divide-[var(--color-border)]">
             {items.map((s) => (
               <div key={s.key} className="px-6 py-4">
+                {s.key === "AUTH_SECRET" && (
+                  <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 leading-relaxed">
+                    ⚠️ <strong>AUTH_SECRET 변경 주의</strong> — JWT 서명 키입니다. 변경하는 즉시 <strong>모든 회원의 로그인 세션이 무효화</strong>되어 강제 로그아웃됩니다. 첫 설치 시 자동 발급된 값이며, 키 유출 등 보안 사고가 아니면 변경하지 마세요. 변경 후에는 서버 재시작이 필요합니다.
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="min-w-0">
                     <label className="block text-sm font-medium text-[var(--color-text)]">

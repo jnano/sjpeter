@@ -3,6 +3,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from app.core.config import settings
 from app.core.site_settings import get_setting
 
 logger = logging.getLogger(__name__)
@@ -13,8 +14,9 @@ def _build_bulletin_html(info: dict) -> str:
     season = info.get("liturgical_season") or ""
     gospel = info.get("gospel_reference") or ""
     pub_date = info.get("published_date") or ""
-    url = f"{get_setting('SITE_URL', 'http://localhost:3000')}/bulletin"
-    unsubscribe_url = f"{get_setting('SITE_URL', 'http://localhost:3000')}/members/me"
+    site_url = get_setting("SITE_URL", settings.SITE_URL)
+    url = f"{site_url}/bulletin"
+    unsubscribe_url = f"{site_url}/members/me"
 
     title_parts = [p for p in [issue, season] if p]
     title_line = " · ".join(title_parts) if title_parts else "주보"

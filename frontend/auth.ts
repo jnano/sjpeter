@@ -6,12 +6,45 @@ import Kakao from "next-auth/providers/kakao";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-const googleId     = process.env.AUTH_GOOGLE_ID     ?? "";
-const googleSecret = process.env.AUTH_GOOGLE_SECRET  ?? "";
-const kakaoId      = process.env.AUTH_KAKAO_ID       ?? "";
-const kakaoSecret  = process.env.AUTH_KAKAO_SECRET   ?? "";
+// site_settings DB 단일 source-of-truth. process.env 의 AUTH_* fallback 은 사용하지 않는다.
+// AUTH_SECRET은 백엔드 startup 에서 자동 발급 후 DB 저장. 변경 시 모든 세션이 무효화되므로 운영 중 수정 금지.
+type InternalConfig = Partial<Record<
+  "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" |
+  "KAKAO_CLIENT_ID" | "KAKAO_CLIENT_SECRET" |
+  "AUTH_SECRET", string>>;
+const CACHE_TTL_MS = 60_000;
+let _configCache: { at: number; data: InternalConfig } | null = null;
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+async function fetchInternalConfig(): Promise<InternalConfig> {
+  const now = Date.now();
+  if (_configCache && now - _configCache.at < CACHE_TTL_MS) return _configCache.data;
+  try {
+    const res = await fetch(`${API}/api/internal/config`, { cache: "no-store" });
+    if (res.ok) {
+      const data = (await res.json()) as InternalConfig;
+      _configCache = { at: now, data };
+      return data;
+    }
+  } catch {
+    // 네트워크 오류 시 마지막 캐시 사용. 캐시도 없으면 빈 객체 → Provider 자동 비활성화
+  }
+  return _configCache?.data ?? {};
+}
+
+function take(v: string | undefined): string {
+  return (v ?? "").trim();
+}
+
+export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
+  const db = await fetchInternalConfig();
+  const googleId     = take(db.GOOGLE_CLIENT_ID);
+  const googleSecret = take(db.GOOGLE_CLIENT_SECRET);
+  const kakaoId      = take(db.KAKAO_CLIENT_ID);
+  const kakaoSecret  = take(db.KAKAO_CLIENT_SECRET);
+  const authSecret   = take(db.AUTH_SECRET);
+
+  return {
+  secret: authSecret || undefined,  // 빈 문자열이면 NextAuth가 에러를 throw — 의도된 동작
   providers: [
     ...(googleId && googleSecret
       ? [Google({ clientId: googleId, clientSecret: googleSecret })]
@@ -168,4 +201,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 7 * 24 * 60 * 60,  // 쿠키 최대 수명 7일 (실제 만료는 SessionTimeout이 absoluteExpiry로 강제)
     updateAge: 30 * 60,         // 활동 시 30분마다 세션 갱신 (rolling)
   },
+  };
 });

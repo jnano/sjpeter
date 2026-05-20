@@ -26,8 +26,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=[
         "http://localhost:3000",
         "http://121.152.118.40:3000",  # LAN 접속 (같은 Wi-Fi 휴대폰)
@@ -36,6 +35,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"],
 )
+# ENABLE_TUNNEL_CORS=1 일 때만 trycloudflare.com 와일드카드 허용 (임시 시연용)
+if os.getenv("ENABLE_TUNNEL_CORS") == "1":
+    _cors_kwargs["allow_origin_regex"] = r"https://.*\.trycloudflare\.com"
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(bulletins.router, prefix="/api")
@@ -76,6 +79,37 @@ def startup():
     _migrate_add_columns()
     _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
     _seed_initial_data()
+    _seed_auth_secret()
+
+
+def _seed_auth_secret() -> None:
+    """site_settings.AUTH_SECRET 이 비어 있으면 1회 자동 발급.
+
+    다른 본당이 .env 편집 없이 설치할 수 있도록 첫 실행 시 임의 시크릿을 생성한다.
+    이후 변경 시 모든 세션이 무효화되므로 운영 중 임의 변경을 금지하는 admin UI 처리가 별도 필요.
+    """
+    import secrets
+    from sqlalchemy import text
+    from app.core.database import engine
+
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT value FROM site_settings WHERE key='AUTH_SECRET'")).first()
+        current = (row[0] or "") if row else ""
+        if current.strip():
+            return  # 이미 값 있음 — 건드리지 않음
+
+        token = secrets.token_urlsafe(32)
+        # row 가 없으면 INSERT, 있으면 UPDATE
+        if row is None:
+            conn.execute(text(
+                "INSERT INTO site_settings (key, value, label, description, is_secret, group_name) "
+                "VALUES ('AUTH_SECRET', :v, 'NextAuth 시크릿', 'JWT 서명 키. 변경 시 모든 세션이 무효화됩니다.', TRUE, '보안')"
+            ), {"v": token})
+        else:
+            conn.execute(text("UPDATE site_settings SET value=:v WHERE key='AUTH_SECRET'"), {"v": token})
+        conn.commit()
+        import logging
+        logging.getLogger(__name__).info("AUTH_SECRET 자동 발급 완료 (%d자)", len(token))
 
 
 def _alembic_upgrade_to_head() -> None:
@@ -1559,7 +1593,12 @@ def health():
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root():
-    return HTMLResponse(content="""<!DOCTYPE html>
+    from app.core.site_settings import get_setting
+    site_url = get_setting("SITE_URL", settings.SITE_URL)
+    return HTMLResponse(content=_ROOT_HTML.replace("__SITE_URL__", site_url))
+
+
+_ROOT_HTML = """<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -1676,7 +1715,7 @@ def root():
     </div>
 
     <div class="links">
-      <a class="link-btn btn-site" href="http://localhost:3000" target="_blank">
+      <a class="link-btn btn-site" href="__SITE_URL__" target="_blank">
         <span class="icon">🏠</span>홈페이지
       </a>
       <a class="link-btn btn-docs" href="/docs" target="_blank">
@@ -1694,5 +1733,5 @@ def root():
     <p class="footer">대전교구 세종성베드로성당 &copy; 2025</p>
   </div>
 </body>
-</html>""")
+</html>"""
 
