@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { resolveClientApi } from "@/lib/api";
 
 type Step = "welcome" | "admin" | "parish" | "done";
 
@@ -35,6 +34,7 @@ export default function SetupPage() {
 
   // setup 이 이미 완료된 상태면 / 로 리다이렉트 (URL 직접 접근 방어)
   useEffect(() => {
+    const API = resolveClientApi();
     fetch(`${API}/api/setup/status`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
@@ -61,6 +61,7 @@ export default function SetupPage() {
     }
     setSubmitting(true);
     try {
+      const API = resolveClientApi();
       const res = await fetch(`${API}/api/setup/init`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
