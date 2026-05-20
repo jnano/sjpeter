@@ -61,9 +61,21 @@ interface BannerGroup {
   aspect_ratio: string;
   delay_seconds: number;
   show_caption_overlay: boolean;
+  start_at: string | null;
+  end_at: string | null;
   created_at: string;
   updated_at: string;
   images: BannerImage[];
+}
+
+// "YYYY-MM-DDTHH:mm:ss(.…)?" (UTC, from backend) ↔ "YYYY-MM-DDTHH:mm" (datetime-local input)
+function isoToLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  // backend 는 UTC naive 로 저장·반환. 입력 UI 는 그대로 노출(역변환 단순화)
+  return iso.slice(0, 16);
+}
+function localInputToIso(local: string): string | null {
+  return local ? `${local}:00` : null;
 }
 
 function absoluteUrl(path: string): string {
@@ -191,11 +203,22 @@ export default function AdminBannersPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      {/* placement 자유 입력의 자동완성 — 페이지 전체에서 공유 */}
+      <datalist id="banner-placement-suggestions">
+        {PLACEMENT_OPTIONS.map((p) => (
+          <option key={p.value} value={p.value}>{p.label}</option>
+        ))}
+      </datalist>
+
       <div>
         <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)]">광고 배너</h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">
           공개 페이지의 지정된 위치(슬롯)에 배너를 노출합니다. 같은 위치에 활성화된 그룹들의 이미지가
-          sort_order 순서로 합쳐지고, 2장 이상이면 자동 슬라이드됩니다. 그룹마다 크기(비율)·전환 효과·딜레이·캡션 노출 여부를 따로 설정할 수 있습니다.
+          sort_order 순서로 합쳐지고, 2장 이상이면 자동 슬라이드됩니다. 그룹마다 크기·전환 효과·딜레이·노출 기간·캡션 노출 여부를 따로 설정할 수 있습니다.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">
+          위치(placement) 는 권장 키 8 개 (홈 메인/중단/하단, 성당 소개 상/하, 캘린더/주보/갤러리 상단) 외에도 자유롭게 입력해
+          새 슬롯을 만들 수 있습니다 (예: <code>advent_2026</code>). 공개 페이지에서 <code>&lt;BannerSlider placement=&quot;...&quot; /&gt;</code> 로 같은 키를 참조하면 노출됩니다.
         </p>
       </div>
 
@@ -215,15 +238,15 @@ export default function AdminBannersPage() {
           </div>
           <div>
             <label className="block text-xs text-[var(--color-text-muted)] mb-1">위치</label>
-            <select
+            <input
+              type="text"
+              list="banner-placement-suggestions"
               value={newPlacement}
               onChange={(e) => setNewPlacement(e.target.value)}
-              className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
-            >
-              {PLACEMENT_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
+              placeholder="home_main"
+              title="영문 소문자·숫자·언더스코어·하이픈 — 권장 키는 자동완성, 새 키도 자유롭게 입력 가능"
+              className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white w-44"
+            />
           </div>
           <button
             onClick={createGroup}
@@ -293,15 +316,17 @@ function GroupCard({
             }}
             className="flex-1 min-w-[160px] bg-transparent border border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-white rounded px-2 py-1 text-sm font-semibold text-[var(--color-text)]"
           />
-          <select
-            value={group.placement}
-            onChange={(e) => onUpdate({ placement: e.target.value })}
-            className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
-          >
-            {PLACEMENT_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            list="banner-placement-suggestions"
+            defaultValue={group.placement}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== group.placement) onUpdate({ placement: v });
+            }}
+            title="노출 위치 키 — 영문 소문자·숫자·언더스코어·하이픈 (예: home_main, advent_2026)"
+            className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white w-32"
+          />
           <select
             value={group.transition}
             onChange={(e) => onUpdate({ transition: e.target.value })}
@@ -373,6 +398,32 @@ function GroupCard({
               onChange={(e) => onUpdate({ show_caption_overlay: e.target.checked })}
             />
             <span>대체 텍스트를 이미지 위에 자막으로 표시</span>
+          </label>
+
+          {/* 노출 기간 — 둘 다 비우면 무제한, 한쪽만 채우면 그 방향만 제한 */}
+          <label className="flex items-center gap-1.5">
+            <span title="이 시각 이후부터 노출">시작</span>
+            <input
+              type="datetime-local"
+              defaultValue={isoToLocalInput(group.start_at)}
+              onBlur={(e) => {
+                const iso = localInputToIso(e.target.value);
+                if (iso !== group.start_at) onUpdate({ start_at: iso });
+              }}
+              className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span title="이 시각까지 노출">종료</span>
+            <input
+              type="datetime-local"
+              defaultValue={isoToLocalInput(group.end_at)}
+              onBlur={(e) => {
+                const iso = localInputToIso(e.target.value);
+                if (iso !== group.end_at) onUpdate({ end_at: iso });
+              }}
+              className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white"
+            />
           </label>
         </div>
       </div>

@@ -260,6 +260,16 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # 배너 그룹 — 노출 기간(start_at/end_at) 컬럼 추가 (v1.5.233+: 1+2 유연성 패치)
+        for ddl in [
+            "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS start_at TIMESTAMP",
+            "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS end_at TIMESTAMP",
+        ]:
+            try:
+                conn.execute(text(ddl))
+            except Exception:
+                pass
+
         # 게시판 어드민 분류 그룹 (admin/boards 화면 정리용. 공개 페이지엔 영향 없음.)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS board_admin_groups (

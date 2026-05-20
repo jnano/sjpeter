@@ -13,12 +13,14 @@
 - DELETE /api/banners/images/{image_id}         : 이미지 삭제
 """
 import os
+import re
 import uuid
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_current_admin
@@ -29,13 +31,17 @@ from app.models.banner import BannerGroup, BannerImage
 
 router = APIRouter(prefix="/banners", tags=["banners"])
 
-ALLOWED_PLACEMENTS = {
+# placement 는 자유 키 — admin 이 직접 정의 가능 (예: "home_main", "advent_2026", "my_event").
+# 형식만 검증: 영문 소문자·숫자·언더스코어·하이픈 1~50자. (URL-safe, 파일명 호환)
+_PLACEMENT_PATTERN = re.compile(r"^[a-z0-9_-]{1,50}$")
+# 화이트리스트는 제거됐지만 admin UI 에서 빠른 선택을 위해 권장 키만 제안용으로 남겨둠.
+SUGGESTED_PLACEMENTS = [
     "home_main", "home_middle", "home_bottom",
     "about_top", "about_bottom",
     "calendar_top",
     "bulletin_top",
     "gallery_top",
-}
+]
 ALLOWED_TRANSITIONS = {
     "none", "fade", "slide", "slide-up", "slide-down",
     "zoom-in", "zoom-out", "ken-burns", "blur",
@@ -70,6 +76,8 @@ class BannerGroupOut(BaseModel):
     aspect_ratio: str
     delay_seconds: int
     show_caption_overlay: bool
+    start_at: Optional[datetime]
+    end_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
     images: list[BannerImageOut]
@@ -87,6 +95,8 @@ class GroupCreate(BaseModel):
     aspect_ratio: str = "16:9"
     delay_seconds: int = 5
     show_caption_overlay: bool = False
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
 
 
 class GroupUpdate(BaseModel):
@@ -98,6 +108,8 @@ class GroupUpdate(BaseModel):
     aspect_ratio: Optional[str] = None
     delay_seconds: Optional[int] = None
     show_caption_overlay: Optional[bool] = None
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
 
 
 class ImageUpdate(BaseModel):
@@ -109,10 +121,10 @@ class ImageUpdate(BaseModel):
 # ── 헬퍼 ────────────────────────────────────────────────────
 
 def _validate_placement(value: str) -> str:
-    if value not in ALLOWED_PLACEMENTS:
+    if not _PLACEMENT_PATTERN.match(value):
         raise HTTPException(
             status_code=400,
-            detail=f"placement 는 {sorted(ALLOWED_PLACEMENTS)} 중 하나여야 합니다.",
+            detail="placement 는 영문 소문자·숫자·언더스코어(_)·하이픈(-) 1~50자여야 합니다.",
         )
     return value
 
@@ -173,17 +185,33 @@ def _delete_local_file(file_url: Optional[str]) -> None:
 
 @router.get("/by-placement/{placement}", response_model=list[BannerGroupOut])
 def list_active_by_placement(placement: str, db: Session = Depends(get_db)):
-    """해당 위치에 노출할 활성 그룹 목록 (이미지 포함). sort_order ASC."""
+    """해당 위치에 노출할 활성 그룹 목록 (이미지 포함). sort_order ASC.
+
+    노출 조건: is_active=True AND now ∈ [start_at, end_at]
+    (start_at/end_at 이 NULL 이면 그 방향 제한 없음 — 무제한)
+    """
     _validate_placement(placement)
+    now = datetime.utcnow()
     groups = (
         db.query(BannerGroup)
         .options(joinedload(BannerGroup.images))
-        .filter(BannerGroup.placement == placement, BannerGroup.is_active == True)
+        .filter(
+            BannerGroup.placement == placement,
+            BannerGroup.is_active == True,
+            or_(BannerGroup.start_at.is_(None), BannerGroup.start_at <= now),
+            or_(BannerGroup.end_at.is_(None), BannerGroup.end_at >= now),
+        )
         .order_by(BannerGroup.sort_order, BannerGroup.id)
         .all()
     )
     # 이미지 없는 그룹은 의미 없으니 필터링
     return [g for g in groups if len(g.images) > 0]
+
+
+@router.get("/placements/suggested")
+def list_suggested_placements(_: Admin = Depends(get_current_admin)):
+    """admin UI 의 placement 선택용 추천 키 목록. 사용자가 자유 입력도 가능."""
+    return {"suggested": SUGGESTED_PLACEMENTS}
 
 
 # ── 관리자: 그룹 ───────────────────────────────────────────
@@ -217,6 +245,8 @@ def create_group(
         aspect_ratio=body.aspect_ratio,
         delay_seconds=body.delay_seconds,
         show_caption_overlay=body.show_caption_overlay,
+        start_at=body.start_at,
+        end_at=body.end_at,
     )
     db.add(group)
     db.commit()
@@ -254,6 +284,12 @@ def update_group(
         group.delay_seconds = body.delay_seconds
     if body.show_caption_overlay is not None:
         group.show_caption_overlay = body.show_caption_overlay
+    # start_at·end_at 은 명시적 None (기간 해제) 도 허용 — model_fields_set 으로 set 여부 판정
+    _provided = body.model_fields_set
+    if "start_at" in _provided:
+        group.start_at = body.start_at
+    if "end_at" in _provided:
+        group.end_at = body.end_at
     group.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(group)

@@ -27,6 +27,10 @@ class BannerGroup(Base):
     delay_seconds = Column(Integer, nullable=False, default=5)
     # true면 이미지 위에 alt_text를 자막 오버레이로 표시
     show_caption_overlay = Column(Boolean, nullable=False, default=False)
+    # 노출 기간 — NULL 은 무제한. start_at 이전·end_at 이후엔 by-placement 응답에서 자동 제외.
+    # 활성 여부는 (is_active=True) AND (now BETWEEN start_at AND end_at) 으로 판정.
+    start_at = Column(DateTime, nullable=True)
+    end_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
