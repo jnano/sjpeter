@@ -13,21 +13,41 @@ type InternalConfig = Partial<Record<
   "KAKAO_CLIENT_ID" | "KAKAO_CLIENT_SECRET" |
   "AUTH_SECRET", string>>;
 const CACHE_TTL_MS = 60_000;
+// backend 가 아직 startup 중이거나 일시 장애일 때 NextAuth 가 기다리도록 backoff retry.
+// 총 3.5초 — 그 안에 backend 가 ready 되면 첫 진입 500 (MissingSecret) 발생 안 함.
+const RETRY_DELAYS_MS = [500, 1000, 2000];
 let _configCache: { at: number; data: InternalConfig } | null = null;
+
+async function _tryFetchConfig(): Promise<InternalConfig | null> {
+  try {
+    const res = await fetch(`${API}/api/internal/config`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as InternalConfig;
+    // AUTH_SECRET 누락 응답은 미완성으로 간주 — 재시도 유도
+    if (!(data.AUTH_SECRET ?? "").trim()) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchInternalConfig(): Promise<InternalConfig> {
   const now = Date.now();
   if (_configCache && now - _configCache.at < CACHE_TTL_MS) return _configCache.data;
-  try {
-    const res = await fetch(`${API}/api/internal/config`, { cache: "no-store" });
-    if (res.ok) {
-      const data = (await res.json()) as InternalConfig;
-      _configCache = { at: now, data };
-      return data;
-    }
-  } catch {
-    // 네트워크 오류 시 마지막 캐시 사용. 캐시도 없으면 빈 객체 → Provider 자동 비활성화
+
+  let data = await _tryFetchConfig();
+  for (const delay of RETRY_DELAYS_MS) {
+    if (data) break;
+    await new Promise((r) => setTimeout(r, delay));
+    data = await _tryFetchConfig();
   }
+
+  if (data) {
+    _configCache = { at: now, data };
+    return data;
+  }
+  // 모든 시도 실패 — 마지막 캐시 사용. 캐시도 없으면 빈 객체 → secret undefined 로 500
+  // (backend 가 영영 안 뜨는 케이스는 의도적 fail — 다른 API 도 다 실패하는 상태)
   return _configCache?.data ?? {};
 }
 
