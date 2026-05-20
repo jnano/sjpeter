@@ -360,7 +360,6 @@ export default function AdminParishStaffPage() {
             <input
               value={editing.name}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              placeholder="예: 김찬용 베드로 신부님"
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
             />
           </Field>
