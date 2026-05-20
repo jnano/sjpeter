@@ -2,7 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "세종성베드로성당"
+    # 본당명 fallback. 실제 표시는 site_settings.PARISH_NAME (admin 입력) 우선.
+    PROJECT_NAME: str = "본당 홈페이지"
     DATABASE_URL: str = "postgresql://user:password@localhost/cathedral"
     SECRET_KEY: str = "change-this-in-production"
     UPLOAD_DIR: str = "uploads"

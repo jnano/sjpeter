@@ -127,14 +127,14 @@ export default async function Footer() {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={parish.logo_url.startsWith("http") ? parish.logo_url : `${API}${parish.logo_url}`}
-                  alt={parish?.name ?? "세종성베드로성당"}
+                  alt={parish?.name ?? "본당 홈페이지"}
                   className="h-7 w-7 object-contain"
                 />
               ) : (
                 <CrossIcon className="text-[var(--color-accent)] text-xl" />
               )}
               <span className="font-serif font-bold text-[var(--color-primary)] text-lg">
-                {parish?.name ?? "세종성베드로성당"}
+                {parish?.name ?? "본당 홈페이지"}
               </span>
             </div>
             <address className="not-italic text-sm leading-relaxed space-y-1 text-[var(--color-text-muted)]">
@@ -243,7 +243,7 @@ export default async function Footer() {
 
         {/* 구분선 + 저작권 중앙 */}
         <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)]">
-          © {new Date().getFullYear()} {parish?.name ?? "세종성베드로성당"}. All rights reserved.
+          © {new Date().getFullYear()} {parish?.name ?? "본당 홈페이지"}. All rights reserved.
         </div>
       </div>
     </footer>

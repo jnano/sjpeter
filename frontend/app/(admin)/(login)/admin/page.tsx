@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -74,12 +75,12 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-warm)]">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <span className="text-[var(--color-primary)] text-4xl">✝</span>
+          <CrossIcon className="text-[var(--color-primary)] text-[58px] block mx-auto" />
           <h1 className="font-serif text-2xl font-bold text-[var(--color-primary)] mt-2">
             관리자 로그인
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            세종성베드로성당
+            본당 홈페이지
           </p>
         </div>
 

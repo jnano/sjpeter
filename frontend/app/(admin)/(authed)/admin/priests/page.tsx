@@ -4,6 +4,7 @@ import Image from "next/image";
 import { DataEvent, notify } from "@/components/dataEvents";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -269,7 +270,7 @@ export default function AdminPriestsPage() {
                     <Image src={p.photo_url.startsWith("/") ? `${API}${p.photo_url}` : p.photo_url}
                       alt={p.name} fill className="object-cover" />
                   ) : (
-                    <span className="text-2xl text-[var(--color-border)]">✝</span>
+                    <CrossIcon className="text-2xl text-[var(--color-border)]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

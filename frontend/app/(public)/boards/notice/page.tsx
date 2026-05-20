@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import NoticeAdminWriteButton from "./NoticeAdminWriteButton";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "공지·알림", description: `${p.name} 공지사항` };
+  return { title: "공지사항", description: `${p.name} 공지사항` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -83,6 +84,9 @@ export default async function NoticePage({
     <>
       <PageHeader group="알림과 게시판" title="공지·알림" subtitle="성당 주요 공지사항을 안내합니다." />
       <SectionLayout autoHero={false}>
+
+      {/* admin/운영자 전용 — admin_token 있을 때만 노출 */}
+      <NoticeAdminWriteButton />
 
       {isEmpty ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">

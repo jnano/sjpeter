@@ -1,10 +1,11 @@
 import Link from "next/link";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 export default function NotFound() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
       <div className="mb-6">
-        <span className="text-[var(--color-accent)] text-5xl select-none">✝</span>
+        <CrossIcon className="text-[var(--color-accent)] text-5xl" />
       </div>
       <p className="text-8xl font-bold text-[var(--color-primary)]/10 select-none leading-none mb-2">
         404

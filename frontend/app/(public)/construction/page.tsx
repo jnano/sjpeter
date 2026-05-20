@@ -7,8 +7,8 @@ const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "성전 건축 현황 | 성전건축",
-  description: "세종 성베드로 성당 새 성전 건축의 진행 상황과 공사 일지",
+  title: "성전 건축 현황",
+  description: "본당 새 성전 건축의 진행 상황과 공사 일지",
 };
 
 interface Phase {
@@ -68,7 +68,7 @@ export default async function ConstructionPage() {
       <PageHeader
         group="성전건축"
         title="성전 건축 현황"
-        subtitle="세종 성베드로 성당의 새 성전이 자라나는 과정을 함께 보아주세요."
+        subtitle="본당의 새 성전이 자라나는 과정을 함께 보아주세요."
       />
       <SectionLayout autoHero>
         <article className="space-y-10">

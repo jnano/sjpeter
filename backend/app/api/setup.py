@@ -112,6 +112,14 @@ def setup_init(body: SetupInitRequest, db: Session = Depends(get_db)):
             {"v": value, "k": key},
         )
 
+    # 7. parishes 첫 row 의 name 도 동기화 — admin/parish/info 페이지의 기본값으로 사용됨
+    db.execute(
+        text(
+            "UPDATE parishes SET name = :name WHERE id = (SELECT id FROM parishes ORDER BY id LIMIT 1)"
+        ),
+        {"name": body.parish_name.strip()},
+    )
+
     db.commit()
 
     return SetupInitResponse(ok=True, message="첫 관리자 계정과 본당 정보가 등록되었습니다.")

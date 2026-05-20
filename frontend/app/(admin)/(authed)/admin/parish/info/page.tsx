@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -142,7 +143,7 @@ export default function AdminParishInfoPage() {
               value={info.name ?? ""}
               onChange={(e) => setInfo((p) => p && ({ ...p, name: e.target.value }))}
               className={`w-full ${inputCls}`}
-              placeholder="세종성베드로성당"
+              placeholder="본당 홈페이지"
               required
             />
             <p className="text-xs text-gray-400 mt-1">
@@ -161,7 +162,7 @@ export default function AdminParishInfoPage() {
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <span className="text-3xl text-gray-300">✝</span>
+                  <CrossIcon className="text-3xl text-gray-300" />
                 )}
               </div>
               <div className="flex-1 space-y-2">

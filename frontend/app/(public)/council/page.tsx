@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -178,7 +179,7 @@ export default async function CouncilPage() {
 
         {isEmpty ? (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 text-center py-20">
-            <div className="text-5xl mb-4">✝</div>
+            <div className="text-5xl mb-4"><CrossIcon /></div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-2">준비 중입니다</p>
             <p className="text-sm text-[var(--color-text-muted)]">관리자 페이지에서 구성원을 등록해 주세요.</p>
           </div>

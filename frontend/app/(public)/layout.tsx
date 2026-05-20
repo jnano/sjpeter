@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { fetchParishMin } from "@/lib/parish";
+import { fetchParishMin, fetchParishNameEn } from "@/lib/parish";
 import { fetchCurrentSeason } from "@/lib/season";
 
 export default async function PublicLayout({
@@ -8,14 +8,16 @@ export default async function PublicLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [parish, season] = await Promise.all([
+  const [parish, parishNameEn, season] = await Promise.all([
     fetchParishMin(),
+    fetchParishNameEn(),
     fetchCurrentSeason(),
   ]);
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)]">
       <Header
         parishName={parish.name}
+        parishNameEn={parishNameEn}
         logoUrl={parish.logo_url}
         season={season}
       />

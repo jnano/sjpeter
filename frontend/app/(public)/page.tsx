@@ -9,6 +9,8 @@ import SearchHero from "@/components/SearchHero";
 import ChurchIcon from "@/components/icons/ChurchIcon";
 import GroupsIcon from "@/components/icons/GroupsIcon";
 import BulletinIcon from "@/components/icons/BulletinIcon";
+import CrossIcon from "@/components/icons/CrossIcon";
+import ConstructionIcon from "@/components/icons/ConstructionIcon";
 import { buildMassRows, formatTodayMass, type MassEntry } from "@/lib/mass";
 
 // admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
@@ -133,7 +135,7 @@ export default async function HomePage() {
     >
       <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b border-[var(--color-border)]">
         <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-          <span className="text-[var(--color-accent)]">✝</span>
+          <CrossIcon className="text-[var(--color-accent)]" />
           오늘의 복음
         </h2>
         {gospel?.liturgical_season && (
@@ -279,7 +281,7 @@ export default async function HomePage() {
                     }
                   />
                 </div>
-                <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
+                <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
               </div>
             ) : (
               // even+배너: 사진·가운데·미사 모두 단일 cell 1행. 가운데 col은 안에서 [복음+배너] flex column.
@@ -297,7 +299,7 @@ export default async function HomePage() {
                     }
                   />
                 </div>
-                <HomeHero parishName={parish?.name ?? "세종성베드로성당"} />
+                <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
               </div>
             )}
 
@@ -323,7 +325,7 @@ export default async function HomePage() {
                 </div>
                 {/* mass: 오른쪽 col, 1행 cell */}
                 <div className="min-w-0">{massCardEl}</div>
-                {/* 모바일 전용: 미사 바로 다음에 새 성전 건축 위젯 (desktop은 아래 70/30 섹션에서 노출) */}
+                {/* 모바일 전용: 미사 바로 다음에 성전 건축 위젯 (desktop은 아래 70/30 섹션에서 노출) */}
                 <div className="md:hidden min-w-0">
                   <HomeConstructionWidget summary={constructionSummary} embedded />
                 </div>
@@ -367,7 +369,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── 새 성전 건축(좌 70%) + 게시판 탭(우 30%) — 한 행에서 높이 매칭.
+      {/* ── 성전 건축(좌 70%) + 게시판 탭(우 30%) — 한 행에서 높이 매칭.
             건축 위젯은 모바일에서 메인 3단 안쪽(미사 바로 아래)으로 이동했으므로 여기선 md+에서만 노출. ── */}
       <section>
         <div className={CONTAINER}>
@@ -420,7 +422,7 @@ export default async function HomePage() {
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-9 text-center">
-            <span className="text-[var(--color-accent)] text-xl">✝</span>
+            <ConstructionIcon className="w-10 h-10 mx-auto block" />
             <blockquote className="font-serif italic text-[var(--color-primary)] text-xs sm:text-sm mt-2 leading-relaxed">
               &ldquo;너는 베드로이다. 나는 이 반석 위에 내 교회를 세우겠다.&rdquo;
             </blockquote>

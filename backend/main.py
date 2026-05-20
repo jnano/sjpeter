@@ -1214,7 +1214,7 @@ def _migrate_add_columns():
         conn.execute(text("""
             INSERT INTO site_settings (key, label, description, is_secret, group_name) VALUES
             ('SITE_URL',              '사이트 URL',            '이메일 링크 등에 사용되는 홈페이지 주소',         FALSE, '사이트'),
-            ('SMTP_FROM',             '발신자 이름/주소',       '예: 세종성베드로성당 <noreply@sjpeter.com>',      FALSE, '사이트'),
+            ('SMTP_FROM',             '발신자 이름/주소',       '예: 본당이름 <noreply@example.com>',                  FALSE, '사이트'),
             ('SMTP_HOST',             'SMTP 서버',             '예: smtp.gmail.com',                            FALSE, '이메일'),
             ('SMTP_PORT',             'SMTP 포트',             '일반적으로 587 (TLS)',                           FALSE, '이메일'),
             ('SMTP_USER',             'SMTP 계정',             '발송에 사용할 이메일 계정',                       FALSE, '이메일'),
@@ -1297,37 +1297,21 @@ def _seed_initial_data():
 
     db = SessionLocal()
     try:
-        # 성당 데이터 초기 입력
+        # 본당 row 초기 입력 (빈 본당명 — setup wizard 의 init 핸들러에서 PARISH_NAME 입력 시 함께 채움)
         if not db.query(Parish).first():
             db.add(Parish(
-                slug="sejong-peter",
-                name="세종성베드로성당",
-                diocese="대전교구",
-                address="세종특별자치시 도움5로 00",
-                phone="044-000-0000",
+                slug="parish",
+                name="",
+                diocese="",
+                address="",
+                phone="",
             ))
             db.commit()
 
-        # 기본 관리자 계정 (최초 1회)
-        if not db.query(Admin).first():
-            db.add(Admin(
-                username="admin",
-                hashed_password=hash_password("change-this-password"),
-            ))
-            db.commit()
+        # admin 계정 시드는 setup wizard 가 담당 — 자동 생성하지 않음.
+        # (이전: 기본 admin/change-this-password 시드는 보안 위험 + 새 본당이 그대로 쓰면 위험)
 
-        # 연혁 초기 데이터
-        if not db.query(HistoryItem).first():
-            history_seed = [
-                HistoryItem(year=2011, event="세종성베드로성당 설립", detail="세종특별자치시 출범과 함께 세종시 최초 가톨릭 본당으로 설립. 초대 주임신부 부임.", highlight=True, is_current=False, sort_order=0),
-                HistoryItem(year=2012, event="성당 건물 축성", detail="현재 성당 건물이 완공되어 축성 미사를 봉헌.", highlight=False, is_current=False, sort_order=1),
-                HistoryItem(year=2015, event="신자 수 200명 돌파", detail="세종시 인구 증가와 함께 공동체가 빠르게 성장.", highlight=False, is_current=False, sort_order=2),
-                HistoryItem(year=2019, event="창립 8주년 — 사목평의회 창설", detail="본당 운영의 민주적 참여를 위한 사목평의회 공식 발족.", highlight=False, is_current=False, sort_order=3),
-                HistoryItem(year=2021, event="창립 10주년 기념 행사", detail="10주년 감사 미사 및 공동체 축제 개최. 주보 500호 달성.", highlight=True, is_current=False, sort_order=4),
-                HistoryItem(year=2023, event="현 주임신부 부임", detail="새로운 사목 시대의 시작.", highlight=False, is_current=False, sort_order=5),
-                HistoryItem(year=2026, event="현재", detail="신자 약 480명. 주보 제623호 발행 중.", highlight=False, is_current=True, sort_order=6),
-            ]
-            db.add_all(history_seed)
+        # 연혁 시드는 본당 종속 데이터 — 자동 생성하지 않음. admin /admin/content 에서 입력.
             db.commit()
 
         # 사목지표 초기 데이터
@@ -1367,8 +1351,8 @@ def _seed_initial_data():
                     subtitle="반석 위에 세운 교회의 수호성인",
                     body="예수님께서 시몬에게 베드로(반석)라는 이름을 주시며 말씀하셨습니다.\n"
                          "\"나는 이 반석 위에 내 교회를 세울 터인즉 저승의 세력도 그것을 이기지 못할 것이다.\" (마태 16,18)\n\n"
-                         "세종성베드로성당은 성 베드로 사도의 신앙과 용기를 본받아,\n"
-                         "세종 땅에 하느님 나라를 세워가는 공동체입니다.\n\n"
+                         "본당 수호성인의 신앙과 용기를 본받아,\n"
+                         "이 땅에 하느님 나라를 세워가는 공동체입니다.\n\n"
                          "갈릴래아 어부 출신의 평범한 사람이었지만, 예수님의 부르심에 응답하여\n"
                          "교회의 초석이 된 베드로처럼,\n"
                          "우리 공동체도 날마다 주님께 더 가까이 나아가길 다짐합니다.",
@@ -1591,14 +1575,23 @@ def _seed_saint_popularity(db) -> None:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "project": settings.PROJECT_NAME}
+    from app.core.site_settings import get_parish_name
+    return {"status": "ok", "project": get_parish_name()}
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root():
-    from app.core.site_settings import get_setting
+    from app.core.site_settings import get_setting, get_parish_name, get_parish_name_en
     site_url = get_setting("SITE_URL", settings.SITE_URL)
-    return HTMLResponse(content=_ROOT_HTML.replace("__SITE_URL__", site_url))
+    parish_name = get_parish_name()
+    parish_name_en = get_parish_name_en()
+    html = (
+        _ROOT_HTML
+        .replace("__SITE_URL__", site_url)
+        .replace("__PARISH_NAME__", parish_name)
+        .replace("__PARISH_NAME_EN__", parish_name_en or parish_name)
+    )
+    return HTMLResponse(content=html)
 
 
 _ROOT_HTML = """<!DOCTYPE html>
@@ -1606,7 +1599,7 @@ _ROOT_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>세종성베드로성당 API</title>
+  <title>__PARISH_NAME__ API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -1709,8 +1702,8 @@ _ROOT_HTML = """<!DOCTYPE html>
 <body>
   <div class="card">
     <div class="cross">✝</div>
-    <h1>세종성베드로성당</h1>
-    <p class="sub">St. Peter&rsquo;s Cathedral, Sejong &mdash; Backend API</p>
+    <h1>__PARISH_NAME__</h1>
+    <p class="sub">__PARISH_NAME_EN__ &mdash; Backend API</p>
 
     <div class="status">
       <span class="dot"></span>
@@ -1733,7 +1726,7 @@ _ROOT_HTML = """<!DOCTYPE html>
     </div>
 
     <hr class="divider" />
-    <p class="footer">대전교구 세종성베드로성당 &copy; 2025</p>
+    <p class="footer">__PARISH_NAME__ &copy; 2025</p>
   </div>
 </body>
 </html>"""

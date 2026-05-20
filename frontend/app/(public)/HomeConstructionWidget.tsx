@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConstructionIcon from "@/components/icons/ConstructionIcon";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -108,8 +109,8 @@ export default function HomeConstructionWidget({ summary, containerClassName, em
       <div className="border border-[var(--color-border)] rounded-xl bg-white overflow-hidden h-full flex flex-col">
         <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-2.5">
           <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-            <span className="text-[var(--color-accent)]">🏗️</span>
-            새 성전 건축
+            <ConstructionIcon className="w-4 h-4" />
+            성전 건축
           </h2>
           <Link
             href="/construction"
@@ -134,8 +135,8 @@ export default function HomeConstructionWidget({ summary, containerClassName, em
         <div className="border-t border-[var(--color-border)] py-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-              <span className="text-[var(--color-accent)]">🏗️</span>
-              새 성전 건축
+              <ConstructionIcon className="w-4 h-4" />
+              성전 건축
             </h2>
             <Link
               href="/construction"

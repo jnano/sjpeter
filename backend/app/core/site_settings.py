@@ -60,3 +60,18 @@ def invalidate(key: str) -> None:
 
 def invalidate_all() -> None:
     _cache.clear()
+
+
+def get_parish_name() -> str:
+    """본당명 — site_settings.PARISH_NAME → settings.PROJECT_NAME fallback.
+
+    다른 본당 배포 시 setup wizard 에서 PARISH_NAME 을 입력받음.
+    UI·메일·메타 태그·푸터 등에서 사용.
+    """
+    name = (get_setting("PARISH_NAME") or "").strip()
+    return name or settings.PROJECT_NAME
+
+
+def get_parish_name_en() -> str:
+    """본당 영문명 — site_settings.PARISH_NAME_EN. 비어 있으면 빈 문자열."""
+    return (get_setting("PARISH_NAME_EN") or "").strip()

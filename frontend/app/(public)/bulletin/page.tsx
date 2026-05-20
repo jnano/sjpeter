@@ -9,7 +9,7 @@ import { fetchParishMin } from "@/lib/parish";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "주보", description: `${p.name} 주보 — 이번 주 주보와 지난 주보 아카이브` };
+  return { title: "주보 아카이브", description: `${p.name} 주보 — 이번 주 주보와 지난 주보 아카이브` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -44,7 +44,15 @@ export default async function BulletinPage() {
       <PageHeader group="말씀과 기도" title="주보 아카이브" subtitle="이번 주 주보와 지난 주보를 한 자리에서 만납니다" />
       <SectionLayout group="word">
         <BannerSlider placement="bulletin_top" className="mb-6" />
-        <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} parishName={p.name} />
+        {bulletins.length === 0 ? (
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-12 text-center">
+            <p className="text-4xl mb-3">📰</p>
+            <p className="font-serif text-lg text-[var(--color-primary)] mb-2">주보가 아직 등록되지 않았습니다</p>
+            <p className="text-sm text-[var(--color-text-muted)]">관리자가 주보를 업로드하면 이곳에 표시됩니다.</p>
+          </div>
+        ) : (
+          <BulletinClient bulletins={bulletins} kakaoKey={kakaoKey} parishName={p.name} />
+        )}
       </SectionLayout>
     </>
   );

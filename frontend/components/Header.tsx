@@ -7,18 +7,20 @@ import { useState, useEffect, useRef } from "react";
 import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 import { useNavigation } from "./useNavigation";
 import { SEASON_LABELS_KO, type LiturgicalSeason } from "@/lib/season";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 interface Breadcrumb { group: string; title: string }
 
 interface HeaderProps {
   parishName?: string;
+  parishNameEn?: string;
   logoUrl?: string | null;
   season?: LiturgicalSeason | null;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export default function Header({ parishName = "세종성베드로성당", logoUrl = null, season = null }: HeaderProps) {
+export default function Header({ parishName = "본당 홈페이지", parishNameEn = "", logoUrl = null, season = null }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -199,7 +201,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                   className="h-8 w-8 object-contain"
                 />
               ) : (
-                <span className="text-[var(--color-accent)] text-2xl leading-none">✝</span>
+                <CrossIcon className="text-[var(--color-accent)] text-2xl" />
               )}
               <div>
                 <div className="font-serif font-bold text-lg leading-tight tracking-tight text-[var(--color-primary)]">
@@ -208,7 +210,7 @@ export default function Header({ parishName = "세종성베드로성당", logoUr
                 {/* 모바일: 스크롤 시 서브타이틀 → 페이지 제목으로 전환 */}
                 <div className="relative text-xs leading-none h-[1.1em] overflow-hidden">
                   <span className={`absolute inset-0 text-[var(--color-text-muted)] transition-opacity duration-300 ${breadcrumb ? "opacity-0" : "opacity-100"}`}>
-                    St. Peter&apos;s Cathedral, Sejong
+                    {parishNameEn}
                   </span>
                   <span className={`absolute inset-0 text-[var(--color-text)] font-medium whitespace-nowrap overflow-hidden text-ellipsis transition-opacity duration-300 ${breadcrumb ? "opacity-100" : "opacity-0"}`}>
                     {breadcrumb?.title}

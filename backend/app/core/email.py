@@ -14,9 +14,12 @@ def _build_bulletin_html(info: dict) -> str:
     season = info.get("liturgical_season") or ""
     gospel = info.get("gospel_reference") or ""
     pub_date = info.get("published_date") or ""
+    from app.core.site_settings import get_parish_name, get_parish_name_en
     site_url = get_setting("SITE_URL", settings.SITE_URL)
     url = f"{site_url}/bulletin"
     unsubscribe_url = f"{site_url}/members/me"
+    parish_name = get_parish_name()
+    parish_name_en = get_parish_name_en()
 
     title_parts = [p for p in [issue, season] if p]
     title_line = " · ".join(title_parts) if title_parts else "주보"
@@ -59,11 +62,9 @@ def _build_bulletin_html(info: dict) -> str:
           <td style="background:#1b3d6e;padding:36px 32px;text-align:center;">
             <p style="margin:0 0 10px;color:#c9a84c;font-size:22px;">✝</p>
             <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:1px;">
-              세종 성베드로 성당
+              {parish_name}
             </h1>
-            <p style="margin:6px 0 0;color:rgba(255,255,255,0.55);font-size:12px;letter-spacing:2px;">
-              SEJONG ST. PETER'S PARISH
-            </p>
+            {f'<p style="margin:6px 0 0;color:rgba(255,255,255,0.55);font-size:12px;letter-spacing:2px;">{parish_name_en}</p>' if parish_name_en else ''}
           </td>
         </tr>
 
@@ -103,7 +104,7 @@ def _build_bulletin_html(info: dict) -> str:
         <tr>
           <td style="background:#f9f5f0;padding:18px 32px;text-align:center;border-top:1px solid #e5ddd3;">
             <p style="margin:0;color:#aaa;font-size:11px;line-height:1.8;">
-              본 메일은 세종 성베드로 성당 홈페이지 알림 수신에 동의하신 분께 발송됩니다.<br>
+              본 메일은 {parish_name} 홈페이지 알림 수신에 동의하신 분께 발송됩니다.<br>
               수신을 원하지 않으시면
               <a href="{unsubscribe_url}" style="color:#1b3d6e;text-decoration:underline;">여기</a>
               에서 설정을 변경하세요.
@@ -132,7 +133,8 @@ def send_bulletin_notification(emails: list[str], bulletin_info: dict) -> int:
     issue = f"제{bulletin_info['issue_number']}호 " if bulletin_info.get("issue_number") else ""
     season = bulletin_info.get("liturgical_season") or ""
     subject_suffix = f"{issue}{season}".strip() or "이번 주 주보"
-    subject = f"[세종 성베드로 성당] {subject_suffix} 등록 안내"
+    from app.core.site_settings import get_parish_name
+    subject = f"[{get_parish_name()}] {subject_suffix} 등록 안내"
     html = _build_bulletin_html(bulletin_info)
     sender = get_setting("SMTP_FROM") or smtp_user
 

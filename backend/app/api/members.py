@@ -220,6 +220,9 @@ def _mail_layout_html(title: str, greeting_html: str, body_html: str, button_htm
         f'<p style="margin:24px 0 0;color:#9ca3af;font-size:12px;line-height:1.6;">{footer_note}</p>'
         if footer_note else ""
     )
+    from app.core.site_settings import get_parish_name, get_parish_name_en
+    parish_name = get_parish_name()
+    parish_name_en = get_parish_name_en()
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head><meta charset="utf-8"><title>{title}</title></head>
@@ -229,8 +232,8 @@ def _mail_layout_html(title: str, greeting_html: str, body_html: str, button_htm
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
         <tr>
           <td style="background:#1a365d;padding:24px 32px;text-align:center;">
-            <div style="color:#ffffff;font-size:16px;font-weight:600;letter-spacing:0.5px;">세종성베드로성당</div>
-            <div style="color:#cbd5e1;font-size:12px;margin-top:4px;">St. Peter's Cathedral, Sejong</div>
+            <div style="color:#ffffff;font-size:16px;font-weight:600;letter-spacing:0.5px;">{parish_name}</div>
+            {f'<div style="color:#cbd5e1;font-size:12px;margin-top:4px;">{parish_name_en}</div>' if parish_name_en else ''}
           </td>
         </tr>
         <tr>
@@ -244,7 +247,7 @@ def _mail_layout_html(title: str, greeting_html: str, body_html: str, button_htm
         </tr>
         <tr>
           <td style="background:#fafaf9;padding:18px 32px;text-align:center;border-top:1px solid #e5e7eb;">
-            <p style="margin:0;color:#9ca3af;font-size:12px;">© 2026 세종성베드로성당. All rights reserved.</p>
+            <p style="margin:0;color:#9ca3af;font-size:12px;">© 2026 {parish_name}. All rights reserved.</p>
           </td>
         </tr>
       </table>
@@ -256,10 +259,12 @@ def _mail_layout_html(title: str, greeting_html: str, body_html: str, button_htm
 
 def _send_reset_email(to_email: str, reset_url: str, nickname: str) -> None:
     """비밀번호 재설정 이메일 발송 — HTML 버튼 + plain 텍스트 fallback."""
+    from app.core.site_settings import get_parish_name
+    parish_name = get_parish_name()
     plain = (
         f"안녕하세요, {nickname}님.\n\n비밀번호 재설정 링크가 요청되었습니다.\n"
         f"아래 링크를 클릭하여 새 비밀번호를 설정하세요 (유효 시간: 1시간).\n\n{reset_url}\n\n"
-        "본인이 요청하지 않으셨다면 이 메일을 무시하세요.\n\n세종성베드로성당 드림"
+        f"본인이 요청하지 않으셨다면 이 메일을 무시하세요.\n\n{parish_name} 드림"
     )
     html = _mail_layout_html(
         title="비밀번호 재설정",
@@ -275,21 +280,23 @@ def _send_reset_email(to_email: str, reset_url: str, nickname: str) -> None:
             f"버튼이 작동하지 않으면 다음 주소를 직접 입력해 주세요: <span style=\"color:#6b7280;word-break:break-all;\">{reset_url}</span>"
         ),
     )
-    _send_email(to_email, "[세종성베드로성당] 비밀번호 재설정 안내", plain, html_body=html)
+    _send_email(to_email, f"[{parish_name}] 비밀번호 재설정 안내", plain, html_body=html)
 
 
 def _send_verification_email(to_email: str, verify_url: str, nickname: str) -> None:
     """이메일 인증 메일 발송 — HTML 버튼 + plain 텍스트 fallback."""
+    from app.core.site_settings import get_parish_name
+    parish_name = get_parish_name()
     plain = (
-        f"안녕하세요, {nickname}님.\n\n세종성베드로성당 홈페이지에 가입해 주셔서 감사합니다.\n"
+        f"안녕하세요, {nickname}님.\n\n{parish_name} 홈페이지에 가입해 주셔서 감사합니다.\n"
         f"아래 링크를 클릭하여 이메일 주소를 인증해 주세요 (유효 시간: 24시간).\n\n{verify_url}\n\n"
-        "세종성베드로성당 드림"
+        f"{parish_name} 드림"
     )
     html = _mail_layout_html(
         title="이메일 주소 인증",
         greeting_html=f"안녕하세요, <strong>{nickname}</strong> 님.",
         body_html=(
-            "세종성베드로성당 홈페이지에 가입해 주셔서 감사합니다.<br>"
+            f"{parish_name} 홈페이지에 가입해 주셔서 감사합니다.<br>"
             "아래 버튼을 눌러 이메일 주소를 인증해 주세요. "
             "<span style=\"color:#9ca3af;\">(유효 시간: 24시간)</span>"
         ),
@@ -299,7 +306,7 @@ def _send_verification_email(to_email: str, verify_url: str, nickname: str) -> N
             f"버튼이 작동하지 않으면 다음 주소를 직접 입력해 주세요: <span style=\"color:#6b7280;word-break:break-all;\">{verify_url}</span>"
         ),
     )
-    _send_email(to_email, "[세종성베드로성당] 이메일 주소 인증 안내", plain, html_body=html)
+    _send_email(to_email, f"[{parish_name}] 이메일 주소 인증 안내", plain, html_body=html)
 
 
 # ── 공개 엔드포인트 ──────────────────────────────────────

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,7 @@ export default async function SistersPage() {
       <SectionLayout group="about">
         {sisters.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
-            <div className="text-5xl mb-4">✝</div>
+            <div className="text-5xl mb-4"><CrossIcon /></div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-1">준비 중입니다</p>
             <p className="text-sm">수녀님 정보를 곧 등록하겠습니다.</p>
           </div>
@@ -73,7 +74,7 @@ export default async function SistersPage() {
                       </div>
                     ) : (
                       <div className="w-full h-44 sm:h-full flex items-center justify-center text-5xl text-[var(--color-border)]">
-                        ✝
+                        <CrossIcon />
                       </div>
                     )}
                   </div>

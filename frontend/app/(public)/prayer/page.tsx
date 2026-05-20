@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 import {
   PRAYER_CATEGORIES,
@@ -180,7 +181,7 @@ export default async function PrayerPage({
 
         {items.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
-            <div className="text-5xl mb-4">✝</div>
+            <div className="text-5xl mb-4"><CrossIcon /></div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-2">
               {q || category ? "결과가 없습니다" : "준비 중입니다"}
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 export default function GlobalError({
   error,
@@ -27,7 +28,9 @@ export default function GlobalError({
             padding: "2rem",
           }}
         >
-          <div style={{ fontSize: "3rem", marginBottom: "1rem", color: "#b7791f" }}>✝</div>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem", color: "#b7791f" }}>
+            <CrossIcon />
+          </div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#1a365d", marginBottom: "0.75rem" }}>
             서비스를 불러올 수 없습니다
           </h1>

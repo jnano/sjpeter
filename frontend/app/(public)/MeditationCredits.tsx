@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DataEvent, useInvalidationListener } from "@/components/dataEvents";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -55,13 +56,13 @@ export default function MeditationCredits() {
       className="relative block overflow-hidden hover:opacity-90 transition-opacity duration-200 group w-full h-full"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      aria-label="묵상 글 보기"
+      aria-label="주일 말씀 보기"
     >
       {/* 라벨 — 좌상단 미세 padding */}
       <div className="absolute top-0.5 left-1 z-10 flex items-center gap-1.5">
-        <span className="text-[var(--color-accent)] text-base leading-none">✝</span>
+        <CrossIcon className="text-[var(--color-accent)] text-base" />
         <span className="text-[11px] font-medium text-[var(--color-text-muted)] tracking-wide">
-          묵상 글
+          주일 말씀
         </span>
       </div>
 

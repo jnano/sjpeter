@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DataEvent, notify } from "@/components/dataEvents";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -623,7 +624,7 @@ export default function AdminParishStaffPage() {
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={`${API}${s.photo_url}`} alt={s.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-xl text-gray-400">✝</span>
+                        <CrossIcon className="text-xl text-gray-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

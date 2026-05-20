@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchGroups } from "./GroupsLayout";
 import { fetchParishMin } from "@/lib/parish";
 
@@ -25,7 +26,7 @@ export default async function GroupsPage() {
       <SectionLayout autoHero={false}>
         {topLevel.length === 0 ? (
           <div className="text-center py-16 text-[var(--color-text-muted)]">
-            <div className="text-5xl mb-4">✝</div>
+            <div className="text-5xl mb-4"><CrossIcon /></div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-2">준비 중입니다</p>
             <p className="text-sm">분과 정보를 곧 등록하겠습니다.</p>
           </div>
@@ -54,7 +55,7 @@ export default async function GroupsPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-[var(--color-accent)] text-2xl sm:text-3xl">✝</span>
+                        <CrossIcon className="text-[var(--color-accent)] text-2xl sm:text-3xl" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

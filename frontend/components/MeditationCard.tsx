@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import rehypeRaw from "rehype-raw";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -140,7 +141,8 @@ export function MeditationCard({
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks]}
-              // 보안: react-markdown 은 기본적으로 raw HTML 을 렌더링하지 않음
+              // AI 추출 출처 표기에 <span>·<small> HTML 사용 — admin/AI 생성 콘텐츠만 노출되므로 raw HTML 허용
+              rehypePlugins={[rehypeRaw]}
             >
               {meditation.body}
             </ReactMarkdown>

@@ -184,7 +184,7 @@ export default function RegisterPage() {
                 className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)] cursor-pointer"
               />
               <span className="text-sm text-[var(--color-text)]">
-                세종 성베드로 성당 채널 알림을 받으시려면 체크하세요
+                본당 채널 알림을 받으시려면 체크하세요
               </span>
             </label>
           </div>

@@ -71,7 +71,7 @@ export default async function InfoPage() {
     }
   } catch {}
 
-  const name = parish?.name ?? "세종성베드로성당";
+  const name = parish?.name ?? "본당 홈페이지";
   const address = parish?.address ?? "세종특별자치시 도움5로 00";
   const phone = parish?.phone ?? "";
   const fax = parish?.fax ?? "";

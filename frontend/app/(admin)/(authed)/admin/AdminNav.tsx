@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import CrossIcon from "@/components/icons/CrossIcon";
 
 interface Props {
   onMobileMenuClick?: () => void;
@@ -73,9 +74,9 @@ export default function AdminNav({
           </button>
         )}
         <Link href="/admin/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0">
-          <span className="text-[var(--color-accent-light)] text-xl">✝</span>
+          <CrossIcon className="text-[var(--color-accent-light)] text-xl" />
           <span className="font-serif font-bold whitespace-nowrap">관리자</span>
-          <span className="hidden md:inline text-white/50 text-sm whitespace-nowrap">— 세종성베드로성당</span>
+          <span className="hidden md:inline text-white/50 text-sm whitespace-nowrap">— 본당 홈페이지</span>
         </Link>
         {isSuper && (
           <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">

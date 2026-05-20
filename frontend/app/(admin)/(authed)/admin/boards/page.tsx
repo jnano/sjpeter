@@ -97,7 +97,7 @@ function accessModeToFields(mode: AccessMode) {
 const ACCESS_LABELS: Record<AccessMode, { label: string; badge: string; color: string }> = {
   "public":           { label: "공개",          badge: "누구나 보기·쓰기",              color: "bg-green-50 text-green-600" },
   "write-restricted": { label: "쓰기 제한",      badge: "누구나 보기, 회원만 쓰기",       color: "bg-blue-50 text-blue-600" },
-  "moderator-only":   { label: "관리자만 쓰기",   badge: "누구나 보기, 게시판 관리자만 쓰기", color: "bg-orange-50 text-orange-600" },
+  "moderator-only":   { label: "운영자 권한",    badge: "누구나 보기, 게시판 운영자 이상 쓰기", color: "bg-orange-50 text-orange-600" },
   "members-only":     { label: "회원 전용",      badge: "회원만 보기·쓰기",               color: "bg-purple-50 text-purple-600" },
   "selected-members": { label: "지정 회원",      badge: "선택된 회원만 보기·쓰기",         color: "bg-amber-50 text-amber-600" },
 };
@@ -550,7 +550,7 @@ export default function AdminBoardsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">게시판 관리자</label>
+              <label className="block text-sm font-medium mb-1">게시판 운영자</label>
               <ModeratorPicker current={formModerator} onChange={setFormModerator} />
               <p className="text-xs text-gray-400 mt-1">지정 시 해당 회원이 모든 게시글 수정·삭제 가능</p>
             </div>
@@ -1074,9 +1074,9 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         </div>
       </div>
 
-      {/* 게시판 관리자 */}
+      {/* 게시판 운영자 */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">게시판 관리자</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">게시판 운영자</p>
         <ModeratorPicker current={moderator} onChange={setModerator} />
         <p className="text-xs text-gray-400 mt-1">모든 게시글 수정·삭제 권한 부여</p>
       </div>
@@ -1587,6 +1587,14 @@ function BoardPostsPanel({
                 >
                   {p.is_pinned ? "📌 고정 해제" : "📌 고정"}
                 </button>
+                <Link
+                  href={`/boards/${board.slug}/${p.id}/edit`}
+                  target="_blank"
+                  className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 shrink-0"
+                  title="새 탭에서 수정"
+                >
+                  수정
+                </Link>
                 <button
                   onClick={() => copyPost(p.id, p.title)}
                   className="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50 shrink-0"

@@ -5,7 +5,7 @@ import { fetchParishMin } from "@/lib/parish";
 
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "성 베드로", description: `${p.name}의 주보성인 성 베드로 사도의 생애` };
+  return { title: "수호성인 성 베드로", description: `${p.name}의 주보성인 성 베드로 사도의 생애` };
 }
 
 interface Bubble { who: string; text: string; }

@@ -8,7 +8,7 @@ import { fetchParishMin } from "@/lib/parish";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "성당 소개", description: `${p.name} 소개 — 세종시 최초 본당` };
+  return { title: "성당 안내", description: `${p.name} 소개 — 세종시 최초 본당` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
@@ -110,7 +110,7 @@ export default async function AboutPage() {
         <div className="md:col-span-2 relative w-full aspect-[4/3] md:aspect-auto md:min-h-[280px] rounded-xl overflow-hidden">
           <Image
             src={parish?.about_photo_url ? `${API}${parish.about_photo_url}` : "/yakhoun.jpg"}
-            alt={parish?.name ?? "세종성베드로성당"}
+            alt={parish?.name ?? "본당 홈페이지"}
             fill
             className="object-cover"
             style={{ objectPosition: "center 30%" }}
@@ -123,7 +123,24 @@ export default async function AboutPage() {
         <div className="md:col-span-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8">
           {infoRows.length > 0 ? (
             <>
-              <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-4">안내</h2>
+              <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-4 flex items-center gap-2">
+                <svg
+                  viewBox="0 0 14 14"
+                  role="img"
+                  focusable="false"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="#FFD0A1"
+                  className="w-10 h-10"
+                >
+                  <g id="SVGRepo_bgCarrier" strokeWidth={0} />
+                  <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
+                  <g id="SVGRepo_iconCarrier">
+                    <path d="m 12.00625,2.6364725 -2.9125,0 c -1.0020833,0 -1.8729167,0.69375 -2.0916667,1.67291 C 6.78125,3.3302225 5.9125,2.6364725 4.9104167,2.6364725 L 2,2.6364725 c -0.5520833,0 -1,0.44791 -1,1 l 0,5.12083 c 0,0.55208 0.4479167,1 1,1 l 1.86875,0 c 2.1291667,0 2.7645833,0.5083305 3.06875,1.5625005 0.014583,0.0583 0.1083333,0.0583 0.125,0 0.30625,-1.05417 0.9416667,-1.5625005 3.06875,-1.5625005 l 1.86875,0 c 0.552083,0 1,-0.44792 1,-1 l 0,-5.11875 c 0,-0.55 -0.44375,-0.99792 -0.99375,-1.00208 z m -5.9645833,5.52916 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 5.4020833,2.53542 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.475 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.475 z" />
+                  </g>
+                </svg>
+                안내
+              </h2>
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-[var(--color-border)]">
                   {infoRows.map((row) => (
@@ -168,7 +185,35 @@ export default async function AboutPage() {
       <section>
         {/* 섹션 헤더 */}
         <p className="text-[10px] tracking-[0.3em] mb-1.5" style={{ color: GOLD }}>MASS SCHEDULE</p>
-        <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-2">미사 시간표</h2>
+        <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-2 flex items-center gap-2">
+          <svg
+            viewBox="0 0 57.674 57.674"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlSpace="preserve"
+            fill="#000000"
+            aria-hidden
+            className="w-10 h-10"
+          >
+            <g id="SVGRepo_bgCarrier" strokeWidth={0} />
+            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
+            <g id="SVGRepo_iconCarrier">
+              <path style={{ fill: "#FFD0A1" }} d="M33.317,39.442l-4.222,2.422l-2.436-4.292L22.337,40l2.436,4.292l-4.272,2.425l2.425,4.272 l4.272-2.425l4.774,8.41c0.377,0.664,1.221,0.897,1.885,0.52l1.901-1.079c0.666-0.378,0.898-1.226,0.517-1.89l-4.805-8.385 l4.272-2.425L33.317,39.442z" />
+              <circle style={{ fill: "#FFD0A1" }} cx="24.337" cy="3" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="33.337" cy="4" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="42.337" cy="6" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="47.337" cy="13" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="44.337" cy="21" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="37.337" cy="27" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="30.337" cy="33" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="16.337" cy="6" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="11.337" cy="13" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="10.337" cy="22" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="12.337" cy="31" r="3" />
+              <circle style={{ fill: "#FFD0A1" }} cx="16.337" cy="39" r="3" />
+            </g>
+          </svg>
+          미사 시간표
+        </h2>
         <div className="w-8 h-0.5 mb-6" style={{ backgroundColor: GOLD }} />
 
         {sortedEntries.length === 0 ? (

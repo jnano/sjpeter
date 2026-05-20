@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SectionLayout from "@/components/SectionLayout";
+import MarkdownContent from "@/components/MarkdownContent";
+import NoticeAdminActions from "./NoticeAdminActions";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -16,6 +18,7 @@ interface Notice {
   title: string;
   content: string | null;
   is_pinned: boolean;
+  is_ai_generated?: boolean;
   created_at: string;
   attachments?: NoticeAttachment[];
 }
@@ -54,10 +57,13 @@ export default async function NoticeDetailPage({
       {/* 뒤로 가기 */}
       <Link
         href="/boards/notice"
-        className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors mb-8"
+        className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors mb-4"
       >
         ← 공지·알림 목록
       </Link>
+
+      {/* admin/운영자 전용 액션 (admin_token 보유 시 노출) */}
+      <NoticeAdminActions noticeId={notice.id} />
 
       {/* 제목 영역 */}
       <div className="border-b-2 border-[var(--color-primary)] pb-4 mb-6">
@@ -72,20 +78,30 @@ export default async function NoticeDetailPage({
         <h1 className="text-xl font-bold text-[var(--color-primary)] leading-snug">
           {notice.title}
         </h1>
-        <p className="text-xs text-[var(--color-text-muted)] mt-2">
-          {new Date(notice.created_at).toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            weekday: "short",
-          })}
+        <p className="text-xs text-[var(--color-text-muted)] mt-2 flex items-center gap-1.5">
+          <span>
+            {new Date(notice.created_at).toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              weekday: "short",
+            })}
+          </span>
+          {notice.is_ai_generated && (
+            <span
+              className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 text-[10px] font-medium"
+              title="주보 PDF에서 AI가 추출한 공지입니다"
+            >
+              AI
+            </span>
+          )}
         </p>
       </div>
 
-      {/* 본문 */}
+      {/* 본문 — 마크다운 + 신뢰 콘텐츠 raw HTML 허용 (AI 출처 표기에 <span><small> 사용) */}
       {notice.content ? (
-        <div className="min-h-16 text-[var(--color-text)] text-sm leading-relaxed whitespace-pre-wrap">
-          {notice.content}
+        <div className="min-h-16">
+          <MarkdownContent content={notice.content} />
         </div>
       ) : (
         !notice.attachments?.length && (

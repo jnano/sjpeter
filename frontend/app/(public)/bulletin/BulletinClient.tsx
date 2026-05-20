@@ -7,19 +7,6 @@ import type { Bulletin } from "@/lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// API 데이터가 없을 때 보여줄 정적 샘플
-const SAMPLE_BULLETINS: Bulletin[] = [
-  {
-    id: 0,
-    issue_number: 623,
-    published_date: "2026-05-03",
-    liturgical_season: "부활 제5주일",
-    gospel_reference: "요한 15,1-8",
-    pdf_url: null,
-    ai_summary: null,
-  },
-];
-
 function shareToKakao(b: Bulletin, kakaoKey: string, parishName: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const kakao = (window as any).Kakao;
@@ -41,7 +28,7 @@ function shareToKakao(b: Bulletin, kakaoKey: string, parishName: string) {
 export default function BulletinClient({
   bulletins,
   kakaoKey = "",
-  parishName = "세종성베드로성당",
+  parishName = "본당 홈페이지",
 }: {
   bulletins: Bulletin[];
   kakaoKey?: string;
@@ -49,7 +36,7 @@ export default function BulletinClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const list = bulletins.length > 0 ? bulletins : SAMPLE_BULLETINS;
+  const list = bulletins;
   const latest = list[0];
 
   // 선택된 주보: URL ?id=N → 일치하는 항목, 없으면 latest

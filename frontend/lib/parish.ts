@@ -10,10 +10,12 @@ export interface ParishMin {
   address: string | null;
 }
 
+// 본당 정보가 아직 입력되지 않은 상태(첫 실행 직후)의 안전한 빈 값.
+// 실제 본당명은 setup wizard 또는 admin/parish/info 에서 입력됨.
 const FALLBACK: ParishMin = {
-  name: "세종성베드로성당",
+  name: "본당 홈페이지",
   logo_url: null,
-  diocese: "대전교구",
+  diocese: "",
   address: null,
 };
 
@@ -46,3 +48,15 @@ export function absoluteUrl(path: string | null | undefined): string | null {
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   return `${API}${path}`;
 }
+
+/** site_settings 의 PARISH_NAME_EN — 헤더 영문 라벨·meta 태그용. 없으면 빈 문자열. */
+export const fetchParishNameEn = cache(async (): Promise<string> => {
+  try {
+    const res = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
+    if (!res.ok) return "";
+    const data = await res.json();
+    return (data.PARISH_NAME_EN || "").trim();
+  } catch {
+    return "";
+  }
+});
