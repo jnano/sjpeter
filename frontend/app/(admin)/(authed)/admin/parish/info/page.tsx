@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import CrossIcon from "@/components/icons/CrossIcon";
+import LogoFallback from "@/components/icons/LogoFallback";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -162,7 +162,7 @@ export default function AdminParishInfoPage() {
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <CrossIcon className="text-3xl text-gray-300" />
+                  <LogoFallback className="w-14 h-14" />
                 )}
               </div>
               <div className="flex-1 space-y-2">

@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 import { useNavigation } from "./useNavigation";
 import { SEASON_LABELS_KO, type LiturgicalSeason } from "@/lib/season";
-import CrossIcon from "@/components/icons/CrossIcon";
+import LogoFallback from "@/components/icons/LogoFallback";
 
 interface Breadcrumb { group: string; title: string }
 
@@ -201,7 +201,7 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
                   className="h-8 w-8 object-contain"
                 />
               ) : (
-                <CrossIcon className="text-[var(--color-accent)] text-2xl" />
+                <LogoFallback className="h-8 w-8" />
               )}
               <div>
                 <div className="font-serif font-bold text-lg leading-tight tracking-tight text-[var(--color-primary)]">

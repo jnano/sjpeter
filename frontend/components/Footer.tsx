@@ -3,7 +3,7 @@ import Link from "next/link";
 import { fetchServerMenus } from "./fetchServerMenus";
 import ReportLink from "./ReportLink";
 import type { MenuItem } from "./useNavigation";
-import CrossIcon from "@/components/icons/CrossIcon";
+import LogoFallback from "@/components/icons/LogoFallback";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -131,7 +131,7 @@ export default async function Footer() {
                   className="h-7 w-7 object-contain"
                 />
               ) : (
-                <CrossIcon className="text-[var(--color-accent)] text-xl" />
+                <LogoFallback className="h-7 w-7" />
               )}
               <span className="font-serif font-bold text-[var(--color-primary)] text-lg">
                 {parish?.name ?? "본당 홈페이지"}
