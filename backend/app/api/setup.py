@@ -54,15 +54,18 @@ DEFAULT_BOARDS: list[dict] = [
 
 
 def _seed_default_boards(db: Session) -> int:
-    """기본 게시판 4종 시드. boards 가 비어 있을 때만 동작.
+    """기본 게시판 4종 시드. slug 단위 idempotent — 같은 slug 가 이미 있으면 건너뜀.
 
-    반환: 생성된 게시판 수 (0 또는 4).
-    이미 boards 가 있다면 0 반환 — 새 본당이 첫 setup 후 깨끗한 상태에서만 시드.
+    backend startup 의 _migrate_add_columns 가 시스템 게시판 (notice/ai-extract/liturgy/events)
+    을 먼저 시드하므로 Board.count() 기반 조건은 부적절하다. slug 단위로 비교한다.
+
+    반환: 새로 생성된 게시판 수 (0~4). 모두 이미 있으면 0.
     """
-    if db.query(Board).count() > 0:
-        return 0
-
+    created = 0
     for spec in DEFAULT_BOARDS:
+        existing = db.query(Board).filter(Board.slug == spec["slug"]).first()
+        if existing:
+            continue
         db.add(Board(
             name=spec["name"],
             slug=spec["slug"],
@@ -72,7 +75,8 @@ def _seed_default_boards(db: Session) -> int:
             is_active=True,
             show_in_menu=True,
         ))
-    return len(DEFAULT_BOARDS)
+        created += 1
+    return created
 
 
 class SetupStatus(BaseModel):
