@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type LayoutKind = "body" | "body_with_hero" | "sections";
+type LayoutKind = "body" | "body_with_hero" | "sections" | "html";
 
 interface PageData {
   id: number;
@@ -41,6 +41,17 @@ export default async function DynamicPageRoute({
   const { slug } = await params;
   const data = await fetchPage(slug);
   if (!data) notFound();
+
+  // html 레이아웃: PageHeader·SectionLayout 등 wrapper 없이 raw HTML 그대로 출력 —
+  // admin 이 자유롭게 레이아웃을 짤 수 있도록. (글로벌 Header/Footer 는 (public) layout 이 처리)
+  if (data.layout_kind === "html") {
+    return (
+      <div
+        className="dynamic-html-page"
+        dangerouslySetInnerHTML={{ __html: data.body_markdown ?? "" }}
+      />
+    );
+  }
 
   // body_with_hero 레이아웃은 자체 슬라이드쇼를 그리므로 SectionLayout의 autoHero는 끔
   const useAutoHero = data.layout_kind !== "body_with_hero";

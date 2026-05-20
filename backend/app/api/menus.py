@@ -200,9 +200,27 @@ class MenuGroupOut(MenuGroupIn):
 # ─── 메타: admin UI용 옵션 데이터 ─────────────────────────
 
 @router.get("/static-pages")
-def list_static_pages(_: Admin = Depends(get_current_admin)):
-    """admin 메뉴 편집기에서 'page' 연결 시 드롭다운에 표시할 화이트리스트."""
-    return STATIC_PAGES
+def list_static_pages(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    """admin 메뉴 편집기에서 'page' 연결 시 드롭다운에 표시할 페이지 목록.
+
+    - STATIC_PAGES 화이트리스트 (코드 라우트)
+    - DynamicPage 활성 항목 (admin/pages 에서 만든 동적 페이지) — slug 를 /p/{slug} 로 변환
+    """
+    from app.models.dynamic_page import DynamicPage
+    result = list(STATIC_PAGES)
+    dynamic = (
+        db.query(DynamicPage)
+        .filter(DynamicPage.is_active == True)  # noqa: E712
+        .order_by(DynamicPage.title)
+        .all()
+    )
+    for p in dynamic:
+        result.append({
+            "slug": f"/p/{p.slug}",
+            "label": p.title,
+            "category": "동적 페이지",
+        })
+    return result
 
 
 @router.get("/boards-list")

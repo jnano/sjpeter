@@ -18,7 +18,13 @@ from app.models.dynamic_page import DynamicPage
 
 router = APIRouter(prefix="/pages", tags=["pages"])
 
-LAYOUT_KINDS = ("body", "body_with_hero", "sections")
+# layout_kind 종류:
+#  body            — markdown 본문 (간단한 글 페이지)
+#  body_with_hero  — markdown 본문 + 상단 히어로 이미지
+#  sections        — markdown 본문 + payload.sections[] 카드 섹션들
+#  html            — body_markdown 자리에 raw HTML 저장. /p/{slug} 가 PageHeader/SectionLayout
+#                    wrapper 없이 그대로 dangerouslySetInnerHTML 로 출력 (자유 레이아웃).
+LAYOUT_KINDS = ("body", "body_with_hero", "sections", "html")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9\-]*$")  # 영문 소문자·숫자·하이픈만
 
 

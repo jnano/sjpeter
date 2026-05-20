@@ -6,7 +6,7 @@ import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type LayoutKind = "body" | "body_with_hero" | "sections";
+type LayoutKind = "body" | "body_with_hero" | "sections" | "html";
 
 interface DynamicPage {
   id: number;
@@ -31,6 +31,7 @@ const LAYOUT_OPTIONS: { value: LayoutKind; label: string; description: string }[
   { value: "body", label: "본문형", description: "제목 + 본문 텍스트만" },
   { value: "body_with_hero", label: "사진 + 본문", description: "상단 슬라이드쇼 + 본문 (페이지 사진은 /admin/page-photos에서 같은 slug로 등록)" },
   { value: "sections", label: "섹션 카드형", description: "본문 + 하단 카드 리스트 (FAQ·단계 안내 등)" },
+  { value: "html", label: "HTML 직접 입력", description: "PageHeader·SectionLayout wrapper 없이 raw HTML 그대로 출력. 자유 레이아웃." },
 ];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -364,30 +365,36 @@ export default function AdminPagesPage() {
               </div>
             </section>
 
-            {/* 본문 */}
+            {/* 본문 — html 레이아웃이면 HTML, 그 외 markdown */}
             <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold">본문 (마크다운)</h2>
+                <h2 className="text-sm font-semibold">
+                  {draft.layout_kind === "html" ? "HTML 코드" : "본문 (마크다운)"}
+                </h2>
                 <a
-                  href="https://commonmark.org/help/"
+                  href={draft.layout_kind === "html"
+                    ? "https://developer.mozilla.org/ko/docs/Web/HTML/Element"
+                    : "https://commonmark.org/help/"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:underline"
-                >마크다운 문법 ↗</a>
+                >{draft.layout_kind === "html" ? "HTML 태그 참고 ↗" : "마크다운 문법 ↗"}</a>
               </div>
+              {draft.layout_kind === "html" && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠ HTML 은 wrapper 없이 그대로 렌더링됩니다. 외부에서 받은 코드를 붙여넣을 때는
+                  &lt;script&gt; 등 동적 코드가 포함되지 않았는지 확인하세요.
+                  글로벌 Header/Footer 는 자동 적용됩니다.
+                </p>
+              )}
               <textarea
                 value={draft.body_markdown ?? ""}
                 onChange={(e) => updateDraft("body_markdown", e.target.value)}
                 rows={15}
                 className={inputCls + " font-mono text-xs"}
-                placeholder={`# 제목
-
-여기에 본문을 작성합니다.
-
-- 항목 1
-- 항목 2
-
-> 인용문도 가능합니다.`}
+                placeholder={draft.layout_kind === "html"
+                  ? `<section class="max-w-3xl mx-auto px-6 py-12">\n  <h1 class="text-3xl font-bold">제목</h1>\n  <p class="mt-4 text-gray-600">자유로운 HTML 레이아웃을 작성하세요.</p>\n</section>`
+                  : `# 제목\n\n여기에 본문을 작성합니다.\n\n- 항목 1\n- 항목 2\n\n> 인용문도 가능합니다.`}
               />
             </section>
 
