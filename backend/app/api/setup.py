@@ -13,8 +13,66 @@ from sqlalchemy.orm import Session
 from app.core.auth import hash_password
 from app.core.database import get_db
 from app.models.admin import Admin
+from app.models.board import Board
 
 router = APIRouter(tags=["setup"])
+
+
+# 첫 setup 직후 자동 생성될 기본 게시판.
+# 다른 본당이 빈 사이트가 아니라 첫 인상이 있는 사이트로 시작하도록 함.
+# admin 이 마음에 들지 않으면 /admin/boards 에서 자유롭게 삭제·이름 변경 가능.
+DEFAULT_BOARDS: list[dict] = [
+    {
+        "name": "자유게시판",
+        "slug": "free",
+        "description": "본당 신자들이 자유롭게 글을 쓰는 공간",
+        "kind": "default",
+        "members_only_write": True,
+    },
+    {
+        "name": "사진 갤러리",
+        "slug": "gallery",
+        "description": "본당 행사·일상 사진 모음",
+        "kind": "default",
+        "members_only_write": True,
+    },
+    {
+        "name": "기도 청원",
+        "slug": "prayer-line",
+        "description": "한 줄로 청원·감사·위령 기도를 나누는 공간",
+        "kind": "line",
+        "members_only_write": True,
+    },
+    {
+        "name": "묵상 나눔",
+        "slug": "meditation-board",
+        "description": "말씀과 일상의 묵상을 함께 나누는 공간",
+        "kind": "default",
+        "members_only_write": True,
+    },
+]
+
+
+def _seed_default_boards(db: Session) -> int:
+    """기본 게시판 4종 시드. boards 가 비어 있을 때만 동작.
+
+    반환: 생성된 게시판 수 (0 또는 4).
+    이미 boards 가 있다면 0 반환 — 새 본당이 첫 setup 후 깨끗한 상태에서만 시드.
+    """
+    if db.query(Board).count() > 0:
+        return 0
+
+    for spec in DEFAULT_BOARDS:
+        db.add(Board(
+            name=spec["name"],
+            slug=spec["slug"],
+            description=spec["description"],
+            kind=spec["kind"],
+            members_only_write=spec["members_only_write"],
+            is_active=True,
+            show_in_menu=True,
+        ))
+    return len(DEFAULT_BOARDS)
 
 
 class SetupStatus(BaseModel):
@@ -120,6 +178,12 @@ def setup_init(body: SetupInitRequest, db: Session = Depends(get_db)):
         {"name": body.parish_name.strip()},
     )
 
+    # 8. 기본 게시판 자동 생성 (boards 가 비어 있을 때만 — 다른 본당의 첫 시작 인상)
+    seeded = _seed_default_boards(db)
+
     db.commit()
 
-    return SetupInitResponse(ok=True, message="첫 관리자 계정과 본당 정보가 등록되었습니다.")
+    msg = "첫 관리자 계정과 본당 정보가 등록되었습니다."
+    if seeded:
+        msg += f" 기본 게시판 {seeded}개를 자동 생성했습니다."
+    return SetupInitResponse(ok=True, message=msg)
