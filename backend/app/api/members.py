@@ -44,7 +44,8 @@ router = APIRouter(prefix="/members", tags=["members"])
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    name: str
+    # Member.name 은 nullable=True — admin 빠른 등록 시 생략 가능. 공개 회원가입은 client 측에서 필수 처리.
+    name: Optional[str] = None
     nickname: str
     phone: Optional[str] = None
     receive_notification: bool = False
@@ -903,6 +904,7 @@ def admin_create_member(
 
     member = Member(
         email=body.email,
+        name=body.name.strip() if body.name else None,
         nickname=body.nickname,
         hashed_password=hash_password(body.password),
         is_active=True,

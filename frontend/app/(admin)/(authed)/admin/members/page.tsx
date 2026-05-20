@@ -33,7 +33,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   kakao: "카카오",
 };
 
-const EMPTY_FORM = { email: "", nickname: "", password: "" };
+const EMPTY_FORM = { email: "", name: "", nickname: "", password: "" };
 
 export default function AdminMembersPage() {
   const router = useRouter();
@@ -269,7 +269,7 @@ export default function AdminMembersPage() {
           {formError && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">이메일 *</label>
               <input
@@ -282,14 +282,24 @@ export default function AdminMembersPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">닉네임 * (2자 이상)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">이름 (선택)</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                placeholder="본명"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">세례명 * (2자 이상)</label>
               <input
                 type="text"
                 required
                 value={form.nickname}
                 onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
                 className={`w-full ${inputCls}`}
-                placeholder="홍길동"
+                placeholder="베드로"
               />
             </div>
             <div>
