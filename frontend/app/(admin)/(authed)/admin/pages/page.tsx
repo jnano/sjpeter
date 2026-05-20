@@ -387,6 +387,36 @@ export default function AdminPagesPage() {
                   글로벌 Header/Footer 는 자동 적용됩니다.
                 </p>
               )}
+
+              {/* 변수 안내 — 모든 레이아웃 공통 */}
+              <details className="text-xs bg-blue-50 border border-blue-200 rounded">
+                <summary className="cursor-pointer px-3 py-2 font-medium text-blue-900 select-none">
+                  사용 가능한 변수 — 본문·제목·부제에 <code className="font-mono">{`{{ VAR_NAME }}`}</code> 형태로 쓰면 현재 본당 값으로 자동 치환됩니다 ▼
+                </summary>
+                <ul className="px-3 pb-3 pt-1 space-y-1 text-blue-900/90">
+                  {[
+                    { k: "PARISH_NAME", d: "본당 이름 (예: 세종성베드로성당)" },
+                    { k: "PARISH_NAME_EN", d: "본당 영문명 (예: St. Peter's Cathedral)" },
+                    { k: "PARISH_ADDRESS", d: "본당 주소" },
+                    { k: "PARISH_PHONE", d: "본당 전화번호" },
+                    { k: "PARISH_FAX", d: "본당 팩스번호" },
+                    { k: "DIOCESE", d: "소속 교구" },
+                    { k: "SITE_URL", d: "사이트 URL" },
+                    { k: "CURRENT_YEAR", d: "현재 연도 (예: 2026)" },
+                    { k: "TODAY", d: "오늘 날짜 (YYYY-MM-DD)" },
+                  ].map((v) => (
+                    <li key={v.k} className="flex items-baseline gap-2">
+                      <code className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-white border border-blue-200 text-blue-700 whitespace-nowrap">
+                        {`{{ ${v.k} }}`}
+                      </code>
+                      <span className="text-[11px]">{v.d}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="px-3 pb-3 text-[11px] text-blue-700/80">
+                  공백 유무·대소문자 무관. 모르는 변수는 그대로 출력됩니다 (오타 시 사이트 깨지지 않음).
+                </p>
+              </details>
               <textarea
                 value={draft.body_markdown ?? ""}
                 onChange={(e) => updateDraft("body_markdown", e.target.value)}

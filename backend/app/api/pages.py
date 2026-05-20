@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.auth import get_current_admin
+from app.core.dynamic_vars import VARIABLE_DOCS, render
 from app.models.admin import Admin
 from app.models.dynamic_page import DynamicPage
 
@@ -71,7 +72,18 @@ def get_page(slug: str, db: Session = Depends(get_db)):
     ).first()
     if not p:
         raise HTTPException(status_code=404, detail="페이지를 찾을 수 없습니다.")
-    return PageOut.model_validate(p)
+    # {{ PARISH_NAME }} 등 변수 치환 — 본당 정보·오늘 날짜로 채움
+    out = PageOut.model_validate(p)
+    out.title = render(out.title, db) or out.title
+    out.subtitle = render(out.subtitle, db)
+    out.body_markdown = render(out.body_markdown, db)
+    return out
+
+
+@router.get("/variables")
+def list_variables():
+    """admin 편집기에서 사용 가능한 변수 목록 안내. 인증 불필요."""
+    return VARIABLE_DOCS
 
 
 @router.get("/public", response_model=list[PageOut])
