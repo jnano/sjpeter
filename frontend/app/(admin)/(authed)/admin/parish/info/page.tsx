@@ -44,6 +44,9 @@ export default function AdminParishInfoPage() {
   const [logoLoading, setLogoLoading] = useState(false);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [aboutPhotoLoading, setAboutPhotoLoading] = useState(false);
+  const aboutPhotoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     fetch(`${API}/api/parish/`).then((r) => r.json()).then((data: ParishInfo) => {
       setInfo(data);
@@ -93,6 +96,52 @@ export default function AdminParishInfoPage() {
       await fetch("/api/revalidate?tag=parish", { method: "POST" });
     } finally {
       setLogoLoading(false);
+    }
+  }
+
+  async function uploadAboutPhoto(file: File) {
+    setAboutPhotoLoading(true);
+    setError("");
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`${API}/api/parish/about-photo/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(formatErrorDetail(data.detail, "사진 업로드에 실패했습니다."));
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setAboutPhotoLoading(false);
+    }
+  }
+
+  async function deleteAboutPhoto() {
+    if (!confirm("성당 소개 사진을 삭제하시겠습니까?")) return;
+    setAboutPhotoLoading(true);
+    setError("");
+    const token = getToken();
+    try {
+      const res = await fetch(`${API}/api/parish/about-photo`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(formatErrorDetail(data.detail, "사진 삭제에 실패했습니다."));
+        return;
+      }
+      setInfo(data);
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
+    } finally {
+      setAboutPhotoLoading(false);
     }
   }
 
@@ -200,6 +249,60 @@ export default function AdminParishInfoPage() {
                 </div>
                 <p className="text-xs text-gray-400">
                   권장: 정사각형 PNG/SVG, 1MB 이하. 헤더와 푸터에 자동으로 표시됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/40">
+            <label className="block text-sm font-medium mb-2">성당 소개 사진</label>
+            <div className="flex items-start gap-4">
+              <div className="w-28 h-20 rounded-xl border border-gray-200 bg-white flex items-center justify-center overflow-hidden shrink-0">
+                {info.about_photo_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={info.about_photo_url.startsWith("http") ? info.about_photo_url : `${API}${info.about_photo_url}`}
+                    alt="성당 소개 사진"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400">미등록</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  ref={aboutPhotoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadAboutPhoto(f);
+                    if (aboutPhotoInputRef.current) aboutPhotoInputRef.current.value = "";
+                  }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => aboutPhotoInputRef.current?.click()}
+                    disabled={aboutPhotoLoading}
+                    className="px-3 py-1.5 text-sm border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    {aboutPhotoLoading ? "처리 중..." : info.about_photo_url ? "사진 변경" : "사진 등록"}
+                  </button>
+                  {info.about_photo_url && (
+                    <button
+                      type="button"
+                      onClick={deleteAboutPhoto}
+                      disabled={aboutPhotoLoading}
+                      className="px-3 py-1.5 text-sm border border-red-300 text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  권장: 가로형 사진, 10MB 이하. <code>/about</code> 페이지 상단 안내 카드 왼쪽에 표시됩니다.
                 </p>
               </div>
             </div>
