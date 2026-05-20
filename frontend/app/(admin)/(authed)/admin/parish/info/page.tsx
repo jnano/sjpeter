@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import LogoFallback from "@/components/icons/LogoFallback";
+import { formatErrorDetail } from "@/lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -63,7 +64,7 @@ export default function AdminParishInfoPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || "업로드에 실패했습니다.");
+        setError(formatErrorDetail(data.detail, "업로드에 실패했습니다."));
         return;
       }
       setInfo(data);
@@ -85,7 +86,7 @@ export default function AdminParishInfoPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || "삭제에 실패했습니다.");
+        setError(formatErrorDetail(data.detail, "삭제에 실패했습니다."));
         return;
       }
       setInfo(data);
@@ -107,7 +108,7 @@ export default function AdminParishInfoPage() {
         body: JSON.stringify(info),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.detail || "저장에 실패했습니다."); return; }
+      if (!res.ok) { setError(formatErrorDetail(data.detail, "저장에 실패했습니다.")); return; }
       setInfo(data);
       await fetch("/api/revalidate?tag=parish", { method: "POST" });
       setSaved(true);

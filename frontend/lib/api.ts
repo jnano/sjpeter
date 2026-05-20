@@ -40,6 +40,33 @@ export function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+/**
+ * FastAPI 응답의 `detail` 필드(string | ValidationError[] | object) 를 사람이 읽을 수 있는
+ * 문자열로 변환. setError·alert·throw 등에서 객체가 그대로 들어가 React 가 크래시
+ * (`Objects are not valid as a React child`) 되는 함정 방지.
+ *
+ * 사용 예:
+ *   setError(formatErrorDetail(data.detail, "저장 실패"));
+ *   throw new Error(formatErrorDetail(data.detail, "업로드 실패"));
+ */
+export function formatErrorDetail(detail: unknown, fallback = "요청에 실패했습니다."): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const lines = detail
+      .map((e: { loc?: unknown[]; msg?: string }) => {
+        const field = Array.isArray(e.loc) ? e.loc.slice(1).join(".") : "";
+        const msg = e.msg ?? "";
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter(Boolean);
+    if (lines.length) return lines.join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    try { return JSON.stringify(detail); } catch { /* noop */ }
+  }
+  return fallback;
+}
+
 export interface Bulletin {
   id: number;
   issue_number: number | null;
