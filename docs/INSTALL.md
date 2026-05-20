@@ -97,15 +97,15 @@ npm install
 
 ```bash
 cat > .env.local <<'EOF'
-# 비워두면 브라우저 origin 기반으로 자동 결정 (localhost·LAN·외부 IP 모두 자동 분기)
-NEXT_PUBLIC_API_URL=
+# NEXT_PUBLIC_API_URL 라인은 적지 마세요 — 그래야 각 컴포넌트의 fallback "http://localhost:8000" 이 자동 적용됩니다.
+# 다른 host 가 필요한 경우만 채우세요 (예: reverse proxy 로 API 분리·모바일 LAN 시연).
 BACKEND_INTERNAL_URL=http://127.0.0.1:8000
 EOF
 ```
 
-- **`NEXT_PUBLIC_API_URL` 은 가능한 비우길 권장합니다.** `lib/api.ts:resolveClientApi()` 헬퍼가 브라우저 `window.location` 기반으로 자동 결정하므로, 로컬·LAN·외부 IP·모바일 접속이 모두 같은 코드로 동작합니다.
-- **명시적으로 다른 host 가 필요한 경우만 채우세요.** (예: reverse proxy 로 API 만 별도 도메인 — `https://api.example.org`)
-- 자기 외부 공인 IP 를 직접 넣으면 자기 PC 가 그 IP 로 outgoing 시 라우터 hairpin NAT 가 안 되는 환경에서 fetch 실패가 발생합니다.
+⚠ **`NEXT_PUBLIC_API_URL=` (빈 문자열) 로 두면 동작 안 함.** `??` 의 fallback 은 `null/undefined` 만 잡으므로, 빈 문자열이면 client 컴포넌트의 fetch 가 같은 origin (Next.js 자기 자신) 으로 가버려 404. 라인 자체를 적지 않거나 주석 처리하세요.
+
+⚠ **자기 외부 공인 IP 를 직접 넣으면 위험.** 자기 PC 가 그 IP 로 outgoing 시 라우터의 hairpin NAT 가 동작하지 않는 환경에서는 fetch timeout. 모바일 LAN 시연이라면 자기 PC 의 LAN IP (`192.168.x.x` 등) 를 사용하세요.
 
 `BACKEND_INTERNAL_URL` 은 SSR/Server Component 가 backend 호출 시 사용 — 같은 머신이라면 `127.0.0.1:8000` 유지 권장.
 
