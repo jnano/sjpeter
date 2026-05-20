@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes, photos, saints
+from app.api import issue_reports, transport_routes, photos, saints, setup
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -63,6 +63,7 @@ app.include_router(issue_reports.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(saints.router, prefix="/api")
+app.include_router(setup.router)
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -1228,7 +1229,9 @@ def _migrate_add_columns():
             ('KAKAO_MAP_KEY',         '카카오맵 JavaScript 키', '카카오맵 API JavaScript 키',                     TRUE,  'OAuth'),
             ('AUTH_SECRET',           'NextAuth 시크릿',       '세션 암호화 키 (32자 이상 임의 문자열)',             TRUE,  '보안'),
             ('CURRENT_SEASON',        '현재 전례 시기',         '빈 값=꺼짐 / advent · christmas · lent · easter · ordinary · pentecost', FALSE, '스킨'),
-            ('SEASON_AUTO_MODE',      '전례 시기 자동 모드',     'true=오늘 날짜로 자동 계산(CURRENT_SEASON 무시), false=수동 선택값 사용', FALSE, '스킨')
+            ('SEASON_AUTO_MODE',      '전례 시기 자동 모드',     'true=오늘 날짜로 자동 계산(CURRENT_SEASON 무시), false=수동 선택값 사용', FALSE, '스킨'),
+            ('PARISH_NAME',           '본당 이름',             '사이트 전반·이메일 발신자·메타 태그에 사용',           FALSE, '사이트'),
+            ('PARISH_NAME_EN',        '본당 영문명',           '선택. footer·meta tag 등에 사용 (예: St. Peter''s Cathedral)', FALSE, '사이트')
             ON CONFLICT (key) DO NOTHING
         """))
 
