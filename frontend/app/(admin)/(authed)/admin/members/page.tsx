@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useRouter } from "next/navigation";
+import { formatErrorDetail } from "@/lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -100,7 +101,7 @@ export default function AdminMembersPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.detail || "등록에 실패했습니다."); return; }
+      if (!res.ok) { setFormError(formatErrorDetail(data.detail, "등록에 실패했습니다.")); return; }
       setForm({ ...EMPTY_FORM });
       setShowForm(false);
       setPage(1);
