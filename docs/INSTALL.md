@@ -97,13 +97,13 @@ npm install
 
 ```bash
 cat > .env.local <<'EOF'
-# NEXT_PUBLIC_API_URL 라인은 적지 마세요 — 그래야 각 컴포넌트의 fallback "http://localhost:8000" 이 자동 적용됩니다.
-# 다른 host 가 필요한 경우만 채우세요 (예: reverse proxy 로 API 분리·모바일 LAN 시연).
+# 브라우저(client) 가 backend 호출 시 사용. 명시적으로 값을 채우세요.
+NEXT_PUBLIC_API_URL=http://localhost:8000
 BACKEND_INTERNAL_URL=http://127.0.0.1:8000
 EOF
 ```
 
-⚠ **`NEXT_PUBLIC_API_URL=` (빈 문자열) 로 두면 동작 안 함.** `??` 의 fallback 은 `null/undefined` 만 잡으므로, 빈 문자열이면 client 컴포넌트의 fetch 가 같은 origin (Next.js 자기 자신) 으로 가버려 404. 라인 자체를 적지 않거나 주석 처리하세요.
+⚠ **`NEXT_PUBLIC_API_URL` 은 라인 자체를 비우거나 빈 문자열로 두지 마세요.** Next.js Turbopack 의 env inline 동작상 일부 컴포넌트의 `process.env.X` 가 string `"undefined"` 로 인식되어 `??` fallback 이 우회되는 함정이 있습니다 (`${API}/api/...` 가 `"undefined/api/..."` 가 되어 같은 origin 의 `/admin/undefined/...` 로 404). 명시적으로 `http://localhost:8000` 또는 운영 도메인을 채우세요.
 
 ⚠ **자기 외부 공인 IP 를 직접 넣으면 위험.** 자기 PC 가 그 IP 로 outgoing 시 라우터의 hairpin NAT 가 동작하지 않는 환경에서는 fetch timeout. 모바일 LAN 시연이라면 자기 PC 의 LAN IP (`192.168.x.x` 등) 를 사용하세요.
 
