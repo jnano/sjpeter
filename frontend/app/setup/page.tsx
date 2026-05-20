@@ -29,6 +29,8 @@ interface FormState {
   admin_password_confirm: string;
   parish_name: string;
   parish_name_en: string;
+  parish_address: string;
+  parish_phone: string;
   site_url: string;
 }
 
@@ -38,6 +40,8 @@ const initialForm: FormState = {
   admin_password_confirm: "",
   parish_name: "",
   parish_name_en: "",
+  parish_address: "",
+  parish_phone: "",
   site_url: typeof window !== "undefined" ? window.location.origin : "",
 };
 
@@ -87,6 +91,8 @@ export default function SetupPage() {
           admin_password: form.admin_password,
           parish_name: form.parish_name,
           parish_name_en: form.parish_name_en,
+          parish_address: form.parish_address,
+          parish_phone: form.parish_phone,
           site_url: form.site_url,
         }),
       });
@@ -205,6 +211,16 @@ export default function SetupPage() {
                 label="본당 영문명 (선택)"
                 value={form.parish_name_en}
                 onChange={(v) => setField("parish_name_en", v)}
+              />
+              <Field
+                label="주소 (선택)"
+                value={form.parish_address}
+                onChange={(v) => setField("parish_address", v)}
+              />
+              <Field
+                label="전화번호 (선택)"
+                value={form.parish_phone}
+                onChange={(v) => setField("parish_phone", v)}
               />
               <Field
                 label="사이트 URL"

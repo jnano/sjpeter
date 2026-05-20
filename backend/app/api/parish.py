@@ -121,11 +121,27 @@ def update_parish(
     elif "mass_schedule" in data:
         data.pop("mass_schedule")
 
+    name_changed = "name" in data
     for k, v in data.items():
         setattr(parish, k, v)
 
     db.commit()
     db.refresh(parish)
+
+    # A안 single source: parishes.name 이 master. 변경 시 site_settings.PARISH_NAME 을
+    # 자동 mirror — 이메일 발신자 fallback 등 site_settings 를 참조하는 기존 코드와 호환 유지.
+    # 단방향이라 사용자가 admin/settings 에서 PARISH_NAME 을 따로 변경할 일은 없음 (UI 숨김).
+    if name_changed:
+        from sqlalchemy import text as _text
+        from app.core.site_settings import invalidate as _invalidate
+        db.execute(_text(
+            "INSERT INTO site_settings (key, value, label, description, is_secret, group_name) "
+            "VALUES ('PARISH_NAME', :v, '본당 이름', 'parishes.name 의 자동 mirror — admin/parish/info 에서 변경하세요.', FALSE, '사이트') "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+        ), {"v": (parish.name or "").strip()})
+        db.commit()
+        _invalidate("PARISH_NAME")
+
     return _parish_to_out(parish)
 
 

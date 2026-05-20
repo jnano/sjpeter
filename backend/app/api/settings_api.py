@@ -120,9 +120,19 @@ def _to_out(row: SiteSetting) -> SettingOut:
     )
 
 
+# admin/settings UI 에서 가려야 할 키 — parishes 테이블이 single source 라 여기서 중복 관리하면 어긋남 유발.
+# 시드·mirror 는 그대로 두되 admin UI 에는 노출 안 함.
+_HIDDEN_KEYS = {"PARISH_NAME", "PARISH_NAME_EN"}
+
+
 @router.get("", response_model=list[SettingOut])
 def list_settings(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
-    rows = db.query(SiteSetting).order_by(SiteSetting.group_name, SiteSetting.key).all()
+    rows = (
+        db.query(SiteSetting)
+        .filter(~SiteSetting.key.in_(_HIDDEN_KEYS))
+        .order_by(SiteSetting.group_name, SiteSetting.key)
+        .all()
+    )
     return [_to_out(r) for r in rows]
 
 

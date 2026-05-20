@@ -91,6 +91,8 @@ class SetupInitRequest(BaseModel):
     admin_password: str = Field(min_length=8, max_length=200)
     parish_name: str = Field(min_length=1, max_length=200)
     parish_name_en: str = Field(default="", max_length=200)
+    parish_address: str = Field(default="", max_length=300)
+    parish_phone: str = Field(default="", max_length=50)
     site_url: str = Field(min_length=1, max_length=500)
 
 
@@ -174,12 +176,17 @@ def setup_init(body: SetupInitRequest, db: Session = Depends(get_db)):
             {"v": value, "k": key},
         )
 
-    # 7. parishes 첫 row 의 name 도 동기화 — admin/parish/info 페이지의 기본값으로 사용됨
+    # 7. parishes 첫 row 동기화 — admin/parish/info 페이지의 기본값. parishes.name 이 master.
     db.execute(
         text(
-            "UPDATE parishes SET name = :name WHERE id = (SELECT id FROM parishes ORDER BY id LIMIT 1)"
+            "UPDATE parishes SET name = :name, address = :addr, phone = :phone "
+            "WHERE id = (SELECT id FROM parishes ORDER BY id LIMIT 1)"
         ),
-        {"name": body.parish_name.strip()},
+        {
+            "name": body.parish_name.strip(),
+            "addr": body.parish_address.strip(),
+            "phone": body.parish_phone.strip(),
+        },
     )
 
     # 8. 기본 게시판 자동 생성 (boards 가 비어 있을 때만 — 다른 본당의 첫 시작 인상)
