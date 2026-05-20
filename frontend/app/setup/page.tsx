@@ -4,6 +4,23 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resolveClientApi } from "@/lib/api";
 
+/** FastAPI 응답의 detail (string | ValidationError[] | object) 을 사람이 읽을 수 있는 문자열로. */
+function formatErrorDetail(detail: unknown): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((e: { loc?: unknown[]; msg?: string }) => {
+        const field = Array.isArray(e.loc) ? e.loc.slice(1).join(".") : "";
+        const msg = e.msg ?? "";
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (detail && typeof detail === "object") return JSON.stringify(detail);
+  return "설정 저장에 실패했습니다.";
+}
+
 type Step = "welcome" | "admin" | "parish" | "done";
 
 interface FormState {
@@ -75,7 +92,7 @@ export default function SetupPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.detail || "설정 저장에 실패했습니다.");
+        setError(formatErrorDetail(data.detail));
       } else {
         setStep("done");
       }
