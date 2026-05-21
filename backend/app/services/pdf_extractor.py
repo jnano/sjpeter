@@ -52,3 +52,42 @@ def _meaningful_chars(text: str) -> int:
 
 def is_text_sparse(text: str, min_chars: int = 200) -> bool:
     return _meaningful_chars(text) < min_chars
+
+
+def extract_embedded_images(pdf_path: str, min_dim: int = 200) -> list[dict]:
+    """PDF에 임베드된 비트맵 이미지를 원본 그대로 추출.
+
+    페이지 렌더(`pdf_to_images_b64`)와 달리 PDF 내부에 저장된 사진·일러스트
+    리소스를 그대로 꺼낸다. 본당 사진 추출(/admin/bulletin → 갤러리·성전건축
+    분류)에 사용된다.
+
+    Returns: [{"ext": "jpeg"|"png"|..., "bytes": bytes,
+              "width": int, "height": int, "page": int(1-indexed)}]
+    - 같은 xref(중복 임베드)는 한 번만 반환
+    - min_dim 미만의 작은 이미지(아이콘·로고)는 제외
+    """
+    results: list[dict] = []
+    seen_xrefs: set[int] = set()
+    with fitz.open(pdf_path) as doc:
+        for page_index, page in enumerate(doc, start=1):
+            for img_info in page.get_images(full=True):
+                xref = img_info[0]
+                if xref in seen_xrefs:
+                    continue
+                seen_xrefs.add(xref)
+                try:
+                    base = doc.extract_image(xref)
+                except Exception:
+                    continue
+                width = int(base.get("width") or 0)
+                height = int(base.get("height") or 0)
+                if min(width, height) < min_dim:
+                    continue
+                results.append({
+                    "ext": base.get("ext") or "png",
+                    "bytes": base.get("image") or b"",
+                    "width": width,
+                    "height": height,
+                    "page": page_index,
+                })
+    return results

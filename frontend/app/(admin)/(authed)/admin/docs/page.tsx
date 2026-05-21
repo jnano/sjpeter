@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.274";
+export const CURRENT_VERSION = "1.5.275";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.275", date: "2026-05-22", tag: "수정",
+    items: [
+      "주보 AI 분석 무한 'AI 분석 중…' 멈춤 버그 수정",
+      "  · 원인: app/services/pdf_extractor.py 에서 extract_embedded_images 함수가 누락되어 background task 가 import 단계에서 ImportError 로 즉시 실패",
+      "  · BackgroundTasks 컨텍스트에서 except 분기의 ai_status='failed' 갱신도 commit 되지 못해 processing 상태로 영구 잔존",
+      "  · 조치: PyMuPDF 기반으로 extract_embedded_images(pdf_path, min_dim) 복원 — 임베디드 비트맵을 원본 그대로 추출, 중복 xref 제거 + min_dim 미만 아이콘 제외",
+      "  · 영향: 주보 PDF 업로드 → AI 추출 + 사진 추출 정상 동작 복구",
+    ],
+  },
   {
     version: "1.5.274", date: "2026-05-22", tag: "디자인",
     items: [
