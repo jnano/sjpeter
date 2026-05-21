@@ -58,7 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         href: "/admin/bulletin",
-        label: "주보",
+        label: "주보 관리",
         children: [
           { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet", aiTag: true },
           { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber", aiTag: true },
@@ -66,7 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
           { href: "/admin/bulletin/stats", label: "AI 분석 통계", aiTag: true },
         ],
       },
-      { href: "/admin/notices", label: "공지" },
+      { href: "/admin/notices", label: "공지 관리" },
       { href: "/admin/calendar", label: "행사 캘린더" },
     ],
   },
