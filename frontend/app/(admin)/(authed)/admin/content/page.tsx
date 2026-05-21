@@ -69,7 +69,7 @@ const btnEdit = "text-xs text-blue-500 hover:text-blue-700";
 
 // ─── History Tab ──────────────────────────────────────────
 
-function HistoryTab() {
+export function HistoryTab() {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [form, setForm] = useState({ year: new Date().getFullYear(), event: "", detail: "", highlight: false, is_current: false, sort_order: 0 });
   const [editId, setEditId] = useState<number | null>(null);
@@ -275,7 +275,7 @@ function HistoryTab() {
 
 // ─── Vision Tab ───────────────────────────────────────────
 
-function VisionTab() {
+export function VisionTab() {
   const [items, setItems] = useState<Vision[]>([]);
   const [form, setForm] = useState({ year: new Date().getFullYear(), motto: "", body: "", is_current: false });
   const [editId, setEditId] = useState<number | null>(null);
@@ -475,7 +475,7 @@ const emptyComForm = {
 
 const COMMUNITY_OPEN_KEY = "admin_community_open_divisions";
 
-function CommunityTab() {
+export function CommunityTab() {
   const [items, setItems] = useState<CommunityGroup[]>([]);
   const [boards, setBoards] = useState<BoardOption[]>([]);
   const [form, setForm] = useState({ ...emptyComForm });
@@ -987,7 +987,7 @@ function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onC
 const COUNCIL_CATEGORIES = ["회장단", "분과대표", "구역장대표"];
 const emptyCouncilForm = { name: "", role: "", category: "회장단", sort_order: 0, is_active: true };
 
-function CouncilTab() {
+export function CouncilTab() {
   const [items, setItems] = useState<CouncilMember[]>([]);
   const [form, setForm] = useState({ ...emptyCouncilForm });
   const [editId, setEditId] = useState<number | null>(null);
@@ -1283,7 +1283,7 @@ const emptyMedForm = {
   is_published: true,
 };
 
-function MeditationTab() {
+export function MeditationTab() {
   const focusId = useFocusItem();
   const [items, setItems] = useState<Meditation[]>([]);
   const [total, setTotal] = useState(0);
@@ -1948,49 +1948,22 @@ const TABS = [
 
 type TabKey = typeof TABS[number]["key"];
 
+// v1.5.260+: 5개 탭을 admin/{vision,meditation,history,council,community} 개별 라우트로 분리.
+// 본 페이지는 ?tab=xxx 호환 redirect 만 담당 — 북마크·외부 링크 보호용.
 export default function AdminContentPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const rawTab = searchParams.get("tab");
-  const tab: TabKey = (TABS.map((t) => t.key) as string[]).includes(rawTab ?? "")
-    ? (rawTab as TabKey)
-    : "vision";
-
-  const currentTab = TABS.find((t) => t.key === tab) ?? TABS[0];
-
-  function setTab(key: TabKey) {
-    router.push(`/admin/content?tab=${key}`);
-  }
+  useEffect(() => {
+    const rawTab = searchParams.get("tab");
+    const valid = (TABS.map((t) => t.key) as string[]).includes(rawTab ?? "");
+    const target = valid ? rawTab : "vision";
+    router.replace(`/admin/${target}`);
+  }, [searchParams, router]);
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{currentTab.label}</h1>
-        <p className="text-sm text-gray-500 mt-1">{currentTab.subtitle}</p>
-      </div>
-
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === t.key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "meditation" && <MeditationTab />}
-      {tab === "council" && <CouncilTab />}
-      {tab === "history" && <HistoryTab />}
-      {tab === "vision" && <VisionTab />}
-      {tab === "community" && <CommunityTab />}
+      <p className="text-sm text-gray-500">이동 중…</p>
     </div>
   );
 }

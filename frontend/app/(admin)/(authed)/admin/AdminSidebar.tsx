@@ -40,7 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/parish/info", label: "기본 정보" },
       { href: "/admin/parish/mass-times", label: "미사 시간" },
-      { href: "/admin/content?tab=history", label: "연혁" },
+      { href: "/admin/history", label: "연혁" },
     ],
   },
   {
@@ -74,8 +74,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "말씀·기도",
     icon: "🙏",
     items: [
-      { href: "/admin/content?tab=vision", label: "사목지표" },
-      { href: "/admin/content?tab=meditation", label: "주일 말씀" },
+      { href: "/admin/vision", label: "사목지표" },
+      { href: "/admin/meditation", label: "주일 말씀" },
       { href: "/admin/prayers", label: "기도문" },
       { href: "/admin/saints", label: "성인 사전" },
     ],
@@ -103,8 +103,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "공동체",
     icon: "💬",
     items: [
-      { href: "/admin/content?tab=council", label: "사목평의회" },
-      { href: "/admin/content?tab=community", label: "단체·분과" },
+      { href: "/admin/council", label: "사목평의회" },
+      { href: "/admin/community", label: "단체·분과" },
       { href: "/admin/boards", label: "게시판 관리" },
       { href: "/admin/members", label: "회원 관리" },
     ],

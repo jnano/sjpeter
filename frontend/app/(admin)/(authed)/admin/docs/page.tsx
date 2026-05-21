@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.259";
+export const CURRENT_VERSION = "1.5.260";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.260", date: "2026-05-21", tag: "기능",
+    items: [
+      "admin/content 의 5개 탭을 개별 라우트로 분리 — 사이드바 항목별 단독 페이지",
+      "  · 새 라우트: /admin/vision · /admin/meditation · /admin/history · /admin/council · /admin/community",
+      "  · 5개 Tab 컴포넌트(VisionTab 외)에 export 추가, 새 페이지에서 import",
+      "  · /admin/content?tab=xxx 는 새 라우트로 client-side replace 리다이렉트 (북마크·외부 링크 호환)",
+      "  · AdminSidebar 의 5개 href 를 새 라우트로 갱신 — 사이드바 어떤 항목을 눌러도 자신의 화면만 보임",
+      "  · bulletin/[id]/result, docs 안내 내 활성 링크도 새 라우트로 동기화",
+    ],
+  },
   {
     version: "1.5.259", date: "2026-05-21", tag: "디자인",
     items: [
@@ -2136,7 +2147,7 @@ function GuideTab() {
 
         <p className="mb-2 font-medium mt-4">자동 동기화 항목 (auto:*)</p>
         <p className="text-xs text-[var(--color-text-muted)] mb-2">
-          새 게시판이나 분과(/admin/boards · /admin/content?tab=community)를 추가하면
+          새 게시판이나 분과(/admin/boards · /admin/community)를 추가하면
           해당 메뉴 항목이 <strong>자동으로 생성</strong>되어 적절한 그룹에 들어갑니다.
           관리 화면에서 <code className="font-mono">auto:boards</code>, <code className="font-mono">auto:groups</code> 등의 뱃지로 표시됩니다.
         </p>

@@ -47,7 +47,7 @@ function buildEditHref(ex: Extraction): string | null {
     return `/admin/calendar?focus=${ex.created_event_id}`;
   }
   if (ex.event_type === "묵상" && ex.created_meditation_id) {
-    return `/admin/content?tab=meditation&focus=${ex.created_meditation_id}`;
+    return `/admin/meditation?focus=${ex.created_meditation_id}`;
   }
   // 임시저장 (ai-extract 게시판) — 날짜 없는 행사·모임
   if (ex.created_post_id && ex.target_board_id) {
