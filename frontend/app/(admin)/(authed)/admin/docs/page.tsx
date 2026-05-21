@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.238";
+export const CURRENT_VERSION = "1.5.239";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.239", date: "2026-05-21", tag: "인프라",
+    items: [
+      "감사 로그 확대 — menus·notices CRUD 도 admin_logs 기록",
+      "  · menus.py: 13개 endpoint (그룹·항목 CRUD + 이미지 업로드/삭제 + reorder/move) 전부 log_action 추가. target_type='menu_group'|'menu_item'",
+      "  · notices.py: 5개 endpoint (CRUD + 첨부 업로드/삭제) 전부 log_action 추가. target_type='notice'",
+      "  · 효과: 메뉴 라벨 변경·메뉴 항목 삭제·공지 삭제 모두 admin/logs 에서 시간순 추적 가능. 'test/새내기' 사례 같은 데이터 미스터리 재발 방지",
+      "  · 별도 보고: 전체 점검 결과 15개 endpoint 파일(content·bulletins·archive·banners·construction·parish·parish_staff·page_photos·home_banner·saints·settings_api·setup·transport_routes·issue_reports·일부 boards·members)이 audit log 미적용 — 다음 단계에서 점검 예정",
+    ],
+  },
   {
     version: "1.5.238", date: "2026-05-21", tag: "인프라",
     items: [

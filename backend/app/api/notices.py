@@ -15,6 +15,7 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.auth import get_current_admin
+from app.core.admin_log import log_action, get_admin_identifier
 from app.core.config import settings
 from app.models.admin import Admin
 from app.models.board import Board, Post
@@ -186,7 +187,7 @@ def get_notice(notice_id: int, db: Session = Depends(get_db)):
 def create_notice(
     body: NoticeIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     board_id = _notice_board_id(db)
     post = Post(
@@ -202,6 +203,7 @@ def create_notice(
     db.add(post)
     db.commit()
     db.refresh(post)
+    log_action(db, get_admin_identifier(admin), "create_notice", "notice", post.id, body.title)
     return _to_notice_out(post)
 
 
@@ -210,7 +212,7 @@ def update_notice(
     notice_id: int,
     body: NoticeIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     board_id = _notice_board_id(db)
     post = db.query(Post).filter(Post.id == notice_id, Post.board_id == board_id).first()
@@ -224,6 +226,7 @@ def update_notice(
         post.created_at = body.created_at
     db.commit()
     db.refresh(post)
+    log_action(db, get_admin_identifier(admin), "update_notice", "notice", post.id, body.title)
     # attachments 재조회
     post = (
         db.query(Post)
@@ -238,7 +241,7 @@ def update_notice(
 def delete_notice(
     notice_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     board_id = _notice_board_id(db)
     post = (
@@ -249,10 +252,12 @@ def delete_notice(
     )
     if not post:
         raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다.")
+    snapshot = post.title
     for att in post.attachments:
         _remove_file(att.file_url)
     db.delete(post)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_notice", "notice", notice_id, snapshot)
     return None
 
 
@@ -263,7 +268,7 @@ async def upload_notice_attachments(
     notice_id: int,
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """공지에 사진 다중 업로드. board.slug='notice' posts 에 Attachment 추가."""
     board_id = _notice_board_id(db)
@@ -303,6 +308,7 @@ async def upload_notice_attachments(
     db.commit()
     for a in saved:
         db.refresh(a)
+    log_action(db, get_admin_identifier(admin), "upload_notice_attachment", "notice", notice_id, f"{len(saved)}건 업로드")
     return [_to_attachment_out(a) for a in saved]
 
 
@@ -311,7 +317,7 @@ def delete_notice_attachment(
     notice_id: int,
     attachment_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     board_id = _notice_board_id(db)
     post = db.query(Post).filter(Post.id == notice_id, Post.board_id == board_id).first()
@@ -324,7 +330,9 @@ def delete_notice_attachment(
     )
     if not att:
         raise HTTPException(status_code=404, detail="첨부를 찾을 수 없습니다.")
+    snapshot = att.original_name or att.file_url
     _remove_file(att.file_url)
     db.delete(att)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_notice_attachment", "notice", notice_id, snapshot)
     return None

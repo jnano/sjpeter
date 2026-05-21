@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.auth import get_current_admin
+from app.core.admin_log import log_action, get_admin_identifier
 from app.models.admin import Admin
 from app.models.menu import MenuGroup, MenuItem
 from app.models.board import Board
@@ -326,7 +327,7 @@ def _renumber_items(db: Session, group_id: int) -> None:
 
 
 @router.post("/groups", response_model=MenuGroupOut)
-def create_group(body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_group(body: MenuGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     if db.query(MenuGroup).filter(MenuGroup.key == body.key).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 그룹 key입니다.")
     # 새 그룹은 항상 마지막에 — 기존 그룹 수를 sort_order로
@@ -337,21 +338,23 @@ def create_group(body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = De
     db.commit()
     _renumber_groups(db)
     db.refresh(g)
+    log_action(db, get_admin_identifier(admin), "create_menu_group", "menu_group", g.id, f"{g.key} / {g.label}")
     return MenuGroupOut.model_validate(g)
 
 
 # /groups/reorder는 /groups/{group_id}보다 먼저 정의해야 FastAPI 라우트 매칭 우선순위에서 잡힘
 @router.put("/groups/reorder")
-def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def reorder_groups(body: ReorderIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     for i, gid in enumerate(body.ids):
         db.query(MenuGroup).filter(MenuGroup.id == gid).update({"sort_order": i})
     db.commit()
     _renumber_groups(db)
+    log_action(db, get_admin_identifier(admin), "reorder_menu_groups", "menu_group", None, f"순서: {','.join(map(str, body.ids))}")
     return {"ok": True}
 
 
 @router.put("/groups/{group_id}", response_model=MenuGroupOut)
-def update_group(group_id: int, body: MenuGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_group(group_id: int, body: MenuGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     g = db.query(MenuGroup).filter(MenuGroup.id == group_id).first()
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
@@ -361,24 +364,27 @@ def update_group(group_id: int, body: MenuGroupIn, db: Session = Depends(get_db)
         setattr(g, k, v)
     db.commit()
     db.refresh(g)
+    log_action(db, get_admin_identifier(admin), "update_menu_group", "menu_group", g.id, f"{g.key} / {g.label}")
     return MenuGroupOut.model_validate(g)
 
 
 @router.delete("/groups/{group_id}")
-def delete_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_group(group_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     g = db.query(MenuGroup).filter(MenuGroup.id == group_id).first()
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    snapshot = f"{g.key} / {g.label}"
     db.delete(g)
     db.commit()
     _renumber_groups(db)
+    log_action(db, get_admin_identifier(admin), "delete_menu_group", "menu_group", group_id, snapshot)
     return {"ok": True}
 
 
 # ─── Item CRUD ───────────────────────────────────────────
 
 @router.post("/groups/{group_id}/items", response_model=MenuItemOut)
-def create_item(group_id: int, body: MenuItemIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_item(group_id: int, body: MenuItemIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     if not db.query(MenuGroup).filter(MenuGroup.id == group_id).first():
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
     data = _validate_and_apply_link(body, db)
@@ -394,11 +400,12 @@ def create_item(group_id: int, body: MenuItemIn, db: Session = Depends(get_db), 
     db.commit()
     _renumber_items(db, group_id)
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "create_menu_item", "menu_item", item.id, f"{item.label} → {item.href or item.link_type}")
     return _build_item_out(item, db)
 
 
 @router.put("/items/{item_id}", response_model=MenuItemOut)
-def update_item(item_id: int, body: MenuItemIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_item(item_id: int, body: MenuItemIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
@@ -409,38 +416,44 @@ def update_item(item_id: int, body: MenuItemIn, db: Session = Depends(get_db), _
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_menu_item", "menu_item", item.id, f"{item.label} → {item.href or item.link_type}")
     return _build_item_out(item, db)
 
 
 @router.put("/items/{item_id}/move")
-def move_item(item_id: int, group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def move_item(item_id: int, group_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     """항목을 다른 그룹으로 이동."""
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
     if not db.query(MenuGroup).filter(MenuGroup.id == group_id).first():
         raise HTTPException(status_code=404, detail="대상 그룹을 찾을 수 없습니다.")
+    old_group = item.group_id
     item.group_id = group_id
     db.commit()
+    log_action(db, get_admin_identifier(admin), "move_menu_item", "menu_item", item_id, f"{item.label}: group {old_group} → {group_id}")
     return {"ok": True}
 
 
 @router.delete("/items/{item_id}")
-def delete_item(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_item(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    snapshot = f"{item.label} → {item.href or item.link_type}"
     db.delete(item)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_menu_item", "menu_item", item_id, snapshot)
     return {"ok": True}
 
 
 @router.put("/groups/{group_id}/items/reorder")
-def reorder_items(group_id: int, body: ReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def reorder_items(group_id: int, body: ReorderIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     for i, item_id in enumerate(body.ids):
         db.query(MenuItem).filter(MenuItem.id == item_id, MenuItem.group_id == group_id).update({"sort_order": i})
     db.commit()
     _renumber_items(db, group_id)
+    log_action(db, get_admin_identifier(admin), "reorder_menu_items", "menu_item", None, f"group={group_id}, 순서: {','.join(map(str, body.ids))}")
     return {"ok": True}
 
 
@@ -451,7 +464,7 @@ def upload_sidebar_image(
     group_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     g = db.query(MenuGroup).filter(MenuGroup.id == group_id).first()
     if not g:
@@ -468,11 +481,12 @@ def upload_sidebar_image(
     g.sidebar_image_url = f"/{path}"
     db.commit()
     db.refresh(g)
+    log_action(db, get_admin_identifier(admin), "upload_menu_group_image", "menu_group", g.id, f"{g.label}: {fname}")
     return MenuGroupOut.model_validate(g)
 
 
 @router.delete("/groups/{group_id}/sidebar-image")
-def delete_sidebar_image(group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_sidebar_image(group_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     g = db.query(MenuGroup).filter(MenuGroup.id == group_id).first()
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
@@ -485,6 +499,7 @@ def delete_sidebar_image(group_id: int, db: Session = Depends(get_db), _: Admin 
                 pass
     g.sidebar_image_url = None
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_menu_group_image", "menu_group", group_id, g.label)
     return {"ok": True}
 
 
@@ -493,7 +508,7 @@ def upload_item_image(
     item_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """메뉴 항목 대표 사진 업로드 (footer 원형 표시 등). sidebar-image 와 동일 정책."""
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
@@ -520,11 +535,12 @@ def upload_item_image(
                 os.remove(old_path)
             except Exception:
                 pass
+    log_action(db, get_admin_identifier(admin), "upload_menu_item_image", "menu_item", item.id, f"{item.label}: {fname}")
     return _build_item_out(item, db)
 
 
 @router.delete("/items/{item_id}/image")
-def delete_item_image(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_item_image(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="메뉴 항목을 찾을 수 없습니다.")
@@ -537,4 +553,5 @@ def delete_item_image(item_id: int, db: Session = Depends(get_db), _: Admin = De
                 pass
     item.image_url = None
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_menu_item_image", "menu_item", item_id, item.label)
     return {"ok": True}
