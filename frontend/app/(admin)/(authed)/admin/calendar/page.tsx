@@ -865,7 +865,7 @@ export default function AdminCalendarPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-primary)]">본당 행사·모임 일정</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-primary)]">본당 일정 관리</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">행사와 모임을 등록하고 관리합니다.</p>
         </div>
         <button

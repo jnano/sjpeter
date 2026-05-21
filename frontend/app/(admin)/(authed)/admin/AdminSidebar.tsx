@@ -67,7 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { href: "/admin/notices", label: "공지 관리" },
-      { href: "/admin/calendar", label: "행사 캘린더" },
+      { href: "/admin/calendar", label: "본당 일정 관리" },
     ],
   },
   {
