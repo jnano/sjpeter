@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.264";
+export const CURRENT_VERSION = "1.5.265";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,12 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.265", date: "2026-05-21", tag: "디자인",
+    items: [
+      "admin '페이지' → '페이지 관리' (사이드바·페이지 H1 동시 적용, H1 의 '동적 페이지' 도 통일)",
+    ],
+  },
   {
     version: "1.5.264", date: "2026-05-21", tag: "디자인",
     items: [
