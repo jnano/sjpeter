@@ -34,6 +34,8 @@ router = APIRouter(prefix="/banners", tags=["banners"])
 # placement 는 자유 키 — admin 이 직접 정의 가능 (예: "home_main", "advent_2026", "my_event").
 # 형식만 검증: 영문 소문자·숫자·언더스코어·하이픈 1~50자. (URL-safe, 파일명 호환)
 _PLACEMENT_PATTERN = re.compile(r"^[a-z0-9_-]{1,50}$")
+# slug 는 변수 치환에서 {{ BANNER:slug }} 로 참조됨. 영문 소문자로 시작 + 1~80자.
+_SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{0,79}$")
 # 화이트리스트는 제거됐지만 admin UI 에서 빠른 선택을 위해 권장 키만 제안용으로 남겨둠.
 SUGGESTED_PLACEMENTS = [
     "home_main", "home_middle", "home_bottom",
@@ -69,6 +71,7 @@ class BannerImageOut(BaseModel):
 class BannerGroupOut(BaseModel):
     id: int
     name: str
+    slug: Optional[str] = None
     placement: str
     is_active: bool
     sort_order: int
@@ -88,6 +91,7 @@ class BannerGroupOut(BaseModel):
 
 class GroupCreate(BaseModel):
     name: str
+    slug: Optional[str] = None
     placement: str = "home_main"
     is_active: bool = True
     sort_order: int = 0
@@ -101,6 +105,7 @@ class GroupCreate(BaseModel):
 
 class GroupUpdate(BaseModel):
     name: Optional[str] = None
+    slug: Optional[str] = None
     placement: Optional[str] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
@@ -127,6 +132,32 @@ def _validate_placement(value: str) -> str:
             detail="placement 는 영문 소문자·숫자·언더스코어(_)·하이픈(-) 1~50자여야 합니다.",
         )
     return value
+
+
+def _validate_slug(value: Optional[str]) -> Optional[str]:
+    """slug 가 None/빈 문자열이면 None 반환 (선택 항목), 값이 있으면 패턴 검증."""
+    if value is None:
+        return None
+    v = value.strip()
+    if not v:
+        return None
+    if not _SLUG_PATTERN.match(v):
+        raise HTTPException(
+            status_code=400,
+            detail="slug 는 영문 소문자로 시작 + 소문자·숫자·언더스코어·하이픈 1~80자여야 합니다.",
+        )
+    return v
+
+
+def _check_slug_unique(db: Session, slug: Optional[str], exclude_id: Optional[int] = None) -> None:
+    """slug 중복 확인 — NULL 은 검사 안 함 (여러 그룹이 slug 없이 공존 가능)."""
+    if not slug:
+        return
+    q = db.query(BannerGroup).filter(BannerGroup.slug == slug)
+    if exclude_id is not None:
+        q = q.filter(BannerGroup.id != exclude_id)
+    if q.first():
+        raise HTTPException(status_code=400, detail=f"slug '{slug}'은 이미 사용 중입니다.")
 
 
 def _validate_transition(value: str) -> str:
@@ -236,8 +267,11 @@ def create_group(
     _validate_transition(body.transition)
     _validate_aspect_ratio(body.aspect_ratio)
     _validate_delay(body.delay_seconds)
+    slug = _validate_slug(body.slug)
+    _check_slug_unique(db, slug)
     group = BannerGroup(
         name=body.name.strip(),
+        slug=slug,
         placement=body.placement,
         is_active=body.is_active,
         sort_order=body.sort_order,
@@ -266,6 +300,12 @@ def update_group(
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
     if body.name is not None:
         group.name = body.name.strip()
+    # slug 은 명시적 None (slug 해제) 도 허용 — model_fields_set 으로 set 여부 판정
+    _provided_fields = body.model_fields_set
+    if "slug" in _provided_fields:
+        slug = _validate_slug(body.slug)
+        _check_slug_unique(db, slug, exclude_id=group_id)
+        group.slug = slug
     if body.placement is not None:
         _validate_placement(body.placement)
         group.placement = body.placement

@@ -54,6 +54,8 @@ interface BannerImage {
 interface BannerGroup {
   id: number;
   name: string;
+  /** 변수 치환에서 {{ BANNER:slug }} 로 참조. null 이면 변수에서 접근 불가. */
+  slug: string | null;
   placement: string;
   is_active: boolean;
   sort_order: number;
@@ -326,6 +328,18 @@ function GroupCard({
             }}
             title="노출 위치 키 — 영문 소문자·숫자·언더스코어·하이픈 (예: home_main, advent_2026)"
             className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white w-32"
+          />
+          <input
+            type="text"
+            defaultValue={group.slug ?? ""}
+            placeholder="slug (선택)"
+            onBlur={(e) => {
+              const raw = e.target.value.trim();
+              const v = raw === "" ? null : raw;
+              if (v !== (group.slug ?? null)) onUpdate({ slug: v });
+            }}
+            title="동적페이지 본문에서 {{ BANNER:slug }} 로 참조할 키. 영문 소문자로 시작, 비워두면 변수 미사용."
+            className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-white w-32 font-mono"
           />
           <select
             value={group.transition}

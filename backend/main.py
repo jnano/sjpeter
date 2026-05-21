@@ -261,9 +261,12 @@ def _migrate_add_columns():
                 pass
 
         # 배너 그룹 — 노출 기간(start_at/end_at) 컬럼 추가 (v1.5.233+: 1+2 유연성 패치)
+        # + slug 컬럼 추가 (v1.5.240+: 변수 치환 {{ BANNER:slug }} 지원)
         for ddl in [
             "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS start_at TIMESTAMP",
             "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS end_at TIMESTAMP",
+            "ALTER TABLE banner_groups ADD COLUMN IF NOT EXISTS slug VARCHAR(80)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_banner_groups_slug ON banner_groups(slug) WHERE slug IS NOT NULL",
         ]:
             try:
                 conn.execute(text(ddl))

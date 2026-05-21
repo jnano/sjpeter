@@ -415,6 +415,7 @@ export default function AdminPagesPage() {
                     { k: "SITE_URL", d: "사이트 URL" },
                     { k: "CURRENT_YEAR", d: "현재 연도 (예: 2026)" },
                     { k: "TODAY", d: "오늘 날짜 (YYYY-MM-DD)" },
+                    { k: "BANNER:slug", d: "배너 (admin/banners 에서 slug 지정. 그룹의 첫 이미지를 <img>/<a> 로 렌더)" },
                   ].map((v) => (
                     <li key={v.k} className="flex items-baseline gap-2">
                       <code className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-white border border-blue-200 text-blue-700 whitespace-nowrap">

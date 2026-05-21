@@ -14,6 +14,9 @@ class BannerGroup(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
+    # 변수 치환에서 {{ BANNER:slug }} 로 참조하기 위한 안정 키. unique·nullable.
+    # placement 보다 자유로워 일회성 시즌 배너도 임의 slug 로 dynamic page 에 꽂을 수 있음.
+    slug = Column(String(80), nullable=True, unique=True, index=True)
     # 미리 정의된 위치 키. 현재: "home_main". 향후 확장 시 enum 늘려도 됨.
     placement = Column(String(50), nullable=False, default="home_main")
     is_active = Column(Boolean, nullable=False, default=True)

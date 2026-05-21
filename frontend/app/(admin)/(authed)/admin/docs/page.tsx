@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.239";
+export const CURRENT_VERSION = "1.5.240";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.240", date: "2026-05-21", tag: "기능",
+    items: [
+      "동적 페이지 변수 치환에 배너 추가 — {{ BANNER:slug }} 문법",
+      "  · banner_groups 에 slug 컬럼 추가 (unique·nullable) — admin/banners 에서 slug 입력 가능",
+      "  · {{ BANNER:my_slug }} → 해당 그룹 첫 이미지를 <img>/<a class=dynamic-banner-image/link> 로 렌더",
+      "  · 미발견 slug 는 빈 문자열 (안전 fallback). 본문이 깨지지 않음",
+      "  · admin/pages 변수 안내에 BANNER 항목 추가",
+      "  · _PATTERN 정규식 확장 — `{{ NAMESPACE:key }}` 형식 지원 (향후 추가 namespace 확장 기반)",
+    ],
+  },
   {
     version: "1.5.239", date: "2026-05-21", tag: "인프라",
     items: [
