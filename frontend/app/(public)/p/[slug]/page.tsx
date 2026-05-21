@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type LayoutKind = "body" | "body_with_hero" | "sections" | "html";
+type LayoutKind = "body" | "body_with_hero" | "sections" | "html" | "html_in_layout";
 
 interface PageData {
   id: number;
@@ -77,6 +77,12 @@ export default async function DynamicPageRoute({
           <DynamicPageSections
             bodyMarkdown={data.body_markdown ?? ""}
             payload={data.payload}
+          />
+        )}
+        {data.layout_kind === "html_in_layout" && (
+          <div
+            className="dynamic-html-in-layout"
+            dangerouslySetInnerHTML={{ __html: data.body_markdown ?? "" }}
           />
         )}
       </SectionLayout>

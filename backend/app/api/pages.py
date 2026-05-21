@@ -26,7 +26,7 @@ router = APIRouter(prefix="/pages", tags=["pages"])
 #  sections        — markdown 본문 + payload.sections[] 카드 섹션들
 #  html            — body_markdown 자리에 raw HTML 저장. /p/{slug} 가 PageHeader/SectionLayout
 #                    wrapper 없이 그대로 dangerouslySetInnerHTML 로 출력 (자유 레이아웃).
-LAYOUT_KINDS = ("body", "body_with_hero", "sections", "html")
+LAYOUT_KINDS = ("body", "body_with_hero", "sections", "html", "html_in_layout")
 
 # 레이아웃별 스키마 — admin UI 가 layout 선택에 따라 폼을 동적으로 구성하기 위한 메타데이터.
 # 각 레이아웃이 실제로 사용하는 필드만 보여주고, 무시되는 필드는 admin 화면에서 숨김 처리.
@@ -80,6 +80,21 @@ LAYOUT_SPECS: list[dict] = [
             '  <h1 class="text-3xl font-bold">제목</h1>\n'
             '  <p class="mt-4 text-gray-600">자유로운 HTML 레이아웃.</p>\n'
             '</section>'
+        ),
+    },
+    {
+        "kind": "html_in_layout",
+        "label": "HTML + 레이아웃",
+        "description": "PageHeader(헤더·브레드크럼) + 사이드바 안에 HTML 본문을 그대로 출력. raw HTML 의 자유도 + 사이트 일관성.",
+        "uses": {
+            "title": True, "subtitle": True, "group_label": True,
+            "body_markdown": True, "sections": False, "page_photos": False,
+        },
+        "body_format": "html",
+        "body_placeholder": (
+            '<article class="prose max-w-none">\n'
+            '  <p>여기에 HTML 또는 평문을 작성합니다. PageHeader · 사이드바는 자동으로 붙습니다.</p>\n'
+            '</article>'
         ),
     },
 ]

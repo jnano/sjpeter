@@ -6,7 +6,7 @@ import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type LayoutKind = "body" | "body_with_hero" | "sections" | "html";
+type LayoutKind = "body" | "body_with_hero" | "sections" | "html" | "html_in_layout";
 
 interface DynamicPage {
   id: number;
@@ -59,6 +59,9 @@ const FALLBACK_SPECS: LayoutSpec[] = [
     body_format: "markdown", body_placeholder: "" },
   { kind: "html", label: "HTML 직접 입력", description: "wrapper 없이 raw HTML",
     uses: { title: true, subtitle: false, group_label: false, body_markdown: true, sections: false, page_photos: false },
+    body_format: "html", body_placeholder: "" },
+  { kind: "html_in_layout", label: "HTML + 레이아웃", description: "PageHeader·사이드바 안에 HTML 본문",
+    uses: { title: true, subtitle: true, group_label: true, body_markdown: true, sections: false, page_photos: false },
     body_format: "html", body_placeholder: "" },
 ];
 

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.250";
+export const CURRENT_VERSION = "1.5.251";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.251", date: "2026-05-21", tag: "기능",
+    items: [
+      "새 레이아웃 'HTML + 레이아웃' (html_in_layout) — HTML 자유도 + 사이트 일관성",
+      "  · 기존 'html' 은 wrapper 없이 raw HTML 만 출력 — 사이드바·PageHeader 없음",
+      "  · 신규 'html_in_layout' 은 raw HTML 본문을 PageHeader + SectionLayout(사이드바) 안에 출력",
+      "  · admin/pages 레이아웃 picker 에 새 옵션 노출. LAYOUT_SPECS 동적 갱신",
+      "  · /p/saint 의 layout_kind 를 'html' → 'html_in_layout' 으로 전환 — 본문 그대로, 사이드바·헤더 자동 추가",
+    ],
+  },
   {
     version: "1.5.250", date: "2026-05-21", tag: "인프라",
     items: [
