@@ -38,6 +38,15 @@ interface GospelToday {
   gospel_text: string | null;
 }
 
+/** /api/home/blocks 응답 — admin/home 에서 ON/OFF·순서·payload 편집 가능. */
+interface HomeBlock {
+  id: number;
+  kind: string;
+  sort_order: number;
+  is_active: boolean;
+  payload: Record<string, unknown>;
+}
+
 async function getParish(): Promise<Parish | null> {
   try { const r = await fetch(`${API}/api/parish/`); return r.ok ? r.json() : null; } catch { return null; }
 }
@@ -83,6 +92,15 @@ async function getSiteConfig(): Promise<Record<string, string>> {
   } catch { return {}; }
 }
 
+async function getHomeBlocks(): Promise<HomeBlock[]> {
+  try {
+    const r = await fetch(`${API}/api/home/blocks`, { cache: "no-store" });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch { return []; }
+}
+
 
 const QUICK_LINKS: { href: string; label: string; icon: React.ReactNode }[] = [
   { href: "/about", label: "성당 안내", icon: <ChurchIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
@@ -93,7 +111,7 @@ const QUICK_LINKS: { href: string; label: string; icon: React.ReactNode }[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -101,14 +119,13 @@ export default async function HomePage() {
       getUpcomingEvents(),
       fetchConstructionSummary(),
       getSiteConfig(),
+      getHomeBlocks(),
     ]);
 
-  // 홈 메인 레이아웃 4종:
-  //   wide       — 사진 크게 + 우측 [복음·배너·미사]
-  //   wide-plain — 사진 크게 + 우측 [복음·미사] (배너 없음)
-  //   even       — 사진 / [복음·배너] / 미사 (3등분)
-  //   even-plain — 사진 / 복음 / 미사 (3등분, 배너 없음)
-  const heroLayoutRaw = siteConfig.HOME_HERO_LAYOUT ?? "wide";
+  // home_blocks 에 hero 블록이 있으면 그 payload.layout 을 우선 — 없으면 site_settings.HOME_HERO_LAYOUT fallback.
+  const heroBlock = blocks.find((b) => b.kind === "hero");
+  const heroLayoutFromBlock = heroBlock?.payload?.["layout"] as string | undefined;
+  const heroLayoutRaw = heroLayoutFromBlock ?? siteConfig.HOME_HERO_LAYOUT ?? "wide";
   const heroLayout = (["wide", "wide-plain", "even", "even-plain"].includes(heroLayoutRaw)
     ? heroLayoutRaw
     : "wide") as "wide" | "wide-plain" | "even" | "even-plain";
@@ -262,178 +279,177 @@ export default async function HomePage() {
     },
   ];
 
-  return (
-    <div data-home-theme={homeTheme}>
-      {/* ── 메인 3단 ── */}
-      <section>
-        <div className={`${CONTAINER} py-5 sm:py-7`}>
-          <div className={`grid grid-cols-1 ${gridColsClass} gap-4`}>
-
-            {/* 모바일: pill 검색창(상단) + 슬림 사진 스트립 / 데스크톱: 큰 사진(셀 채움) — HomeHero는 단일 인스턴스, 내부 responsive 클래스로 모드 전환 */}
-            {heroIsWide || !showBanner ? (
-              <div className="min-w-0 flex flex-col gap-3">
-                <div className="md:hidden">
-                  <SearchHero
-                    initialQ=""
-                    autoFocus={false}
-                    variant="pill"
-                    placeholder="무엇을 찾으시나요?"
-                    rotatingPlaceholders={
-                      parish?.mass_schedule?.entries
-                        ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
-                        : undefined
-                    }
-                  />
-                </div>
-                <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
-              </div>
-            ) : (
-              // even+배너: 사진·가운데·미사 모두 단일 cell 1행. 가운데 col은 안에서 [복음+배너] flex column.
-              <div className="min-w-0 flex flex-col gap-3">
-                <div className="md:hidden">
-                  <SearchHero
-                    initialQ=""
-                    autoFocus={false}
-                    variant="pill"
-                    placeholder="무엇을 찾으시나요?"
-                    rotatingPlaceholders={
-                      parish?.mass_schedule?.entries
-                        ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
-                        : undefined
-                    }
-                  />
-                </div>
-                <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
-              </div>
-            )}
-
-            {/* wide(±배너): 우측 1fr 컬럼에 [복음·(배너)·미사] 스택.
-                even+배너:    photo·mass row-span-2, gospel/banner는 가운데 col 위/아래 (직접 grid 자식).
-                even-plain:   가운데/우측이 [복음] [미사] 각각의 cell. */}
-            {heroIsWide ? (
-              // 모바일: 복음 → 미사 → 배너 (배너/미사 순서 스왑)
-              // md+: 복음 → 배너 → 미사 (기본)
-              <div className="flex flex-col gap-4 min-w-0">
-                {gospelCardEl}
-                {showBanner && <div className="order-3 md:order-2">{bannerCardEl}</div>}
-                <div className="order-2 md:order-3">{massCardEl}</div>
-              </div>
-            ) : showBanner ? (
-              <>
-                {/* 가운데 col — 단일 cell 안에서 [복음 + 배너] flex column으로 분할.
-                    복음이 flex-1로 남은 공간 차지 + 배너는 자기 비율 height — col 전체가 사진/미사와 같이 stretch.
-                    모바일에서는 grid 1col이라 자식들이 적층 (photo → [복음+배너] → mass → construction). */}
-                <div className="min-w-0 flex flex-col gap-4">
-                  <div className="flex-1 min-h-0">{gospelCardEl}</div>
-                  <div>{bannerCardEl}</div>
-                </div>
-                {/* mass: 오른쪽 col, 1행 cell */}
-                <div className="min-w-0">{massCardEl}</div>
-                {/* 모바일 전용: 미사 바로 다음에 성전 건축 위젯 (desktop은 아래 70/30 섹션에서 노출) */}
-                <div className="md:hidden min-w-0">
-                  <HomeConstructionWidget summary={constructionSummary} embedded />
-                </div>
-              </>
-            ) : (
-              <>
-                {gospelCardEl}
-                {massCardEl}
-              </>
-            )}
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── 빠른 메뉴 6개 ── */}
-      <section>
-        <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-3">
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
-              {QUICK_LINKS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
-                >
-                  <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
-                    {item.icon}
-                  </span>
-                  <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
-                    {item.label}
-                  </span>
-                </Link>
-              ))}
-              {/* 묵상글: section py-3 padding 을 가로질러 위·아래 구분선까지 닿게 — -my-3 으로 보정 */}
-              <div className="col-span-3 -my-3 flex">
-                <MeditationCredits />
-              </div>
+  // ── 블록별 JSX 정의 — admin/home 의 home_blocks 배열에 따라 render 선택됨 ──
+  const heroSection = (
+    <section>
+      <div className={`${CONTAINER} py-5 sm:py-7`}>
+        <div className={`grid grid-cols-1 ${gridColsClass} gap-4`}>
+          <div className="min-w-0 flex flex-col gap-3">
+            <div className="md:hidden">
+              <SearchHero
+                initialQ=""
+                autoFocus={false}
+                variant="pill"
+                placeholder="무엇을 찾으시나요?"
+                rotatingPlaceholders={
+                  parish?.mass_schedule?.entries
+                    ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
+                    : undefined
+                }
+              />
             </div>
+            <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
           </div>
-        </div>
-      </section>
 
-      {/* ── 성전 건축(좌 70%) + 게시판 탭(우 30%) — 한 행에서 높이 매칭.
-            건축 위젯은 모바일에서 메인 3단 안쪽(미사 바로 아래)으로 이동했으므로 여기선 md+에서만 노출. ── */}
-      <section>
-        <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-6">
-            <div className="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4 md:items-stretch">
-              <div className="hidden md:block">
+          {/* wide(±배너) | even+배너 | even-plain */}
+          {heroIsWide ? (
+            <div className="flex flex-col gap-4 min-w-0">
+              {gospelCardEl}
+              {showBanner && <div className="order-3 md:order-2">{bannerCardEl}</div>}
+              <div className="order-2 md:order-3">{massCardEl}</div>
+            </div>
+          ) : showBanner ? (
+            <>
+              <div className="min-w-0 flex flex-col gap-4">
+                <div className="flex-1 min-h-0">{gospelCardEl}</div>
+                <div>{bannerCardEl}</div>
+              </div>
+              <div className="min-w-0">{massCardEl}</div>
+              <div className="md:hidden min-w-0">
                 <HomeConstructionWidget summary={constructionSummary} embedded />
               </div>
-              <BoardTabs tabs={boardTabs} />
-            </div>
+            </>
+          ) : (
+            <>
+              {gospelCardEl}
+              {massCardEl}
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  const quickLinksSection = (
+    <section>
+      <div className={CONTAINER}>
+        <div className="border-t border-[var(--color-border)] py-3">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 max-w-lg mx-auto">
+            {QUICK_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
+              >
+                <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+                  {item.icon}
+                </span>
+                <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
+                  {item.label}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
-      </section>
-
-      {/* ── 배너: 홈 중단 (admin이 home_middle 그룹을 활성화한 경우에만 노출) ── */}
-      <div className={CONTAINER}>
-        <BannerSlider placement="home_middle" className="my-2" />
       </div>
+    </section>
+  );
 
-      {/* ── 사진 슬라이더 (자동 회전) ── */}
-      <section>
-        <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-                <span className="text-[var(--color-accent)]">📷</span>
-                사진 갤러리
-              </h2>
-              <div className="flex items-center gap-3 text-[11px]">
-                <Link href="/gallery/liturgy" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-                  전례 사진
-                </Link>
-                <span className="text-[var(--color-border-dark)]">·</span>
-                <Link href="/gallery/events" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-                  행사 사진
-                </Link>
-              </div>
-            </div>
-            <PhotoSlider />
-          </div>
+  const meditationSection = (
+    <section>
+      <div className={CONTAINER}>
+        <div className="border-t border-[var(--color-border)] py-3 flex">
+          <MeditationCredits />
         </div>
-      </section>
-
-      {/* ── 배너: 홈 하단 (admin이 home_bottom 그룹을 활성화한 경우에만 노출) ── */}
-      <div className={CONTAINER}>
-        <BannerSlider placement="home_bottom" className="my-2" />
       </div>
+    </section>
+  );
 
-      {/* ── 마무리 인용 ── */}
+  const constructionSection = (
+    <section>
+      <div className={CONTAINER}>
+        <div className="border-t border-[var(--color-border)] py-6">
+          <HomeConstructionWidget summary={constructionSummary} embedded />
+        </div>
+      </div>
+    </section>
+  );
+
+  const boardTabsSection = (
+    <section>
+      <div className={CONTAINER}>
+        <div className="border-t border-[var(--color-border)] py-6">
+          <BoardTabs tabs={boardTabs} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const gallerySection = (
+    <section>
+      <div className={CONTAINER}>
+        <div className="border-t border-[var(--color-border)] py-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
+              <span className="text-[var(--color-accent)]">📷</span>
+              사진 갤러리
+            </h2>
+            <div className="flex items-center gap-3 text-[11px]">
+              <Link href="/gallery/liturgy" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                전례 사진
+              </Link>
+              <span className="text-[var(--color-border-dark)]">·</span>
+              <Link href="/gallery/events" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                행사 사진
+              </Link>
+            </div>
+          </div>
+          <PhotoSlider />
+        </div>
+      </div>
+    </section>
+  );
+
+  function renderBannerBlock(placement: string) {
+    return (
+      <div className={CONTAINER}>
+        <BannerSlider placement={placement} className="my-2" />
+      </div>
+    );
+  }
+
+  function renderQuoteBlock(text: string, source: string) {
+    return (
       <section>
         <div className={CONTAINER}>
           <div className="border-t border-[var(--color-border)] py-9 text-center">
             <ConstructionIcon className="w-10 h-10 mx-auto block" />
             <blockquote className="font-serif italic text-[var(--color-primary)] text-xs sm:text-sm mt-2 leading-relaxed">
-              &ldquo;너는 베드로이다. 나는 이 반석 위에 내 교회를 세우겠다.&rdquo;
+              &ldquo;{text}&rdquo;
             </blockquote>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">— 마태오 16,18</p>
+            {source && <p className="text-[11px] text-[var(--color-text-muted)] mt-1">— {source}</p>}
           </div>
         </div>
       </section>
+    );
+  }
+
+  // 모르는 kind 는 silent skip (admin 이 새 종류를 만들고 렌더러가 미도입된 경우 본문 안 깨짐)
+  return (
+    <div data-home-theme={homeTheme}>
+      {blocks.map((b) => {
+        switch (b.kind) {
+          case "hero":         return <div key={b.id}>{heroSection}</div>;
+          case "quick_links":  return <div key={b.id}>{quickLinksSection}</div>;
+          case "meditation":   return <div key={b.id}>{meditationSection}</div>;
+          case "construction": return <div key={b.id}>{constructionSection}</div>;
+          case "board_tabs":   return <div key={b.id}>{boardTabsSection}</div>;
+          case "gallery":      return <div key={b.id}>{gallerySection}</div>;
+          case "banner":       return <div key={b.id}>{renderBannerBlock((b.payload?.placement as string) ?? "home_main")}</div>;
+          case "quote":        return <div key={b.id}>{renderQuoteBlock((b.payload?.text as string) ?? "", (b.payload?.source as string) ?? "")}</div>;
+          default:             return null;
+        }
+      })}
     </div>
   );
 }
