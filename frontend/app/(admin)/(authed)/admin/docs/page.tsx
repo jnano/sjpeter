@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.249";
+export const CURRENT_VERSION = "1.5.250";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.250", date: "2026-05-21", tag: "인프라",
+    items: [
+      "Stage 6 Part 3 — 모든 admin endpoint audit log 완료 (100% coverage)",
+      "  · bulletins.py (16): 업로드·재분석·삭제·추출 승인/거부/편집/분리·이미지 라우팅·crop·delete 등 mutation 전부",
+      "  · content.py (32): history/vision/community/static_page/meditation/prayer/council CRUD + 배경 이미지 + 카드 사진 등 전부",
+      "  · boards.py 누락 12 보강: move_post·publish_draft_multi·event_mapping·board CRUD·board_admin_group CRUD·allowed_member·delete_board",
+      "  · members.py 누락 4 보강: admin_create_member·reset_password·grant_admin·revoke_admin",
+      "  · bulletin_routed_counts_batch 1건만 의도적 skip (pure read — count only)",
+      "  · Stage 6 누적: 21개 파일 ~170 admin endpoints. admin_logs 에 모든 mutation 기록됨",
+    ],
+  },
   {
     version: "1.5.249", date: "2026-05-21", tag: "인프라",
     items: [

@@ -912,6 +912,7 @@ def admin_create_member(
     db.add(member)
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(_admin), "admin_create_member", "member", member.id, member.email)
     return _to_admin_out(member, db)
 
 
@@ -978,6 +979,7 @@ def admin_reset_password(
     member = _get_member_or_404(member_id, db)
     member.hashed_password = hash_password("0629")
     db.commit()
+    log_action(db, get_admin_identifier(_admin), "admin_reset_password", "member", member_id, member.email)
     return {"ok": True}
 
 
@@ -985,7 +987,7 @@ def admin_reset_password(
 def grant_admin(
     member_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_super_admin),
+    admin: Admin = Depends(get_current_super_admin),
 ):
     """슈퍼 관리자만 호출 가능 — 회원에게 관리 권한 부여.
     비밀번호가 없는 소셜 회원도 지정 가능하나, 실제 관리자 패널 로그인은
@@ -994,6 +996,7 @@ def grant_admin(
     member.is_admin = True
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(admin), "grant_admin", "member", member.id, member.email)
     return _to_admin_out(member, db)
 
 
@@ -1001,13 +1004,14 @@ def grant_admin(
 def revoke_admin(
     member_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_super_admin),
+    admin: Admin = Depends(get_current_super_admin),
 ):
     """슈퍼 관리자만 호출 가능 — 회원 관리 권한 회수."""
     member = _get_member_or_404(member_id, db)
     member.is_admin = False
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(admin), "revoke_admin", "member", member.id, member.email)
     return _to_admin_out(member, db)
 
 

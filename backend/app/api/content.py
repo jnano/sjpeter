@@ -6,6 +6,7 @@ from sqlalchemy import desc, asc, or_, and_
 from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date, datetime
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.database import get_db
 from app.core.auth import get_current_admin
 from app.core.config import settings
@@ -49,16 +50,17 @@ def list_history(db: Session = Depends(get_db)):
 
 
 @router.post("/history", response_model=HistoryItemOut)
-def create_history(body: HistoryItemIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_history(body: HistoryItemIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = HistoryItem(**body.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "create_history", "history", item.id, getattr(item, "title", None) or getattr(item, "event_date", None))
     return item
 
 
 @router.put("/history/{item_id}", response_model=HistoryItemOut)
-def update_history(item_id: int, body: HistoryItemIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_history(item_id: int, body: HistoryItemIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(HistoryItem).filter(HistoryItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
@@ -66,16 +68,19 @@ def update_history(item_id: int, body: HistoryItemIn, db: Session = Depends(get_
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_history", "history", item.id, getattr(item, "title", None) or str(getattr(item, "event_date", "")))
     return item
 
 
 @router.delete("/history/{item_id}")
-def delete_history(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_history(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(HistoryItem).filter(HistoryItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    snapshot = getattr(item, "title", None) or str(getattr(item, "event_date", ""))
     db.delete(item)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_history", "history", item_id, snapshot)
     return {"ok": True}
 
 
@@ -105,16 +110,17 @@ def list_visions(db: Session = Depends(get_db)):
 
 
 @router.post("/visions", response_model=VisionOut)
-def create_vision(body: VisionIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_vision(body: VisionIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     vision = Vision(**body.model_dump())
     db.add(vision)
     db.commit()
     db.refresh(vision)
+    log_action(db, get_admin_identifier(admin), "create_vision", "vision", vision.id, f"{vision.year}: {vision.motto}")
     return vision
 
 
 @router.put("/visions/{vision_id}", response_model=VisionOut)
-def update_vision(vision_id: int, body: VisionIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_vision(vision_id: int, body: VisionIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     vision = db.query(Vision).filter(Vision.id == vision_id).first()
     if not vision:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
@@ -122,16 +128,19 @@ def update_vision(vision_id: int, body: VisionIn, db: Session = Depends(get_db),
         setattr(vision, k, v)
     db.commit()
     db.refresh(vision)
+    log_action(db, get_admin_identifier(admin), "update_vision", "vision", vision.id, f"{vision.year}: {vision.motto}")
     return vision
 
 
 @router.delete("/visions/{vision_id}")
-def delete_vision(vision_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_vision(vision_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     vision = db.query(Vision).filter(Vision.id == vision_id).first()
     if not vision:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    snapshot = f"{vision.year}: {vision.motto}"
     db.delete(vision)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_vision", "vision", vision_id, snapshot)
     return {"ok": True}
 
 
@@ -226,7 +235,7 @@ def get_community_by_slug(slug: str, db: Session = Depends(get_db)):
 
 
 @router.post("/community", response_model=CommunityGroupOut)
-def create_community(body: CommunityGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_community(body: CommunityGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     if body.slug:
         existing = db.query(CommunityGroup).filter(CommunityGroup.slug == body.slug).first()
         if existing:
@@ -235,11 +244,12 @@ def create_community(body: CommunityGroupIn, db: Session = Depends(get_db), _: A
     db.add(group)
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "create_community_group", "community_group", group.id, group.name)
     return group
 
 
 @router.put("/community/{group_id}", response_model=CommunityGroupOut)
-def update_community(group_id: int, body: CommunityGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_community(group_id: int, body: CommunityGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
@@ -253,16 +263,19 @@ def update_community(group_id: int, body: CommunityGroupIn, db: Session = Depend
         setattr(group, k, v)
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "update_community_group", "community_group", group.id, group.name)
     return group
 
 
 @router.delete("/community/{group_id}")
-def delete_community(group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_community(group_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    snapshot = group.name
     db.delete(group)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_community_group", "community_group", group_id, snapshot)
     return {"ok": True}
 
 
@@ -271,7 +284,7 @@ def upload_community_representative_photo(
     group_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """단일 대표 이미지(카드 썸네일) 업로드. 기존 대표사진이 있으면 교체 + 파일 정리."""
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
@@ -298,6 +311,7 @@ def upload_community_representative_photo(
     group.representative_photo_url = f"/{path}"
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "upload_community_rep_photo", "community_group", group.id, group.name)
     return group
 
 
@@ -305,7 +319,7 @@ def upload_community_representative_photo(
 def delete_community_representative_photo(
     group_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
@@ -321,6 +335,7 @@ def delete_community_representative_photo(
     group.representative_photo_url = None
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "delete_community_rep_photo", "community_group", group.id, group.name)
     return group
 
 
@@ -329,7 +344,7 @@ def upload_community_photo(
     group_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
@@ -349,6 +364,7 @@ def upload_community_photo(
     group.photo_urls = urls
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "upload_community_photo", "community_group", group.id, group.name)
     return group
 
 
@@ -357,7 +373,7 @@ def delete_community_photo(
     group_id: int,
     url: str,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
     if not group:
@@ -374,6 +390,7 @@ def delete_community_photo(
                 os.remove(path)
             except Exception:
                 pass
+        log_action(db, get_admin_identifier(admin), "delete_community_photo", "community_group", group.id, group.name)
     return {"ok": True}
 
 
@@ -396,7 +413,7 @@ class StaticPageIn(BaseModel):
 
 
 @router.get("/pages", response_model=list[StaticPageOut])
-def list_static_pages(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_static_pages(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     return db.query(StaticPage).order_by(StaticPage.slug).all()
 
 
@@ -409,7 +426,7 @@ def get_static_page(slug: str, db: Session = Depends(get_db)):
 
 
 @router.put("/pages/{slug}", response_model=StaticPageOut)
-def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     page = db.query(StaticPage).filter_by(slug=slug).first()
     if not page:
         raise HTTPException(status_code=404, detail="페이지를 찾을 수 없습니다.")
@@ -418,6 +435,7 @@ def update_static_page(slug: str, body: StaticPageIn, db: Session = Depends(get_
     page.body = body.body
     db.commit()
     db.refresh(page)
+    log_action(db, get_admin_identifier(admin), "update_static_page", "static_page", None, f"{slug}: {body.title}")
     return page
 
 
@@ -598,7 +616,7 @@ def get_meditation_neighbors(item_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/meditations/admin", response_model=MeditationListOut)
-def list_meditations_admin(page: int = 1, limit: int = 20, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_meditations_admin(page: int = 1, limit: int = 20, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     total = db.query(Meditation).count()
     items = (
         db.query(Meditation)
@@ -628,16 +646,17 @@ def get_meditation(item_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/meditations", response_model=MeditationOut, status_code=201)
-def create_meditation(body: MeditationIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_meditation(body: MeditationIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = Meditation(**body.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "create_meditation", "meditation", item.id, body.title)
     return item
 
 
 @router.put("/meditations/{item_id}", response_model=MeditationOut)
-def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
@@ -645,6 +664,7 @@ def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(ge
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_meditation", "meditation", item.id, body.title)
     return item
 
 
@@ -652,7 +672,7 @@ def update_meditation(item_id: int, body: MeditationIn, db: Session = Depends(ge
 def set_current_meditation(
     item_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """이 묵상을 대표로 지정. 기존 is_current=TRUE 항목은 자동 해제."""
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
@@ -665,19 +685,21 @@ def set_current_meditation(
     item.is_current = True
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "set_current_meditation", "meditation", item.id, item.title)
     return item
 
 
 @router.post("/meditations/clear-current", status_code=204)
 def clear_current_meditation(
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """대표 지정 해제 — 모든 is_current 를 FALSE 로. 이후 자동으로 최신이 노출됨."""
     db.query(Meditation).filter(Meditation.is_current == True).update(
         {Meditation.is_current: False}, synchronize_session=False,
     )
     db.commit()
+    log_action(db, get_admin_identifier(admin), "clear_current_meditation", "meditation", None, None)
     return None
 
 
@@ -686,7 +708,7 @@ def update_meditation_background_options(
     item_id: int,
     body: MeditationBackgroundIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """배경 반복·시작점·흐림 옵션만 갱신 (이미지 파일은 별도 업로드 엔드포인트)."""
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
@@ -709,6 +731,7 @@ def update_meditation_background_options(
     item.body_font_size_px = font_size
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_meditation_bg_options", "meditation", item.id, item.title)
     return item
 
 
@@ -717,7 +740,7 @@ def upload_meditation_background(
     item_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """배경 이미지 파일 업로드. 기존 파일이 있으면 덮어쓰지 않고 새 파일을 둔다."""
     from app.core.config import settings as app_settings
@@ -740,6 +763,7 @@ def upload_meditation_background(
     item.background_image_url = f"/uploads/meditation-bg/{filename}"
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "upload_meditation_bg", "meditation", item.id, item.title)
     return item
 
 
@@ -747,7 +771,7 @@ def upload_meditation_background(
 def delete_meditation_background(
     item_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """배경 이미지 제거 (DB 의 URL 만 비움 — 파일은 정리하지 않음)."""
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
@@ -756,16 +780,19 @@ def delete_meditation_background(
     item.background_image_url = None
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "delete_meditation_bg", "meditation", item.id, item.title)
     return item
 
 
 @router.delete("/meditations/{item_id}", status_code=204)
-def delete_meditation(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_meditation(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(Meditation).filter(Meditation.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    snapshot = item.title
     db.delete(item)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_meditation", "meditation", item_id, snapshot)
 
 
 # ─── Prayer ─────────────────────────────────────────────────
@@ -926,7 +953,7 @@ def list_prayers_admin(
     limit: int = 50,
     category: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     query = db.query(Prayer)
     if category:
@@ -951,17 +978,18 @@ def get_prayer(item_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/prayers", response_model=PrayerOut, status_code=201)
-def create_prayer(body: PrayerIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_prayer(body: PrayerIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     _validate_prayer_category(body.category)
     item = Prayer(**body.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "create_prayer", "prayer", item.id, body.title)
     return item
 
 
 @router.put("/prayers/{item_id}", response_model=PrayerOut)
-def update_prayer(item_id: int, body: PrayerIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_prayer(item_id: int, body: PrayerIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     _validate_prayer_category(body.category)
     item = db.query(Prayer).filter(Prayer.id == item_id).first()
     if not item:
@@ -970,11 +998,12 @@ def update_prayer(item_id: int, body: PrayerIn, db: Session = Depends(get_db), _
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_prayer", "prayer", item.id, body.title)
     return item
 
 
 @router.put("/prayers/{item_id}/background", response_model=PrayerOut)
-def update_prayer_background(item_id: int, body: PrayerBackgroundIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_prayer_background(item_id: int, body: PrayerBackgroundIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(Prayer).filter(Prayer.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
@@ -991,6 +1020,7 @@ def update_prayer_background(item_id: int, body: PrayerBackgroundIn, db: Session
     item.body_font_size_px = max(12, min(32, body.body_font_size_px))
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_prayer_bg", "prayer", item.id, item.title)
     return item
 
 
@@ -999,7 +1029,7 @@ def upload_prayer_background(
     item_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     from app.core.config import settings as app_settings
     item = db.query(Prayer).filter(Prayer.id == item_id).first()
@@ -1016,27 +1046,31 @@ def upload_prayer_background(
     item.background_image_url = f"/uploads/prayer-bg/{filename}"
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "upload_prayer_bg", "prayer", item.id, item.title)
     return item
 
 
 @router.delete("/prayers/{item_id}/background-image", response_model=PrayerOut)
-def delete_prayer_background(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_prayer_background(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(Prayer).filter(Prayer.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
     item.background_image_url = None
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "delete_prayer_bg", "prayer", item.id, item.title)
     return item
 
 
 @router.delete("/prayers/{item_id}", status_code=204)
-def delete_prayer(item_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_prayer(item_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     item = db.query(Prayer).filter(Prayer.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="기도문을 찾을 수 없습니다.")
+    snapshot = item.title
     db.delete(item)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_prayer", "prayer", item_id, snapshot)
 
 
 # ─── Council Members ────────────────────────────────────────
@@ -1074,16 +1108,17 @@ def list_council(db: Session = Depends(get_db)):
 
 
 @router.get("/council/admin", response_model=list[CouncilMemberOut])
-def list_council_admin(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_council_admin(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     return db.query(CouncilMember).order_by(CouncilMember.sort_order, CouncilMember.id).all()
 
 
 @router.post("/council", response_model=CouncilMemberOut, status_code=201)
-def create_council_member(body: CouncilMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_council_member(body: CouncilMemberIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     member = CouncilMember(**body.model_dump())
     db.add(member)
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(admin), "create_council_member", "council_member", member.id, f"{member.role}/{member.name}")
     return member
 
 
@@ -1092,7 +1127,7 @@ async def upload_council_photo(
     member_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
     if not member:
@@ -1110,11 +1145,12 @@ async def upload_council_photo(
     member.photo_url = f"/uploads/{filename}"
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(admin), "upload_council_photo", "council_member", member.id, member.name)
     return member
 
 
 @router.put("/council/{member_id}", response_model=CouncilMemberOut)
-def update_council_member(member_id: int, body: CouncilMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_council_member(member_id: int, body: CouncilMemberIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
     if not member:
         raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
@@ -1122,13 +1158,16 @@ def update_council_member(member_id: int, body: CouncilMemberIn, db: Session = D
         setattr(member, k, v)
     db.commit()
     db.refresh(member)
+    log_action(db, get_admin_identifier(admin), "update_council_member", "council_member", member.id, f"{member.role}/{member.name}")
     return member
 
 
 @router.delete("/council/{member_id}", status_code=204)
-def delete_council_member(member_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_council_member(member_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     member = db.query(CouncilMember).filter(CouncilMember.id == member_id).first()
     if not member:
         raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
+    snapshot = f"{member.role}/{member.name}"
     db.delete(member)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_council_member", "council_member", member_id, snapshot)

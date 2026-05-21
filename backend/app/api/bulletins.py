@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, text
 from pydantic import BaseModel
 from app.core.database import get_db
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.email import send_bulletin_notification
@@ -93,7 +94,7 @@ async def upload_bulletin(
     gospel_reference: str | None = Form(None),
     pdf_file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     if pdf_file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="PDF 파일만 업로드할 수 있습니다.")
@@ -146,6 +147,7 @@ async def upload_bulletin(
     # AI 자동 분석 → 게시판 임시저장
     background_tasks.add_task(_auto_process_bulletin, bulletin.id)
 
+    log_action(db, get_admin_identifier(admin), "upload_bulletin", "bulletin", bulletin.id, f"호={bulletin.issue_number} {bulletin.published_date}")
     return bulletin
 
 
@@ -154,7 +156,7 @@ def reanalyze_bulletin(
     bulletin_id: int,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """기존 주보를 다시 AI 분석. 파서 개선 후 0건 처리된 주보를 살리는 용도."""
     # SELECT FOR UPDATE 로 동시 reanalyze race 차단 (이미 processing 이면 409)
@@ -175,6 +177,7 @@ def reanalyze_bulletin(
     bulletin.ai_error = None
     bulletin.ai_retry_count = 0  # 수동 재분석은 새 시작 — 자동 재시도 한도 리셋
     db.commit()
+    log_action(db, get_admin_identifier(admin), "reanalyze_bulletin", "bulletin", bulletin_id, None)
 
     background_tasks.add_task(_auto_process_bulletin, bulletin_id)
     return {"ok": True, "ai_status": "processing"}
@@ -188,7 +191,7 @@ class BatchCountsBody(BaseModel):
 def bulletin_routed_counts_batch(
     body: BatchCountsBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """다건 주보의 결과물 카운트를 한 번에 합산. /admin/bulletin 다중 삭제 다이얼로그용 (N+1 회피)."""
     if not body.bulletin_ids:
@@ -242,7 +245,7 @@ def bulletin_routed_counts_batch(
 @router.get("/ai-stats")
 def ai_analysis_stats(
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """AI 분석 관찰성 지표 — 성공률·소요시간·재시도·에러 패턴·event_type 분포."""
     # 상태별 분포
@@ -332,7 +335,7 @@ def ai_analysis_stats(
 def bulletin_routed_counts(
     bulletin_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """주보 삭제 시 cascade 로 함께 사라질 결과물 카운트.
     프론트엔드 삭제 다이얼로그에서 미리 보여줘 사용자가 결정할 수 있게 함."""
@@ -372,7 +375,7 @@ def bulletin_routed_counts(
 def delete_bulletin(
     bulletin_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """주보 삭제. 다음이 함께 정리됨:
     - bulletin_extractions / bulletin_extracted_images (DB CASCADE)
@@ -418,8 +421,10 @@ def delete_bulletin(
         db.delete(p)
     db.flush()
 
+    snapshot = f"호={bulletin.issue_number} {bulletin.published_date}"
     db.delete(bulletin)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_bulletin", "bulletin", bulletin_id, snapshot)
     return {"ok": True}
 
 
@@ -452,7 +457,7 @@ class ExtractionOut(BaseModel):
 def analyze_bulletin(
     bulletin_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     from app.services.pdf_extractor import extract_text, is_text_sparse, pdf_to_images_b64
     from app.services.claude_analyzer import analyze_bulletin_text, analyze_bulletin_images, is_ai_available
@@ -499,6 +504,7 @@ def analyze_bulletin(
     db.commit()
     for e in new_extractions:
         db.refresh(e)
+    log_action(db, get_admin_identifier(admin), "analyze_bulletin", "bulletin", bulletin_id, f"extracted={len(new_extractions)}")
     return new_extractions
 
 
@@ -867,7 +873,7 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
 @router.get("/extractions/pending", response_model=list[ExtractionOut])
 def list_pending_extractions(
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     return (
         db.query(BulletinExtraction)
@@ -880,7 +886,7 @@ def list_pending_extractions(
 @router.get("/extractions/pending/count")
 def count_pending_extractions(
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """사이드바 뱃지용 — 검토 대기 추출 항목 수.
 
@@ -907,7 +913,7 @@ def count_pending_extractions(
 def list_bulletin_extractions(
     bulletin_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     return (
         db.query(BulletinExtraction)
@@ -931,7 +937,7 @@ def approve_extraction(
     extraction_id: int,
     body: ApproveBody | None = None,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """단일 항목 승인 — event_type 에 맞춰 자동 라우팅.
 
@@ -978,12 +984,14 @@ def approve_extraction(
         ext.status = "approved"
         db.commit()
         db.refresh(ext)
+        log_action(db, get_admin_identifier(admin), "approve_extraction", "bulletin_extraction", ext.id, f"강제 board={board.id}")
         return ext
 
     # 자동 라우팅
     _apply_extraction_routing(db, ext)
     db.commit()
     db.refresh(ext)
+    log_action(db, get_admin_identifier(admin), "approve_extraction", "bulletin_extraction", ext.id, f"auto type={ext.event_type}")
     return ext
 
 
@@ -995,7 +1003,7 @@ class BulkApproveBody(BaseModel):
 def bulk_approve_extractions(
     body: BulkApproveBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """여러 추출 항목을 일괄 자동 라우팅. 지표는 스킵하고 보고."""
     if not body.extraction_ids:
@@ -1030,6 +1038,7 @@ def bulk_approve_extractions(
             failed.append({"id": ext.id, "reason": str(e)})
 
     db.commit()
+    log_action(db, get_admin_identifier(admin), "bulk_approve_extractions", "bulletin_extraction", None, f"approved={len(approved)}, skipped={len(skipped)}, failed={len(failed)}")
     return {"approved": approved, "skipped": skipped, "failed": failed}
 
 
@@ -1047,7 +1056,7 @@ def update_extraction(
     extraction_id: int,
     body: ExtractionPatchBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """승인 전 편집 — pending 상태에서만 가능."""
     ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
@@ -1064,6 +1073,7 @@ def update_extraction(
     if body.group_name is not None: ext.group_name = body.group_name or None
     db.commit()
     db.refresh(ext)
+    log_action(db, get_admin_identifier(admin), "update_extraction", "bulletin_extraction", ext.id, ext.title)
     return ext
 
 
@@ -1253,7 +1263,7 @@ class ExtractedImageOut(BaseModel):
 def list_extracted_images(
     bulletin_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """주보 PDF에서 추출된 사진 목록 (관리자만)."""
     return (
@@ -1274,7 +1284,7 @@ def route_extracted_image(
     image_id: int,
     body: RouteImageBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """추출된 사진을 분류·등록.
 
@@ -1305,6 +1315,7 @@ def route_extracted_image(
         img.routed_to = "construction"
         img.routed_at = datetime.utcnow()
         db.commit()
+        log_action(db, get_admin_identifier(admin), "route_extracted_image", "extracted_image", image_id, "construction")
         return {"ok": True, "routed_to": "construction"}
 
     if body.target == "gallery":
@@ -1372,6 +1383,7 @@ def route_extracted_image(
         img.routed_to = f"gallery:{body.gallery_slug}"
         img.routed_at = datetime.utcnow()
         db.commit()
+        log_action(db, get_admin_identifier(admin), "route_extracted_image", "extracted_image", image_id, f"gallery:{body.gallery_slug}")
         return {"ok": True, "routed_to": img.routed_to, "post_id": post.id}
 
     if body.target == "ignore":
@@ -1379,6 +1391,7 @@ def route_extracted_image(
         img.routed_to = "ignored"
         img.routed_at = datetime.utcnow()
         db.commit()
+        log_action(db, get_admin_identifier(admin), "route_extracted_image", "extracted_image", image_id, "ignored")
         return {"ok": True, "routed_to": "ignored"}
 
     raise HTTPException(status_code=400, detail=f"알 수 없는 target: {body.target}")
@@ -1389,7 +1402,7 @@ async def crop_extracted_image(
     image_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """admin이 frontend에서 잘라낸 사진으로 원본 파일을 덮어쓰고 width/height 갱신.
     스캔본 주보에서 한 페이지 통째로 추출된 사진을 사용자가 직접 잘라 쓸 때 사용."""
@@ -1421,6 +1434,7 @@ async def crop_extracted_image(
 
     db.commit()
     db.refresh(img)
+    log_action(db, get_admin_identifier(admin), "crop_extracted_image", "extracted_image", image_id, None)
     return img
 
 
@@ -1428,7 +1442,7 @@ async def crop_extracted_image(
 def delete_extracted_image(
     image_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """추출된 사진 DB 레코드 + 파일 모두 삭제."""
     img = db.query(BulletinExtractedImage).filter(BulletinExtractedImage.id == image_id).first()
@@ -1443,6 +1457,7 @@ def delete_extracted_image(
             pass
     db.delete(img)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_extracted_image", "extracted_image", image_id, None)
     return {"ok": True}
 
 
@@ -1458,7 +1473,7 @@ def approve_extraction_as_vision(
     extraction_id: int,
     body: ApproveAsVisionBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """AI가 뽑은 '지표' 추출 항목을 visions 테이블에 등록.
 
@@ -1501,6 +1516,7 @@ def approve_extraction_as_vision(
     ext.status = "approved"
     db.commit()
     db.refresh(ext)
+    log_action(db, get_admin_identifier(admin), "approve_as_vision", "bulletin_extraction", ext.id, f"vision={ext.created_vision_id} year={year}")
     return ext
 
 
@@ -1515,7 +1531,7 @@ def approve_extraction_as_event(
     extraction_id: int,
     body: ApproveAsEventBody | None = None,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
     if not ext:
@@ -1584,6 +1600,7 @@ def approve_extraction_as_event(
 
     db.commit()
     db.refresh(ext)
+    log_action(db, get_admin_identifier(admin), "approve_as_event", "bulletin_extraction", ext.id, f"event={ext.created_event_id} board={board_slug or '-'}")
     return ext
 
 
@@ -1591,14 +1608,16 @@ def approve_extraction_as_event(
 def reject_extraction(
     extraction_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     # 거부 = 즉시 삭제. rejected 행은 어디서도 조회·중복검사에 쓰이지 않아 보존 가치 없음.
     ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
     if not ext:
         raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
+    snapshot = ext.title
     db.delete(ext)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "reject_extraction", "bulletin_extraction", extraction_id, snapshot)
     return {"deleted": extraction_id}
 
 
@@ -1610,7 +1629,7 @@ class BulkRejectBody(BaseModel):
 def bulk_reject_extractions(
     body: BulkRejectBody,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """여러 추출 항목을 일괄 거부(삭제)."""
     if not body.extraction_ids:
@@ -1625,6 +1644,7 @@ def bulk_reject_extractions(
     for ext in extractions:
         db.delete(ext)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "bulk_reject_extractions", "bulletin_extraction", None, f"deleted={len(found_ids)}, not_found={len(not_found)}")
     return {"deleted": sorted(found_ids), "not_found": not_found}
 
 
@@ -1676,7 +1696,7 @@ def split_extraction_by_dates(
     extraction_id: int,
     body: SplitByDatesBody | None = None,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """추출 항목의 본문에서 'M/D(요일)' 패턴을 찾아 같은 제목으로 여러 날짜의 별도 항목으로 분리.
     dry_run=True (기본) → 미리보기만, False → 실제 분리 적용."""
@@ -1724,6 +1744,7 @@ def split_extraction_by_dates(
         db.add(new_ext)
         new_extractions.append(new_ext)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "split_extraction_by_dates", "bulletin_extraction", ext.id, f"split into {len(dates)} dates")
     return {
         "preview": False,
         "split_count": len(dates),

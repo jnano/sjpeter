@@ -924,13 +924,13 @@ def _check_selected_access(board: Board, viewer: Optional[Member], db: Session):
 # ── 임시저장 게시글 관리 (관리자 전용) ──────────────────────
 
 @router.get("/api/boards/drafts/count")
-def get_draft_count(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def get_draft_count(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     count = db.query(Post).filter(Post.is_published == False).count()
     return {"count": count}
 
 
 @router.get("/api/boards/drafts", response_model=list[DraftOut])
-def list_drafts(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_drafts(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     return (
         db.query(Post)
         .options(joinedload(Post.board))
@@ -1048,7 +1048,7 @@ def move_post(
     post_id: int,
     body: PostMoveBody,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """게시글을 다른 게시판으로 이동 (admin 전용). 댓글·첨부·추천은 post_id 기준이라 자동 따라감."""
     src = _get_board_or_404(slug, db)
@@ -1064,6 +1064,8 @@ def move_post(
     post.board_id = target.id
     db.commit()
     db.refresh(post)
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "move_post", "post", post_id, f"{slug} → {target_slug}")
     return (
         db.query(Post)
         .options(joinedload(Post.member), joinedload(Post.board), joinedload(Post.attachments))
@@ -1147,7 +1149,7 @@ def publish_draft_multi(
     post_id: int,
     body: PublishMultiBody,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     post = db.query(Post).options(joinedload(Post.board)).filter(
         Post.id == post_id, Post.is_published == False
@@ -1198,6 +1200,8 @@ def publish_draft_multi(
         )
 
     db.commit()
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "publish_draft_multi", "post", post_id, f"additional={','.join(body.additional_board_slugs)}, calendar={body.add_calendar}")
     return {"ok": True}
 
 
@@ -1227,7 +1231,7 @@ def _mapping_to_out(m: EventBoardMapping) -> MappingOut:
 
 
 @router.get("/api/boards/event-mapping", response_model=list[MappingOut])
-def list_event_mappings(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_event_mappings(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     mappings = (
         db.query(EventBoardMapping)
         .options(joinedload(EventBoardMapping.board))
@@ -1242,7 +1246,7 @@ def update_event_mapping(
     event_type: str,
     body: MappingUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     mapping = db.query(EventBoardMapping).filter(EventBoardMapping.event_type == event_type).first()
     if not mapping:
@@ -1259,6 +1263,8 @@ def update_event_mapping(
         mapping.use_calendar = False
     db.commit()
     db.refresh(mapping)
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "update_event_mapping", "event_mapping", None, f"{event_type} → board={mapping.board_id} cal={mapping.use_calendar}")
     return _mapping_to_out(mapping)
 
 
@@ -1276,20 +1282,22 @@ def get_board(slug: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/boards", response_model=BoardOut, status_code=201)
-def create_board(body: BoardIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_board(body: BoardIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     if db.query(Board).filter(Board.slug == body.slug).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 슬러그입니다.")
     board = Board(**body.model_dump())
     db.add(board)
     db.commit()
     db.refresh(board)
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "create_board", "board", board.id, f"{board.slug}/{board.name}")
     out = BoardOut.model_validate(board)
     out.post_count = 0
     return out
 
 
 @router.put("/api/boards/{slug}", response_model=BoardOut)
-def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
@@ -1297,6 +1305,8 @@ def update_board(slug: str, body: BoardUpdate, db: Session = Depends(get_db), _:
         setattr(board, k, v)
     db.commit()
     board = db.query(Board).options(joinedload(Board.moderator)).filter(Board.slug == slug).first()
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "update_board", "board", board.id, f"{board.slug}/{board.name}")
     return _board_out(board, db)
 
 
@@ -1320,7 +1330,7 @@ class BoardAdminGroupReorderIn(BaseModel):
 
 
 @router.get("/api/board-admin-groups", response_model=list[BoardAdminGroupOut])
-def list_board_admin_groups(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_board_admin_groups(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     return (
         db.query(BoardAdminGroup)
         .order_by(BoardAdminGroup.sort_order, BoardAdminGroup.id)
@@ -1329,7 +1339,7 @@ def list_board_admin_groups(db: Session = Depends(get_db), _: Admin = Depends(ge
 
 
 @router.post("/api/board-admin-groups", response_model=BoardAdminGroupOut)
-def create_board_admin_group(body: BoardAdminGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_board_admin_group(body: BoardAdminGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     name = (body.name or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="그룹 이름을 입력하세요.")
@@ -1338,19 +1348,23 @@ def create_board_admin_group(body: BoardAdminGroupIn, db: Session = Depends(get_
     db.add(g)
     db.commit()
     db.refresh(g)
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "create_board_admin_group", "board_admin_group", g.id, name)
     return g
 
 
 @router.put("/api/board-admin-groups/reorder")
-def reorder_board_admin_groups(body: BoardAdminGroupReorderIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def reorder_board_admin_groups(body: BoardAdminGroupReorderIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     for i, gid in enumerate(body.ids):
         db.query(BoardAdminGroup).filter(BoardAdminGroup.id == gid).update({"sort_order": i})
     db.commit()
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "reorder_board_admin_groups", "board_admin_group", None, f"순서: {','.join(map(str, body.ids))}")
     return {"ok": True}
 
 
 @router.put("/api/board-admin-groups/{group_id}", response_model=BoardAdminGroupOut)
-def update_board_admin_group(group_id: int, body: BoardAdminGroupIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_board_admin_group(group_id: int, body: BoardAdminGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     g = db.query(BoardAdminGroup).filter(BoardAdminGroup.id == group_id).first()
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
@@ -1360,21 +1374,26 @@ def update_board_admin_group(group_id: int, body: BoardAdminGroupIn, db: Session
     g.name = name
     db.commit()
     db.refresh(g)
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "update_board_admin_group", "board_admin_group", g.id, name)
     return g
 
 
 @router.delete("/api/board-admin-groups/{group_id}", status_code=204)
-def delete_board_admin_group(group_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_board_admin_group(group_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     g = db.query(BoardAdminGroup).filter(BoardAdminGroup.id == group_id).first()
     if not g:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    snapshot = g.name
     # boards.admin_group_id 는 ON DELETE SET NULL — 안에 있던 게시판은 자동으로 미분류 처리됨.
     db.delete(g)
     db.commit()
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "delete_board_admin_group", "board_admin_group", group_id, snapshot)
 
 
 @router.get("/api/boards/{slug}/allowed-members", response_model=list[AllowedMemberOut])
-def list_allowed_members(slug: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_allowed_members(slug: str, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404)
@@ -1385,7 +1404,7 @@ def list_allowed_members(slug: str, db: Session = Depends(get_db), _: Admin = De
 
 
 @router.post("/api/boards/{slug}/allowed-members", status_code=201)
-def add_allowed_member(slug: str, body: AllowedMemberIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def add_allowed_member(slug: str, body: AllowedMemberIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404)
@@ -1398,11 +1417,13 @@ def add_allowed_member(slug: str, body: AllowedMemberIn, db: Session = Depends(g
     if not exists:
         db.add(BoardAllowedMember(board_id=board.id, member_id=body.member_id))
         db.commit()
+        from app.core.admin_log import log_action, get_admin_identifier
+        log_action(db, get_admin_identifier(admin), "add_board_allowed_member", "board", board.id, f"member={body.member_id}")
     return {"ok": True}
 
 
 @router.delete("/api/boards/{slug}/allowed-members/{member_id}", status_code=204)
-def remove_allowed_member(slug: str, member_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def remove_allowed_member(slug: str, member_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404)
@@ -1413,13 +1434,16 @@ def remove_allowed_member(slug: str, member_id: int, db: Session = Depends(get_d
     if row:
         db.delete(row)
         db.commit()
+        from app.core.admin_log import log_action, get_admin_identifier
+        log_action(db, get_admin_identifier(admin), "remove_board_allowed_member", "board", board.id, f"member={member_id}")
 
 
 @router.delete("/api/boards/{slug}", status_code=204)
-def delete_board(slug: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_board(slug: str, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     board = db.query(Board).filter(Board.slug == slug).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시판을 찾을 수 없습니다.")
+    snapshot = f"{board.slug}/{board.name}"
     # cascade로 posts·attachments DB row는 자동 제거되지만 디스크 파일은 남으므로 먼저 정리
     posts = (
         db.query(Post)
@@ -1431,6 +1455,8 @@ def delete_board(slug: str, db: Session = Depends(get_db), _: Admin = Depends(ge
         _remove_post_attachment_files(p)
     db.delete(board)
     db.commit()
+    from app.core.admin_log import log_action, get_admin_identifier
+    log_action(db, get_admin_identifier(admin), "delete_board", "board", None, snapshot)
 
 
 # ── 게시글 ────────────────────────────────────────────────
