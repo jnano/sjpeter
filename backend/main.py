@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding
+from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -65,6 +65,7 @@ app.include_router(photos.router, prefix="/api")
 app.include_router(saints.router, prefix="/api")
 app.include_router(setup.router)
 app.include_router(onboarding.router)
+app.include_router(home_blocks.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -340,6 +341,43 @@ def _migrate_add_columns():
 
         # 공지 사진 첨부는 v1.5.241 에서 제거 — 공지가 boards/posts/attachments 로 통합되며
         # notice_attachments + notices 테이블 자체가 사라짐. 옛 첨부 데이터는 0건이라 손실 없음.
+
+        # 홈 블록 빌더 (v1.5.244+) — admin/home 에서 블록 ON/OFF·순서·payload 편집
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS home_blocks (
+                id SERIAL PRIMARY KEY,
+                kind VARCHAR(40) NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_home_blocks_sort ON home_blocks(sort_order, id)"
+        ))
+        # 빈 테이블이면 현재 홈 구조와 동일한 default 블록 9건 시드
+        existing = conn.execute(text("SELECT COUNT(*) FROM home_blocks")).scalar() or 0
+        if existing == 0:
+            import json as _json
+            default_blocks = [
+                ("hero",         {"layout": "even"}),
+                ("quick_links",  {}),
+                ("meditation",   {}),
+                ("construction", {}),
+                ("board_tabs",   {}),
+                ("banner",       {"placement": "home_middle"}),
+                ("gallery",      {}),
+                ("banner",       {"placement": "home_bottom"}),
+                ("quote",        {"text": "너는 베드로이다. 나는 이 반석 위에 내 교회를 세우겠다.",
+                                  "source": "마태오 16,18"}),
+            ]
+            for i, (kind, payload) in enumerate(default_blocks):
+                conn.execute(text(
+                    "INSERT INTO home_blocks (kind, sort_order, is_active, payload, created_at, updated_at) "
+                    "VALUES (:k, :s, TRUE, CAST(:p AS jsonb), NOW(), NOW())"
+                ), {"k": kind, "s": i, "p": _json.dumps(payload)})
 
         # 한 줄 게시판 추천(공감) — 회원 1인 1회 토글
         conn.execute(text("""

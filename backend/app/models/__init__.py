@@ -1,5 +1,6 @@
 from app.models.parish import Parish
 from app.models.bulletin import Bulletin
+from app.models.home_block import HomeBlock
 from app.models.admin import Admin
 from app.models.member import Member
 from app.models.board import Board, Post, Comment

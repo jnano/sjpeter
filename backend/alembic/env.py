@@ -17,7 +17,7 @@ from app.core.config import settings  # noqa: E402
 # 모델 모듈 임포트 (metadata 등록 부수효과)
 from app.models import (  # noqa: E402, F401
     admin, attachment, banner, bulletin, bulletin_extraction, board, construction,
-    content, dynamic_page, event_board_mapping, home_banner, issue_report,
+    content, dynamic_page, event_board_mapping, home_banner, home_block, issue_report,
     member, member_interest, menu, page_photo, parish, parish_staff,
     search, site_setting, transport_route,
 )
