@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.243";
+export const CURRENT_VERSION = "1.5.246";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,37 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.246", date: "2026-05-21", tag: "기능",
+    items: [
+      "Stage 4 Phase 4+5 — admin/home 블록 빌더 UI + 사이드바 등록",
+      "  · admin/home 페이지에 블록 빌더 추가: 9 블록 ↑↓ 재정렬 + ON/OFF 토글 + 추가 + 삭제 + per-block payload 편집",
+      "  · 블록 종류별 인라인 폼: hero(layout select 4종) · banner(placement 입력) · quote(text/source 텍스트박스). 나머지 5종은 무옵션",
+      "  · 활성 블록 수·순서 즉시 반영 (PATCH/POST/DELETE 마다 setBlocks 갱신)",
+      "  · AdminSidebar 시스템 그룹에 '홈 페이지' 항목 첫 번째로 추가",
+      "  · 통합 테스트 OK — payload 갱신·is_active 토글·reorder·테마 전환 모두 정상. admin_logs 에 home_block CRUD 기록됨",
+    ],
+  },
+  {
+    version: "1.5.245", date: "2026-05-21", tag: "기능",
+    items: [
+      "Stage 4 Phase 3 — 홈 page.tsx block-driven 리팩토",
+      "  · home_blocks 배열 fetch → kind 별 dispatch (8 종류 switch 렌더)",
+      "  · hero.payload.layout 이 site_settings.HOME_HERO_LAYOUT 보다 우선",
+      "  · 모르는 kind 는 silent skip — admin 이 미구현 종류 만들어도 본문 안 깨짐",
+      "  · quick_links / meditation 분리: 각자 독립 섹션 (admin 자유 재정렬)",
+    ],
+  },
+  {
+    version: "1.5.244", date: "2026-05-21", tag: "기능",
+    items: [
+      "Stage 4 Phase 2 — home_blocks 백엔드",
+      "  · home_blocks 테이블 (kind·sort_order·is_active·payload jsonb)",
+      "  · /api/home/blocks (공개) + admin CRUD + reorder, log_action 감사 로그",
+      "  · 8 ALLOWED_KINDS: hero·quick_links·meditation·construction·board_tabs·gallery·banner·quote",
+      "  · main.py 시드: 현재 홈과 동일한 default 9 블록 (빈 테이블일 때만)",
+    ],
+  },
   {
     version: "1.5.243", date: "2026-05-21", tag: "기능",
     items: [

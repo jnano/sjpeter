@@ -102,6 +102,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "시스템",
     icon: "⚙",
     items: [
+      { href: "/admin/home", label: "홈 페이지" },
       { href: "/admin/menus", label: "메뉴" },
       { href: "/admin/pages", label: "동적 페이지" },
       { href: "/admin/season", label: "전례 시기 테마" },
