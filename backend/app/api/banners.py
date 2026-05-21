@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
@@ -261,7 +262,7 @@ def list_all_groups(db: Session = Depends(get_db), _: Admin = Depends(get_curren
 def create_group(
     body: GroupCreate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     _validate_placement(body.placement)
     _validate_transition(body.transition)
@@ -285,6 +286,7 @@ def create_group(
     db.add(group)
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "create_banner_group", "banner_group", group.id, group.name)
     return group
 
 
@@ -293,7 +295,7 @@ def update_group(
     group_id: int,
     body: GroupUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = db.query(BannerGroup).filter(BannerGroup.id == group_id).first()
     if not group:
@@ -333,6 +335,7 @@ def update_group(
     group.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(group)
+    log_action(db, get_admin_identifier(admin), "update_banner_group", "banner_group", group.id, group.name)
     return group
 
 
@@ -340,7 +343,7 @@ def update_group(
 def delete_group(
     group_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = (
         db.query(BannerGroup)
@@ -350,11 +353,13 @@ def delete_group(
     )
     if not group:
         raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    snapshot = group.name
     # 로컬 파일 함께 정리 (DB CASCADE 가 행은 지워주지만 파일은 별도)
     for img in group.images:
         _delete_local_file(img.file_url)
     db.delete(group)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_banner_group", "banner_group", group_id, snapshot)
     return None
 
 
@@ -367,7 +372,7 @@ async def upload_banner_image(
     link_url: Optional[str] = None,
     alt_text: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     group = db.query(BannerGroup).filter(BannerGroup.id == group_id).first()
     if not group:
@@ -395,6 +400,7 @@ async def upload_banner_image(
     db.add(image)
     db.commit()
     db.refresh(image)
+    log_action(db, get_admin_identifier(admin), "upload_banner_image", "banner_image", image.id, f"group={group_id}")
     return image
 
 
@@ -403,7 +409,7 @@ def update_image(
     image_id: int,
     body: ImageUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     img = db.query(BannerImage).filter(BannerImage.id == image_id).first()
     if not img:
@@ -416,6 +422,7 @@ def update_image(
         img.sort_order = body.sort_order
     db.commit()
     db.refresh(img)
+    log_action(db, get_admin_identifier(admin), "update_banner_image", "banner_image", img.id, img.alt_text or img.file_url)
     return img
 
 
@@ -423,12 +430,14 @@ def update_image(
 def delete_image(
     image_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     img = db.query(BannerImage).filter(BannerImage.id == image_id).first()
     if not img:
         raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+    snapshot = img.alt_text or img.file_url
     _delete_local_file(img.file_url)
     db.delete(img)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_banner_image", "banner_image", image_id, snapshot)
     return None

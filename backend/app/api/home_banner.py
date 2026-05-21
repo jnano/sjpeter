@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import asc
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
@@ -70,7 +71,7 @@ def list_all_banners(
 async def upload_banners(
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """관리자: 다중 파일 업로드 (드래그앤드롭 지원)."""
     if not files:
@@ -112,6 +113,7 @@ async def upload_banners(
     db.commit()
     for b in saved:
         db.refresh(b)
+    log_action(db, get_admin_identifier(admin), "upload_home_banner", "home_banner", None, f"{len(saved)}건 업로드")
     return saved
 
 
@@ -119,7 +121,7 @@ async def upload_banners(
 def reorder_banners(
     body: ReorderIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """관리자: ids 배열의 순서대로 sort_order 재할당."""
     banners = {b.id: b for b in db.query(HomeBanner).filter(HomeBanner.id.in_(body.ids)).all()}
@@ -128,6 +130,7 @@ def reorder_banners(
     for order, bid in enumerate(body.ids):
         banners[bid].sort_order = order
     db.commit()
+    log_action(db, get_admin_identifier(admin), "reorder_home_banners", "home_banner", None, f"순서: {','.join(map(str, body.ids))}")
     return (
         db.query(HomeBanner)
         .order_by(asc(HomeBanner.sort_order), asc(HomeBanner.id))
@@ -139,7 +142,7 @@ def reorder_banners(
 def toggle_banner(
     banner_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """관리자: 활성/비활성 토글."""
     banner = db.query(HomeBanner).filter(HomeBanner.id == banner_id).first()
@@ -148,6 +151,7 @@ def toggle_banner(
     banner.is_active = not banner.is_active
     db.commit()
     db.refresh(banner)
+    log_action(db, get_admin_identifier(admin), "toggle_home_banner", "home_banner", banner_id, f"is_active={banner.is_active}")
     return banner
 
 
@@ -155,12 +159,13 @@ def toggle_banner(
 def delete_banner(
     banner_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """관리자: DB 레코드 + 실제 파일 삭제."""
     banner = db.query(HomeBanner).filter(HomeBanner.id == banner_id).first()
     if not banner:
         raise HTTPException(status_code=404, detail="배너를 찾을 수 없습니다.")
+    snapshot = banner.original_name
 
     # 파일 삭제 (실패해도 DB는 지움)
     try:
@@ -173,3 +178,4 @@ def delete_banner(
 
     db.delete(banner)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_home_banner", "home_banner", banner_id, snapshot)

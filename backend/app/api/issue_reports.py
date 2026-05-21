@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from pydantic import BaseModel, EmailStr
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.database import get_db
 from app.core.auth import get_current_admin, get_optional_member
 from app.models.issue_report import IssueReport
@@ -159,7 +160,7 @@ def update_report(
     report_id: int,
     body: IssueReportUpdate,
     db: Session = Depends(get_db),
-    _admin=Depends(get_current_admin),
+    admin=Depends(get_current_admin),
 ):
     report = _get_or_404(report_id, db)
     if body.status is not None:
@@ -170,14 +171,16 @@ def update_report(
         report.admin_note = body.admin_note.strip() or None
     db.commit()
     db.refresh(report)
+    log_action(db, get_admin_identifier(admin), "update_issue_report", "issue_report", report.id, report.status)
     return _to_out(report, db)
 
 
 @router.delete("/{report_id}", status_code=204)
-def delete_report(report_id: int, db: Session = Depends(get_db), _admin=Depends(get_current_admin)):
+def delete_report(report_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     report = _get_or_404(report_id, db)
     db.delete(report)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_issue_report", "issue_report", report_id, None)
 
 
 # ── 헬퍼 ──────────────────────────────────────────────────

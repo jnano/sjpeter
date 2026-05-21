@@ -10,6 +10,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import log_action
 from app.core.auth import hash_password
 from app.core.database import get_db
 from app.models.admin import Admin
@@ -193,6 +194,12 @@ def setup_init(body: SetupInitRequest, db: Session = Depends(get_db)):
     seeded = _seed_default_boards(db)
 
     db.commit()
+
+    # setup 은 첫 admin 생성 이전이라 get_admin_identifier 사용 불가 — "setup" 으로 기록
+    log_action(
+        db, "setup", "setup_init", "system", None,
+        f"첫 관리자={body.admin_username}, 본당={body.parish_name}, seeded_boards={seeded}",
+    )
 
     msg = "첫 관리자 계정과 본당 정보가 등록되었습니다."
     if seeded:

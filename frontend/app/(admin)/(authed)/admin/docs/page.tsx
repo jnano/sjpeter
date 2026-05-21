@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.247";
+export const CURRENT_VERSION = "1.5.248";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.248", date: "2026-05-21", tag: "인프라",
+    items: [
+      "Stage 6 Part 1 — 8개 admin endpoint 파일에 감사 로그 추가",
+      "  · saints·setup·issue_reports·transport_routes·home_banner·parish·banners·parish_staff 모두 log_action 적용",
+      "  · 모든 create/update/delete/reorder/upload 액션이 admin_logs 에 기록됨",
+      "  · setup_init 은 admin 이 아직 없는 시점이라 admin_identifier='setup' 으로 기록",
+      "  · 다음 단계 (Part 2~4): construction·page_photos·archive·bulletins·content + members/boards/auth 부분 누락 보강",
+    ],
+  },
   {
     version: "1.5.247", date: "2026-05-21", tag: "기능",
     items: [

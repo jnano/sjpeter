@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from app.core.database import get_db
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.models.parish import Parish
@@ -111,7 +112,7 @@ def get_parish(db: Session = Depends(get_db)):
 def update_parish(
     body: ParishUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     parish = _get_parish(db)
     data = body.model_dump(exclude_unset=True)
@@ -142,6 +143,7 @@ def update_parish(
         db.commit()
         _invalidate("PARISH_NAME")
 
+    log_action(db, get_admin_identifier(admin), "update_parish", "parish", parish.id, ",".join(data.keys()))
     return _parish_to_out(parish)
 
 
@@ -151,7 +153,7 @@ def update_parish(
 async def upload_about_photo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in PHOTO_IMAGE_EXTS:
@@ -181,6 +183,7 @@ async def upload_about_photo(
     parish.about_photo_url = f"/uploads/about_photos/{filename}"
     db.commit()
     db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "upload_about_photo", "parish", parish.id, filename)
 
     return _parish_to_out(parish)
 
@@ -188,7 +191,7 @@ async def upload_about_photo(
 @router.delete("/about-photo", response_model=ParishOut)
 def delete_about_photo(
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     parish = _get_parish(db)
     if parish.about_photo_url and parish.about_photo_url.startswith("/uploads/about_photos/"):
@@ -202,6 +205,7 @@ def delete_about_photo(
     parish.about_photo_url = None
     db.commit()
     db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "delete_about_photo", "parish", parish.id, None)
 
     return _parish_to_out(parish)
 
@@ -212,7 +216,7 @@ def delete_about_photo(
 async def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in PHOTO_IMAGE_EXTS:
@@ -239,13 +243,14 @@ async def upload_logo(
     parish.logo_url = f"/uploads/logos/{filename}"
     db.commit()
     db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "upload_logo", "parish", parish.id, filename)
     return _parish_to_out(parish)
 
 
 @router.delete("/logo", response_model=ParishOut)
 def delete_logo(
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     parish = _get_parish(db)
     if parish.logo_url and parish.logo_url.startswith("/uploads/logos/"):
@@ -258,4 +263,5 @@ def delete_logo(
     parish.logo_url = None
     db.commit()
     db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "delete_logo", "parish", parish.id, None)
     return _parish_to_out(parish)

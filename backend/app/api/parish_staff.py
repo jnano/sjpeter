@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import asc, text
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
@@ -84,7 +85,7 @@ def list_staff(db: Session = Depends(get_db)):
 
 
 @router.get("/all", response_model=List[StaffOut])
-def list_all_staff(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_all_staff(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     rows = db.query(ParishStaff).all()
     return sorted(rows, key=_sort_key)
 
@@ -93,12 +94,13 @@ def list_all_staff(db: Session = Depends(get_db), _: Admin = Depends(get_current
 def create_staff(
     body: StaffIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     staff = ParishStaff(**body.model_dump())
     db.add(staff)
     db.commit()
     db.refresh(staff)
+    log_action(db, get_admin_identifier(admin), "create_parish_staff", "parish_staff", staff.id, f"{staff.role}/{staff.name}")
     return staff
 
 
@@ -106,7 +108,7 @@ def create_staff(
 def reorder_staff(
     body: ReorderIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     rows = {s.id: s for s in db.query(ParishStaff).filter(ParishStaff.id.in_(body.ids)).all()}
     if len(rows) != len(body.ids):
@@ -114,6 +116,7 @@ def reorder_staff(
     for order, sid in enumerate(body.ids):
         rows[sid].sort_order = order
     db.commit()
+    log_action(db, get_admin_identifier(admin), "reorder_parish_staff", "parish_staff", None, f"순서: {','.join(map(str, body.ids))}")
     all_rows = db.query(ParishStaff).all()
     return sorted(all_rows, key=_sort_key)
 
@@ -123,7 +126,7 @@ def update_staff(
     staff_id: int,
     body: StaffIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     staff = db.query(ParishStaff).filter(ParishStaff.id == staff_id).first()
     if not staff:
@@ -132,6 +135,7 @@ def update_staff(
         setattr(staff, k, v)
     db.commit()
     db.refresh(staff)
+    log_action(db, get_admin_identifier(admin), "update_parish_staff", "parish_staff", staff.id, f"{staff.role}/{staff.name}")
     return staff
 
 
@@ -140,7 +144,7 @@ async def upload_photo(
     staff_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     staff = db.query(ParishStaff).filter(ParishStaff.id == staff_id).first()
     if not staff:
@@ -168,6 +172,7 @@ async def upload_photo(
     staff.photo_url = f"/uploads/{SUBDIR}/{stored}"
     db.commit()
     db.refresh(staff)
+    log_action(db, get_admin_identifier(admin), "upload_parish_staff_photo", "parish_staff", staff.id, stored)
     return staff
 
 
@@ -175,7 +180,7 @@ async def upload_photo(
 def delete_photo(
     staff_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """등록된 사진만 삭제 (staff 레코드는 유지)."""
     staff = db.query(ParishStaff).filter(ParishStaff.id == staff_id).first()
@@ -192,6 +197,7 @@ def delete_photo(
     staff.photo_url = None
     db.commit()
     db.refresh(staff)
+    log_action(db, get_admin_identifier(admin), "delete_parish_staff_photo", "parish_staff", staff.id, staff.name)
     return staff
 
 
@@ -206,7 +212,7 @@ def move_to_archive(
     staff_id: int,
     body: MoveToArchiveIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     """현재 사목자를 역대 사목자(parish_pastors) 아카이브로 이전.
 
@@ -246,8 +252,10 @@ def move_to_archive(
         },
     )
     # 사진 URL을 새 record에서 참조하므로 파일은 삭제하지 않고 staff만 삭제
+    snapshot = f"{staff.role}/{staff.name}"
     db.delete(staff)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "move_parish_staff_to_archive", "parish_staff", staff_id, snapshot)
     return {"ok": True}
 
 
@@ -255,11 +263,12 @@ def move_to_archive(
 def delete_staff(
     staff_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     staff = db.query(ParishStaff).filter(ParishStaff.id == staff_id).first()
     if not staff:
         raise HTTPException(status_code=404, detail="찾을 수 없습니다.")
+    snapshot = f"{staff.role}/{staff.name}"
     if staff.photo_url:
         try:
             rel = staff.photo_url.lstrip("/").replace("uploads/", "", 1)
@@ -270,3 +279,4 @@ def delete_staff(
             pass
     db.delete(staff)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_parish_staff", "parish_staff", staff_id, snapshot)

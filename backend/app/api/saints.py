@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import asc, desc, or_
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.database import get_db
 from app.models.admin import Admin
@@ -189,12 +190,13 @@ def get_saint(saint_id: int, db: Session = Depends(get_db)):
 def create_saint(
     body: SaintIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     s = Saint(**body.model_dump())
     db.add(s)
     db.commit()
     db.refresh(s)
+    log_action(db, get_admin_identifier(admin), "create_saint", "saint", s.id, body.korean_name)
     return s
 
 
@@ -203,7 +205,7 @@ def update_saint(
     saint_id: int,
     body: SaintIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     s = db.query(Saint).filter(Saint.id == saint_id).first()
     if not s:
@@ -212,6 +214,7 @@ def update_saint(
         setattr(s, k, v)
     db.commit()
     db.refresh(s)
+    log_action(db, get_admin_identifier(admin), "update_saint", "saint", s.id, body.korean_name)
     return s
 
 
@@ -219,10 +222,12 @@ def update_saint(
 def delete_saint(
     saint_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     s = db.query(Saint).filter(Saint.id == saint_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="찾을 수 없습니다.")
+    snapshot = s.korean_name
     db.delete(s)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_saint", "saint", saint_id, snapshot)
