@@ -40,7 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/parish/info", label: "기본 정보" },
       { href: "/admin/parish/mass-times", label: "미사 시간" },
-      { href: "/admin/history", label: "연혁" },
+      { href: "/admin/history", label: "연혁 관리" },
     ],
   },
   {
