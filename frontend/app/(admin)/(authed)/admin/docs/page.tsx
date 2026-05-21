@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.241";
+export const CURRENT_VERSION = "1.5.242";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.242", date: "2026-05-21", tag: "디자인",
+    items: [
+      "동적 페이지 레이아웃 스키마 — admin 폼이 layout 별로 동적 구성",
+      "  · pages.py 에 LAYOUT_SPECS 추가 — 각 레이아웃이 사용하는 필드(title·subtitle·group_label·body·sections·page_photos) 와 body_format(markdown/html) 명시",
+      "  · GET /api/pages/layout-specs 노출 (인증 불필요, 정적 메타)",
+      "  · admin/pages: layout-specs fetch 후 currentSpec.uses 로 필드 조건부 렌더 — html 레이아웃은 subtitle·group_label 자동 숨김 (실제로 안 쓰이는 필드라 혼란 제거)",
+      "  · 레이아웃 선택 직후 안내 문구 '이 레이아웃은 OO·OO 를 사용합니다' 표시 → 사용자가 무엇을 채워야 할지 즉각 파악",
+      "  · 본문 textarea placeholder 도 spec.body_placeholder 에서 동적 — 옛 하드코딩 분기 제거",
+    ],
+  },
   {
     version: "1.5.241", date: "2026-05-21", tag: "인프라",
     items: [

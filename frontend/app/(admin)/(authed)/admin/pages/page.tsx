@@ -29,11 +29,37 @@ interface SectionCard {
 
 const GROUP_PRESETS = ["성당 소개", "본당 공동체", "말씀과 기도", "알림과 게시판", "사진 갤러리"];
 
-const LAYOUT_OPTIONS: { value: LayoutKind; label: string; description: string }[] = [
-  { value: "body", label: "본문형", description: "제목 + 본문 텍스트만" },
-  { value: "body_with_hero", label: "사진 + 본문", description: "상단 슬라이드쇼 + 본문 (페이지 사진은 /admin/page-photos에서 같은 slug로 등록)" },
-  { value: "sections", label: "섹션 카드형", description: "본문 + 하단 카드 리스트 (FAQ·단계 안내 등)" },
-  { value: "html", label: "HTML 직접 입력", description: "PageHeader·SectionLayout wrapper 없이 raw HTML 그대로 출력. 자유 레이아웃." },
+/** 백엔드 /api/pages/layout-specs 의 응답 — layout 별 받는 필드·placeholder. */
+interface LayoutSpec {
+  kind: LayoutKind;
+  label: string;
+  description: string;
+  uses: {
+    title: boolean;
+    subtitle: boolean;
+    group_label: boolean;
+    body_markdown: boolean;
+    sections: boolean;
+    page_photos: boolean;
+  };
+  body_format: "markdown" | "html";
+  body_placeholder: string;
+}
+
+/** layout-specs fetch 실패 시 안전 fallback — 옛 LAYOUT_OPTIONS 와 동일한 메타데이터. */
+const FALLBACK_SPECS: LayoutSpec[] = [
+  { kind: "body", label: "본문형", description: "제목 + 본문 텍스트만",
+    uses: { title: true, subtitle: true, group_label: true, body_markdown: true, sections: false, page_photos: false },
+    body_format: "markdown", body_placeholder: "" },
+  { kind: "body_with_hero", label: "사진 + 본문", description: "상단 슬라이드쇼 + 본문",
+    uses: { title: true, subtitle: true, group_label: true, body_markdown: true, sections: false, page_photos: true },
+    body_format: "markdown", body_placeholder: "" },
+  { kind: "sections", label: "섹션 카드형", description: "본문 + 하단 카드 리스트",
+    uses: { title: true, subtitle: true, group_label: true, body_markdown: true, sections: true, page_photos: false },
+    body_format: "markdown", body_placeholder: "" },
+  { kind: "html", label: "HTML 직접 입력", description: "wrapper 없이 raw HTML",
+    uses: { title: true, subtitle: false, group_label: false, body_markdown: true, sections: false, page_photos: false },
+    body_format: "html", body_placeholder: "" },
 ];
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -65,6 +91,17 @@ export default function AdminPagesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [layoutSpecs, setLayoutSpecs] = useState<LayoutSpec[]>(FALLBACK_SPECS);
+
+  // layout-specs 한 번만 fetch — 정적 메타데이터라 admin 세션 동안 캐싱 OK
+  useEffect(() => {
+    fetch(`${API}/api/pages/layout-specs`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (Array.isArray(d) && d.length > 0) setLayoutSpecs(d); })
+      .catch(() => { /* fallback 유지 */ });
+  }, []);
+
+  const currentSpec = layoutSpecs.find((s) => s.kind === draft?.layout_kind) ?? layoutSpecs[0];
 
   const headers = (): HeadersInit => {
     const t = getToken();
@@ -283,26 +320,39 @@ export default function AdminPagesPage() {
                 </div>
               </div>
 
-              {/* 레이아웃 선택 */}
+              {/* 레이아웃 선택 — layout-specs API 응답에서 동적 구성 */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">레이아웃</label>
                 <div className="grid sm:grid-cols-3 gap-2">
-                  {LAYOUT_OPTIONS.map((opt) => (
+                  {layoutSpecs.map((spec) => (
                     <button
-                      key={opt.value}
+                      key={spec.kind}
                       type="button"
-                      onClick={() => updateDraft("layout_kind", opt.value)}
+                      onClick={() => updateDraft("layout_kind", spec.kind)}
                       className={`text-left px-3 py-3 text-xs rounded border transition-colors ${
-                        draft.layout_kind === opt.value
+                        draft.layout_kind === spec.kind
                           ? "bg-blue-50 border-blue-400 text-blue-900"
                           : "bg-white border-gray-300 hover:bg-gray-50"
                       }`}
                     >
-                      <div className="font-semibold mb-1">{opt.label}</div>
-                      <div className="text-[11px] text-gray-500 leading-snug">{opt.description}</div>
+                      <div className="font-semibold mb-1">{spec.label}</div>
+                      <div className="text-[11px] text-gray-500 leading-snug">{spec.description}</div>
                     </button>
                   ))}
                 </div>
+                {/* 현재 layout 의 사용 필드 안내 — 사용 안 하는 필드는 폼에서 숨김 */}
+                {currentSpec && (
+                  <p className="text-[11px] text-blue-700/80 mt-2 leading-relaxed">
+                    이 레이아웃은
+                    {[
+                      currentSpec.uses.subtitle && "부제",
+                      currentSpec.uses.group_label && "소속 그룹",
+                      currentSpec.uses.sections && "하단 카드",
+                      currentSpec.uses.page_photos && "상단 슬라이드쇼 (page_photos 같은 slug)",
+                    ].filter(Boolean).join("·") || "기본 필드"}
+                    {" "}를 사용합니다.
+                  </p>
+                )}
               </div>
 
               {/* 기본 필드 */}
@@ -329,38 +379,42 @@ export default function AdminPagesPage() {
                     placeholder="페이지 제목"
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">부제 (선택)</label>
-                  <input
-                    value={draft.subtitle ?? ""}
-                    onChange={(e) => updateDraft("subtitle", e.target.value)}
-                    className={inputCls}
-                    placeholder="페이지 상단에 작은 글씨로 표시"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">소속 그룹 (헤더 브레드크럼·사이드바)</label>
-                  <input
-                    value={draft.group_label ?? ""}
-                    onChange={(e) => updateDraft("group_label", e.target.value)}
-                    className={inputCls}
-                    placeholder="예: 성당 소개"
-                  />
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {GROUP_PRESETS.map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => updateDraft("group_label", g)}
-                        className={`text-xs px-2 py-1 rounded border ${
-                          draft.group_label === g
-                            ? "bg-blue-50 border-blue-300 text-blue-700"
-                            : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >{g}</button>
-                    ))}
+                {currentSpec?.uses.subtitle && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">부제 (선택)</label>
+                    <input
+                      value={draft.subtitle ?? ""}
+                      onChange={(e) => updateDraft("subtitle", e.target.value)}
+                      className={inputCls}
+                      placeholder="페이지 상단에 작은 글씨로 표시"
+                    />
                   </div>
-                </div>
+                )}
+                {currentSpec?.uses.group_label && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">소속 그룹 (헤더 브레드크럼·사이드바)</label>
+                    <input
+                      value={draft.group_label ?? ""}
+                      onChange={(e) => updateDraft("group_label", e.target.value)}
+                      className={inputCls}
+                      placeholder="예: 성당 소개"
+                    />
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {GROUP_PRESETS.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => updateDraft("group_label", g)}
+                          className={`text-xs px-2 py-1 rounded border ${
+                            draft.group_label === g
+                              ? "bg-blue-50 border-blue-300 text-blue-700"
+                              : "bg-white border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >{g}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 활성 토글 */}
@@ -380,18 +434,18 @@ export default function AdminPagesPage() {
             <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold">
-                  {draft.layout_kind === "html" ? "HTML 코드" : "본문 (마크다운)"}
+                  {currentSpec?.body_format === "html" ? "HTML 코드" : "본문 (마크다운)"}
                 </h2>
                 <a
-                  href={draft.layout_kind === "html"
+                  href={currentSpec?.body_format === "html"
                     ? "https://developer.mozilla.org/ko/docs/Web/HTML/Element"
                     : "https://commonmark.org/help/"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:underline"
-                >{draft.layout_kind === "html" ? "HTML 태그 참고 ↗" : "마크다운 문법 ↗"}</a>
+                >{currentSpec?.body_format === "html" ? "HTML 태그 참고 ↗" : "마크다운 문법 ↗"}</a>
               </div>
-              {draft.layout_kind === "html" && (
+              {currentSpec?.body_format === "html" && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                   ⚠ HTML 은 wrapper 없이 그대로 렌더링됩니다. 외부에서 받은 코드를 붙여넣을 때는
                   &lt;script&gt; 등 동적 코드가 포함되지 않았는지 확인하세요.
@@ -434,14 +488,12 @@ export default function AdminPagesPage() {
                 onChange={(e) => updateDraft("body_markdown", e.target.value)}
                 rows={15}
                 className={inputCls + " font-mono text-xs"}
-                placeholder={draft.layout_kind === "html"
-                  ? `<section class="max-w-3xl mx-auto px-6 py-12">\n  <h1 class="text-3xl font-bold">제목</h1>\n  <p class="mt-4 text-gray-600">자유로운 HTML 레이아웃을 작성하세요.</p>\n</section>`
-                  : `# 제목\n\n여기에 본문을 작성합니다.\n\n- 항목 1\n- 항목 2\n\n> 인용문도 가능합니다.`}
+                placeholder={currentSpec?.body_placeholder || ""}
               />
             </section>
 
             {/* sections 레이아웃 전용 카드 편집기 */}
-            {draft.layout_kind === "sections" && (
+            {currentSpec?.uses.sections && (
               <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold">하단 카드 ({sections.length})</h2>

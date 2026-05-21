@@ -27,6 +27,62 @@ router = APIRouter(prefix="/pages", tags=["pages"])
 #  html            — body_markdown 자리에 raw HTML 저장. /p/{slug} 가 PageHeader/SectionLayout
 #                    wrapper 없이 그대로 dangerouslySetInnerHTML 로 출력 (자유 레이아웃).
 LAYOUT_KINDS = ("body", "body_with_hero", "sections", "html")
+
+# 레이아웃별 스키마 — admin UI 가 layout 선택에 따라 폼을 동적으로 구성하기 위한 메타데이터.
+# 각 레이아웃이 실제로 사용하는 필드만 보여주고, 무시되는 필드는 admin 화면에서 숨김 처리.
+LAYOUT_SPECS: list[dict] = [
+    {
+        "kind": "body",
+        "label": "본문형",
+        "description": "제목·부제 + 본문 텍스트만. 가장 단순한 글 페이지.",
+        "uses": {
+            "title": True, "subtitle": True, "group_label": True,
+            "body_markdown": True, "sections": False, "page_photos": False,
+        },
+        "body_format": "markdown",
+        "body_placeholder": "# 제목\n\n여기에 본문을 작성합니다.\n\n- 항목 1\n- 항목 2",
+    },
+    {
+        "kind": "body_with_hero",
+        "label": "사진 + 본문",
+        "description": "상단 슬라이드쇼(/admin/page-photos 의 같은 slug 사진) + 본문.",
+        "uses": {
+            "title": True, "subtitle": True, "group_label": True,
+            "body_markdown": True, "sections": False, "page_photos": True,
+        },
+        "body_format": "markdown",
+        "body_placeholder": "# 제목\n\n상단에는 page_photos 의 슬라이드쇼가 자동 표시됩니다.",
+    },
+    {
+        "kind": "sections",
+        "label": "섹션 카드형",
+        "description": "본문 + 하단 카드 리스트. FAQ·단계 안내·소개 카드 등.",
+        "uses": {
+            "title": True, "subtitle": True, "group_label": True,
+            "body_markdown": True, "sections": True, "page_photos": False,
+        },
+        "body_format": "markdown",
+        "body_placeholder": "# 제목\n\n본문은 카드 위쪽에 표시됩니다.",
+    },
+    {
+        "kind": "html",
+        "label": "HTML 직접 입력",
+        "description": "PageHeader·SectionLayout wrapper 없이 raw HTML 그대로 출력. 자유 레이아웃.",
+        "uses": {
+            # html 은 PageHeader/SectionLayout 을 거치지 않으므로 subtitle·group_label 무시
+            "title": True,  # admin/pages 목록 표시용으로는 사용
+            "subtitle": False, "group_label": False,
+            "body_markdown": True, "sections": False, "page_photos": False,
+        },
+        "body_format": "html",
+        "body_placeholder": (
+            '<section class="max-w-3xl mx-auto px-6 py-12">\n'
+            '  <h1 class="text-3xl font-bold">제목</h1>\n'
+            '  <p class="mt-4 text-gray-600">자유로운 HTML 레이아웃.</p>\n'
+            '</section>'
+        ),
+    },
+]
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9\-]*$")  # 영문 소문자·숫자·하이픈만
 
 
@@ -88,6 +144,13 @@ def get_page(slug: str, db: Session = Depends(get_db)):
 def list_variables():
     """admin 편집기에서 사용 가능한 변수 목록 안내. 인증 불필요."""
     return VARIABLE_DOCS
+
+
+@router.get("/layout-specs")
+def list_layout_specs():
+    """admin 편집기가 layout 선택에 따라 폼을 동적으로 구성할 때 참고하는 메타데이터.
+    인증 불필요 — 정적 정보."""
+    return LAYOUT_SPECS
 
 
 @router.get("/public", response_model=list[PageOut])
