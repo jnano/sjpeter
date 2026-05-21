@@ -240,7 +240,7 @@ export default function AdminPagesPage() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary)]">페이지 관리</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-primary)]">페이지 만들기</h1>
         <p className="text-sm text-gray-500 mt-1">
           코드 없이 페이지를 만들고 메뉴에 연결할 수 있습니다. URL은 <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/p/{`{slug}`}</code> 형식.
         </p>
