@@ -112,6 +112,10 @@ export default async function HomePage() {
   const heroLayout = (["wide", "wide-plain", "even", "even-plain"].includes(heroLayoutRaw)
     ? heroLayoutRaw
     : "wide") as "wide" | "wide-plain" | "even" | "even-plain";
+
+  // 홈 테마 — admin/home 에서 선택. 'warm'(기본·current) | 'modern'(여유 흰 톤) | 'classic'(컴팩트 네이비)
+  const homeThemeRaw = siteConfig.HOME_THEME ?? "warm";
+  const homeTheme = (["warm", "modern", "classic"].includes(homeThemeRaw) ? homeThemeRaw : "warm");
   const heroIsWide = heroLayout.startsWith("wide");
   const showBanner = !heroLayout.endsWith("-plain");
   const gridColsClass = heroIsWide ? "md:grid-cols-[2fr_1fr]" : "md:grid-cols-3";
@@ -259,7 +263,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div>
+    <div data-home-theme={homeTheme}>
       {/* ── 메인 3단 ── */}
       <section>
         <div className={`${CONTAINER} py-5 sm:py-7`}>

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.242";
+export const CURRENT_VERSION = "1.5.243";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.243", date: "2026-05-21", tag: "기능",
+    items: [
+      "Stage 4 Phase 1 — 홈 페이지 테마 시스템 (warm/modern/classic)",
+      "  · site_settings.HOME_THEME 추가 (/api/public/site-config 에 노출)",
+      "  · home page wrapper 에 data-home-theme=\"...\" 주입. globals.css 에 모던·클래식 CSS 변수 오버라이드",
+      "  · /admin/home 신설 — 테마 picker (현재) + 블록 빌더 자리 표시 (다음 phase)",
+      "  · 가톨릭 전례 시기 스킨(data-season)과 직교 — 두 스킨 시스템이 독립 동작",
+    ],
+  },
   {
     version: "1.5.242", date: "2026-05-21", tag: "디자인",
     items: [

@@ -57,6 +57,37 @@ input[type="search"]::-webkit-search-results-decoration {
   /* 비워둠 — 의도된 인프라용 셀렉터 */
 }
 
+/* ── 홈 페이지 테마 스킨 ──
+   /admin/home 에서 선택. site_settings.HOME_THEME 값을 app/(public)/page.tsx 가
+   읽어 홈 page wrapper 에 data-home-theme="..." 로 주입.
+   warm(기본·current 톤) · modern(여유 있는 흰 톤) · classic(컴팩트 네이비).
+   섹션 간격·카드 모양으로 차이를 두어 시각적으로 식별 가능. */
+
+[data-home-theme="modern"] section {
+  /* 섹션 사이 여백을 더 넓게 — 한숨 돌리는 톤 */
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+[data-home-theme="modern"] .rounded-xl {
+  border-radius: 1.25rem;
+}
+[data-home-theme="modern"] {
+  /* 흰 배경에 좀더 부드러운 그림자 — modern 느낌 */
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+[data-home-theme="classic"] section {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+[data-home-theme="classic"] .rounded-xl {
+  border-radius: 0.375rem;
+}
+[data-home-theme="classic"] {
+  --color-border: #1a365d33;
+  --color-border-dark: #1a365d80;
+}
+
 /* ── 가톨릭 전례 시기 스킨 ──
    /admin/season에서 토글. site_settings.CURRENT_SEASON 값을 app/layout.tsx가
    읽어 <html data-season="..."> 로 주입한다. 빈 값/유효하지 않은 값이면 속성
