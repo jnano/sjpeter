@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.237";
+export const CURRENT_VERSION = "1.5.238";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.238", date: "2026-05-21", tag: "인프라",
+    items: [
+      "동적 페이지 안전장치 — admin 감사 로그 + 고아 페이지 가시화",
+      "  · 원인: 'test/새내기' 처럼 사용자가 삭제 의도였는데도 9일간 살아남은 사례 추적 결과, pages.py CRUD 가 admin_logs 에 기록하지 않아 사용자가 본인 작업 결과를 검증할 방법 자체가 없었음",
+      "  · Fix A: pages.py create/update/delete 에 log_action 호출 추가 (events·boards·members 와 같은 패턴). admin_logs.target_type='dynamic_page' 로 추적 가능",
+      "  · Fix B: GET /api/pages/admin/all 에 menu_item_count 포함 → admin/pages 목록 각 항목에 '⚠ 메뉴 미연결' (빨강) 또는 '메뉴 N곳' (회색) 뱃지 표시. menu_items.href = '/p/{slug}' 매칭으로 카운트",
+      "  · 효과: 어느 페이지가 사이드바·헤더에서 접근 불가한 '고아' 인지 한눈에 식별 가능. 삭제 의도 vs 실제 결과 격차도 admin_logs 로 사후 확인",
+    ],
+  },
   {
     version: "1.5.237", date: "2026-05-21", tag: "인프라",
     items: [

@@ -18,6 +18,8 @@ interface DynamicPage {
   payload: Record<string, unknown>;
   body_markdown: string | null;
   is_active: boolean;
+  /** 이 페이지를 가리키는 active menu_items 개수. 0 이면 '고아 페이지' — 사이드바·헤더 어디서도 접근 불가. */
+  menu_item_count: number;
 }
 
 interface SectionCard {
@@ -52,6 +54,7 @@ const EMPTY_PAGE: DynamicPage = {
   payload: {},
   body_markdown: "",
   is_active: true,
+  menu_item_count: 0,
 };
 
 export default function AdminPagesPage() {
@@ -228,12 +231,20 @@ export default function AdminPagesPage() {
                     className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
                       selectedId === p.id ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold" : "hover:bg-gray-50"
                     } ${!p.is_active ? "opacity-60" : ""}`}
+                    title={p.menu_item_count === 0 ? "어느 메뉴에도 연결되지 않아 사이드바·헤더에서 접근할 수 없습니다." : `${p.menu_item_count}개 메뉴 항목과 연결됨`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="truncate">{p.title || "(제목 없음)"}</span>
                       {!p.is_active && <span className="text-[10px] text-gray-500">숨김</span>}
                     </div>
-                    <code className="text-[10px] text-gray-400 font-mono">/p/{p.slug}</code>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <code className="text-[10px] text-gray-400 font-mono">/p/{p.slug}</code>
+                      {p.menu_item_count === 0 ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">⚠ 메뉴 미연결</span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">메뉴 {p.menu_item_count}곳</span>
+                      )}
+                    </div>
                   </button>
                 </li>
               ))}

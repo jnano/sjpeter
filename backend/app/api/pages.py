@@ -8,11 +8,12 @@ import re
 from typing import Optional, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import asc
+from sqlalchemy import asc, text
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.auth import get_current_admin
+from app.core.admin_log import log_action, get_admin_identifier
 from app.core.dynamic_vars import VARIABLE_DOCS, render
 from app.models.admin import Admin
 from app.models.dynamic_page import DynamicPage
@@ -50,6 +51,9 @@ class PageOut(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     body_markdown: Optional[str] = None
     is_active: bool
+    # admin/pages 목록에서 "메뉴에 연결됨 / 미연결" 뱃지 표시용.
+    # 공개 응답에도 함께 노출되나 사용자에겐 무해 (기본 0).
+    menu_item_count: int = 0
 
     class Config:
         from_attributes = True
@@ -103,7 +107,19 @@ def list_public_pages(db: Session = Depends(get_db)):
 @router.get("/admin/all", response_model=list[PageOut])
 def list_all_pages(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
     pages = db.query(DynamicPage).order_by(asc(DynamicPage.id)).all()
-    return [PageOut.model_validate(p) for p in pages]
+    # 메뉴 연결 수 — '고아 페이지' 식별을 위해 admin/pages 목록에 뱃지로 표시.
+    # menu_items.href = '/p/{slug}' 형식으로 dynamic page 를 가리킴 (active 만 카운트).
+    href_counts: dict[str, int] = {}
+    for (href,) in db.execute(text(
+        "SELECT href FROM menu_items WHERE is_active = TRUE AND href LIKE '/p/%'"
+    )):
+        href_counts[href] = href_counts.get(href, 0) + 1
+    result: list[PageOut] = []
+    for p in pages:
+        out = PageOut.model_validate(p)
+        out.menu_item_count = href_counts.get(f"/p/{p.slug}", 0)
+        result.append(out)
+    return result
 
 
 @router.get("/admin/{page_id}", response_model=PageOut)
@@ -115,7 +131,7 @@ def get_admin_page(page_id: int, db: Session = Depends(get_db), _: Admin = Depen
 
 
 @router.post("", response_model=PageOut)
-def create_page(body: PageIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def create_page(body: PageIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     _validate(body)
     if db.query(DynamicPage).filter(DynamicPage.slug == body.slug).first():
         raise HTTPException(status_code=400, detail=f"slug '{body.slug}'은 이미 사용 중입니다.")
@@ -123,11 +139,12 @@ def create_page(body: PageIn, db: Session = Depends(get_db), _: Admin = Depends(
     db.add(p)
     db.commit()
     db.refresh(p)
+    log_action(db, get_admin_identifier(admin), "create_page", "dynamic_page", p.id, f"{p.slug} / {p.title}")
     return PageOut.model_validate(p)
 
 
 @router.put("/{page_id}", response_model=PageOut)
-def update_page(page_id: int, body: PageIn, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def update_page(page_id: int, body: PageIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     _validate(body)
     p = db.query(DynamicPage).filter(DynamicPage.id == page_id).first()
     if not p:
@@ -141,14 +158,18 @@ def update_page(page_id: int, body: PageIn, db: Session = Depends(get_db), _: Ad
         setattr(p, k, v)
     db.commit()
     db.refresh(p)
+    log_action(db, get_admin_identifier(admin), "update_page", "dynamic_page", p.id, f"{p.slug} / {p.title}")
     return PageOut.model_validate(p)
 
 
 @router.delete("/{page_id}")
-def delete_page(page_id: int, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def delete_page(page_id: int, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     p = db.query(DynamicPage).filter(DynamicPage.id == page_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="페이지를 찾을 수 없습니다.")
+    # 삭제 전 식별 정보 캡처 — db.delete 후엔 p.slug/p.title 접근 불가
+    snapshot = f"{p.slug} / {p.title}"
     db.delete(p)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_page", "dynamic_page", page_id, snapshot)
     return {"ok": True}
