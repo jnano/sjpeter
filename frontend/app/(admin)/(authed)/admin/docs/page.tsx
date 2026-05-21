@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.265";
+export const CURRENT_VERSION = "1.5.266";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.266", date: "2026-05-21", tag: "기능",
+    items: [
+      "기도문 카테고리 '암송할 기도문(memorize)' 신설 — 학교사이트 암송 기도문 6건 묶음",
+      "  · 반성의 기도·십계명·고백의 기도·삼덕송·봉헌의 기도·부활 삼종기도 → category='memorize'",
+      "  · frontend/lib/prayer.ts: PRAYER_CATEGORIES·LABELS·HINTS 에 memorize 추가 (daily 다음 위치)",
+      "  · backend/app/api/content.py·models/content.py: 허용 카테고리 리스트에 추가",
+    ],
+  },
   {
     version: "1.5.265", date: "2026-05-21", tag: "디자인",
     items: [

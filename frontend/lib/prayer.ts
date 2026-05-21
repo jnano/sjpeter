@@ -1,5 +1,6 @@
 export type PrayerCategory =
   | "daily"
+  | "memorize"
   | "mass"
   | "rosary"
   | "liturgy_season"
@@ -9,6 +10,7 @@ export type PrayerCategory =
 
 export const PRAYER_CATEGORIES: PrayerCategory[] = [
   "daily",
+  "memorize",
   "mass",
   "rosary",
   "liturgy_season",
@@ -19,6 +21,7 @@ export const PRAYER_CATEGORIES: PrayerCategory[] = [
 
 export const PRAYER_CATEGORY_LABELS: Record<PrayerCategory, string> = {
   daily: "일상 기도",
+  memorize: "암송할 기도문",
   mass: "미사 기도",
   rosary: "묵주 기도",
   liturgy_season: "전례 시기",
@@ -29,6 +32,7 @@ export const PRAYER_CATEGORY_LABELS: Record<PrayerCategory, string> = {
 
 export const PRAYER_CATEGORY_HINTS: Record<PrayerCategory, string> = {
   daily: "성호경·주님의 기도·성모송·영광송 등 매일 바치는 기도",
+  memorize: "신자가 외워서 바치는 기본 기도문 모음",
   mass: "미사 전·후·식사 전·후 기도",
   rosary: "환희·고통·영광·빛의 신비",
   liturgy_season: "대림·사순·부활 등 시기에 따른 기도",

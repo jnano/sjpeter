@@ -78,7 +78,7 @@ class Prayer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    # 카테고리 키: daily / mass / rosary / liturgy_season / special / memorial / parish
+    # 카테고리 키: daily / memorize / mass / rosary / liturgy_season / special / memorial / parish
     category = Column(String(50), nullable=False, default="daily")
     scripture = Column(String(300), nullable=True)
     body = Column(Text, nullable=False)
