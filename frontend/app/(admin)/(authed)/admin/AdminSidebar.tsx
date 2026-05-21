@@ -55,6 +55,16 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "말씀·기도",
+    icon: "🙏",
+    items: [
+      { href: "/admin/vision", label: "사목지표" },
+      { href: "/admin/meditation", label: "주일 말씀" },
+      { href: "/admin/prayers", label: "기도문 관리" },
+      { href: "/admin/saints", label: "성인 사전" },
+    ],
+  },
+  {
     label: "소식·일정",
     icon: "📰",
     items: [
@@ -73,13 +83,13 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "말씀·기도",
-    icon: "🙏",
+    label: "공동체",
+    icon: "💬",
     items: [
-      { href: "/admin/vision", label: "사목지표" },
-      { href: "/admin/meditation", label: "주일 말씀" },
-      { href: "/admin/prayers", label: "기도문 관리" },
-      { href: "/admin/saints", label: "성인 사전" },
+      { href: "/admin/council", label: "사목평의회" },
+      { href: "/admin/community", label: "단체·분과" },
+      { href: "/admin/boards", label: "게시판 관리" },
+      { href: "/admin/members", label: "회원 관리" },
     ],
   },
   {
@@ -99,16 +109,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/home", label: "홈 페이지" },
       { href: "/admin/menus", label: "메뉴" },
       { href: "/admin/season", label: "전례 시기 테마" },
-    ],
-  },
-  {
-    label: "공동체",
-    icon: "💬",
-    items: [
-      { href: "/admin/council", label: "사목평의회" },
-      { href: "/admin/community", label: "단체·분과" },
-      { href: "/admin/boards", label: "게시판 관리" },
-      { href: "/admin/members", label: "회원 관리" },
     ],
   },
   {

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.272";
-export const LAST_UPDATED = "2026-05-21";
+export const CURRENT_VERSION = "1.5.273";
+export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.273", date: "2026-05-22", tag: "디자인",
+    items: [
+      "admin 사이드바 NAV_GROUPS 순서 재정렬 — 사용 빈도·업무 흐름 반영",
+      "  · 새 순서: 대시보드 → 성전 건축 → 성당 정보 → 신부님·수녀님 → 말씀·기도 → 소식·일정 → 공동체 → 페이지·사진·배너 → 레이아웃 → 시스템",
+      "  · 이전 순서 대비 변경: 말씀·기도가 소식·일정 앞으로, 공동체가 페이지·사진·배너 앞으로 이동",
+    ],
+  },
   {
     version: "1.5.272", date: "2026-05-21", tag: "디자인",
     items: [
