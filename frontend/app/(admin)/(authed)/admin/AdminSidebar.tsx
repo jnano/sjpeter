@@ -86,6 +86,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/home-banner", label: "메인 사진" },
       { href: "/admin/banners", label: "광고 배너" },
+      { href: "/admin/page-photos", label: "페이지 사진" },
     ],
   },
   {

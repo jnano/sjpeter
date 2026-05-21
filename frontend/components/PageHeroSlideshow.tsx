@@ -23,6 +23,8 @@ export interface PagePhoto {
   file_url: string;
   alt: string | null;
   sort_order: number;
+  /** object-position 값. "top left" | "top" | ... | "bottom right". 기본 "center". */
+  image_position: string;
 }
 
 export interface PagePhotoSettings {
@@ -122,7 +124,7 @@ export default function PageHeroSlideshow({
           alt={p.alt ?? fallbackAlt ?? "사진"}
           fill
           className={imgClassName ?? "object-cover"}
-          style={imgStyle}
+          style={{ objectPosition: p.image_position || "center", ...imgStyle }}
           sizes={sizes}
           priority={priority}
         />
@@ -162,7 +164,7 @@ export default function PageHeroSlideshow({
                 alt={p.alt ?? fallbackAlt ?? "사진"}
                 fill
                 className={imgClassName ?? "object-cover"}
-                style={imgStyle}
+                style={{ objectPosition: p.image_position || "center", ...imgStyle }}
                 sizes={sizes}
                 priority={priority && i === 0}
               />
@@ -180,6 +182,7 @@ export default function PageHeroSlideshow({
       {photos.map((p, i) => {
         const active = i === index;
         const style: React.CSSProperties = {
+          objectPosition: p.image_position || "center",
           ...imgStyle,
           opacity: active ? 1 : 0,
           transition: `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out, filter ${duration}ms ease-in-out`,

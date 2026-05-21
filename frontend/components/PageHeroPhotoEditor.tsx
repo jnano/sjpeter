@@ -41,6 +41,19 @@ const TRANSITION_MODES: TransitionMode[] = [
   "none",
 ];
 
+// admin/menus 의 IMAGE_POSITIONS 와 동일 패턴 — object-position 9방향 그리드
+const IMAGE_POSITIONS: { value: string; label: string }[] = [
+  { value: "top left",     label: "↖" },
+  { value: "top",          label: "↑" },
+  { value: "top right",    label: "↗" },
+  { value: "left",         label: "←" },
+  { value: "center",       label: "•" },
+  { value: "right",        label: "→" },
+  { value: "bottom left",  label: "↙" },
+  { value: "bottom",       label: "↓" },
+  { value: "bottom right", label: "↘" },
+];
+
 export default function PageHeroPhotoEditor({ slug, title, description }: Props) {
   const [photos, setPhotos] = useState<PagePhoto[]>([]);
   const [settings, setSettings] = useState<PagePhotoSettings>({
@@ -110,6 +123,25 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
       notify(DataEvent.PAGE_PHOTOS);
       flash("삭제되었습니다.");
     }
+  }
+
+  async function updateImagePosition(id: number, pos: string) {
+    const token = getToken();
+    // 낙관적 업데이트 — 응답 기다리지 않고 UI 즉시 반영
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, image_position: pos } : p)));
+    const res = await fetch(`${API}/api/page-photos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ image_position: pos }),
+    });
+    if (!res.ok) {
+      // 실패 시 서버 상태로 되돌림
+      await fetchData();
+      const d = await res.json().catch(() => ({}));
+      setError(d.detail || "이미지 위치 저장에 실패했습니다.");
+      return;
+    }
+    notify(DataEvent.PAGE_PHOTOS);
   }
 
   async function move(id: number, dir: -1 | 1) {
@@ -243,18 +275,45 @@ export default function PageHeroPhotoEditor({ slug, title, description }: Props)
       ) : (
         <ul className="space-y-2">
           {photos.map((p, i) => (
-            <li key={p.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+            <li key={p.id} className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
               <div className="w-20 h-14 relative shrink-0 rounded overflow-hidden bg-gray-200">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`${API}${p.file_url}`}
                   alt={p.alt ?? "사진"}
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: p.image_position || "center" }}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-500 truncate">{p.file_url}</p>
                 <p className="text-xs text-gray-400">순서 {i + 1}</p>
+              </div>
+              {/* 9방향 이미지 위치 그리드 */}
+              <div className="shrink-0">
+                <p className="text-[11px] text-gray-500 mb-1">이미지 위치</p>
+                <div className="grid grid-cols-3 gap-0.5 w-[84px]">
+                  {IMAGE_POSITIONS.map((pos) => {
+                    const active = (p.image_position || "center") === pos.value;
+                    return (
+                      <button
+                        key={pos.value}
+                        type="button"
+                        onClick={() => updateImagePosition(p.id, pos.value)}
+                        title={pos.value}
+                        aria-label={`이미지 위치 ${pos.value}`}
+                        aria-pressed={active}
+                        className={`w-7 h-7 text-xs flex items-center justify-center rounded border transition-colors ${
+                          active
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {pos.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex gap-1 shrink-0">
                 <button

@@ -524,6 +524,10 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_page_photos_slug ON page_photos(page_slug)"
         ))
+        # v1.5.253+: 사진별 object-position (admin/menus 의 9방향 그리드와 동일 패턴)
+        conn.execute(text(
+            "ALTER TABLE page_photos ADD COLUMN IF NOT EXISTS image_position VARCHAR(20) NOT NULL DEFAULT 'center'"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS page_photo_settings (
                 page_slug VARCHAR(50) PRIMARY KEY,

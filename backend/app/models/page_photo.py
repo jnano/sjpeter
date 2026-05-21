@@ -29,6 +29,10 @@ class PagePhoto(Base):
     file_url = Column(String(500), nullable=False)
     alt = Column(String(200), nullable=True)
     sort_order = Column(Integer, default=0, nullable=False)
+    # object-position 값. admin/menus 의 9방향 그리드와 동일한 문자열 집합:
+    # "top left" | "top" | "top right" | "left" | "center" | "right" |
+    # "bottom left" | "bottom" | "bottom right"
+    image_position = Column(String(20), default="center", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

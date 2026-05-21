@@ -39,12 +39,20 @@ DEFAULT_DURATION_MS = 700
 
 # ──────────────────────────── 스키마 ────────────────────────────
 
+_ALLOWED_IMAGE_POSITIONS = {
+    "top left", "top", "top right",
+    "left", "center", "right",
+    "bottom left", "bottom", "bottom right",
+}
+
+
 class PagePhotoOut(BaseModel):
     id: int
     page_slug: str
     file_url: str
     alt: Optional[str]
     sort_order: int
+    image_position: str
     created_at: datetime
 
     class Config:
@@ -70,6 +78,7 @@ class PagePhotoBundle(BaseModel):
 class PagePhotoUpdate(BaseModel):
     alt: Optional[str] = None
     sort_order: Optional[int] = None
+    image_position: Optional[str] = None
 
 
 class PagePhotoSettingUpdate(BaseModel):
@@ -295,6 +304,8 @@ def update_page_photo(
     if not photo:
         raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
     data = body.model_dump(exclude_unset=True)
+    if "image_position" in data and data["image_position"] not in _ALLOWED_IMAGE_POSITIONS:
+        raise HTTPException(status_code=400, detail=f"허용되지 않는 이미지 위치 값입니다: {data['image_position']}")
     for k, v in data.items():
         setattr(photo, k, v)
     db.commit()

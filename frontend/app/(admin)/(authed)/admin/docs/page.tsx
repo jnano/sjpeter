@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.252";
+export const CURRENT_VERSION = "1.5.253";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.253", date: "2026-05-21", tag: "기능",
+    items: [
+      "페이지 사진(page-photos) 관리 개선 — admin 사이드바 메뉴 + 사진별 이미지 위치(9방향)",
+      "  · admin 사이드바 '배너 관리' 그룹에 '페이지 사진' 메뉴 추가 — 그동안 누락되어 있던 진입점 복원",
+      "  · DB: page_photos.image_position VARCHAR(20) DEFAULT 'center' 컬럼 추가 (object-position 9방향)",
+      "  · admin/page-photos: 사진 행마다 9방향 위치 그리드 (admin/menus 의 사이드바 이미지와 동일 패턴, 낙관적 업데이트)",
+      "  · 공개 PageHeroSlideshow: 1장 정적 / 슬라이드 / 페이드 3경로 모두 <Image style={objectPosition}> 반영",
+      "  · 동기: /p/saint 같이 가로형 박스에 세로 인물 사진이 들어가도 머리·얼굴 위치를 어드민에서 직접 맞출 수 있게",
+    ],
+  },
   {
     version: "1.5.252", date: "2026-05-21", tag: "수정",
     items: [
