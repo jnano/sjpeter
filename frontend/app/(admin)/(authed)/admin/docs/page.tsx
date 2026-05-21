@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.253";
+export const CURRENT_VERSION = "1.5.254";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.254", date: "2026-05-21", tag: "수정",
+    items: [
+      "admin/settings 에서 HOME_HERO_LAYOUT 항목 숨김 — /admin/home 으로 단일화",
+      "  · 홈 hero 레이아웃은 home_blocks 의 hero 블록 payload.layout 이 1순위, settings.HOME_HERO_LAYOUT 은 fallback",
+      "  · 같은 옵션이 두 곳에 노출되어 혼란을 유발 → admin/settings 화면에서만 가리기 (DB row·API·fallback 동작 유지)",
+      "  · 확장용 HIDDEN_KEYS Set 도입 — 향후 다른 키도 같은 방식으로 가능",
+    ],
+  },
   {
     version: "1.5.253", date: "2026-05-21", tag: "기능",
     items: [

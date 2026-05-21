@@ -40,6 +40,12 @@ const SELECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
+// admin/settings UI 에서 표시하지 않을 키. DB row·API·fallback 동작은 그대로 유지하고
+// 화면에서만 가린다. (HOME_HERO_LAYOUT 은 /admin/home 의 hero 블록 payload.layout 으로 단일화)
+const HIDDEN_KEYS = new Set<string>([
+  "HOME_HERO_LAYOUT",
+]);
+
 export default function SettingsPage() {
   const router = useRouter();
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -130,7 +136,7 @@ export default function SettingsPage() {
 
   const grouped = GROUP_ORDER.map((group) => ({
     group,
-    items: settings.filter((s) => s.group_name === group),
+    items: settings.filter((s) => s.group_name === group && !HIDDEN_KEYS.has(s.key)),
   })).filter((g) => g.items.length > 0);
 
   return (
