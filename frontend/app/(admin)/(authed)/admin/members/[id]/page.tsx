@@ -70,8 +70,13 @@ export default function AdminMemberDetailPage() {
   });
 
   useEffect(() => {
+    // super-admin 전용 — 운영자는 회원 목록으로 리다이렉트 (상세는 개인정보 전체 노출)
+    if (localStorage.getItem("admin_is_super") !== "true") {
+      router.replace("/admin/members");
+      return;
+    }
     setToken(localStorage.getItem("admin_token"));
-  }, []);
+  }, [router]);
 
   const fetchMember = useCallback(async () => {
     if (!token) { router.push("/admin"); return; }

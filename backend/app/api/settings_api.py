@@ -126,7 +126,7 @@ _HIDDEN_KEYS = {"PARISH_NAME", "PARISH_NAME_EN"}
 
 
 @router.get("", response_model=list[SettingOut])
-def list_settings(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def list_settings(db: Session = Depends(get_db), _: Admin = Depends(get_current_super_admin)):
     rows = (
         db.query(SiteSetting)
         .filter(~SiteSetting.key.in_(_HIDDEN_KEYS))
@@ -174,7 +174,7 @@ def update_setting(
 
 
 @router.post("/test-smtp")
-def test_smtp(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+def test_smtp(db: Session = Depends(get_db), _: Admin = Depends(get_current_super_admin)):
     """현재 저장된 SMTP 설정으로 연결 테스트."""
     from app.core.site_settings import get_setting
     host = get_setting("SMTP_HOST", "smtp.gmail.com")

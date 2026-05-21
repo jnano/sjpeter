@@ -1061,9 +1061,10 @@ def admin_export_csv(
     q: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    _admin: Admin = Depends(get_current_super_admin),
 ):
-    """현재 필터 조건의 회원 전체를 CSV 로 내려준다. 외부 메일링·통계 용도."""
+    """현재 필터 조건의 회원 전체를 CSV 로 내려준다. 외부 메일링·통계 용도.
+    개인정보 일괄 노출이라 super-admin 전용."""
     query = db.query(Member)
     if q:
         like = f"%{q}%"
@@ -1107,9 +1108,10 @@ def admin_export_csv(
 def admin_get_member(
     member_id: int,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    _admin: Admin = Depends(get_current_super_admin),
 ):
-    """회원 상세 — 활동 통계(글·댓글 수) + 관심 분과 포함."""
+    """회원 상세 — 활동 통계(글·댓글 수) + 관심 분과 포함. super-admin 전용
+    (개인정보 + 관심 분과 + 활동 이력을 단일 화면에 노출)."""
     member = _get_member_or_404(member_id, db)
     post_count = db.query(func.count(Post.id)).filter(Post.member_id == member.id).scalar() or 0
     comment_count = db.query(func.count(Comment.id)).filter(Comment.member_id == member.id).scalar() or 0
@@ -1150,9 +1152,10 @@ def admin_update_member(
     member_id: int,
     body: MemberAdminUpdate,
     db: Session = Depends(get_db),
-    _admin: Admin = Depends(get_current_admin),
+    _admin: Admin = Depends(get_current_super_admin),
 ):
-    """관리자가 회원 기본 정보를 수정한다. 이메일은 중복 검사 후 변경."""
+    """관리자가 회원 기본 정보를 수정한다. 이메일은 중복 검사 후 변경.
+    회원 개인정보 수정이라 super-admin 전용."""
     member = _get_member_or_404(member_id, db)
     data = body.model_dump(exclude_unset=True)
     changed: list[str] = []

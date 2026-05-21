@@ -293,13 +293,15 @@ export default function AdminMembersPage() {
           {data && <span className="text-sm text-[var(--color-text-muted)]">전체 {data.total}명</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={downloadCsv}
-            className="px-3 py-2 border border-[var(--color-border)] text-sm rounded-lg hover:bg-[var(--color-surface)] transition-colors"
-            title="현재 필터의 회원을 CSV 로 다운로드"
-          >
-            📥 CSV 다운로드
-          </button>
+          {isSuper && (
+            <button
+              onClick={downloadCsv}
+              className="px-3 py-2 border border-[var(--color-border)] text-sm rounded-lg hover:bg-[var(--color-surface)] transition-colors"
+              title="현재 필터의 회원을 CSV 로 다운로드 (슈퍼 관리자 전용)"
+            >
+              📥 CSV 다운로드
+            </button>
+          )}
           <button
             onClick={() => { setShowForm((v) => !v); setFormError(""); setForm({ ...EMPTY_FORM }); }}
             className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
@@ -556,12 +558,16 @@ function MemberRow({
         )}
         <div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Link
-              href={`/admin/members/${member.id}`}
-              className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline"
-            >
-              {member.nickname}
-            </Link>
+            {isSuper ? (
+              <Link
+                href={`/admin/members/${member.id}`}
+                className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline"
+              >
+                {member.nickname}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium">{member.nickname}</p>
+            )}
             {member.is_admin && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">운영자</span>
             )}

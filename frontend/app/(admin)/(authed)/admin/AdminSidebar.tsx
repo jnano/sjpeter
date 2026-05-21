@@ -14,6 +14,8 @@ interface NavItem {
   badgeTone?: "amber" | "violet" | "red";
   aiTag?: boolean;
   children?: NavItem[];
+  /** super-admin 전용 항목 — 운영자(member.is_admin)에게는 숨김 */
+  superOnly?: boolean;
 }
 
 interface NavGroup {
@@ -113,7 +115,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "시스템",
     icon: "⚙",
     items: [
-      { href: "/admin/settings", label: "사이트 설정" },
+      { href: "/admin/settings", label: "사이트 설정", superOnly: true },
       { href: "/admin/reports", label: "장애 신고" },
       { href: "/admin/logs", label: "활동 로그" },
       { href: "/admin/docs", label: "기술 문서" },
@@ -160,6 +162,11 @@ export default function AdminSidebar({
   const [draftCount, setDraftCount] = useState(0);
   const [extractionCount, setExtractionCount] = useState(0);
   const [visionCount, setVisionCount] = useState(0);
+  // super-admin 만 보여줄 메뉴 항목(superOnly:true) 필터용. mount 후 localStorage 동기화.
+  const [isSuper, setIsSuper] = useState(false);
+  useEffect(() => {
+    setIsSuper(typeof window !== "undefined" && localStorage.getItem("admin_is_super") === "true");
+  }, []);
 
   // 대분류는 accordion — 한 번에 하나만 열림. 중분류는 독립.
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -422,8 +429,10 @@ export default function AdminSidebar({
             );
           })}
 
-          {/* 그룹별 메뉴 */}
+          {/* 그룹별 메뉴 — superOnly 항목은 isSuper 일 때만, 그룹 자체가 비면 그룹도 숨김 */}
           {NAV_GROUPS.map((g) => {
+            const filteredItems = g.items.filter((it) => !it.superOnly || isSuper);
+            if (filteredItems.length === 0) return null;
             const open = openGroup === g.label;
             const headerId = `admin-group-${g.label}`;
             return (
@@ -458,7 +467,7 @@ export default function AdminSidebar({
                 </h2>
                 {open && (
                   <ul aria-labelledby={headerId}>
-                    {g.items.map((it) => {
+                    {filteredItems.map((it) => {
                       const active = isActive(it.href);
                       const badge = badgeFor(it);
                       const hasChildren = it.children && it.children.length > 0;

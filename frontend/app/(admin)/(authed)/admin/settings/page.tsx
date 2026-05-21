@@ -65,6 +65,11 @@ export default function SettingsPage() {
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) { router.push("/admin"); return; }
+    // super-admin 전용 페이지 — 운영자(member.is_admin)는 대시보드로 리다이렉트
+    if (localStorage.getItem("admin_is_super") !== "true") {
+      router.replace("/admin/dashboard");
+      return;
+    }
 
     fetch(`${API}/api/admin/settings`, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (res) => {

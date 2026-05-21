@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.269";
+export const CURRENT_VERSION = "1.5.270";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.270", date: "2026-05-21", tag: "수정",
+    items: [
+      "super-admin 전용 영역 5곳 가드 강화 — 운영자(member.is_admin) 접근 차단",
+      "  · 백엔드: /api/admin/settings GET/test-smtp, /api/members/admin/{id} GET·PATCH, /api/members/admin/export.csv → super-admin Depends",
+      "  · 프론트엔드 admin/settings: 비-super 진입 시 /admin/dashboard 리다이렉트",
+      "  · 프론트엔드 admin/members/[id]: 비-super 진입 시 /admin/members 리다이렉트",
+      "  · 프론트엔드 admin/members 목록: CSV 다운로드 버튼·닉네임 상세 링크는 isSuper 만 노출(운영자에겐 plain 텍스트)",
+      "  · 프론트엔드 admin/docs '변경 이력' 탭: 비-super 면 탭 자체 숨김 + 컴포넌트 미렌더",
+      "  · AdminSidebar NavItem.superOnly 필드 도입 — '사이트 설정' 메뉴는 운영자에게 사이드바에서 미노출(그룹 자체가 비면 그룹도 숨김)",
+      "  · 운영자 권한 grant/revoke 는 이전부터 super-admin 전용(get_current_super_admin) — 별도 변경 없음",
+    ],
+  },
   {
     version: "1.5.269", date: "2026-05-21", tag: "기능",
     items: [
@@ -2948,6 +2961,14 @@ type TabId = typeof TABS[number]["id"];
 
 export default function AdminDocsPage() {
   const [tab, setTab] = useState<TabId>("philosophy");
+  const [isSuper, setIsSuper] = useState(false);
+  useEffect(() => {
+    setIsSuper(typeof window !== "undefined" && localStorage.getItem("admin_is_super") === "true");
+  }, []);
+
+  // '변경 이력' 탭은 super-admin 전용. 비-super 는 메뉴에서도 숨기고, 직접 setTab 호출도 차단.
+  const visibleTabs = TABS.filter((t) => t.id !== "changelog" || isSuper);
+  const activeTab = tab === "changelog" && !isSuper ? "philosophy" : tab;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -2967,12 +2988,12 @@ export default function AdminDocsPage() {
 
       {/* 탭 네비게이션 */}
       <div className="flex gap-1 mb-6 border-b border-[var(--color-border)]">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === t.id
+              activeTab === t.id
                 ? "border-[var(--color-primary)] text-[var(--color-primary)]"
                 : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
@@ -2984,12 +3005,12 @@ export default function AdminDocsPage() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      {tab === "philosophy" && <PhilosophyTab />}
-      {tab === "guide"      && <GuideTab />}
-      {tab === "tech"       && <TechTab />}
-      {tab === "api"        && <ApiTab />}
-      {tab === "changelog"  && <ChangelogTab />}
-      {tab === "ownership"  && <OwnershipTab />}
+      {activeTab === "philosophy" && <PhilosophyTab />}
+      {activeTab === "guide"      && <GuideTab />}
+      {activeTab === "tech"       && <TechTab />}
+      {activeTab === "api"        && <ApiTab />}
+      {activeTab === "changelog"  && isSuper && <ChangelogTab />}
+      {activeTab === "ownership"  && <OwnershipTab />}
     </div>
   );
 }
