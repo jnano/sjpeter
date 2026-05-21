@@ -50,4 +50,6 @@ class Member(Base):
     # 영명축일 (세례명 성인의 축일) — 월·일 모두 입력해야 의미. 둘 다 NULL 허용 (선택 사항).
     name_day_month = Column(Integer, nullable=True)
     name_day_day = Column(Integer, nullable=True)
+    # v1.5.269: 마지막 로그인 시각 (auth.py 로그인 성공 시 갱신)
+    last_login_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -4,7 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBulkSelect } from "@/components/useBulkSelect";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatErrorDetail } from "@/lib/api";
+
+function relativeFromNow(iso: string | null): string {
+  if (!iso) return "로그인 기록 없음";
+  const t = new Date(iso).getTime();
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return "방금 전";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
+  const days = Math.floor(diffSec / 86400);
+  if (days < 7) return `${days}일 전`;
+  return new Date(iso).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -12,12 +25,16 @@ interface Member {
   id: number;
   email: string;
   nickname: string;
+  name: string | null;
+  phone: string | null;
   avatar_url: string | null;
   social_provider: string | null;
   is_active: boolean;
   is_admin: boolean;
+  is_email_verified: boolean;
   has_password: boolean;
   post_count: number;
+  last_login_at: string | null;
   created_at: string;
 }
 
@@ -89,6 +106,27 @@ export default function AdminMembersPage() {
   }, [token, page, q, filterActive, router]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
+
+  async function downloadCsv() {
+    if (!token) { router.push("/admin"); return; }
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (filterActive !== "all") params.set("is_active", filterActive === "active" ? "true" : "false");
+    const res = await fetch(`${API}/api/members/admin/export.csv?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      alert("CSV 다운로드에 실패했습니다.");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `members_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleCreateMember(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -254,12 +292,21 @@ export default function AdminMembersPage() {
           <h1 className="text-2xl font-bold">회원 관리</h1>
           {data && <span className="text-sm text-[var(--color-text-muted)]">전체 {data.total}명</span>}
         </div>
-        <button
-          onClick={() => { setShowForm((v) => !v); setFormError(""); setForm({ ...EMPTY_FORM }); }}
-          className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
-        >
-          {showForm ? "취소" : "회원 등록"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={downloadCsv}
+            className="px-3 py-2 border border-[var(--color-border)] text-sm rounded-lg hover:bg-[var(--color-surface)] transition-colors"
+            title="현재 필터의 회원을 CSV 로 다운로드"
+          >
+            📥 CSV 다운로드
+          </button>
+          <button
+            onClick={() => { setShowForm((v) => !v); setFormError(""); setForm({ ...EMPTY_FORM }); }}
+            className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+          >
+            {showForm ? "취소" : "회원 등록"}
+          </button>
+        </div>
       </div>
 
       {/* 회원 등록 폼 */}
@@ -509,7 +556,12 @@ function MemberRow({
         )}
         <div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-sm font-medium">{member.nickname}</p>
+            <Link
+              href={`/admin/members/${member.id}`}
+              className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline"
+            >
+              {member.nickname}
+            </Link>
             {member.is_admin && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">운영자</span>
             )}
@@ -519,7 +571,9 @@ function MemberRow({
               </span>
             )}
           </div>
-          <p className="text-xs text-[var(--color-text-muted)]">#{member.id}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            #{member.id} · {relativeFromNow(member.last_login_at)}
+          </p>
         </div>
       </div>
 

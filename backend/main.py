@@ -169,6 +169,8 @@ def _migrate_add_columns():
             # 영명축일 (월·일 별도 INT, 둘 다 NULL 허용. v1.5.141)
             ("name_day_month", "INTEGER"),
             ("name_day_day", "INTEGER"),
+            # 마지막 로그인 시각 (v1.5.269) — auth.py 로그인 성공 시 갱신
+            ("last_login_at", "TIMESTAMP"),
         ]:
             try:
                 conn.execute(text(

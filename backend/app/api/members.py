@@ -6,6 +6,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
+from fastapi.responses import StreamingResponse
+import csv
+import io
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, or_, func, text
 from pydantic import BaseModel, EmailStr
@@ -23,6 +26,7 @@ from app.models.admin import Admin
 from app.models.board import Post
 from app.models.content import CommunityGroup
 from app.models.member_interest import MemberCommunityInterest
+from app.models.board import Comment
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -107,16 +111,40 @@ class MemberAdminOut(BaseModel):
     id: int
     email: str
     nickname: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
     avatar_url: Optional[str] = None
     social_provider: Optional[str] = None
     is_active: bool
     is_admin: bool = False
+    is_email_verified: bool = False
     has_password: bool = True   # 비밀번호 설정 여부 (소셜 전용 여부 판단용)
     post_count: int = 0
+    name_day_month: Optional[int] = None
+    name_day_day: Optional[int] = None
+    last_login_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class MemberDetailOut(MemberAdminOut):
+    """회원 상세 — 활동 통계 + 관심 분과 포함."""
+    comment_count: int = 0
+    interest_groups: list[dict] = []   # [{id, label}]
+    receive_notification: bool = False
+    notify_kakao: bool = False
+
+
+class MemberAdminUpdate(BaseModel):
+    """관리자가 회원 정보를 직접 수정. 이메일·이름·전화·세례명·세례명 축일."""
+    email: Optional[str] = None
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    phone: Optional[str] = None
+    name_day_month: Optional[int] = None
+    name_day_day: Optional[int] = None
 
 
 class MemberListResponse(BaseModel):
@@ -362,6 +390,8 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
     if not member.is_active:
         raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
+    member.last_login_at = datetime.utcnow()
+    db.commit()
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member", remember=body.remember),
         member=_member_out(member),
@@ -407,6 +437,9 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
 
     if not member.is_active:
         raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
+
+    member.last_login_at = datetime.utcnow()
+    db.commit()
 
     return TokenResponse(
         access_token=create_access_token(str(member.id), role="member"),
@@ -874,12 +907,18 @@ def admin_list_members(
             id=m.id,
             email=m.email,
             nickname=m.nickname,
+            name=m.name,
+            phone=m.phone,
             avatar_url=m.avatar_url,
             social_provider=m.social_provider,
             is_active=m.is_active,
             is_admin=m.is_admin,
+            is_email_verified=bool(m.is_email_verified),
             has_password=m.hashed_password is not None,
             post_count=post_counts.get(m.id, 0),
+            name_day_month=m.name_day_month,
+            name_day_day=m.name_day_day,
+            last_login_at=m.last_login_at,
             created_at=m.created_at,
         )
         for m in members
@@ -1015,6 +1054,135 @@ def revoke_admin(
     return _to_admin_out(member, db)
 
 
+# ── v1.5.269: 회원 상세·수정·CSV export ─────────────────────
+
+@router.get("/admin/export.csv")
+def admin_export_csv(
+    q: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """현재 필터 조건의 회원 전체를 CSV 로 내려준다. 외부 메일링·통계 용도."""
+    query = db.query(Member)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(Member.email.ilike(like), Member.nickname.ilike(like)))
+    if is_active is not None:
+        query = query.filter(Member.is_active == is_active)
+    members = query.order_by(desc(Member.created_at)).all()
+
+    buf = io.StringIO()
+    # 한글 깨짐 방지 — Excel 호환 BOM
+    buf.write("﻿")
+    writer = csv.writer(buf)
+    writer.writerow([
+        "id", "이메일", "이름", "세례명", "전화", "활성", "운영자", "이메일인증",
+        "가입방법", "마지막 로그인", "가입일",
+    ])
+    for m in members:
+        writer.writerow([
+            m.id,
+            m.email or "",
+            m.name or "",
+            m.nickname or "",
+            m.phone or "",
+            "활성" if m.is_active else "비활성",
+            "예" if m.is_admin else "아니오",
+            "예" if m.is_email_verified else "아니오",
+            m.social_provider or "이메일",
+            m.last_login_at.strftime("%Y-%m-%d %H:%M") if m.last_login_at else "",
+            m.created_at.strftime("%Y-%m-%d %H:%M") if m.created_at else "",
+        ])
+    csv_bytes = buf.getvalue().encode("utf-8")
+    log_action(db, get_admin_identifier(_admin), "export_members_csv", "member", None, f"{len(members)}건")
+    return StreamingResponse(
+        io.BytesIO(csv_bytes),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="members.csv"'},
+    )
+
+
+@router.get("/admin/{member_id}", response_model=MemberDetailOut)
+def admin_get_member(
+    member_id: int,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """회원 상세 — 활동 통계(글·댓글 수) + 관심 분과 포함."""
+    member = _get_member_or_404(member_id, db)
+    post_count = db.query(func.count(Post.id)).filter(Post.member_id == member.id).scalar() or 0
+    comment_count = db.query(func.count(Comment.id)).filter(Comment.member_id == member.id).scalar() or 0
+    interests = (
+        db.query(CommunityGroup.id, CommunityGroup.name)
+        .join(MemberCommunityInterest, MemberCommunityInterest.community_group_id == CommunityGroup.id)
+        .filter(MemberCommunityInterest.member_id == member.id)
+        .order_by(CommunityGroup.id.asc())
+        .all()
+    )
+    interest_groups = [{"id": i.id, "label": i.name} for i in interests]
+    return MemberDetailOut(
+        id=member.id,
+        email=member.email,
+        nickname=member.nickname,
+        name=member.name,
+        phone=member.phone,
+        avatar_url=member.avatar_url,
+        social_provider=member.social_provider,
+        is_active=member.is_active,
+        is_admin=member.is_admin,
+        is_email_verified=bool(member.is_email_verified),
+        has_password=member.hashed_password is not None,
+        post_count=post_count,
+        comment_count=comment_count,
+        interest_groups=interest_groups,
+        receive_notification=bool(member.receive_notification),
+        notify_kakao=bool(member.notify_kakao),
+        name_day_month=member.name_day_month,
+        name_day_day=member.name_day_day,
+        last_login_at=member.last_login_at,
+        created_at=member.created_at,
+    )
+
+
+@router.patch("/admin/{member_id}", response_model=MemberAdminOut)
+def admin_update_member(
+    member_id: int,
+    body: MemberAdminUpdate,
+    db: Session = Depends(get_db),
+    _admin: Admin = Depends(get_current_admin),
+):
+    """관리자가 회원 기본 정보를 수정한다. 이메일은 중복 검사 후 변경."""
+    member = _get_member_or_404(member_id, db)
+    data = body.model_dump(exclude_unset=True)
+    changed: list[str] = []
+
+    if "email" in data and data["email"] and data["email"] != member.email:
+        if db.query(Member).filter(Member.email == data["email"], Member.id != member.id).first():
+            raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다.")
+        member.email = data["email"]
+        changed.append("email")
+
+    if "nickname" in data and data["nickname"]:
+        if len(data["nickname"]) < 2:
+            raise HTTPException(status_code=400, detail="세례명/닉네임은 2자 이상이어야 합니다.")
+        member.nickname = data["nickname"]
+        changed.append("nickname")
+
+    for field in ("name", "phone", "name_day_month", "name_day_day"):
+        if field in data:
+            setattr(member, field, data[field])
+            changed.append(field)
+
+    db.commit()
+    db.refresh(member)
+    log_action(
+        db, get_admin_identifier(_admin), "admin_update_member", "member", member.id,
+        f"{member.email} ({','.join(changed) or '변경없음'})",
+    )
+    return _to_admin_out(member, db)
+
+
 # ── 헬퍼 ──────────────────────────────────────────────────
 
 def _get_member_or_404(member_id: int, db: Session) -> Member:
@@ -1030,12 +1198,18 @@ def _to_admin_out(member: Member, db: Session) -> MemberAdminOut:
         id=member.id,
         email=member.email,
         nickname=member.nickname,
+        name=member.name,
+        phone=member.phone,
         avatar_url=member.avatar_url,
         social_provider=member.social_provider,
         is_active=member.is_active,
         is_admin=member.is_admin,
+        is_email_verified=bool(member.is_email_verified),
         has_password=member.hashed_password is not None,
         post_count=post_count,
+        name_day_month=member.name_day_month,
+        name_day_day=member.name_day_day,
+        last_login_at=member.last_login_at,
         created_at=member.created_at,
     )
 

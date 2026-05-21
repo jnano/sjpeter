@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.268";
+export const CURRENT_VERSION = "1.5.269";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.269", date: "2026-05-21", tag: "기능",
+    items: [
+      "회원 관리 보강 — 상세 페이지·관리자 수정 API·CSV export·마지막 로그인 추적",
+      "  · DB: members.last_login_at TIMESTAMP 추가 (auth.py·members.py 의 모든 로그인 핸들러에서 갱신)",
+      "  · GET  /api/members/admin/{id} — 회원 상세 (글·댓글·관심 분과·이메일인증 등 통계 포함)",
+      "  · PATCH /api/members/admin/{id} — 관리자가 회원 정보 수정 (이메일·이름·세례명·전화·영명축일)",
+      "  · GET  /api/members/admin/export.csv — 필터 조건 그대로 CSV 다운로드 (Excel BOM, audit log 기록)",
+      "  · MemberAdminOut 확장: name·phone·is_email_verified·name_day_*·last_login_at 노출",
+      "  · admin/members 페이지: CSV 다운로드 버튼, 닉네임 클릭 → 상세, '#id · 마지막 로그인 N일 전' 표시",
+      "  · admin/members/[id] 신규: 4개 정보카드(기본정보·계정상태·활동통계·관심 분과) + 인라인 수정 폼",
+    ],
+  },
   {
     version: "1.5.268", date: "2026-05-21", tag: "디자인",
     items: [

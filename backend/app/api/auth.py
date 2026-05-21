@@ -81,6 +81,9 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
     if member and member.hashed_password and verify_password(body.password, member.hashed_password):
         token = create_access_token(sub=str(member.id), role="member", remember=body.remember)
         from app.core.admin_log import log_action
+        from datetime import datetime as _dt
+        member.last_login_at = _dt.utcnow()
+        db.commit()
         log_action(db, f"member:{member.nickname}", "admin_login", detail=f"운영자 로그인 ({member.email})")
         return AdminLoginResponse(
             access_token=token,
