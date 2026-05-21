@@ -88,6 +88,9 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/banners", label: "광고 배너" },
       { href: "/admin/page-photos", label: "페이지 사진" },
       { href: "/admin/pages", label: "페이지" },
+      { href: "/admin/home", label: "홈 페이지" },
+      { href: "/admin/menus", label: "메뉴" },
+      { href: "/admin/season", label: "전례 시기 테마" },
     ],
   },
   {
@@ -104,9 +107,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "시스템",
     icon: "⚙",
     items: [
-      { href: "/admin/home", label: "홈 페이지" },
-      { href: "/admin/menus", label: "메뉴" },
-      { href: "/admin/season", label: "전례 시기 테마" },
       { href: "/admin/settings", label: "사이트 설정" },
       { href: "/admin/reports", label: "장애 신고" },
       { href: "/admin/logs", label: "활동 로그" },

@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.255";
+export const CURRENT_VERSION = "1.5.256";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.256", date: "2026-05-21", tag: "디자인",
+    items: [
+      "admin 사이드바 재정리 — 홈 페이지·메뉴·전례 시기 테마를 '배너·사진·페이지' 그룹으로 이동",
+      "  · '시스템' 그룹에는 사이트 설정·장애 신고·활동 로그·기술 문서만 잔존",
+      "  · 콘텐츠/구조 관리는 한 그룹, 운영/메타는 시스템 그룹으로 역할 분리",
+    ],
+  },
   {
     version: "1.5.255", date: "2026-05-21", tag: "디자인",
     items: [
