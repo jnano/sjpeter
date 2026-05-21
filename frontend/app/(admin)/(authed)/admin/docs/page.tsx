@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.254";
+export const CURRENT_VERSION = "1.5.255";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.255", date: "2026-05-21", tag: "디자인",
+    items: [
+      "admin 사이드바 그룹 재정리 — '배너·사진·페이지' 그룹 신설",
+      "  · '배너 관리' → '배너·사진·페이지' 로 그룹 라벨 변경 (메인 사진·광고 배너·페이지 사진 포함)",
+      "  · '시스템' 그룹의 '동적 페이지' 를 '페이지' 로 라벨 변경 + 새 그룹으로 이동",
+      "  · 시각 자료(배너·사진)와 동적 페이지가 한 그룹에 모여 콘텐츠 관리 동선 단축",
+    ],
+  },
   {
     version: "1.5.254", date: "2026-05-21", tag: "수정",
     items: [
