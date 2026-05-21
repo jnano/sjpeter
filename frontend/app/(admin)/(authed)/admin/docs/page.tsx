@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.251";
+export const CURRENT_VERSION = "1.5.252";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.252", date: "2026-05-21", tag: "수정",
+    items: [
+      "시스템 불변량 강제 — 메뉴 등록 자원은 어떤 상황에서도 사이드바를 가진다",
+      "  · 근본 원인: 사이드바 결정권이 두 시스템(menu_items / layout_kind)에 분산 → invariant 위반 가능",
+      "  · /api/pages/by-slug 응답에 in_menu 필드 추가 (menu_items 조회로 판정)",
+      "  · /p/[slug] 런타임 가드: layout_kind='html' 라도 in_menu=true 면 SectionLayout/PageHeader 강제 wrap",
+      "  · admin/pages UI 경고: layout='html' + menu_item_count>0 일 때 amber 경고 박스로 'HTML+레이아웃' 추천",
+      "  · CLAUDE.md '핵심 규칙 6' 추가: 메뉴 등록 자원 = 사이드바 필수. 유일한 예외는 /photos (의도된 풀폭)",
+      "  · 전체 메뉴 등록 라우트 37개 점검 — invariant 위반 0건 (/p/saint 사례 재현 불가능)",
+    ],
+  },
   {
     version: "1.5.251", date: "2026-05-21", tag: "기능",
     items: [

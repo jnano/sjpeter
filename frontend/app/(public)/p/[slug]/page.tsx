@@ -22,6 +22,8 @@ interface PageData {
   payload: Record<string, unknown>;
   body_markdown: string | null;
   is_active: boolean;
+  /** 시스템 불변량: 메뉴 등록 자원은 사이드바를 강제. layout_kind='html' 이라도 true 면 wrap. */
+  in_menu?: boolean;
 }
 
 async function fetchPage(slug: string): Promise<PageData | null> {
@@ -42,14 +44,33 @@ export default async function DynamicPageRoute({
   const data = await fetchPage(slug);
   if (!data) notFound();
 
-  // html 레이아웃: PageHeader·SectionLayout 등 wrapper 없이 raw HTML 그대로 출력 —
-  // admin 이 자유롭게 레이아웃을 짤 수 있도록. (글로벌 Header/Footer 는 (public) layout 이 처리)
+  // 시스템 불변량 가드 — admin/menus 에 등록된 자원은 어떤 layout 이든 사이드바를 가진다.
+  // layout_kind='html' 이라도 in_menu=true 면 SectionLayout/PageHeader 강제 wrap.
+  // (메뉴 미등록 자유 HTML 페이지는 기존 동작 — raw HTML 만 출력)
   if (data.layout_kind === "html") {
+    if (!data.in_menu) {
+      return (
+        <div
+          className="dynamic-html-page"
+          dangerouslySetInnerHTML={{ __html: data.body_markdown ?? "" }}
+        />
+      );
+    }
+    // in_menu=true: html_in_layout 처럼 동작 (사이드바 강제)
     return (
-      <div
-        className="dynamic-html-page"
-        dangerouslySetInnerHTML={{ __html: data.body_markdown ?? "" }}
-      />
+      <>
+        <PageHeader
+          group={data.group_label ?? ""}
+          title={data.title}
+          subtitle={data.subtitle ?? ""}
+        />
+        <SectionLayout autoHero={true}>
+          <div
+            className="dynamic-html-in-layout"
+            dangerouslySetInnerHTML={{ __html: data.body_markdown ?? "" }}
+          />
+        </SectionLayout>
+      </>
     );
   }
 

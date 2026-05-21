@@ -125,9 +125,20 @@ class PageOut(BaseModel):
     # admin/pages 목록에서 "메뉴에 연결됨 / 미연결" 뱃지 표시용.
     # 공개 응답에도 함께 노출되나 사용자에겐 무해 (기본 0).
     menu_item_count: int = 0
+    # 시스템 불변량: 메뉴에 등록된 자원은 반드시 사이드바를 가짐. /p/[slug] 렌더가
+    # layout_kind='html' 이라도 in_menu=true 면 SectionLayout 으로 강제 wrap 한다.
+    in_menu: bool = False
 
     class Config:
         from_attributes = True
+
+
+def _is_in_menu(db: Session, slug: str) -> bool:
+    """slug 의 /p/{slug} 가 활성 menu_items 에 등록되어 있는지."""
+    return bool(db.execute(
+        text("SELECT 1 FROM menu_items WHERE href = :href AND is_active = TRUE LIMIT 1"),
+        {"href": f"/p/{slug}"},
+    ).first())
 
 
 def _validate(body: PageIn) -> None:
@@ -152,6 +163,8 @@ def get_page(slug: str, db: Session = Depends(get_db)):
     out.title = render(out.title, db) or out.title
     out.subtitle = render(out.subtitle, db)
     out.body_markdown = render(out.body_markdown, db)
+    # invariant: 메뉴 등록 자원은 사이드바 필수 — 프론트가 layout=html 라도 wrap 강제
+    out.in_menu = _is_in_menu(db, slug)
     return out
 
 
@@ -196,6 +209,7 @@ def list_all_pages(db: Session = Depends(get_db), _: Admin = Depends(get_current
     for p in pages:
         out = PageOut.model_validate(p)
         out.menu_item_count = href_counts.get(f"/p/{p.slug}", 0)
+        out.in_menu = out.menu_item_count > 0
         result.append(out)
     return result
 

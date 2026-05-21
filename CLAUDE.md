@@ -64,6 +64,19 @@ IntersectionObserver로 헤더 브레드크럼과 연동됨. 없으면 브레드
 ### 5. 모바일 우선 (Mobile-First)
 Tailwind 모바일 레이아웃 먼저, sm:/md: 확장. 60대 신자가 쓸 수 있는 UI.
 
+### 6. 메뉴 등록 자원 = 사이드바 필수 (시스템 불변량)
+**`/admin/menus` 의 활성 `menu_items` 에 등록된 URL 은 어떤 상황에서도 사이드바를 가진다.**
+- 정적 라우트 (`/about`, `/pastor`, `/history` 등): `SectionLayout` 으로 감쌈
+- 게시판 (`/boards/*`): 자체 SectionLayout 사용
+- 동적 페이지 (`/p/*`): layout_kind 가 `html` 이라도 `in_menu=true` 면 자동 wrap (런타임 가드 — pages.py)
+- 의도된 예외: 풀폭 갤러리 (`/photos`) — 본문 폭이 우선이라 의도적으로 사이드바 생략
+
+새 라우트 추가 시:
+1. 메뉴에 등록한다면 `<PageHeader>` + `<SectionLayout>` 또는 chipsOnly 사용
+2. 메뉴 미등록 자유 페이지(랜딩 등)는 wrapper 없이 자유
+
+[[feedback_menu_sidebar_invariant]] 메모리에 자세한 가드 동작·예외 케이스·검증 방법 정리.
+
 ## DB 마이그레이션
 Alembic 미설정. 컬럼 추가 시 `backend/main.py`의 startup 블록에 수동 SQL 추가:
 ```python

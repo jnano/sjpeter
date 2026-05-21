@@ -356,6 +356,16 @@ export default function AdminPagesPage() {
                     {" "}를 사용합니다.
                   </p>
                 )}
+                {/* 시스템 불변량 안내 — html + 메뉴 등록된 페이지는 자동으로 사이드바 wrap */}
+                {draft.layout_kind === "html" && draft.menu_item_count > 0 && (
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded px-3 py-2 leading-relaxed">
+                    <strong>안내</strong> — 이 페이지는 메뉴에 {draft.menu_item_count}곳 등록되어 있어
+                    {" "}<code className="font-mono text-[11px]">html</code> 을 선택해도
+                    <strong> 자동으로 사이드바·헤더가 강제 적용</strong>됩니다 (시스템 불변량).
+                    명확하게 하려면 <code className="font-mono text-[11px]">HTML + 레이아웃</code> 을 선택하세요.
+                    완전 자유 raw HTML 이 필요하면 먼저 메뉴에서 제거하세요.
+                  </div>
+                )}
               </div>
 
               {/* 기본 필드 */}
