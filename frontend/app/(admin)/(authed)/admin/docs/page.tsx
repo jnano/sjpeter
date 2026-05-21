@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.270";
+export const CURRENT_VERSION = "1.5.271";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.271", date: "2026-05-21", tag: "디자인",
+    items: [
+      "admin/members 목록 컬럼 6개 의미별 재배치 — 헤더와 셀 내용 일치",
+      "  · 새 헤더: 회원 정보 / 가입 / 활동 / 운영자 / 상태 / 관리",
+      "  · 회원 정보: 아바타+닉네임+이메일+#ID 통합 (이전엔 닉네임·이메일이 두 열로 분리)",
+      "  · 활동: 글 N건 + '마지막 로그인 N일 전' 한 셀로 묶음",
+      "  · 운영자: 운영자/일반 배지 + 비밀번호 미설정 경고 분리",
+      "  · 상태: 활성/비활성 단일 의미로 정돈",
+      "  · grid 비율 재조정: 2.5fr·1fr·1.5fr·0.8fr·0.8fr·auto",
+    ],
+  },
   {
     version: "1.5.270", date: "2026-05-21", tag: "수정",
     items: [

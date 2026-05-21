@@ -437,13 +437,13 @@ export default function AdminMembersPage() {
             </div>
           ) : (
             <>
-              {/* 테이블 헤더 */}
-              <div className="hidden md:grid grid-cols-[auto_2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-warm)]">
+              {/* 테이블 헤더 — 의미별로 6그룹 재배치 (v1.5.271) */}
+              <div className="hidden md:grid grid-cols-[auto_2.5fr_1fr_1.5fr_0.8fr_0.8fr_auto] gap-4 px-5 py-3 border-b border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-surface-warm)]">
                 <span className="w-4"></span>
-                <span>회원</span>
-                <span>이메일</span>
-                <span>가입방법</span>
-                <span>게시글</span>
+                <span>회원 정보</span>
+                <span>가입</span>
+                <span>활동</span>
+                <span>운영자</span>
                 <span>상태</span>
                 <span>관리</span>
               </div>
@@ -533,7 +533,7 @@ function MemberRow({
 }) {
   const selfBlockedTitle = "자신에게는 적용할 수 없습니다.";
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-[auto_2fr_2fr_1fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 items-center transition-colors ${isSelected ? "bg-red-50/30" : "hover:bg-[var(--color-surface-warm)]"}`}>
+    <div className={`grid grid-cols-1 md:grid-cols-[auto_2.5fr_1fr_1.5fr_0.8fr_0.8fr_auto] gap-2 md:gap-4 px-5 py-4 items-center transition-colors ${isSelected ? "bg-red-50/30" : "hover:bg-[var(--color-surface-warm)]"}`}>
       <input
         type="checkbox"
         checked={isSelected}
@@ -541,52 +541,38 @@ function MemberRow({
         className="rounded"
         aria-label={`${member.nickname} 선택`}
       />
-      {/* 회원 */}
-      <div className="flex items-center gap-3">
+      {/* 회원 정보 — 아바타 + 닉네임 + 이메일 + #ID */}
+      <div className="flex items-center gap-3 min-w-0">
         {member.avatar_url ? (
           /* 자체 업로드(상대 경로 /uploads/...)면 API 호스트를 prepend.
              소셜 아바타(http로 시작)는 그대로 사용. */
           <img
             src={member.avatar_url.startsWith("http") ? member.avatar_url : `${API}${member.avatar_url}`}
             alt=""
-            className="w-8 h-8 rounded-full object-cover"
+            className="w-8 h-8 rounded-full object-cover shrink-0"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-[var(--color-border)] flex items-center justify-center text-xs text-[var(--color-text-muted)] font-medium">
+          <div className="w-8 h-8 rounded-full bg-[var(--color-border)] flex items-center justify-center text-xs text-[var(--color-text-muted)] font-medium shrink-0">
             {member.nickname[0]}
           </div>
         )}
-        <div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {isSuper ? (
-              <Link
-                href={`/admin/members/${member.id}`}
-                className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline"
-              >
-                {member.nickname}
-              </Link>
-            ) : (
-              <p className="text-sm font-medium">{member.nickname}</p>
-            )}
-            {member.is_admin && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">운영자</span>
-            )}
-            {member.is_admin && !member.has_password && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium" title="관리자 패널 로그인을 위해 비밀번호 설정 필요">
-                비밀번호 미설정
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            #{member.id} · {relativeFromNow(member.last_login_at)}
-          </p>
+        <div className="min-w-0">
+          {isSuper ? (
+            <Link
+              href={`/admin/members/${member.id}`}
+              className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline block truncate"
+            >
+              {member.nickname}
+            </Link>
+          ) : (
+            <p className="text-sm font-medium truncate">{member.nickname}</p>
+          )}
+          <p className="text-xs text-[var(--color-text-muted)] truncate">{member.email}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">#{member.id}</p>
         </div>
       </div>
 
-      {/* 이메일 */}
-      <p className="text-sm text-[var(--color-text-muted)] truncate">{member.email}</p>
-
-      {/* 가입방법 */}
+      {/* 가입 — provider 배지 */}
       <div>
         {member.social_provider ? (
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -601,11 +587,28 @@ function MemberRow({
         )}
       </div>
 
-      {/* 게시글 수 */}
-      <p className="text-sm text-[var(--color-text-muted)]">{member.post_count}건</p>
+      {/* 활동 — 게시글 수 · 마지막 로그인 */}
+      <div className="text-xs text-[var(--color-text-muted)] space-y-0.5">
+        <p>글 {member.post_count}건</p>
+        <p>마지막 로그인: {relativeFromNow(member.last_login_at)}</p>
+      </div>
 
-      {/* 상태 */}
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+      {/* 운영자 — 권한 배지 (+ 비밀번호 미설정 경고) */}
+      <div className="flex flex-col items-start gap-1">
+        {member.is_admin ? (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">운영자</span>
+        ) : (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">일반</span>
+        )}
+        {member.is_admin && !member.has_password && (
+          <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium" title="관리자 패널 로그인을 위해 비밀번호 설정 필요">
+            비밀번호 미설정
+          </span>
+        )}
+      </div>
+
+      {/* 상태 — 활성/비활성 */}
+      <span className={`text-xs px-2 py-0.5 rounded-full font-medium w-fit ${
         member.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
       }`}>
         {member.is_active ? "활성" : "비활성"}
