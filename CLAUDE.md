@@ -91,7 +91,7 @@ conn.execute(text("ALTER TABLE 테이블 ADD COLUMN IF NOT EXISTS 컬럼 타입"
 PDF 업로드
   → Claude AI 분석 (텍스트/Vision)
   → 3분류 자동 라우팅:
-      공지     → notices 테이블 직등록 (is_ai_generated=TRUE)
+      공지     → posts (board.slug='notice') 등록 (source_bulletin_id 로 추적)
       행사+날짜 → events 테이블 직등록 (event_kind='행사', is_ai_generated=TRUE)
       모임+날짜 → events 테이블 직등록 (event_kind='모임', is_ai_generated=TRUE)
       날짜없음  → ai-extract 게시판 임시저장 ([제XXX호] 제목 prefix)
@@ -132,7 +132,7 @@ PDF 업로드
 | /bulletin | 주보 아카이브 |
 | /calendar | 행사·모임 캘린더 (멀티데이 스패닝, 구분 필터) |
 | /boards/[slug] | 게시판 목록·상세 |
-| /boards/notice | 공지사항 (notices 테이블 직접 조회) |
+| /boards/notice | 공지사항 (boards.slug='notice' 의 posts) |
 | /about, /pastor, /history, /vision, /community | 정적 소개 페이지 |
 | /pastors, /priests | 역대 사목자·본당 출신 사제 |
 | /word | 오늘의 말씀 (RSS) |

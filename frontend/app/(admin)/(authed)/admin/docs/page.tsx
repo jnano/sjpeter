@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.240";
+export const CURRENT_VERSION = "1.5.241";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,19 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.241", date: "2026-05-21", tag: "인프라",
+    items: [
+      "공지사항 통합 완료 — 옛 notices 테이블 잔재 정리",
+      "  · v1.5.69 에서 boards/posts 로 어댑터 전환했으나 옛 notices 테이블 3건이 마이그레이션되지 않고 살아 있었음",
+      "  · /api/notices/ 가 0건 반환 → 사용자에게 보여야 할 공지가 안 보이는 잠재 버그",
+      "  · 누락된 3건을 posts (board.slug='notice') 로 이전. attachments 는 0건이라 손실 없음",
+      "  · 옛 notices·notice_attachments 테이블 DROP, app/models/notice.py 제거, app/models/__init__·alembic env.py 임포트 정리",
+      "  · main.py 의 옛 DDL·인덱스 블록 제거 (CREATE TABLE notice_attachments·idx_notices_*)",
+      "  · onboarding.py: first_notice 체크가 옛 notices 테이블을 보던 것 → posts where board.slug='notice' 로 수정",
+      "  · CLAUDE.md 갱신: '공지사항 (notices 테이블 직접 조회)' → '(boards.slug=notice 의 posts)'",
+    ],
+  },
   {
     version: "1.5.240", date: "2026-05-21", tag: "기능",
     items: [

@@ -62,8 +62,12 @@ def get_checklist(
     # 2. 주임 신부님 등록 — parish_staff 에 role='주임신부'
     head_priest_set = _count(db, "SELECT COUNT(*) FROM parish_staff WHERE role = '주임신부'") > 0
 
-    # 3. 첫 공지 — notices 1건 이상
-    first_notice = _count(db, "SELECT COUNT(*) FROM notices") > 0
+    # 3. 첫 공지 — notice 게시판 (boards.slug='notice') 에 게시물 1건 이상
+    # 공지는 v1.5.69 부터 boards/posts 로 통합 — 옛 notices 테이블은 v1.5.241 에서 제거
+    first_notice = _count(
+        db,
+        "SELECT COUNT(*) FROM posts WHERE board_id = (SELECT id FROM boards WHERE slug='notice')",
+    ) > 0
 
     # 4. 주보 — bulletins 1건 이상
     first_bulletin = _count(db, "SELECT COUNT(*) FROM bulletins") > 0

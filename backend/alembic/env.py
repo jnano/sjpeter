@@ -18,7 +18,7 @@ from app.core.config import settings  # noqa: E402
 from app.models import (  # noqa: E402, F401
     admin, attachment, banner, bulletin, bulletin_extraction, board, construction,
     content, dynamic_page, event_board_mapping, home_banner, issue_report,
-    member, member_interest, menu, notice, page_photo, parish, parish_staff,
+    member, member_interest, menu, page_photo, parish, parish_staff,
     search, site_setting, transport_route,
 )
 

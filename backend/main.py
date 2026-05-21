@@ -338,21 +338,8 @@ def _migrate_add_columns():
             "CREATE INDEX IF NOT EXISTS ix_construction_phases_sort ON construction_phases(sort_order)"
         ))
 
-        # 공지 사진 첨부 (다중)
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS notice_attachments (
-                id SERIAL PRIMARY KEY,
-                notice_id INTEGER NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
-                file_url VARCHAR(500) NOT NULL,
-                original_name VARCHAR(300),
-                file_size INTEGER DEFAULT 0,
-                sort_order INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW() NOT NULL
-            )
-        """))
-        conn.execute(text(
-            "CREATE INDEX IF NOT EXISTS ix_notice_attachments_notice ON notice_attachments(notice_id)"
-        ))
+        # 공지 사진 첨부는 v1.5.241 에서 제거 — 공지가 boards/posts/attachments 로 통합되며
+        # notice_attachments + notices 테이블 자체가 사라짐. 옛 첨부 데이터는 0건이라 손실 없음.
 
         # 한 줄 게시판 추천(공감) — 회원 1인 1회 토글
         conn.execute(text("""
@@ -1021,14 +1008,13 @@ def _migrate_add_columns():
         except Exception:
             pass
 
-        # AI 생성 표시 컬럼
-        for tbl in ["notices", "events"]:
-            try:
-                conn.execute(text(
-                    f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN DEFAULT FALSE"
-                ))
-            except Exception:
-                pass
+        # AI 생성 표시 컬럼 — events 만 유지 (notices 는 v1.5.241 에서 posts 로 통합되며 컬럼 자체 없음)
+        try:
+            conn.execute(text(
+                "ALTER TABLE events ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
 
         # AI 추출 결과물 → 주보 역추적용 FK. ON DELETE CASCADE 로 주보 삭제 시 결과물 자동 정리.
         for tbl in ["posts", "events", "meditations", "visions"]:
@@ -1126,8 +1112,7 @@ def _migrate_add_columns():
         for idx_sql in [
             "CREATE INDEX IF NOT EXISTS idx_posts_title_trgm  ON posts    USING gin (title   gin_trgm_ops)",
             "CREATE INDEX IF NOT EXISTS idx_posts_content_trgm ON posts    USING gin (content gin_trgm_ops)",
-            "CREATE INDEX IF NOT EXISTS idx_notices_title_trgm   ON notices  USING gin (title   gin_trgm_ops)",
-            "CREATE INDEX IF NOT EXISTS idx_notices_content_trgm ON notices  USING gin (content gin_trgm_ops)",
+            # notices 트리거 인덱스는 v1.5.241 에서 제거 (legacy notices 테이블 DROP 됨)
             "CREATE INDEX IF NOT EXISTS idx_events_title_trgm  ON events   USING gin (title   gin_trgm_ops)",
             "CREATE INDEX IF NOT EXISTS idx_events_desc_trgm   ON events   USING gin (description gin_trgm_ops)",
             "CREATE INDEX IF NOT EXISTS idx_bulletins_body_trgm ON bulletins USING gin (body_text gin_trgm_ops)",
