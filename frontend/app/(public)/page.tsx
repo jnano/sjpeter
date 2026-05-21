@@ -102,10 +102,22 @@ async function getHomeBlocks(): Promise<HomeBlock[]> {
 }
 
 
-const QUICK_LINKS: { href: string; label: string; icon: React.ReactNode }[] = [
-  { href: "/about", label: "성당 안내", icon: <ChurchIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
-  { href: "/groups", label: "분과와 단체", icon: <GroupsIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
-  { href: "/bulletin", label: "주보 보기", icon: <BulletinIcon className="w-14 h-14 text-[var(--color-primary)]" /> },
+interface QuickLink { href: string; label: string; icon_key: string; }
+
+// icon_key → React 컴포넌트 매핑. admin/home 의 QUICK_LINK_ICONS 와 동기 유지.
+const ICON_BY_KEY: Record<string, React.ReactNode> = {
+  church:       <ChurchIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+  groups:       <GroupsIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+  bulletin:     <BulletinIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+  cross:        <CrossIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+  construction: <ConstructionIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+};
+
+// quick_links 블록 payload.items 가 비어 있으면 사용되는 default 3개.
+const DEFAULT_QUICK_LINKS: QuickLink[] = [
+  { href: "/about",    label: "성당 안내",   icon_key: "church" },
+  { href: "/groups",   label: "분과와 단체", icon_key: "groups" },
+  { href: "/bulletin", label: "주보 보기",   icon_key: "bulletin" },
 ];
 
 const CONTAINER = "max-w-5xl mx-auto px-4";
@@ -330,30 +342,35 @@ export default async function HomePage() {
     </section>
   );
 
-  const quickLinksSection = (
-    <section>
-      <div className={CONTAINER}>
-        <div className="border-t border-[var(--color-border)] py-3">
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 max-w-lg mx-auto">
-            {QUICK_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
-              >
-                <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
-                  {item.icon}
-                </span>
-                <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
-                  {item.label}
-                </span>
-              </Link>
-            ))}
+  function renderQuickLinksBlock(payload: Record<string, unknown>) {
+    // payload.items 가 비어 있으면 default 3개 사용 (호환성)
+    const rawItems = Array.isArray(payload?.items) ? (payload.items as QuickLink[]) : [];
+    const items = rawItems.length > 0 ? rawItems : DEFAULT_QUICK_LINKS;
+    return (
+      <section>
+        <div className={CONTAINER}>
+          <div className="border-t border-[var(--color-border)] py-3">
+            <div className={`grid gap-2.5 sm:gap-3 max-w-2xl mx-auto`} style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))` }}>
+              {items.map((item, i) => (
+                <Link
+                  key={`${item.href}-${i}`}
+                  href={item.href}
+                  className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
+                >
+                  <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+                    {ICON_BY_KEY[item.icon_key] ?? ICON_BY_KEY.church}
+                  </span>
+                  <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  }
 
   const meditationSection = (
     <section>
@@ -440,7 +457,7 @@ export default async function HomePage() {
       {blocks.map((b) => {
         switch (b.kind) {
           case "hero":         return <div key={b.id}>{heroSection}</div>;
-          case "quick_links":  return <div key={b.id}>{quickLinksSection}</div>;
+          case "quick_links":  return <div key={b.id}>{renderQuickLinksBlock(b.payload ?? {})}</div>;
           case "meditation":   return <div key={b.id}>{meditationSection}</div>;
           case "construction": return <div key={b.id}>{constructionSection}</div>;
           case "board_tabs":   return <div key={b.id}>{boardTabsSection}</div>;

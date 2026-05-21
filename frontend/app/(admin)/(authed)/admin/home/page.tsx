@@ -39,6 +39,21 @@ const HERO_LAYOUTS = [
   { value: "even-plain", label: "Even Plain (3등분, 배너 없음)" },
 ];
 
+// quick_links 의 icon_key 선택지 — page.tsx 의 ICON_BY_KEY 와 동기 유지.
+const QUICK_LINK_ICONS = [
+  { key: "church",       label: "⛪ 성당" },
+  { key: "groups",       label: "👥 분과·단체" },
+  { key: "bulletin",     label: "📖 주보" },
+  { key: "cross",        label: "✝ 십자가" },
+  { key: "construction", label: "🏗 건축" },
+];
+
+interface QuickLinkItem {
+  href: string;
+  label: string;
+  icon_key: string;
+}
+
 function getToken() {
   return typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
 }
@@ -54,6 +69,9 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  // drag-and-drop state
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!getToken()) { router.push("/admin"); return; }
@@ -129,6 +147,15 @@ export default function AdminHomePage() {
     flash(`'${BLOCK_META[kind]?.label ?? kind}' 블록을 추가했습니다.`);
   }
 
+  async function persistOrder(orderedIds: number[]) {
+    const res = await fetch(`${API}/api/home/blocks/reorder`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ ids: orderedIds }),
+    });
+    if (!res.ok) { alert("순서 변경 실패"); await load(); }
+  }
+
   async function move(id: number, dir: -1 | 1) {
     const idx = blocks.findIndex((b) => b.id === id);
     const j = idx + dir;
@@ -136,13 +163,29 @@ export default function AdminHomePage() {
     const next = [...blocks];
     [next[idx], next[j]] = [next[j], next[idx]];
     setBlocks(next);
-    // backend reorder — sort_order 부여
-    const res = await fetch(`${API}/api/home/blocks/reorder`, {
-      method: "PUT",
-      headers: authHeaders(),
-      body: JSON.stringify({ ids: next.map((b) => b.id) }),
-    });
-    if (!res.ok) { alert("순서 변경 실패"); await load(); return; }
+    await persistOrder(next.map((b) => b.id));
+  }
+
+  /** drag end (drop or cancel) — 상태 초기화 */
+  function endDrag() {
+    setDraggedId(null);
+    setDropTargetId(null);
+  }
+
+  async function handleDrop(targetId: number) {
+    if (draggedId === null || draggedId === targetId) {
+      endDrag();
+      return;
+    }
+    const fromIdx = blocks.findIndex((b) => b.id === draggedId);
+    const toIdx = blocks.findIndex((b) => b.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) { endDrag(); return; }
+    const next = [...blocks];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setBlocks(next);
+    endDrag();
+    await persistOrder(next.map((b) => b.id));
   }
 
   if (loading) return <div className="p-8 text-sm text-gray-500">불러오는 중…</div>;
@@ -202,16 +245,36 @@ export default function AdminHomePage() {
           <ul className="space-y-3">
             {blocks.map((b, i) => {
               const meta = BLOCK_META[b.kind] ?? { label: b.kind, desc: "미정의 블록" };
+              const isDragging = draggedId === b.id;
+              const isDropTarget = dropTargetId === b.id && draggedId !== b.id;
               return (
                 <li
                   key={b.id}
-                  className={`border rounded-lg p-4 ${
+                  onDragOver={(e) => {
+                    if (draggedId === null) return;
+                    e.preventDefault();
+                    if (dropTargetId !== b.id) setDropTargetId(b.id);
+                  }}
+                  onDragLeave={() => {
+                    if (dropTargetId === b.id) setDropTargetId(null);
+                  }}
+                  onDrop={(e) => { e.preventDefault(); handleDrop(b.id); }}
+                  className={`border rounded-lg p-4 transition-shadow ${
+                    isDropTarget ? "border-blue-500 border-2 shadow-md" :
                     b.is_active ? "border-gray-300 bg-white" : "border-gray-200 bg-gray-50 opacity-70"
-                  }`}
+                  } ${isDragging ? "opacity-40" : ""}`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* 순서 컨트롤 */}
-                    <div className="flex flex-col gap-1 shrink-0">
+                    {/* 순서 컨트롤 + 드래그 핸들 */}
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <div
+                        draggable
+                        onDragStart={(e) => { setDraggedId(b.id); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragEnd={endDrag}
+                        title="드래그하여 순서 변경"
+                        className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 cursor-grab active:cursor-grabbing select-none"
+                        aria-label="드래그 핸들"
+                      >⠿</div>
                       <button
                         onClick={() => move(b.id, -1)}
                         disabled={i === 0}
@@ -328,6 +391,68 @@ function BlockPayloadEditor({
         <p className="text-[10px] text-gray-500 mt-1">
           /admin/banners 에서 같은 placement 키로 등록한 활성 배너 그룹의 사진들이 슬라이드로 노출됩니다.
         </p>
+      </div>
+    );
+  }
+
+  if (block.kind === "quick_links") {
+    const items: QuickLinkItem[] = Array.isArray(p.items) ? (p.items as QuickLinkItem[]) : [];
+    const updateItems = (next: QuickLinkItem[]) => onChange({ ...p, items: next });
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-semibold text-gray-700">바로가기 항목 ({items.length}개)</label>
+          <button
+            onClick={() => updateItems([...items, { href: "/", label: "새 항목", icon_key: "church" }])}
+            className="text-[11px] px-2 py-1 bg-[var(--color-primary)] text-white rounded"
+          >+ 추가</button>
+        </div>
+        {items.length === 0 ? (
+          <p className="text-[11px] text-gray-500 leading-snug">
+            비어 있으면 페이지 코드의 default 3개 항목(성당 안내·분과와 단체·주보 보기) 이 사용됩니다.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {items.map((it, idx) => (
+              <li key={idx} className="grid grid-cols-[1fr_1fr_120px_auto] gap-1.5 items-center">
+                <input
+                  type="text"
+                  defaultValue={it.label}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== it.label) updateItems(items.map((x, i) => i === idx ? { ...x, label: v } : x));
+                  }}
+                  placeholder="라벨"
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                />
+                <input
+                  type="text"
+                  defaultValue={it.href}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== it.href) updateItems(items.map((x, i) => i === idx ? { ...x, href: v } : x));
+                  }}
+                  placeholder="/about"
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white font-mono"
+                />
+                <select
+                  value={it.icon_key ?? "church"}
+                  onChange={(e) => updateItems(items.map((x, i) => i === idx ? { ...x, icon_key: e.target.value } : x))}
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                >
+                  {QUICK_LINK_ICONS.map((o) => (
+                    <option key={o.key} value={o.key}>{o.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => updateItems(items.filter((_, i) => i !== idx))}
+                  className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50"
+                  title="삭제"
+                >×</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   }

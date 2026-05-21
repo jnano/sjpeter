@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.246";
+export const CURRENT_VERSION = "1.5.247";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.247", date: "2026-05-21", tag: "기능",
+    items: [
+      "홈 블록 빌더 확장 — drag-and-drop + quick_links 편집",
+      "  · admin/home 블록 리스트에 HTML5 native drag-and-drop. 드래그 핸들(⠿) + drop indicator(파랑 테두리). ↑↓ 버튼은 접근성용으로 유지",
+      "  · quick_links 블록에 items[] 편집기 추가: 라벨·URL·icon_key 행별 편집, +추가 / ×삭제",
+      "  · 5개 icon_key 옵션: church·groups·bulletin·cross·construction. page.tsx 의 ICON_BY_KEY 와 동기",
+      "  · payload.items 가 비어 있으면 default 3개(성당 안내·분과·주보) 사용 — 기존 시드와 호환",
+      "  · grid template column 수가 items 길이에 맞춰 동적 (최대 4열)",
+    ],
+  },
   {
     version: "1.5.246", date: "2026-05-21", tag: "기능",
     items: [
