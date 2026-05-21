@@ -797,7 +797,7 @@ def delete_meditation(item_id: int, db: Session = Depends(get_db), admin: Admin 
 
 # ─── Prayer ─────────────────────────────────────────────────
 
-PRAYER_CATEGORIES = ["daily", "memorize", "mass", "rosary", "liturgy_season", "special", "memorial", "parish"]
+PRAYER_CATEGORIES = ["memorize", "daily", "mass", "rosary", "liturgy_season", "special", "memorial", "parish"]
 
 
 class PrayerIn(BaseModel):

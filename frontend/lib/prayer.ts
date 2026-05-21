@@ -9,8 +9,8 @@ export type PrayerCategory =
   | "parish";
 
 export const PRAYER_CATEGORIES: PrayerCategory[] = [
-  "daily",
   "memorize",
+  "daily",
   "mass",
   "rosary",
   "liturgy_season",

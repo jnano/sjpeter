@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.266";
+export const CURRENT_VERSION = "1.5.267";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.267", date: "2026-05-21", tag: "디자인",
+    items: [
+      "'암송할 기도문' 칩을 '전체' 다음으로 — PRAYER_CATEGORIES 배열 맨 앞 이동 (frontend·backend 동기화)",
+      "12개 암송 기도문 display_order 재할당 (1~12, 명시 순서대로)",
+    ],
+  },
   {
     version: "1.5.266", date: "2026-05-21", tag: "기능",
     items: [
