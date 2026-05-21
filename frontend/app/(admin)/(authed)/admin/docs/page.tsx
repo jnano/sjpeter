@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.271";
+export const CURRENT_VERSION = "1.5.272";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.272", date: "2026-05-21", tag: "디자인",
+    items: [
+      "admin/members 회원 정보 셀에 이름(본명) 표시 추가",
+      "  · 1줄: 이름(있을 때, 굵게·상세 링크) / 2줄: 닉네임=세례명 / 3줄: 이메일 / 4줄: #ID",
+      "  · 이름이 없으면 닉네임이 1줄로 올라가 링크 역할 유지 (기존 동작 호환)",
+    ],
+  },
   {
     version: "1.5.271", date: "2026-05-21", tag: "디자인",
     items: [

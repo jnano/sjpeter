@@ -557,15 +557,33 @@ function MemberRow({
           </div>
         )}
         <div className="min-w-0">
-          {isSuper ? (
-            <Link
-              href={`/admin/members/${member.id}`}
-              className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline block truncate"
-            >
-              {member.nickname}
-            </Link>
+          {/* 이름(본명)이 있으면 가장 위에 강조. 클릭으로 상세 이동(super-admin).
+              없으면 닉네임을 첫 줄로 올려 링크. */}
+          {member.name ? (
+            <>
+              {isSuper ? (
+                <Link
+                  href={`/admin/members/${member.id}`}
+                  className="text-sm font-semibold hover:text-[var(--color-primary)] hover:underline block truncate"
+                >
+                  {member.name}
+                </Link>
+              ) : (
+                <p className="text-sm font-semibold truncate">{member.name}</p>
+              )}
+              <p className="text-sm text-[var(--color-text)] truncate">{member.nickname}</p>
+            </>
           ) : (
-            <p className="text-sm font-medium truncate">{member.nickname}</p>
+            isSuper ? (
+              <Link
+                href={`/admin/members/${member.id}`}
+                className="text-sm font-medium hover:text-[var(--color-primary)] hover:underline block truncate"
+              >
+                {member.nickname}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium truncate">{member.nickname}</p>
+            )
           )}
           <p className="text-xs text-[var(--color-text-muted)] truncate">{member.email}</p>
           <p className="text-[11px] text-[var(--color-text-muted)]">#{member.id}</p>
