@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.273";
+export const CURRENT_VERSION = "1.5.274";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.274", date: "2026-05-22", tag: "디자인",
+    items: [
+      "admin 사이드바 '주보 관리'를 독립 대메뉴로 분리 — '소식·일정' 위에 배치",
+      "  · 신규 그룹 '주보 관리' (📖): 주보 업로드·목록 / AI 추출 검토 / AI 임시저장 / AI 분류설정 / AI 분석 통계 (children → 평면 5항목)",
+      "  · '소식·일정'(📰)에는 공지 관리·본당 일정 관리만 잔존",
+      "  · NavItem.exact 옵션 추가 — 하위 경로(/admin/bulletin/extractions 등)에서 '주보 업로드·목록'이 startsWith로 켜지는 active 충돌 방지",
+    ],
+  },
   {
     version: "1.5.273", date: "2026-05-22", tag: "디자인",
     items: [

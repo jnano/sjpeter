@@ -16,6 +16,8 @@ interface NavItem {
   children?: NavItem[];
   /** super-admin 전용 항목 — 운영자(member.is_admin)에게는 숨김 */
   superOnly?: boolean;
+  /** pathname 완전 일치일 때만 active (형제가 하위 경로를 가진 부모 메뉴용) */
+  exact?: boolean;
 }
 
 interface NavGroup {
@@ -65,19 +67,20 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "주보 관리",
+    icon: "📖",
+    items: [
+      { href: "/admin/bulletin", label: "주보 업로드·목록", exact: true },
+      { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet", aiTag: true },
+      { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber", aiTag: true },
+      { href: "/admin/event-mapping", label: "AI 분류설정", aiTag: true },
+      { href: "/admin/bulletin/stats", label: "AI 분석 통계", aiTag: true },
+    ],
+  },
+  {
     label: "소식·일정",
     icon: "📰",
     items: [
-      {
-        href: "/admin/bulletin",
-        label: "주보 관리",
-        children: [
-          { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet", aiTag: true },
-          { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber", aiTag: true },
-          { href: "/admin/event-mapping", label: "AI 분류설정", aiTag: true },
-          { href: "/admin/bulletin/stats", label: "AI 분석 통계", aiTag: true },
-        ],
-      },
       { href: "/admin/notices", label: "공지 관리" },
       { href: "/admin/calendar", label: "본당 일정 관리" },
     ],
@@ -295,7 +298,7 @@ export default function AdminSidebar({
   // ?tab=... 쿼리도 활성 판단에 사용
   const currentTab = searchParams?.get("tab") ?? null;
 
-  const isActive = useCallback((href: string) => {
+  const isActive = useCallback((href: string, exact = false) => {
     // href에 쿼리가 있으면 pathname + tab 비교
     const qIdx = href.indexOf("?");
     if (qIdx >= 0) {
@@ -305,8 +308,8 @@ export default function AdminSidebar({
       if (pathname !== path) return false;
       return currentTab === tab;
     }
-    // 쿼리 없는 href는 pathname startsWith 매칭. 단 다른 항목의 쿼리에 의해 활성화되지 않도록 그대로 비교
     if (pathname === href) return true;
+    if (exact) return false;
     return pathname.startsWith(href + "/");
   }, [pathname, currentTab]);
 
@@ -468,7 +471,7 @@ export default function AdminSidebar({
                 {open && (
                   <ul aria-labelledby={headerId}>
                     {filteredItems.map((it) => {
-                      const active = isActive(it.href);
+                      const active = isActive(it.href, it.exact);
                       const badge = badgeFor(it);
                       const hasChildren = it.children && it.children.length > 0;
 
