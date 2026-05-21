@@ -81,7 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "배너·사진·페이지",
+    label: "페이지·사진·배너",
     icon: "🖼",
     items: [
       { href: "/admin/pages", label: "페이지" },
