@@ -5,7 +5,7 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.248";
+export const CURRENT_VERSION = "1.5.249";
 export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-21";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.249", date: "2026-05-21", tag: "인프라",
+    items: [
+      "Stage 6 Part 2 — construction·page_photos·archive 감사 로그 추가",
+      "  · construction.py (8): phase/journal CRUD + photo upload",
+      "  · page_photos.py (8): slug CRUD + photo upload/update/delete + settings + reorder",
+      "  · archive.py (9): parish_pastors·parish_priests CRUD + photo upload + restore-to-staff",
+      "  · 누적: 12개 파일 65 endpoints 에 log_action 적용",
+      "  · 남은 작업 (Part 3~): bulletins(16) + content(32) + members/boards/auth 부분 누락",
+    ],
+  },
   {
     version: "1.5.248", date: "2026-05-21", tag: "인프라",
     items: [

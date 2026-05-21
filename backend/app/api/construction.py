@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
@@ -138,13 +139,14 @@ def list_phases(db: Session = Depends(get_db)):
 def create_phase(
     body: PhaseIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     _validate_phase(body)
     phase = ConstructionPhase(**body.model_dump())
     db.add(phase)
     db.commit()
     db.refresh(phase)
+    log_action(db, get_admin_identifier(admin), "create_construction_phase", "construction_phase", phase.id, body.title)
     return phase
 
 
@@ -153,7 +155,7 @@ def update_phase(
     phase_id: int,
     body: PhaseIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     _validate_phase(body)
     phase = db.query(ConstructionPhase).filter(ConstructionPhase.id == phase_id).first()
@@ -163,6 +165,7 @@ def update_phase(
         setattr(phase, k, v)
     db.commit()
     db.refresh(phase)
+    log_action(db, get_admin_identifier(admin), "update_construction_phase", "construction_phase", phase.id, phase.title)
     return phase
 
 
@@ -170,14 +173,16 @@ def update_phase(
 def delete_phase(
     phase_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     phase = db.query(ConstructionPhase).filter(ConstructionPhase.id == phase_id).first()
     if not phase:
         raise HTTPException(status_code=404, detail="단계를 찾을 수 없습니다.")
+    snapshot = phase.title
     _delete_photo_file(phase.photo_url)
     db.delete(phase)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_construction_phase", "construction_phase", phase_id, snapshot)
     return None
 
 
@@ -186,7 +191,7 @@ async def upload_phase_photo(
     phase_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     phase = db.query(ConstructionPhase).filter(ConstructionPhase.id == phase_id).first()
     if not phase:
@@ -197,6 +202,7 @@ async def upload_phase_photo(
     phase.photo_url = new_url
     db.commit()
     db.refresh(phase)
+    log_action(db, get_admin_identifier(admin), "upload_construction_phase_photo", "construction_phase", phase.id, phase.title)
     return phase
 
 
@@ -220,7 +226,7 @@ def list_journal(
 def create_journal(
     body: JournalIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     if not body.note.strip():
         raise HTTPException(status_code=400, detail="일지 내용은 필수입니다.")
@@ -228,6 +234,7 @@ def create_journal(
     db.add(entry)
     db.commit()
     db.refresh(entry)
+    log_action(db, get_admin_identifier(admin), "create_construction_journal", "construction_journal", entry.id, str(entry.entry_date))
     return entry
 
 
@@ -236,7 +243,7 @@ def update_journal(
     entry_id: int,
     body: JournalIn,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     if not body.note.strip():
         raise HTTPException(status_code=400, detail="일지 내용은 필수입니다.")
@@ -247,6 +254,7 @@ def update_journal(
     entry.note = body.note.strip()
     db.commit()
     db.refresh(entry)
+    log_action(db, get_admin_identifier(admin), "update_construction_journal", "construction_journal", entry.id, str(entry.entry_date))
     return entry
 
 
@@ -254,14 +262,16 @@ def update_journal(
 def delete_journal(
     entry_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     entry = db.query(ConstructionJournalEntry).filter(ConstructionJournalEntry.id == entry_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="일지를 찾을 수 없습니다.")
+    snapshot = str(entry.entry_date)
     _delete_photo_file(entry.photo_url)
     db.delete(entry)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_construction_journal", "construction_journal", entry_id, snapshot)
     return None
 
 
@@ -270,7 +280,7 @@ async def upload_journal_photo(
     entry_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     entry = db.query(ConstructionJournalEntry).filter(ConstructionJournalEntry.id == entry_id).first()
     if not entry:
@@ -281,6 +291,7 @@ async def upload_journal_photo(
     entry.photo_url = new_url
     db.commit()
     db.refresh(entry)
+    log_action(db, get_admin_identifier(admin), "upload_construction_journal_photo", "construction_journal", entry.id, str(entry.entry_date))
     return entry
 
 

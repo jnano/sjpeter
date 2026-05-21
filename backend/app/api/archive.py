@@ -6,6 +6,7 @@ from typing import Literal, Optional
 from datetime import date
 import os, uuid
 from app.core.database import get_db
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 
@@ -89,7 +90,7 @@ def list_pastors(
 
 
 @router.post("/pastors", response_model=PastorOut, status_code=201)
-def create_pastor(body: PastorIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
+def create_pastor(body: PastorIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     row = db.execute(text(
         "INSERT INTO parish_pastors (name, title, appointed_at, resigned_at, bio, sort_order, category) "
         "VALUES (:name, :title, :app, :res, :bio, :ord, :cat) RETURNING *"
@@ -97,6 +98,7 @@ def create_pastor(body: PastorIn, db: Session = Depends(get_db), _=Depends(get_c
         "res": body.resigned_at, "bio": body.bio, "ord": body.sort_order,
         "cat": body.category}).fetchone()
     db.commit()
+    log_action(db, get_admin_identifier(admin), "create_pastor", "parish_pastor", row.id, body.name)
     return _pastor_row(row)
 
 
@@ -105,7 +107,7 @@ async def upload_pastor_photo(
     pastor_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    admin=Depends(get_current_admin),
 ):
     existing = db.execute(text("SELECT * FROM parish_pastors WHERE id=:id"), {"id": pastor_id}).fetchone()
     if not existing:
@@ -116,11 +118,12 @@ async def upload_pastor_photo(
         "UPDATE parish_pastors SET photo_url=:url WHERE id=:id RETURNING *"
     ), {"url": url, "id": pastor_id}).fetchone()
     db.commit()
+    log_action(db, get_admin_identifier(admin), "upload_pastor_photo", "parish_pastor", pastor_id, row.name)
     return _pastor_row(row)
 
 
 @router.put("/pastors/{pastor_id}", response_model=PastorOut)
-def update_pastor(pastor_id: int, body: PastorIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
+def update_pastor(pastor_id: int, body: PastorIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     row = db.execute(text(
         "UPDATE parish_pastors SET name=:name, title=:title, appointed_at=:app, "
         "resigned_at=:res, bio=:bio, sort_order=:ord, category=:cat WHERE id=:id RETURNING *"
@@ -130,17 +133,20 @@ def update_pastor(pastor_id: int, body: PastorIn, db: Session = Depends(get_db),
     if not row:
         raise HTTPException(status_code=404, detail="사목자를 찾을 수 없습니다.")
     db.commit()
+    log_action(db, get_admin_identifier(admin), "update_pastor", "parish_pastor", pastor_id, body.name)
     return _pastor_row(row)
 
 
 @router.delete("/pastors/{pastor_id}", status_code=204)
-def delete_pastor(pastor_id: int, db: Session = Depends(get_db), _=Depends(get_current_admin)):
-    existing = db.execute(text("SELECT photo_url FROM parish_pastors WHERE id=:id"), {"id": pastor_id}).fetchone()
+def delete_pastor(pastor_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    existing = db.execute(text("SELECT name, photo_url FROM parish_pastors WHERE id=:id"), {"id": pastor_id}).fetchone()
     if not existing:
         raise HTTPException(status_code=404, detail="사목자를 찾을 수 없습니다.")
+    snapshot = existing.name
     _delete_file(existing.photo_url)
     db.execute(text("DELETE FROM parish_pastors WHERE id=:id"), {"id": pastor_id})
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_pastor", "parish_pastor", pastor_id, snapshot)
 
 
 def _infer_staff_role(title: Optional[str], category: str) -> str:
@@ -160,7 +166,7 @@ def _infer_staff_role(title: Optional[str], category: str) -> str:
 def restore_pastor_to_staff(
     pastor_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    admin=Depends(get_current_admin),
 ):
     """역대 사목자 record를 현재 사목자(parish_staff)로 복원.
 
@@ -201,6 +207,7 @@ def restore_pastor_to_staff(
     # 사진 파일은 새 staff record가 참조하므로 유지, parish_pastors record만 삭제
     db.execute(text("DELETE FROM parish_pastors WHERE id=:id"), {"id": pastor_id})
     db.commit()
+    log_action(db, get_admin_identifier(admin), "restore_pastor_to_staff", "parish_pastor", pastor_id, f"role={role}")
     return {"ok": True, "role": role}
 
 
@@ -245,13 +252,14 @@ def list_priests(db: Session = Depends(get_db)):
 
 
 @router.post("/priests", response_model=PriestOut, status_code=201)
-def create_priest(body: PriestIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
+def create_priest(body: PriestIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     row = db.execute(text(
         "INSERT INTO parish_priests (name, baptism_date, ordained_date, role, bio, sort_order) "
         "VALUES (:name, :bap, :ord, :role, :bio, :sord) RETURNING *"
     ), {"name": body.name, "bap": body.baptism_date, "ord": body.ordained_date,
         "role": body.role, "bio": body.bio, "sord": body.sort_order}).fetchone()
     db.commit()
+    log_action(db, get_admin_identifier(admin), "create_priest", "parish_priest", row.id, body.name)
     return _priest_row(row)
 
 
@@ -260,7 +268,7 @@ async def upload_priest_photo(
     priest_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    admin=Depends(get_current_admin),
 ):
     existing = db.execute(text("SELECT * FROM parish_priests WHERE id=:id"), {"id": priest_id}).fetchone()
     if not existing:
@@ -271,11 +279,12 @@ async def upload_priest_photo(
         "UPDATE parish_priests SET photo_url=:url WHERE id=:id RETURNING *"
     ), {"url": url, "id": priest_id}).fetchone()
     db.commit()
+    log_action(db, get_admin_identifier(admin), "upload_priest_photo", "parish_priest", priest_id, row.name)
     return _priest_row(row)
 
 
 @router.put("/priests/{priest_id}", response_model=PriestOut)
-def update_priest(priest_id: int, body: PriestIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
+def update_priest(priest_id: int, body: PriestIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     row = db.execute(text(
         "UPDATE parish_priests SET name=:name, baptism_date=:bap, ordained_date=:ord, "
         "role=:role, bio=:bio, sort_order=:sord WHERE id=:id RETURNING *"
@@ -284,14 +293,17 @@ def update_priest(priest_id: int, body: PriestIn, db: Session = Depends(get_db),
     if not row:
         raise HTTPException(status_code=404, detail="사제를 찾을 수 없습니다.")
     db.commit()
+    log_action(db, get_admin_identifier(admin), "update_priest", "parish_priest", priest_id, body.name)
     return _priest_row(row)
 
 
 @router.delete("/priests/{priest_id}", status_code=204)
-def delete_priest(priest_id: int, db: Session = Depends(get_db), _=Depends(get_current_admin)):
-    existing = db.execute(text("SELECT photo_url FROM parish_priests WHERE id=:id"), {"id": priest_id}).fetchone()
+def delete_priest(priest_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    existing = db.execute(text("SELECT name, photo_url FROM parish_priests WHERE id=:id"), {"id": priest_id}).fetchone()
     if not existing:
         raise HTTPException(status_code=404, detail="사제를 찾을 수 없습니다.")
+    snapshot = existing.name
     _delete_file(existing.photo_url)
     db.execute(text("DELETE FROM parish_priests WHERE id=:id"), {"id": priest_id})
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_priest", "parish_priest", priest_id, snapshot)

@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
@@ -155,7 +156,7 @@ def list_slugs(db: Session = Depends(get_db)):
 def create_slug(
     body: PagePhotoSlugCreate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     if db.query(PagePhotoSlug).filter_by(slug=body.slug).first():
         raise HTTPException(status_code=409, detail="이미 사용 중인 슬러그입니다.")
@@ -165,6 +166,7 @@ def create_slug(
     db.add(item)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "create_page_photo_slug", "page_photo_slug", item.id, body.slug)
     return item
 
 
@@ -173,7 +175,7 @@ def update_slug(
     slug_id: int,
     body: PagePhotoSlugUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     item = db.query(PagePhotoSlug).filter_by(id=slug_id).first()
     if not item:
@@ -182,6 +184,7 @@ def update_slug(
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    log_action(db, get_admin_identifier(admin), "update_page_photo_slug", "page_photo_slug", item.id, item.slug)
     return item
 
 
@@ -189,11 +192,12 @@ def update_slug(
 def delete_slug(
     slug_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     item = db.query(PagePhotoSlug).filter_by(id=slug_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="슬러그를 찾을 수 없습니다.")
+    snapshot = item.slug
 
     # 해당 슬러그의 모든 사진 파일 + DB 행 + 설정 정리
     photos = db.query(PagePhoto).filter_by(page_slug=item.slug).all()
@@ -206,6 +210,7 @@ def delete_slug(
 
     db.delete(item)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_page_photo_slug", "page_photo_slug", slug_id, snapshot)
     return {"ok": True}
 
 
@@ -243,7 +248,7 @@ async def upload_page_photo(
     slug: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     data = await file.read()
     ext = _ensure_image_file(file, data)
@@ -275,6 +280,7 @@ async def upload_page_photo(
     _get_or_create_settings(db, slug)
     db.commit()
     db.refresh(photo)
+    log_action(db, get_admin_identifier(admin), "upload_page_photo", "page_photo", photo.id, f"slug={slug}")
     return photo
 
 
@@ -283,7 +289,7 @@ def update_page_photo(
     photo_id: int,
     body: PagePhotoUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     photo = db.query(PagePhoto).filter_by(id=photo_id).first()
     if not photo:
@@ -293,6 +299,7 @@ def update_page_photo(
         setattr(photo, k, v)
     db.commit()
     db.refresh(photo)
+    log_action(db, get_admin_identifier(admin), "update_page_photo", "page_photo", photo.id, f"slug={photo.page_slug}")
     return photo
 
 
@@ -300,14 +307,16 @@ def update_page_photo(
 def delete_page_photo(
     photo_id: int,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     photo = db.query(PagePhoto).filter_by(id=photo_id).first()
     if not photo:
         raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
+    snapshot = f"slug={photo.page_slug}"
     _remove_uploaded_file(photo.file_url)
     db.delete(photo)
     db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_page_photo", "page_photo", photo_id, snapshot)
     return {"ok": True}
 
 
@@ -316,7 +325,7 @@ def update_page_photo_settings(
     slug: str,
     body: PagePhotoSettingUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     if body.transition_mode not in ALLOWED_TRANSITION:
         raise HTTPException(status_code=400, detail=f"허용되지 않는 전환 방식입니다: {body.transition_mode}")
@@ -326,6 +335,7 @@ def update_page_photo_settings(
     setting.transition_duration_ms = body.transition_duration_ms
     db.commit()
     db.refresh(setting)
+    log_action(db, get_admin_identifier(admin), "update_page_photo_settings", "page_photo_setting", setting.id, f"slug={slug},mode={body.transition_mode}")
     return setting
 
 
@@ -334,7 +344,7 @@ def reorder_page_photos(
     slug: str,
     body: ReorderBody,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_admin),
 ):
     photos = db.query(PagePhoto).filter_by(page_slug=slug).all()
     by_id = {p.id: p for p in photos}
@@ -342,6 +352,7 @@ def reorder_page_photos(
         if pid in by_id:
             by_id[pid].sort_order = idx
     db.commit()
+    log_action(db, get_admin_identifier(admin), "reorder_page_photos", "page_photo", None, f"slug={slug}, 순서: {','.join(map(str, body.photo_ids))}")
     return (
         db.query(PagePhoto)
         .filter_by(page_slug=slug)
