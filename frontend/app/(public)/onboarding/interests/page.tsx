@@ -140,7 +140,7 @@ export default function OnboardingInterestsPage() {
   return (
     <>
       <PageHeader
-        group="본당 가족"
+        group="본당 공동체"
         title={isEditing ? "관심 분과·단체 수정" : "관심 분과·단체 선택"}
         subtitle="관심 있는 분과·단체를 선택하면 해당 소식을 받아볼 수 있습니다."
       />

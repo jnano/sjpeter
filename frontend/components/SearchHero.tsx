@@ -189,7 +189,7 @@ export default function SearchHero({
           }
         }}
         autoFocus={shouldAutoFocus}
-        placeholder={activePlaceholder ?? "기도문·공지·주보·행사·본당 가족을 한 번에 검색"}
+        placeholder={activePlaceholder ?? "기도문·공지·주보·행사·사목자를 한 번에 검색"}
         aria-label="검색어"
         className="w-full pl-14 pr-32 py-4 text-base sm:text-lg rounded-2xl bg-white text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] shadow-sm focus:outline-none focus:border-[var(--color-primary)] focus:shadow-md transition-all"
       />

@@ -434,7 +434,7 @@ def _migrate_add_columns():
         except Exception:
             pass
 
-        # 본당 가족 (parish_staff)
+        # 현재 사목자 (parish_staff)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS parish_staff (
                 id SERIAL PRIMARY KEY,

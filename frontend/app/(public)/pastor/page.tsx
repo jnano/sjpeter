@@ -7,7 +7,7 @@ import { fetchParishMin } from "@/lib/parish";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "주임신부님", description: `${p.name} 본당 가족 — 주임신부, 보좌신부, 수녀, 사무장` };
+  return { title: "주임신부님", description: `${p.name} 현재 사목자 — 주임신부, 보좌신부, 수녀, 사무장` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -55,7 +55,7 @@ export default async function PastorPage() {
         {all.length === 0 ? (
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)]">
             <p className="text-3xl mb-2"><CrossIcon /></p>
-            <p className="text-sm">아직 등록된 본당 가족 정보가 없습니다.</p>
+            <p className="text-sm">아직 등록된 사목자가 없습니다.</p>
             <p className="text-xs mt-1">관리자 페이지에서 등록할 수 있습니다.</p>
           </div>
         ) : (

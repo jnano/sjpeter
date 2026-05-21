@@ -395,7 +395,7 @@ export default function AdminPagesPage() {
                 </summary>
                 <ul className="px-3 pb-3 pt-1 space-y-1 text-blue-900/90">
                   {[
-                    { k: "PARISH_NAME", d: "본당 이름 (예: 세종성베드로성당)" },
+                    { k: "PARISH_NAME", d: "본당 이름" },
                     { k: "PARISH_NAME_EN", d: "본당 영문명 (예: St. Peter's Cathedral)" },
                     { k: "PARISH_ADDRESS", d: "본당 주소" },
                     { k: "PARISH_PHONE", d: "본당 전화번호" },

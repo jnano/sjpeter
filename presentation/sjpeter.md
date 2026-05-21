@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 size: 16:9
-header: '세종성베드로성당 공식 홈페이지'
+header: '본당 홈페이지'
 footer: '본당 사목과 운영을 돕는 보조 수단'
 style: |
   section {
@@ -125,8 +125,8 @@ style: |
 
 <!-- _class: title -->
 
-# 세종성베드로성당
-## 공식 홈페이지 소개
+# 본당 홈페이지
+## 시스템 소개
 
 본당 사목과 운영을 돕는 보조 수단
 
@@ -453,6 +453,6 @@ style: |
 
 # 감사합니다
 
-## 세종성베드로성당 공식 홈페이지
+## 본당 홈페이지
 
 <p class="meta">본당 사목과 운영을 돕는 보조 수단</p>

@@ -1,9 +1,9 @@
-# CLAUDE.md — 세종성베드로성당 홈페이지
+# CLAUDE.md — 본당 홈페이지 (Faith and Me)
 
 > 이 문서는 `~/.claude/CLAUDE.md` 의 작업 흐름(① 지시 검토 → 보고·추천 → 승인 → 작업 시작 → ② 툴 충돌 감지 시 보고·승인)을 따른 뒤 적용되는 프로젝트별 작업 지침이다.
 
 ## 프로젝트 한 줄 요약
-세종성베드로성당 공식 홈페이지. "오늘을 기록하면 역사가 된다" — 주보가 모든 기능의 축(軸).
+어떤 본당이라도 자기 본당명·로고·미사시간을 입력하면 그대로 자기 본당 사이트가 되는 본당 홈페이지 시스템. "오늘을 기록하면 역사가 된다" — 주보가 모든 기능의 축(軸).
 
 ## 작업 디렉토리
 ```
@@ -55,8 +55,9 @@ curl 또는 psql로 실제 동작 확인 후 완료 보고. 코드만 보고 완
 ### 4. 모든 공개 페이지에 PageHeader 필수
 ```tsx
 import PageHeader from "@/components/PageHeader";
-// group: "우리 성당" | "본당 가족" | "말씀과 기도" | "알림과 나눔" | "사진 기록"
-<PageHeader group="알림과 나눔" title="페이지 제목" subtitle="한 줄 설명" />
+// group: admin/menus 에서 정의한 그룹 라벨 (예: "성당 소개" | "본당 공동체" | "말씀과 기도" | "알림과 게시판" | "사진 갤러리" | "성전건축").
+// 실제 사이드바 매칭은 URL → menu_items.href 우선이고 group prop 은 fallback 으로 사용됨.
+<PageHeader group="알림과 게시판" title="페이지 제목" subtitle="한 줄 설명" />
 ```
 IntersectionObserver로 헤더 브레드크럼과 연동됨. 없으면 브레드크럼 미작동.
 

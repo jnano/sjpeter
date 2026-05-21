@@ -4,7 +4,7 @@ from app.core.database import Base
 
 
 class ParishPastor(Base):
-    """역대 사목자 (주임신부 · 보좌신부 · 수녀 등 — 본당 가족과 별개 아카이브)."""
+    """역대 사목자 (주임신부 · 보좌신부 · 수녀 등 — 현재 사목자와 별개 아카이브)."""
     __tablename__ = "parish_pastors"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -35,7 +35,7 @@ class ParishPriest(Base):
 
 
 class ParishStaff(Base):
-    """본당 가족 (주임신부·보좌신부·수녀·사무장 등 현재 staff)."""
+    """현재 사목자 (주임신부·보좌신부·수녀·사무장 등)."""
     __tablename__ = "parish_staff"
 
     id = Column(Integer, primary_key=True, index=True)

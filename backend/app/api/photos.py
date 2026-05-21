@@ -1,7 +1,7 @@
 """통합 사진 인덱스 API — /photos 공개 페이지용.
 
 7개 출처(page_photos · 공개 게시판 첨부 · 주보 추출 · 역대 사목자/수녀 · 본당 출신 사제 ·
-본당 가족 · 공사 단계/일지)를 UNION ALL 로 통합해 한 번에 반환.
+현재 사목자 · 공사 단계/일지)를 UNION ALL 로 통합해 한 번에 반환.
 
 권한: 비공개 게시판(members_only_read=true)·검색 제외(exclude_from_search=true)·
 비활성 게시판(is_active=false) 사진은 노출 금지. 회원 프로필 사진도 노출 안 함.
@@ -108,9 +108,9 @@ WITH unioned AS (
 
   UNION ALL
 
-  -- 5) 본당 가족 (현재 활동중)
+  -- 5) 현재 사목자 (활동 중)
   SELECT 'staff'::text, id::int, photo_url, created_at,
-         COALESCE(role, '본당 가족'), '/pastor', 7
+         COALESCE(role, '현재 사목자'), '/pastor', 7
   FROM parish_staff
   WHERE photo_url IS NOT NULL AND photo_url <> ''
     AND COALESCE(is_active, TRUE) = TRUE

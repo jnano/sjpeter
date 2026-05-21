@@ -7,7 +7,7 @@ class Parish(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String(100), unique=True, nullable=False)  # 본당 식별자 (URL safe)
-    name = Column(String(200), nullable=False)               # 본당 이름 (예: 세종성베드로성당)
+    name = Column(String(200), nullable=False)               # 본당 이름
     diocese = Column(String(100))                            # 교구 (예: 대전교구)
     address = Column(String(300))
     lat = Column(Float, nullable=True)   # 위도 (예: 36.5040)

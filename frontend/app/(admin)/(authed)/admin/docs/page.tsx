@@ -5,8 +5,8 @@ import { useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.205";
-export const LAST_UPDATED = "2026-05-20";
+export const CURRENT_VERSION = "1.5.237";
+export const LAST_UPDATED = "2026-05-21";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-20";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.237", date: "2026-05-21", tag: "인프라",
+    items: [
+      "라벨 일관성 정리 — '본당 가족'·'세종성베드로성당' 하드코딩 제거",
+      "  · '본당 가족' → '현재 사목자' (parish_staff·photos·archive·onboarding·main.py·CLAUDE.md·pastor 페이지)",
+      "  · '본당 가족' 자연어 → '신자분들·신자들' (seed_photo_posts·seed_liturgy_posts·search·SearchHero)",
+      "  · '세종성베드로성당' 16건 → site_settings.PARISH_NAME 동적 참조 또는 일반화. build_pptx.py 는 site_settings → env var 폴백 추가",
+      "  · 부수: menu_groups id=2 label '본당 공동체2' → '본당 공동체' (테스트 라벨 복원)",
+      "  · 부수: dynamic_pages id=2 (test/새내기) 폐기 테스트 데이터 삭제",
+      "  · CLAUDE.md PageHeader group 예시를 현재 DB 메뉴 그룹 라벨로 동기화 + group prop 이 fallback 임을 명시",
+    ],
+  },
   {
     version: "1.5.205", date: "2026-05-20", tag: "수정",
     items: [
@@ -1847,7 +1859,7 @@ function GuideTab() {
 
         <p className="mb-2 font-medium">기본 구조</p>
         <ul className="text-xs text-[var(--color-text-muted)] space-y-1 mb-4">
-          <li>• <strong>그룹</strong>(예: 본당 소개, 본당 가족) — 헤더의 큰 카테고리. 사이드바 최상위.</li>
+          <li>• <strong>그룹</strong>(예: 성당 소개, 본당 공동체) — 헤더의 큰 카테고리. 사이드바 최상위.</li>
           <li>• <strong>항목</strong> — 그룹 안의 메뉴. 항목 아래 자식 항목까지 <strong>최대 2-deep</strong> 서브메뉴 가능</li>
           <li>• 같은 그룹/항목 데이터가 헤더와 사이드바 양쪽에 동시에 사용됩니다</li>
         </ul>
@@ -2647,7 +2659,7 @@ export default function AdminDocsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">기술문서 · 도움말</h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">세종성베드로성당 홈페이지 관리 가이드</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">본당 홈페이지 관리 가이드</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 text-sm font-bold text-[var(--color-primary)]">

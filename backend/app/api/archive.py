@@ -162,7 +162,7 @@ def restore_pastor_to_staff(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    """역대 사목자 record를 본당 가족(parish_staff)으로 복원.
+    """역대 사목자 record를 현재 사목자(parish_staff)로 복원.
 
     이전(move-to-archive)의 역연산. parish_pastors record는 삭제되고,
     parish_staff에 새로 등록된다. 사진 URL은 그대로 옮겨져 파일은 재사용.

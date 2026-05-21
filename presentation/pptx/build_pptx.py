@@ -1,4 +1,4 @@
-"""세종성베드로성당 공식 홈페이지 발표자료 .pptx 생성기.
+"""본당 홈페이지 발표자료 .pptx 생성기.
 
 PRESENTATION_GUIDELINES.md 의 기준에 맞춰
 - 현재 운영 중인 6대 기능 + 카카오채널
@@ -6,10 +6,13 @@ PRESENTATION_GUIDELINES.md 의 기준에 맞춰
 - 밝고 깨끗한 화이트/네이비/옅은 골드 톤
 - 스크린샷 자동 삽입 (presentation/screenshots/ 안의 약속된 파일명)
 
+본당명은 site_settings.PARISH_NAME 에서 읽음 (환경변수 PARISH_NAME 으로 override 가능).
+
 실행:
     cd backend && source venv/bin/activate
     python ../presentation/pptx/build_pptx.py
 """
+import os
 from pathlib import Path
 
 from pptx import Presentation
@@ -17,6 +20,22 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.util import Emu, Inches, Pt
+
+# ─────────────────────────────────────────────
+# 본당명 (site_settings → 환경변수 → 기본값 순)
+# ─────────────────────────────────────────────
+def _resolve_parish_name() -> str:
+    try:
+        from app.core.site_settings import get_setting
+        v = (get_setting("PARISH_NAME", "") or "").strip()
+        if v:
+            return v
+    except Exception:
+        pass
+    return os.environ.get("PARISH_NAME", "본당 홈페이지")
+
+
+PARISH_NAME = _resolve_parish_name()
 
 # ─────────────────────────────────────────────
 # 디자인 토큰 (밝고 깨끗한 톤)
@@ -397,7 +416,7 @@ def add_feature_card(slide, num: str, name: str, desc: str, left, top, width, he
 def slide_title(prs):
     s = add_blank_slide(prs)
     fill_bg(s, BG)
-    add_text(s, "세종성베드로성당", 1, 2.5, 11.3, 1.0, size=54, bold=True,
+    add_text(s, PARISH_NAME, 1, 2.5, 11.3, 1.0, size=54, bold=True,
              color=INK, align=PP_ALIGN.CENTER)
     add_text(s, "공식 홈페이지 소개", 1, 3.5, 11.3, 0.7, size=22, color=GOLD_DARK,
              align=PP_ALIGN.CENTER)
@@ -668,7 +687,7 @@ def slide_closing(prs):
     add_text(s, "감사합니다", 1, 2.6, 11.3, 1.2, size=64, bold=True,
              color=INK, align=PP_ALIGN.CENTER)
     add_divider(s, 6.27, 4.3, 0.8, GOLD, 0.04)
-    add_text(s, "세종성베드로성당 공식 홈페이지", 1, 4.6, 11.3, 0.5,
+    add_text(s, f"{PARISH_NAME} 공식 홈페이지", 1, 4.6, 11.3, 0.5,
              size=18, color=GOLD_DARK, align=PP_ALIGN.CENTER)
     add_text(s, "본당 사목과 운영을 돕는 보조 수단", 1, 5.5, 11.3, 0.4,
              size=13, color=MUTED, align=PP_ALIGN.CENTER)

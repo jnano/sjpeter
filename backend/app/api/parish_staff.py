@@ -1,4 +1,4 @@
-"""본당 가족 (parish staff) API.
+"""현재 사목자 (parish_staff) API.
 
 공개:
 - GET /api/parish-staff/ — 활성 staff 전체 (role 그룹순 + sort_order)
@@ -208,7 +208,7 @@ def move_to_archive(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ):
-    """본당 가족을 역대 사목자(parish_pastors)로 이전.
+    """현재 사목자를 역대 사목자(parish_pastors) 아카이브로 이전.
 
     사무장은 이전 대상이 아님. 사진 URL은 그대로 복사하므로 파일은 삭제하지 않는다.
     parish_staff 레코드는 이전 후 삭제된다.

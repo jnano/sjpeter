@@ -169,7 +169,7 @@ export default async function SearchPage({
               무엇을 찾고 계신가요?
             </h1>
             <p className="text-sm text-[var(--color-text-muted)] mb-6">
-              기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
+              기도문·묵상·공지·주보·행사·사목자·게시판 글을 한 번에 검색합니다.
             </p>
             <div className="mb-8">
               <SearchHero initialQ="" rotatingPlaceholders={ROTATING_PLACEHOLDERS} />
@@ -221,7 +221,7 @@ export default async function SearchPage({
             무엇을 찾고 계신가요?
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mb-6">
-            기도문·묵상·공지·주보·행사·본당 가족·게시판 글을 한 번에 검색합니다.
+            기도문·묵상·공지·주보·행사·사목자·게시판 글을 한 번에 검색합니다.
           </p>
           <div className="mb-6">
             <SearchHero initialQ={q} rotatingPlaceholders={ROTATING_PLACEHOLDERS} />

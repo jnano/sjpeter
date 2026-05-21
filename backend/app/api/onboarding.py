@@ -95,7 +95,7 @@ def get_checklist(
             label="주임 신부님 등록",
             done=head_priest_set,
             href="/admin/parish-staff",
-            hint="본당 가족에 주임신부 1명을 추가합니다",
+            hint="현재 사목자에 주임신부 1명을 등록합니다",
         ),
         ChecklistItem(
             key="first_notice",
