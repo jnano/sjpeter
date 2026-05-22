@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.286";
+export const CURRENT_VERSION = "1.5.287";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,18 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.287", date: "2026-05-22", tag: "기능",
+    items: [
+      "/setup-check 서버 자가진단 페이지 + GET /api/setup/system-check API",
+      "  · 호스팅 직후 다른 본당 운영자가 자기 서버가 본 시스템에 적합한지 자가진단 (인증 불필요)",
+      "  · 진단 항목 13종: Python·OS·PostgreSQL·메모리·디스크·업로드 쓰기·외부 키 5종·INTERNAL_API_SECRET·SECRET_KEY 강도",
+      "  · status 4단계: ok(충족) / warn(권장 미달) / fail(미충족) / info(안내)",
+      "  · 페이지: 최소사양 vs 권장사양 fold + 요약 카드(충족/권장미달/미충족) + 항목별 상세 + 다음 단계 6단계 안내",
+      "  · 보안: path·hostname·process·IP 등 민감 정보 미노출, 일반 운영 정보만",
+      "  · psutil 비의존 — Linux /proc/meminfo + stdlib shutil.disk_usage 만",
+    ],
+  },
   {
     version: "1.5.286", date: "2026-05-22", tag: "기능",
     items: [
