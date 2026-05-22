@@ -28,12 +28,14 @@ class TypoRuleIn(BaseModel):
     wrong: str
     replacement: str
     note: Optional[str] = None
+    exclude_prefixes: Optional[list[str]] = None
 
 
 class TypoRuleUpdate(BaseModel):
     wrong: Optional[str] = None
     replacement: Optional[str] = None
     note: Optional[str] = None
+    exclude_prefixes: Optional[list[str]] = None
 
 
 class TypoRuleOut(BaseModel):
@@ -41,6 +43,7 @@ class TypoRuleOut(BaseModel):
     wrong: str
     replacement: str
     note: Optional[str] = None
+    exclude_prefixes: Optional[list[str]] = None
     created_at: datetime
     updated_at: datetime
 
@@ -64,7 +67,12 @@ def create_rule(body: TypoRuleIn, db: Session = Depends(get_db), admin: Admin = 
         raise HTTPException(status_code=400, detail="wrong 과 replacement 가 같으면 의미가 없습니다.")
     if db.query(AiTypoRule).filter(AiTypoRule.wrong == wrong).first():
         raise HTTPException(status_code=409, detail=f"이미 등록된 오타: {wrong!r}")
-    rule = AiTypoRule(wrong=wrong, replacement=repl, note=(body.note or "").strip() or None)
+    excludes = [p.strip() for p in (body.exclude_prefixes or []) if p and p.strip()] or None
+    rule = AiTypoRule(
+        wrong=wrong, replacement=repl,
+        note=(body.note or "").strip() or None,
+        exclude_prefixes=excludes,
+    )
     db.add(rule)
     db.commit()
     db.refresh(rule)
@@ -91,6 +99,9 @@ def update_rule(rule_id: int, body: TypoRuleUpdate, db: Session = Depends(get_db
         rule.replacement = new_r
     if body.note is not None:
         rule.note = body.note.strip() or None
+    if body.exclude_prefixes is not None:
+        cleaned = [p.strip() for p in body.exclude_prefixes if p and p.strip()]
+        rule.exclude_prefixes = cleaned or None
     if rule.wrong == rule.replacement:
         raise HTTPException(status_code=400, detail="wrong 과 replacement 가 같으면 의미가 없습니다.")
     db.commit()

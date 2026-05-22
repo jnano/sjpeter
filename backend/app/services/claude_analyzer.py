@@ -53,29 +53,45 @@ _SYSTEM = (
 )
 
 
-def _load_typo_dict(db) -> dict[str, str]:
-    """ai_typo_rules 테이블에서 사전을 매번 fetch. 작은 테이블이라 캐시 없이 충분.
-
-    admin /admin/ai-typo-rules 에서 CRUD 한 변경은 다음 추출부터 즉시 반영.
-    """
+def _load_typo_rules(db) -> list[tuple[str, str, list[str]]]:
+    """ai_typo_rules 테이블에서 (wrong, replacement, exclude_prefixes) 매번 fetch."""
     from sqlalchemy import text as _text
     try:
-        rows = db.execute(_text("SELECT wrong, replacement FROM ai_typo_rules")).fetchall()
-        return {r.wrong: r.replacement for r in rows}
+        rows = db.execute(
+            _text("SELECT wrong, replacement, exclude_prefixes FROM ai_typo_rules")
+        ).fetchall()
+        return [(r.wrong, r.replacement, list(r.exclude_prefixes or [])) for r in rows]
     except Exception:
-        return {}
+        return []
 
 
 def fix_typos(text: str | None, db=None) -> str | None:
     """추출된 텍스트의 알려진 오타를 사전 기반 1:1 치환으로 교정.
 
-    db session 이 주어지면 ai_typo_rules 사용. 없으면 빈 사전(=원본 그대로).
+    exclude_prefixes 가 지정된 규칙은 같은 줄에 그 prefix 가 wrong 보다 앞에 있으면
+    해당 occurrence 만 skip — 다른 줄·다른 위치의 동일 wrong 은 정상 치환.
     """
     if not text or db is None:
         return text
+    import re as _re
     out = text
-    for wrong, right in _load_typo_dict(db).items():
-        out = out.replace(wrong, right)
+    for wrong, replacement, excludes in _load_typo_rules(db):
+        if not excludes:
+            out = out.replace(wrong, replacement)
+            continue
+        # occurrence 단위로 검사 — 같은 줄의 앞부분에 prefix 가 있으면 skip
+        result_parts: list[str] = []
+        pos = 0
+        for m in _re.finditer(_re.escape(wrong), out):
+            start = m.start()
+            line_start = out.rfind("\n", 0, start) + 1
+            before_on_line = out[line_start:start]
+            skip = any(p in before_on_line for p in excludes if p)
+            result_parts.append(out[pos:start])
+            result_parts.append(wrong if skip else replacement)
+            pos = m.end()
+        result_parts.append(out[pos:])
+        out = "".join(result_parts)
     return out
 
 

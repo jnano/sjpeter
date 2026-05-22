@@ -1365,6 +1365,10 @@ def _migrate_add_columns():
             "VALUES ('전입가경', '전입가정', 'AI Vision 자주 오인식') "
             "ON CONFLICT (wrong) DO NOTHING"
         ))
+        # 제외 prefix — 같은 줄에 이 prefix 가 wrong 보다 앞에 있으면 그 occurrence 는 치환 skip
+        conn.execute(text(
+            "ALTER TABLE ai_typo_rules ADD COLUMN IF NOT EXISTS exclude_prefixes TEXT[]"
+        ))
 
         # AI 추출 결과에 시점 분류 + 분과 후보 (v1.5.290~)
         conn.execute(text(

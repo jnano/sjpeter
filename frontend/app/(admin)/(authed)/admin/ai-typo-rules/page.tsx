@@ -10,8 +10,17 @@ interface TypoRule {
   wrong: string;
   replacement: string;
   note: string | null;
+  exclude_prefixes: string[] | null;
   created_at: string;
   updated_at: string;
+}
+
+/** "장소:, 위치:" 같은 콤마 구분 입력을 배열로. 양옆 공백 제거 후 빈 항목 skip. */
+function parsePrefixes(input: string): string[] {
+  return input.split(",").map((s) => s.trim()).filter(Boolean);
+}
+function joinPrefixes(arr: string[] | null | undefined): string {
+  return (arr ?? []).join(", ");
 }
 
 function getToken() {
@@ -32,10 +41,11 @@ export default function AiTypoRulesPage() {
   const [newWrong, setNewWrong] = useState("");
   const [newReplacement, setNewReplacement] = useState("");
   const [newNote, setNewNote] = useState("");
+  const [newExcludes, setNewExcludes] = useState("");
   // 인라인 편집
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{ wrong: string; replacement: string; note: string }>({
-    wrong: "", replacement: "", note: "",
+  const [editForm, setEditForm] = useState<{ wrong: string; replacement: string; note: string; excludes: string }>({
+    wrong: "", replacement: "", note: "", excludes: "",
   });
 
   const load = useCallback(async () => {
@@ -65,7 +75,12 @@ export default function AiTypoRulesPage() {
       const res = await fetch(`${API}/api/admin/ai-typo-rules`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ wrong: w, replacement: r, note: newNote.trim() || null }),
+        body: JSON.stringify({
+          wrong: w,
+          replacement: r,
+          note: newNote.trim() || null,
+          exclude_prefixes: parsePrefixes(newExcludes),
+        }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -73,7 +88,7 @@ export default function AiTypoRulesPage() {
       }
       const created = await res.json() as TypoRule;
       setRules((prev) => [created, ...prev]);
-      setNewWrong(""); setNewReplacement(""); setNewNote("");
+      setNewWrong(""); setNewReplacement(""); setNewNote(""); setNewExcludes("");
       flash(`'${created.wrong} → ${created.replacement}' 추가됨`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "추가 실패");
@@ -82,7 +97,12 @@ export default function AiTypoRulesPage() {
 
   function startEdit(rule: TypoRule) {
     setEditingId(rule.id);
-    setEditForm({ wrong: rule.wrong, replacement: rule.replacement, note: rule.note ?? "" });
+    setEditForm({
+      wrong: rule.wrong,
+      replacement: rule.replacement,
+      note: rule.note ?? "",
+      excludes: joinPrefixes(rule.exclude_prefixes),
+    });
   }
   function cancelEdit() { setEditingId(null); }
 
@@ -97,6 +117,7 @@ export default function AiTypoRulesPage() {
           wrong: editForm.wrong.trim(),
           replacement: editForm.replacement.trim(),
           note: editForm.note.trim() || null,
+          exclude_prefixes: parsePrefixes(editForm.excludes),
         }),
       });
       if (!res.ok) {
@@ -146,7 +167,7 @@ export default function AiTypoRulesPage() {
       {/* 추가 폼 */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">새 규칙 추가</h2>
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr_auto] gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr_1.5fr_auto] gap-2">
           <input
             type="text"
             value={newWrong}
@@ -163,6 +184,13 @@ export default function AiTypoRulesPage() {
           />
           <input
             type="text"
+            value={newExcludes}
+            onChange={(e) => setNewExcludes(e.target.value)}
+            placeholder='제외 prefix (예: "장소:, 위치:" 콤마 구분)'
+            className="border border-gray-300 rounded px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="메모 (옵션)"
@@ -175,6 +203,10 @@ export default function AiTypoRulesPage() {
             추가
           </button>
         </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          <b>제외 prefix</b>: 같은 줄에 이 단어가 오타보다 앞에 있으면 그 occurrence 는 치환하지 않음.
+          예) wrong=&quot;전입가경&quot;, 제외 prefix=&quot;장소:&quot; → &quot;장소: 전입가경&quot; 은 장소명일 수 있어 그대로.
+        </p>
       </section>
 
       {/* 목록 */}
@@ -185,8 +217,9 @@ export default function AiTypoRulesPage() {
           <table className="w-full text-sm">
             <thead className="text-xs text-gray-500 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-2 font-medium w-1/4">오타</th>
-                <th className="text-left px-4 py-2 font-medium w-1/4">교정</th>
+                <th className="text-left px-4 py-2 font-medium w-1/6">오타</th>
+                <th className="text-left px-4 py-2 font-medium w-1/6">교정</th>
+                <th className="text-left px-4 py-2 font-medium w-1/4">제외 prefix</th>
                 <th className="text-left px-4 py-2 font-medium">메모</th>
                 <th className="text-right px-4 py-2 font-medium w-32">동작</th>
               </tr>
@@ -215,6 +248,15 @@ export default function AiTypoRulesPage() {
                       <td className="px-4 py-2">
                         <input
                           type="text"
+                          value={editForm.excludes}
+                          onChange={(e) => setEditForm({ ...editForm, excludes: e.target.value })}
+                          placeholder="콤마 구분"
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
                           value={editForm.note}
                           onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
                           className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
@@ -229,6 +271,11 @@ export default function AiTypoRulesPage() {
                     <>
                       <td className="px-4 py-2 font-mono text-red-700">{r.wrong}</td>
                       <td className="px-4 py-2 font-mono text-green-700">→ {r.replacement}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600">
+                        {(r.exclude_prefixes ?? []).length > 0 ? (
+                          <span className="font-mono">{joinPrefixes(r.exclude_prefixes)}</span>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
                       <td className="px-4 py-2 text-gray-500 text-xs">{r.note ?? ""}</td>
                       <td className="px-4 py-2 text-right">
                         <button onClick={() => startEdit(r)} className="text-xs text-[var(--color-primary)] hover:underline mr-3">편집</button>
