@@ -1014,12 +1014,25 @@ def admin_reset_password(
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
-    """관리자·운영자 — 회원 비밀번호를 초기값(0629)으로 초기화."""
+    """관리자·운영자 — 회원 비밀번호를 무작위 임시 패스워드로 초기화.
+
+    임시 패스워드는 응답 본문에 1회만 표시한다. 관리자는 안전한 경로(전화·
+    SMS·대면)로 회원에게 전달하고, 회원은 첫 로그인 직후 마이페이지에서 본인
+    선택 비밀번호로 변경하도록 안내한다.
+
+    이전엔 고정 문자열 '0629' 를 default 로 박았으나, 코드에 평문이 노출되어
+    누구나 알 수 있는 값이 되는 위험 때문에 random 발급으로 전환.
+    """
     member = _get_member_or_404(member_id, db)
-    member.hashed_password = hash_password("0629")
+    temp_pw = secrets.token_urlsafe(8)  # url-safe 11자 (8 bytes 인코딩)
+    member.hashed_password = hash_password(temp_pw)
     db.commit()
     log_action(db, get_admin_identifier(_admin), "admin_reset_password", "member", member_id, member.email)
-    return {"ok": True}
+    return {
+        "ok": True,
+        "temp_password": temp_pw,
+        "message": "임시 비밀번호를 안전한 경로로 회원에게 전달하세요. 첫 로그인 후 변경을 권고합니다.",
+    }
 
 
 @router.patch("/admin/{member_id}/grant-admin", response_model=MemberAdminOut)

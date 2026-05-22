@@ -99,12 +99,16 @@ async def upload_bulletin(
     if pdf_file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="PDF 파일만 업로드할 수 있습니다.")
 
+    content = await pdf_file.read()
+    # MIME 헤더만으론 octet-stream 우회 가능. 매직 바이트(`%PDF-`)로 실제 검증.
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="유효한 PDF 파일이 아닙니다.")
+
     ext = os.path.splitext(pdf_file.filename or "bulletin.pdf")[1] or ".pdf"
     filename = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join(settings.UPLOAD_DIR, "bulletins", filename)
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-    content = await pdf_file.read()
     with open(save_path, "wb") as f:
         f.write(content)
 

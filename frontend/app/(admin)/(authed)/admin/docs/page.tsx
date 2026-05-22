@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.276";
+export const CURRENT_VERSION = "1.5.277";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.277", date: "2026-05-22", tag: "수정",
+    items: [
+      "보안 강화 — 주보 PDF 매직 바이트 검증 + 회원 비밀번호 reset random 발급",
+      "  · 주보 업로드 (POST /api/bulletins): content_type 의 application/octet-stream 우회를 막기 위해 첫 5바이트 '%PDF-' 검증 추가",
+      "  · PATCH /api/members/admin/{id}/reset-password: 고정값 '0629' 평문 → secrets.token_urlsafe(8) 무작위 임시 패스워드",
+      "  · admin/members 페이지: reset 응답의 temp_password 를 1회 alert + 클립보드 복사. 회원에게 안전 경로로 전달 안내",
+      "  · /admin/docs API 표 라벨 '0629 초기화' → '임시 발급 (1회 표시)' 갱신",
+    ],
+  },
   {
     version: "1.5.276", date: "2026-05-22", tag: "수정",
     items: [
@@ -2576,7 +2586,7 @@ function ApiTab() {
           <ApiRow method="GET"  path="/members/admin/list" desc="회원 목록 (page, q, is_active)" auth="관리자" />
           <ApiRow method="PUT"  path="/members/admin/{id}/activate" desc="회원 활성화" auth="관리자" />
           <ApiRow method="PUT"  path="/members/admin/{id}/deactivate" desc="회원 비활성화" auth="관리자" />
-          <ApiRow method="PATCH" path="/members/admin/{id}/reset-password" desc="비밀번호 0629 초기화" auth="관리자" />
+          <ApiRow method="PATCH" path="/members/admin/{id}/reset-password" desc="비밀번호 임시 발급 (1회 표시)" auth="관리자" />
           <ApiRow method="PATCH" path="/members/admin/{id}/grant-admin" desc="관리자 권한 부여" auth="최고관리자" />
           <ApiRow method="PATCH" path="/members/admin/{id}/revoke-admin" desc="관리자 권한 회수" auth="최고관리자" />
           <ApiRow method="DELETE" path="/members/admin/{id}" desc="회원 삭제" auth="관리자" />

@@ -157,14 +157,30 @@ export default function AdminMembersPage() {
   }
 
   async function resetPassword(member: Member) {
-    if (!confirm(`"${member.nickname}" 회원의 비밀번호를 초기값(0629)으로 초기화하시겠습니까?`)) return;
+    if (!confirm(`"${member.nickname}" 회원의 비밀번호를 임시 패스워드로 초기화하시겠습니까?\n\n초기화 후 임시 패스워드가 1회만 표시됩니다. 안전한 경로로 회원에게 전달하세요.`)) return;
     setProcessing((p) => ({ ...p, [member.id]: true }));
     try {
       const res = await fetch(`${API}/api/members/admin/${member.id}/reset-password`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) alert("초기화에 실패했습니다.");
+      if (!res.ok) {
+        alert("초기화에 실패했습니다.");
+        return;
+      }
+      const data = await res.json();
+      if (data.temp_password) {
+        // alert + clipboard copy: admin 이 잊지 않게 두 채널로 전달.
+        try { await navigator.clipboard.writeText(data.temp_password); } catch {}
+        alert(
+          `"${member.nickname}" 회원의 임시 비밀번호:\n\n${data.temp_password}\n\n` +
+          `클립보드에 복사되었습니다. 안전한 경로(전화·SMS·대면)로 전달하세요.\n` +
+          `회원은 첫 로그인 후 마이페이지에서 비밀번호를 변경해야 합니다.\n\n` +
+          `이 창을 닫으면 임시 비밀번호는 다시 표시되지 않습니다.`
+        );
+      } else {
+        alert("초기화 완료. (응답에 임시 비밀번호 누락)");
+      }
     } finally {
       setProcessing((p) => ({ ...p, [member.id]: false }));
     }
