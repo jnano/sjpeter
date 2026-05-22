@@ -733,7 +733,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
       "/photos — 메뉴에 연결되면 해당 그룹 사이드바 자동 표시",
       "  · 변경 전: 의도적으로 풀폭 (사이드바 없음)",
       "  · 변경: PhotosClient 본문을 SectionLayout 으로 감싸서 useNavigation 자동 매칭 활성화",
-      "  · 결과: '본당 공동체' 메뉴 그룹에 등록된 /photos 가 그 그룹 사이드바(모든날 모든순간·사목 지표 등)와 함께 노출",
+      "  · 결과: '본당 공동체' 메뉴 그룹에 등록된 /photos 가 그 그룹 사이드바(모든날 모든순간·본당 사목지표 등)와 함께 노출",
       "  · 메뉴에 등록 안 된 경우는 SectionLayout 의 fallback(풀폭)으로 자연스럽게 동작",
       "  · autoHero=false — PhotosClient 자체가 PageHeader+사진을 갖고 있어 hero 슬라이드쇼는 생략",
       "  · /calendar 는 자체 SectionSidebar 패턴 사용 중이라 별개 처리 (이번 변경 범위 밖)",
@@ -1006,7 +1006,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
   {
     version: "1.5.159", date: "2026-05-18", tag: "수정",
     items: [
-      "/vision 역대 사목지표 목록 — 최근 등록이 항상 가장 위",
+      "/vision 역대 본당 사목지표 목록 — 최근 등록이 항상 가장 위",
       "  · year DESC + id DESC 명시적 정렬 (백엔드 정렬에 의존하지 않음)",
       "  · 같은 year 에 여러 등록 시에도 마지막 INSERT 가 위로",
     ],
@@ -1686,7 +1686,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
     items: [
       "주보 AI 추출 카테고리 확장 — '묵상' / '지표' 추가",
       "묵상은 주보 발행일로 meditations에 자동 INSERT (scripture 필드 포함)",
-      "사목지표는 추출만 pending 상태로 보관, admin이 visions에 수동 등록",
+      "본당 사목지표는 추출만 pending 상태로 보관, admin이 visions에 수동 등록",
       "Bedrock client read_timeout 60→300초, max_tokens 4096→8192 (긴 묵상 본문 잘림 방지)",
     ],
   },
@@ -1786,7 +1786,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
   {
     version: "1.5.14", date: "2026-05-12", tag: "기능",
     items: [
-      "사목지표 본문에 마크다운 에디터(MarkdownEditor) 적용 — 제목(##)·작은 제목(###)·카드 섹션(>)·구분선(---) 지원",
+      "본당 사목지표 본문에 마크다운 에디터(MarkdownEditor) 적용 — 제목(##)·작은 제목(###)·카드 섹션(>)·구분선(---) 지원",
       "/vision 공개 페이지에 MarkdownContent 렌더 — 줄바꿈·단락·카드 박스 자동 시각화",
       "MarkdownContent의 blockquote 스타일 강화 — 좌측 강조 보더 + 따뜻한 배경 + 라운드. 게시판·동적 페이지 인용에도 일관 적용",
     ],
@@ -1794,7 +1794,7 @@ const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] 
   {
     version: "1.5.13", date: "2026-05-12", tag: "기능",
     items: [
-      "사목지표에 본문(body) 입력 추가 — 슬로건 외에 신부님의 한 해 사목 방향·말씀을 단락으로 기록 가능",
+      "본당 사목지표에 본문(body) 입력 추가 — 슬로건 외에 신부님의 한 해 사목 방향·말씀을 단락으로 기록 가능",
       "/vision 공개 페이지에 올해 지표 본문 카드 노출 (줄바꿈 보존)",
       "/admin/content?tab=vision 생성/수정 폼에 textarea 추가, no-store로 즉시 반영",
     ],
@@ -3007,7 +3007,7 @@ function PhilosophyTab() {
             <strong>&ldquo;주보 하나 올리면, 나머지는 시스템이 한다.&rdquo;</strong>
           </p>
           <p className="text-[var(--color-text-muted)]">
-            사목지표, 행사 기록, 공지, 사진 — 이 모든 것이 주보를 중심으로 연결될 때,
+            본당 사목지표, 행사 기록, 공지, 사진 — 이 모든 것이 주보를 중심으로 연결될 때,
             하나하나는 파편이 아니라 하나의 이야기가 됩니다.
           </p>
         </div>

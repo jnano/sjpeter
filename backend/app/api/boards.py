@@ -541,9 +541,9 @@ def search_posts(
         _build_match_clause([Vision.motto, Vision.body], terms)
     ).order_by(Vision.year.desc()).all():
         content_results.append(ContentSearchItem(
-            type="vision", label="사목지표",
+            type="vision", label="본당 사목지표",
             title=v.motto,
-            excerpt=f"{v.year}년 사목지표",
+            excerpt=f"{v.year}년 본당 사목지표",
             url="/vision",
         ))
 

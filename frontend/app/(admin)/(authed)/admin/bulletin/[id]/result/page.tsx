@@ -61,7 +61,7 @@ const TYPE_CONFIG: Record<string, { label: string; dest: string; color: string; 
   행사: { label: "행사 · 캘린더", dest: "캘린더 등록 완료", color: "green", icon: "📅" },
   모임: { label: "모임", dest: "AI 추출 게시판 임시저장", color: "amber", icon: "👥" },
   묵상: { label: "묵상", dest: "묵상 등록 완료", color: "teal", icon: "🕊️" },
-  지표: { label: "사목지표 후보", dest: "검토 후 등록 필요", color: "violet", icon: "📌" },
+  지표: { label: "본당 사목지표 후보", dest: "검토 후 등록 필요", color: "violet", icon: "📌" },
   pending: { label: "미처리", dest: "검토 필요", color: "red", icon: "⚠️" },
 };
 
@@ -156,7 +156,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
     });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
-      throw new Error(detail.detail ?? "사목지표 등록 실패");
+      throw new Error(detail.detail ?? "본당 사목지표 등록 실패");
     }
     const updated: Extraction = await res.json();
     setExtractions((prev) => prev.map((e) => (e.id === extId ? updated : e)));
@@ -366,7 +366,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
                             )}
                             {ex.event_type === "지표" && ex.status === "approved" && (
                               <span className="text-xs text-green-700 font-medium">
-                                ✓ 사목지표 등록 완료
+                                ✓ 본당 사목지표 등록 완료
                               </span>
                             )}
                           </div>
@@ -376,7 +376,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
                             </p>
                           )}
 
-                          {/* 사목지표 인라인 등록 폼 (지표 + pending 일 때만) */}
+                          {/* 본당 사목지표 인라인 등록 폼 (지표 + pending 일 때만) */}
                           {ex.event_type === "지표" && ex.status === "pending" && (
                             <VisionInlineForm
                               ext={ex}
@@ -433,7 +433,7 @@ function VisionInlineForm({
           onClick={() => setOpen(true)}
           className="text-xs px-3 py-1.5 rounded-md bg-violet-600 hover:bg-violet-700 text-white font-medium"
         >
-          📌 사목지표로 등록
+          📌 본당 사목지표로 등록
         </button>
         <button
           onClick={async () => {
@@ -452,7 +452,7 @@ function VisionInlineForm({
 
   return (
     <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
-      <p className="text-xs font-semibold text-violet-800">사목지표로 등록 — visions 테이블에 저장</p>
+      <p className="text-xs font-semibold text-violet-800">본당 사목지표로 등록 — visions 테이블에 저장</p>
 
       <div className="grid grid-cols-[60px_1fr] gap-2 items-center text-xs">
         <label className="text-violet-900">연도</label>
@@ -488,7 +488,7 @@ function VisionInlineForm({
           onChange={(e) => setIsCurrent(e.target.checked)}
           className="accent-violet-600"
         />
-        올해의 사목지표로 표시 (같은 해 기존 표시는 자동 해제)
+        올해의 본당 사목지표로 표시 (같은 해 기존 표시는 자동 해제)
       </label>
 
       {err && <p className="text-xs text-red-600">{err}</p>}

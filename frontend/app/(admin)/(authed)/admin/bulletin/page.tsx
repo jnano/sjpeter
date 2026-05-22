@@ -58,7 +58,7 @@ export default function BulletinListPage() {
       if (c.extractions) lines.push(`  · AI 추출 메타 ${c.extractions}건`);
       if (c.events) lines.push(`  · 캘린더 행사 ${c.events}건`);
       if (c.meditations) lines.push(`  · 묵상 ${c.meditations}건`);
-      if (c.visions) lines.push(`  · 사목지표 ${c.visions}건`);
+      if (c.visions) lines.push(`  · 본당 사목지표 ${c.visions}건`);
       if (c.posts) lines.push(`  · 게시글(공지·임시저장 등) ${c.posts}건`);
       if (c.images) lines.push(`  · 추출 이미지 ${c.images}건`);
       return lines.length > 0 ? `\n\n이 주보로부터 만들어진 다음 결과물도 함께 삭제됩니다:\n${lines.join("\n")}` : "";
@@ -113,7 +113,7 @@ export default function BulletinListPage() {
     if (sum.extractions) warnLines.push(`  · AI 추출 메타 ${sum.extractions}건`);
     if (sum.events) warnLines.push(`  · 캘린더 행사 ${sum.events}건`);
     if (sum.meditations) warnLines.push(`  · 묵상 ${sum.meditations}건`);
-    if (sum.visions) warnLines.push(`  · 사목지표 ${sum.visions}건`);
+    if (sum.visions) warnLines.push(`  · 본당 사목지표 ${sum.visions}건`);
     if (sum.posts) warnLines.push(`  · 게시글 ${sum.posts}건`);
     if (sum.images) warnLines.push(`  · 추출 이미지 ${sum.images}건`);
     const warning = warnLines.length > 0

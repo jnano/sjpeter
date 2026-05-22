@@ -1093,7 +1093,7 @@ def count_pending_extractions(
     """사이드바 뱃지용 — 검토 대기 추출 항목 수.
 
     - total: 전체 pending 건수
-    - vision: 그 중 사목지표('지표') 건수. 0 보다 크면 반드시 관리자 검토 필요.
+    - vision: 그 중 본당 사목지표('지표') 건수. 0 보다 크면 반드시 관리자 검토 필요.
     """
     total = (
         db.query(BulletinExtraction)

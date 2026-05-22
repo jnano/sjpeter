@@ -38,7 +38,7 @@ export const PRAYER_CATEGORY_HINTS: Record<PrayerCategory, string> = {
   liturgy_season: "대림·사순·부활 등 시기에 따른 기도",
   special: "청원·감사·치유 기도",
   memorial: "위령·환자·고해성사 준비",
-  parish: "본당 사목 지표 기도 등 자체 작성 기도",
+  parish: "본당 본당 사목지표 기도 등 자체 작성 기도",
 };
 
 export function prayerCategoryLabel(value: string | null | undefined): string {

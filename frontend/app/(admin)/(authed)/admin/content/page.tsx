@@ -330,7 +330,7 @@ export function VisionTab() {
   async function handleBulkDelete() {
     const ids = Array.from(select.selected);
     if (ids.length === 0) return;
-    if (!confirm(`선택한 사목지표 ${ids.length}개를 삭제하시겠습니까?`)) return;
+    if (!confirm(`선택한 본당 사목지표 ${ids.length}개를 삭제하시겠습니까?`)) return;
     setBulkDeleting(true);
     try {
       const results = await Promise.all(
@@ -366,13 +366,13 @@ export function VisionTab() {
               : "bg-[var(--color-primary)] text-white hover:opacity-90"
           }`}
         >
-          {showCreate ? "닫기" : "+ 새 사목지표 추가"}
+          {showCreate ? "닫기" : "+ 새 본당 사목지표 추가"}
         </button>
       </div>
 
       {showCreate && (
       <section className="bg-white border border-gray-200 rounded-xl p-6">
-        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 사목지표 추가</h3>
+        <h3 className="font-semibold text-gray-800 mb-4 border-b pb-2">새 본당 사목지표 추가</h3>
         <form onSubmit={create} className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">연도</label>
@@ -403,7 +403,7 @@ export function VisionTab() {
 
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800">사목지표 목록 ({items.length}건)</h3>
+          <h3 className="font-semibold text-gray-800">본당 사목지표 목록 ({items.length}건)</h3>
         </div>
         <div className="px-6 pt-3">
           <BulkActionBar

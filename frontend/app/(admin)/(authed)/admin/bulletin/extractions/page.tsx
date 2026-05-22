@@ -249,12 +249,12 @@ export default function ExtractionsPage() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error((await res.json()).detail ?? "사목지표 등록 실패");
+      if (!res.ok) throw new Error((await res.json()).detail ?? "본당 사목지표 등록 실패");
       const updated: Extraction = await res.json();
       setExtractions((prev) => prev.map((e) => (e.id === ext.id ? updated : e)));
       notify(DataEvent.EXTRACTIONS_COUNT);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "사목지표 등록에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "본당 사목지표 등록에 실패했습니다.");
     } finally {
       setProcessing((p) => ({ ...p, [ext.id]: false }));
     }
@@ -882,7 +882,7 @@ function ExtractionCard({
         </div>
       )}
 
-      {/* 사목지표 등록 인라인 폼 (event_type='지표' 전용) */}
+      {/* 본당 사목지표 등록 인라인 폼 (event_type='지표' 전용) */}
       {isVision && (
         <VisionApproveForm
           ext={ext}
@@ -990,7 +990,7 @@ function VisionApproveForm({
   return (
     <div className="mt-1 rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-3">
       <p className="text-xs font-semibold text-violet-800">
-        사목지표로 등록 — visions 테이블에 저장됩니다
+        본당 사목지표로 등록 — visions 테이블에 저장됩니다
       </p>
 
       <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
@@ -1027,7 +1027,7 @@ function VisionApproveForm({
           onChange={(e) => setIsCurrent(e.target.checked)}
           className="accent-violet-600"
         />
-        올해의 사목지표로 표시 (같은 해 기존 표시는 자동 해제)
+        올해의 본당 사목지표로 표시 (같은 해 기존 표시는 자동 해제)
       </label>
 
       <div className="flex gap-2 pt-1">
@@ -1043,7 +1043,7 @@ function VisionApproveForm({
           disabled={processing || !motto.trim()}
           className="flex-1 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          {processing ? "등록 중…" : "사목지표로 등록"}
+          {processing ? "등록 중…" : "본당 사목지표로 등록"}
         </button>
         <button
           onClick={onReject}

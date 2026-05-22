@@ -271,7 +271,7 @@ def _migrate_add_columns():
             # posts 한 줄 메시지용 메타 필드
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_kind VARCHAR(20)",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS intention_for VARCHAR(200)",
-            # 사목지표 본문 (모토 + 상세 설명)
+            # 본당 사목지표 본문 (모토 + 상세 설명)
             "ALTER TABLE visions ADD COLUMN IF NOT EXISTS body TEXT",
             # 성당 로고
             "ALTER TABLE parishes ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)",
@@ -1098,7 +1098,7 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
-        # AI 추출 → 사목지표 라우팅 추적 (다른 created_*_id 와 일관성)
+        # AI 추출 → 본당 사목지표 라우팅 추적 (다른 created_*_id 와 일관성)
         try:
             conn.execute(text(
                 "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS "
@@ -1535,7 +1535,7 @@ def _seed_initial_data():
                               fallback_url="/saints/st_peter.jpg", sort_order=0),
                 PagePhotoSlug(slug="history", label="본당 연혁", public_href="/history",
                               description="/history 상단 히어로 이미지", sort_order=1),
-                PagePhotoSlug(slug="vision", label="사목 지표", public_href="/vision",
+                PagePhotoSlug(slug="vision", label="본당 사목지표", public_href="/vision",
                               description="/vision 상단 히어로 이미지", sort_order=2),
                 PagePhotoSlug(slug="council", label="사목 위원회", public_href="/council",
                               description="/council 상단 히어로 이미지", sort_order=3),
