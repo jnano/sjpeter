@@ -60,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "말씀·기도",
     icon: "🙏",
     items: [
-      { href: "/admin/vision", label: "사목지표" },
+      { href: "/admin/vision", label: "본당 사목지표" },
       { href: "/admin/meditation", label: "주일 말씀" },
       { href: "/admin/prayers", label: "기도문 관리" },
       { href: "/admin/saints", label: "성인 사전" },

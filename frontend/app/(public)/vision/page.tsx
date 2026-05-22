@@ -7,7 +7,7 @@ import { fetchParishMin } from "@/lib/parish";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "사목 지표", description: `${p.name} 역대 사목지표` };
+  return { title: "본당 사목지표", description: `${p.name} 역대 본당 사목지표` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
@@ -55,7 +55,7 @@ export default async function VisionPage() {
 
       {current && (
         <div className="bg-[var(--color-primary)] text-white rounded-xl p-8 mb-8 text-center">
-          <p className="text-white/70 text-sm mb-2">{current.year}년 사목지표</p>
+          <p className="text-white/70 text-sm mb-2">{current.year}년 본당 사목지표</p>
           <blockquote className="font-serif text-3xl font-bold">
             &ldquo;{current.motto}&rdquo;
           </blockquote>
@@ -73,7 +73,7 @@ export default async function VisionPage() {
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h2 className="font-serif font-bold text-[var(--color-primary)]">역대 사목지표</h2>
+          <h2 className="font-serif font-bold text-[var(--color-primary)]">역대 본당 사목지표</h2>
         </div>
         <div className="divide-y divide-[var(--color-border)]">
           {visions.map((v) => {

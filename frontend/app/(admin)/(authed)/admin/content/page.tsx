@@ -1939,7 +1939,7 @@ function BackgroundPanel({
 // ─── Main Page ────────────────────────────────────────────
 
 const TABS = [
-  { key: "vision", label: "사목지표", subtitle: "본당의 사목 방향을 관리합니다." },
+  { key: "vision", label: "본당 사목지표", subtitle: "본당의 사목 방향을 관리합니다." },
   { key: "meditation", label: "주일 말씀", subtitle: "주일 말씀과 묵상 글을 관리합니다." },
   { key: "history", label: "연혁", subtitle: "성당의 역사·연혁 기록을 관리합니다." },
   { key: "council", label: "사목평의회", subtitle: "회장단·분과대표·구역장대표를 관리합니다." },

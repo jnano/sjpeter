@@ -1457,20 +1457,9 @@ def _seed_initial_data():
         # 연혁 시드는 본당 종속 데이터 — 자동 생성하지 않음. admin /admin/content 에서 입력.
             db.commit()
 
-        # 사목지표 초기 데이터
-        if not db.query(Vision).first():
-            vision_seed = [
-                Vision(year=2026, motto="거룩한 향기의 해", is_current=True),
-                Vision(year=2025, motto="사랑으로 하나 되는 공동체", is_current=False),
-                Vision(year=2024, motto="말씀 안에서 성장하는 해", is_current=False),
-                Vision(year=2023, motto="새로운 출발, 함께하는 신앙", is_current=False),
-                Vision(year=2022, motto="희망을 향하여", is_current=False),
-                Vision(year=2021, motto="창립 10주년 — 감사와 새로운 다짐", is_current=False),
-                Vision(year=2020, motto="코로나를 넘어 — 연결된 신앙", is_current=False),
-                Vision(year=2019, motto="하느님 안에서 하나 되는 공동체", is_current=False),
-            ]
-            db.add_all(vision_seed)
-            db.commit()
+        # 본당 사목지표 시드 폐기 (v1.5.300) — 본당마다 다른 데이터.
+        # admin /admin/vision 에서 직접 입력하거나, 주보 AI 추출의 '지표' 항목을 승인해서 등록.
+        # 모두 지운 admin 의 의도가 재시작 후에도 유지되도록 자동 시드 안 함.
 
         # 단체/분과 초기 데이터
         if not db.query(CommunityGroup).first():
