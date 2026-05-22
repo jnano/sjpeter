@@ -57,12 +57,18 @@ function buildEditHref(ex: Extraction): string | null {
 }
 
 const TYPE_CONFIG: Record<string, { label: string; dest: string; color: string; icon: string }> = {
-  공지: { label: "공지사항", dest: "notices 등록 완료", color: "blue", icon: "📢" },
-  행사: { label: "행사 · 캘린더", dest: "캘린더 등록 완료", color: "green", icon: "📅" },
-  모임: { label: "모임", dest: "AI 추출 게시판 임시저장", color: "amber", icon: "👥" },
-  묵상: { label: "묵상", dest: "묵상 등록 완료", color: "teal", icon: "🕊️" },
+  공지: { label: "공지사항", dest: "승인 시 공지사항 등록", color: "blue", icon: "📢" },
+  행사: { label: "행사 · 캘린더", dest: "승인 시 캘린더 등록", color: "green", icon: "📅" },
+  모임: { label: "모임", dest: "승인 시 AI 임시저장", color: "amber", icon: "👥" },
+  묵상: { label: "묵상", dest: "승인 시 묵상 등록", color: "teal", icon: "🕊️" },
   지표: { label: "본당 사목지표 후보", dest: "검토 후 등록 필요", color: "violet", icon: "📌" },
   pending: { label: "미처리", dest: "검토 필요", color: "red", icon: "⚠️" },
+};
+
+const STATUS_BADGE: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  pending:  { label: "대기",     bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
+  approved: { label: "등록 완료", bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200" },
+  rejected: { label: "거부",     bg: "bg-gray-100",  text: "text-gray-500",   border: "border-gray-200" },
 };
 
 function colorClass(color: string, part: "bg" | "text" | "border") {
@@ -311,7 +317,7 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
               <section key={typeKey}>
                 {/* 섹션 헤더 */}
                 <div className={`flex items-center justify-between px-4 py-2.5 rounded-t-xl border ${colorClass(cfg.color, "bg")} ${colorClass(cfg.color, "border")}`}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span>{cfg.icon}</span>
                     <span className={`font-semibold ${colorClass(cfg.color, "text")}`}>
                       {cfg.label}
@@ -319,6 +325,18 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass(cfg.color, "bg")} ${colorClass(cfg.color, "text")} border ${colorClass(cfg.color, "border")}`}>
                       총 {items.length}건
                     </span>
+                    {(() => {
+                      const pending = items.filter(x => x.status === "pending").length;
+                      const approved = items.filter(x => x.status === "approved").length;
+                      const rejected = items.filter(x => x.status === "rejected").length;
+                      return (
+                        <span className="text-[11px] text-[var(--color-text-muted)]">
+                          {approved > 0 && <span className="mr-2">등록 완료 {approved}</span>}
+                          {pending > 0 && <span className="mr-2">대기 {pending}</span>}
+                          {rejected > 0 && <span>거부 {rejected}</span>}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <span className={`text-xs ${colorClass(cfg.color, "text")} opacity-80`}>
                     → {cfg.dest}
@@ -335,9 +353,20 @@ export default function BulletinResultPage({ params }: { params: Promise<{ id: s
                         <span className="text-[var(--color-text-muted)] mt-0.5 shrink-0">•</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="font-medium text-[var(--color-text)] text-sm leading-snug">
-                              {ex.title}
-                            </p>
+                            <div className="flex items-start gap-2 min-w-0 flex-1">
+                              {(() => {
+                                const badge = STATUS_BADGE[ex.status];
+                                if (!badge) return null;
+                                return (
+                                  <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${badge.bg} ${badge.text} ${badge.border} mt-0.5`}>
+                                    {badge.label}
+                                  </span>
+                                );
+                              })()}
+                              <p className="font-medium text-[var(--color-text)] text-sm leading-snug min-w-0">
+                                {ex.title}
+                              </p>
+                            </div>
                             {editHref && (
                               <Link
                                 href={editHref}
