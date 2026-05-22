@@ -451,22 +451,45 @@ export default async function HomePage() {
     );
   }
 
-  // 모르는 kind 는 silent skip (admin 이 새 종류를 만들고 렌더러가 미도입된 경우 본문 안 깨짐)
+  // kind+payload 한 쌍을 렌더 — top-level map 과 two_column 슬롯에서 공통 사용.
+  // 모르는 kind / two_column 슬롯 안의 two_column(중첩) 은 null 로 silent skip.
+  function renderBlockBody(kind: string, payload: Record<string, unknown>, allowContainer: boolean): React.ReactNode {
+    switch (kind) {
+      case "hero":         return heroSection;
+      case "quick_links":  return renderQuickLinksBlock(payload);
+      case "meditation":   return meditationSection;
+      case "construction": return constructionSection;
+      case "board_tabs":   return boardTabsSection;
+      case "gallery":      return gallerySection;
+      case "banner":       return renderBannerBlock((payload?.placement as string) ?? "home_main");
+      case "quote":        return renderQuoteBlock((payload?.text as string) ?? "", (payload?.source as string) ?? "");
+      case "two_column":   return allowContainer ? renderTwoColumnBlock(payload) : null;
+      default:             return null;
+    }
+  }
+
+  function renderTwoColumnBlock(payload: Record<string, unknown>) {
+    const left = (payload?.left ?? {}) as { kind?: string; payload?: Record<string, unknown> };
+    const right = (payload?.right ?? {}) as { kind?: string; payload?: Record<string, unknown> };
+    const leftNode = left.kind ? renderBlockBody(left.kind, left.payload ?? {}, false) : null;
+    const rightNode = right.kind ? renderBlockBody(right.kind, right.payload ?? {}, false) : null;
+    return (
+      <section>
+        <div className={CONTAINER}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="min-w-0">{leftNode}</div>
+            <div className="min-w-0">{rightNode}</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div data-home-theme={homeTheme}>
-      {blocks.map((b) => {
-        switch (b.kind) {
-          case "hero":         return <div key={b.id}>{heroSection}</div>;
-          case "quick_links":  return <div key={b.id}>{renderQuickLinksBlock(b.payload ?? {})}</div>;
-          case "meditation":   return <div key={b.id}>{meditationSection}</div>;
-          case "construction": return <div key={b.id}>{constructionSection}</div>;
-          case "board_tabs":   return <div key={b.id}>{boardTabsSection}</div>;
-          case "gallery":      return <div key={b.id}>{gallerySection}</div>;
-          case "banner":       return <div key={b.id}>{renderBannerBlock((b.payload?.placement as string) ?? "home_main")}</div>;
-          case "quote":        return <div key={b.id}>{renderQuoteBlock((b.payload?.text as string) ?? "", (b.payload?.source as string) ?? "")}</div>;
-          default:             return null;
-        }
-      })}
+      {blocks.map((b) => (
+        <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {}, true)}</div>
+      ))}
     </div>
   );
 }

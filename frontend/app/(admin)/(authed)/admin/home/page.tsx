@@ -30,6 +30,7 @@ const BLOCK_META: Record<string, { label: string; desc: string }> = {
   gallery:      { label: "사진 갤러리", desc: "전례·행사 사진 슬라이드" },
   banner:       { label: "배너",       desc: "지정한 placement 의 배너 그룹 노출" },
   quote:        { label: "인용",       desc: "성경 구절 또는 사목 메시지" },
+  two_column:   { label: "2열 컨테이너", desc: "좌·우 슬롯에 다른 블록 두 개를 가로로 배치 (모바일은 자동 1열)" },
 };
 
 const HERO_LAYOUTS = [
@@ -488,6 +489,58 @@ function BlockPayloadEditor({
             placeholder="마태오 16,18"
           />
         </div>
+      </div>
+    );
+  }
+
+  if (block.kind === "two_column") {
+    type Slot = { kind?: string; payload?: Record<string, unknown> };
+    const left = ((p.left as Slot) ?? {}) as Slot;
+    const right = ((p.right as Slot) ?? {}) as Slot;
+    const slotKinds = Object.keys(BLOCK_META).filter((k) => k !== "two_column");
+
+    const updateSlotKind = (side: "left" | "right", kind: string) => {
+      // 슬롯 kind 변경 시 payload 초기화 (이전 블록 종류의 payload 가 새 종류에 맞지 않을 수 있음)
+      onChange({ ...p, [side]: kind ? { kind, payload: {} } : {} });
+    };
+    const updateSlotPayload = (side: "left" | "right", slot: Slot, np: Record<string, unknown>) => {
+      onChange({ ...p, [side]: { kind: slot.kind, payload: np } });
+    };
+
+    const renderSlot = (side: "left" | "right", slot: Slot) => {
+      const slotKind = slot.kind ?? "";
+      const slotPayload = slot.payload ?? {};
+      return (
+        <div className="border border-gray-200 rounded p-2 bg-white space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] font-semibold text-gray-700 shrink-0">
+              {side === "left" ? "왼쪽" : "오른쪽"}
+            </label>
+            <select
+              value={slotKind}
+              onChange={(e) => updateSlotKind(side, e.target.value)}
+              className="text-xs border border-gray-300 rounded px-2 py-1 bg-white flex-1"
+            >
+              <option value="">— 선택 —</option>
+              {slotKinds.map((k) => (
+                <option key={k} value={k}>{BLOCK_META[k].label} ({k})</option>
+              ))}
+            </select>
+          </div>
+          {slotKind && (
+            <BlockPayloadEditor
+              block={{ id: -1, kind: slotKind, sort_order: 0, is_active: true, payload: slotPayload }}
+              onChange={(np) => updateSlotPayload(side, { kind: slotKind, payload: slotPayload }, np)}
+            />
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+        {renderSlot("left", left)}
+        {renderSlot("right", right)}
       </div>
     );
   }
