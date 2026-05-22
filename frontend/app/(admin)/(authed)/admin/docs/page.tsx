@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.285";
+export const CURRENT_VERSION = "1.5.286";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.286", date: "2026-05-22", tag: "기능",
+    items: [
+      "이용약관·개인정보 처리방침을 admin/pages 동적 페이지로 전환",
+      "  · /terms·/privacy 정적 페이지 제거 → dynamic_pages 테이블 row 2건(slug=terms·privacy, layout_kind=body) 시드",
+      "  · admin/pages 에서 편집 가능 — 본당 운영 정책에 맞춰 markdown 본문 직접 수정",
+      "  · URL: /p/terms · /p/privacy (기존 /p/[slug] 동적 라우트 활용)",
+      "  · register 동의 체크박스와 Footer 링크 모두 /p/terms · /p/privacy 로 변경",
+      "  · 정적 페이지는 페이지 추가/수정 시 코드 배포 필요 → 동적 페이지는 admin UI 만으로 즉시 반영",
+    ],
+  },
   {
     version: "1.5.285", date: "2026-05-22", tag: "기능",
     items: [
