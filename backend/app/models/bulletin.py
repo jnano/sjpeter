@@ -15,7 +15,11 @@ class BulletinExtractedImage(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=False, index=True)
-    file_url = Column(String(500), nullable=False)        # /uploads/bulletin-extracted/{bulletin_id}/img-N.jpg
+    # client 가 보는 URL (admin guard 라우트). 예: /api/bulletins/extracted-images/{id}/file
+    file_url = Column(String(500), nullable=False)
+    # 실제 disk 상의 상대 path. 예: private-uploads/bulletin-extracted/{bulletin_id}/img-N.jpg
+    # 정적 마운트 (/uploads) 가 닿지 않는 디렉토리 — admin 라우트로만 접근.
+    file_path = Column(String(500), nullable=True)
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     page_number = Column(Integer, nullable=False)         # 원본 PDF 페이지 번호 (1부터)

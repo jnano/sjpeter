@@ -28,8 +28,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 # CORS 허용 origin 은 backend/.env 의 CORS_ORIGINS 에서 콤마 구분으로 받는다.
 # 기본값은 localhost:3000 만 — LAN IP / 운영 도메인은 .env 에서 추가.
-_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
-_origins = [o.strip() for o in _origins_raw.split(",") if o.strip()]
+_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 
 _cors_kwargs = dict(
     allow_origins=_origins,
@@ -225,6 +224,15 @@ def _migrate_add_columns():
             ))
             conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_posts_linked_event_id ON posts(linked_event_id)"
+            ))
+        except Exception:
+            pass
+
+        # bulletin_extracted_images.file_path — 정적 마운트 밖 disk path 분리 (v1.5.278)
+        # file_url 은 admin guard 라우트, file_path 는 실제 디스크 위치.
+        try:
+            conn.execute(text(
+                "ALTER TABLE bulletin_extracted_images ADD COLUMN IF NOT EXISTS file_path VARCHAR(500)"
             ))
         except Exception:
             pass

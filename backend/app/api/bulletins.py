@@ -7,6 +7,7 @@ from datetime import date, datetime, time
 from difflib import SequenceMatcher
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
@@ -403,12 +404,16 @@ def delete_bulletin(
             os.remove(file_path)
 
     # 추출 이미지 디렉터리 정리 (DB cascade 와 별개로 디스크 파일·폴더 삭제)
-    extracted_dir = os.path.join(settings.UPLOAD_DIR, "bulletin-extracted", str(bulletin_id))
-    if os.path.isdir(extracted_dir):
-        try:
-            shutil.rmtree(extracted_dir)
-        except Exception as exc:
-            logger.warning("[bulletin %d] 추출 이미지 디렉터리 삭제 실패: %s", bulletin_id, exc)
+    # private-uploads/ 로 이전 (v1.5.278). 구버전 호환 위해 둘 다 시도.
+    for extracted_dir in (
+        os.path.join("private-uploads", "bulletin-extracted", str(bulletin_id)),
+        os.path.join(settings.UPLOAD_DIR, "bulletin-extracted", str(bulletin_id)),
+    ):
+        if os.path.isdir(extracted_dir):
+            try:
+                shutil.rmtree(extracted_dir)
+            except Exception as exc:
+                logger.warning("[bulletin %d] 추출 이미지 디렉터리 삭제 실패 (%s): %s", bulletin_id, extracted_dir, exc)
 
     # source_bulletin_id 를 가진 posts 를 ORM 으로 명시 정리.
     # attachments 의 디스크 파일 unlink 한 뒤 Post 를 삭제 — Post.attachments cascade 가
@@ -1210,8 +1215,11 @@ def _auto_process_bulletin(bulletin_id: int) -> None:
 def _extract_and_save_images(db: Session, bulletin_id: int, pdf_path: str) -> int:
     """주보 PDF에서 사진을 추출해 파일로 저장하고 DB에 등록.
 
-    저장 위치: uploads/bulletin-extracted/{bulletin_id}/img-N.{ext}
-    file_url:  /uploads/bulletin-extracted/{bulletin_id}/img-N.{ext}
+    저장 위치: private-uploads/bulletin-extracted/{bulletin_id}/img-N.{ext}
+      ── 정적 마운트(/uploads) 가 닿지 않는 디렉토리. URL 추측·XSS 로 인한
+         분류 전 신자 얼굴 사진 등의 공개 노출 차단.
+    file_url: /api/bulletins/extracted-images/{id}/file  (admin guard 라우트)
+    file_path: 실제 disk 상대 path (admin 라우트 내부에서만 사용)
     """
     from app.services.pdf_extractor import extract_embedded_images
 
@@ -1220,25 +1228,30 @@ def _extract_and_save_images(db: Session, bulletin_id: int, pdf_path: str) -> in
         logger.info("[bulletin %d] 추출된 사진 0건", bulletin_id)
         return 0
 
-    save_dir = os.path.join(settings.UPLOAD_DIR, "bulletin-extracted", str(bulletin_id))
+    save_dir = os.path.join("private-uploads", "bulletin-extracted", str(bulletin_id))
     os.makedirs(save_dir, exist_ok=True)
 
     saved = 0
     for idx, img in enumerate(images, start=1):
         ext = img["ext"]
         filename = f"img-{idx}.{ext}"
-        file_path = os.path.join(save_dir, filename)
-        with open(file_path, "wb") as f:
+        disk_path = os.path.join(save_dir, filename)
+        with open(disk_path, "wb") as f:
             f.write(img["bytes"])
 
-        db.add(BulletinExtractedImage(
+        # file_url 에 id 가 필요해 2단계: placeholder insert → flush → id 채움
+        row = BulletinExtractedImage(
             bulletin_id=bulletin_id,
-            file_url=f"/uploads/bulletin-extracted/{bulletin_id}/{filename}",
+            file_url="",
+            file_path=disk_path,
             width=img["width"],
             height=img["height"],
             page_number=img["page"],
             status="pending",
-        ))
+        )
+        db.add(row)
+        db.flush()  # row.id 발급
+        row.file_url = f"/api/bulletins/extracted-images/{row.id}/file"
         saved += 1
     db.commit()
     logger.info("[bulletin %d] 사진 %d장 추출·저장 완료", bulletin_id, saved)
@@ -1278,6 +1291,26 @@ def list_extracted_images(
     )
 
 
+@router.get("/extracted-images/{image_id}/file")
+def serve_extracted_image(
+    image_id: int,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    """분류 전 추출 사진의 admin guard 서빙.
+
+    정적 마운트(/uploads) 대신 이 라우트로만 접근 가능 — URL 추측·XSS 에 의한
+    민감 사진(신자 얼굴 등) 공개 노출 차단. file_path 는 private-uploads/
+    하위라 디렉토리 자체가 공개 마운트에서 닿지 않는다.
+    """
+    img = db.query(BulletinExtractedImage).filter(BulletinExtractedImage.id == image_id).first()
+    if not img:
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+    if not img.file_path or not os.path.exists(img.file_path):
+        raise HTTPException(status_code=410, detail="파일이 더 이상 존재하지 않습니다.")
+    return FileResponse(img.file_path)
+
+
 class RouteImageBody(BaseModel):
     target: str          # "construction" | "gallery" | "ignore"
     gallery_slug: str | None = None  # target == "gallery" 일 때 필수
@@ -1301,6 +1334,19 @@ def route_extracted_image(
         raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
 
     if body.target == "construction":
+        # private-uploads/ 에 있는 원본을 공개 정적 위치로 복사.
+        # page_photos.file_url 은 공개 페이지(/construction)에서 사용되므로 admin guard
+        # 라우트가 아닌 공개 URL 이 필요하다.
+        if not img.file_path or not os.path.exists(img.file_path):
+            raise HTTPException(status_code=500, detail=f"원본 파일이 없습니다: {img.file_path}")
+        ext = os.path.splitext(img.file_path)[1].lower() or ".jpg"
+        stored = f"{uuid.uuid4().hex}{ext}"
+        dst_dir = os.path.join(settings.UPLOAD_DIR, "construction")
+        os.makedirs(dst_dir, exist_ok=True)
+        dst_path = os.path.join(dst_dir, stored)
+        with open(img.file_path, "rb") as fsrc, open(dst_path, "wb") as fdst:
+            fdst.write(fsrc.read())
+
         # page_photos 의 construction slug 다음 sort_order 계산
         last = (
             db.query(PagePhoto)
@@ -1311,7 +1357,7 @@ def route_extracted_image(
         next_order = (last.sort_order + 1) if last else 0
         db.add(PagePhoto(
             page_slug="construction",
-            file_url=img.file_url,
+            file_url=f"/uploads/construction/{stored}",
             alt=None,
             sort_order=next_order,
         ))
@@ -1332,8 +1378,8 @@ def route_extracted_image(
             raise HTTPException(status_code=404, detail=f"갤러리 게시판을 찾을 수 없습니다: {body.gallery_slug}")
 
         # 추출 파일을 attachments 디렉토리로 복사 (원본은 그대로 두어 다른 갤러리에도 또 보낼 수 있게)
-        src_path = img.file_url.lstrip("/")
-        if not os.path.exists(src_path):
+        src_path = img.file_path
+        if not src_path or not os.path.exists(src_path):
             raise HTTPException(status_code=500, detail=f"원본 파일이 없습니다: {src_path}")
         ext = os.path.splitext(src_path)[1].lower() or ".jpg"
         stored = f"{uuid.uuid4().hex}{ext}"
@@ -1420,16 +1466,18 @@ async def crop_extracted_image(
     if not data:
         raise HTTPException(status_code=400, detail="빈 파일입니다.")
 
-    # 원본 파일 경로에 덮어쓰기 (확장자 변경 안 함 — file_url 유지)
-    file_path = img.file_url.lstrip("/")
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "wb") as f:
+    # 원본 disk path 에 덮어쓰기 (file_url client URL 은 image_id 기반이라 그대로 유지)
+    disk_path = img.file_path
+    if not disk_path:
+        raise HTTPException(status_code=500, detail="원본 파일 경로가 없습니다.")
+    os.makedirs(os.path.dirname(disk_path), exist_ok=True)
+    with open(disk_path, "wb") as f:
         f.write(data)
 
     # 새 width/height 측정 (Pillow 없으면 PyMuPDF 의 fitz.Pixmap 사용)
     try:
         import fitz
-        pix = fitz.Pixmap(file_path)
+        pix = fitz.Pixmap(disk_path)
         img.width = pix.width
         img.height = pix.height
     except Exception:
@@ -1453,10 +1501,9 @@ def delete_extracted_image(
     if not img:
         raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
 
-    file_path = img.file_url.lstrip("/")
-    if os.path.exists(file_path):
+    if img.file_path and os.path.exists(img.file_path):
         try:
-            os.remove(file_path)
+            os.remove(img.file_path)
         except Exception:
             pass
     db.delete(img)

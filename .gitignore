@@ -18,6 +18,8 @@ backend/.pytest_cache/
 
 # 업로드 파일
 backend/uploads/
+# admin guard 필요 파일 (정적 마운트 밖, /api 라우트로만 접근)
+backend/private-uploads/
 
 # Node
 frontend/node_modules/

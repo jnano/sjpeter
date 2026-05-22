@@ -5,6 +5,34 @@ import ImageCropModal from "./ImageCropModal";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** admin guard 라우트의 이미지를 admin token 으로 받아 blob URL 로 반환.
+ *  img 태그가 Authorization 헤더를 보낼 수 없어 fetch + URL.createObjectURL 우회. */
+function useAuthorizedImage(url: string | null) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!url) { setBlobUrl(null); return; }
+    const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+    if (!token) return;
+    let cancelled = false;
+    let created: string | null = null;
+    // url 이 절대(http) 면 그대로, 상대(/api/...) 면 API 붙임
+    const fullUrl = url.startsWith("http") ? url : `${API}${url}`;
+    fetch(fullUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (!b || cancelled) return;
+        created = URL.createObjectURL(b);
+        setBlobUrl(created);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [url]);
+  return blobUrl;
+}
+
 interface ExtractedImage {
   id: number;
   bulletin_id: number;
@@ -204,6 +232,8 @@ function ExtractedImageCard({
   const [selection, setSelection] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
+  // admin guard 라우트라 fetch + blob URL 필요. file_url 의 ?v= 캐시버스터 변경 시 자동 재페치.
+  const blobUrl = useAuthorizedImage(img.file_url);
 
   async function handleApply() {
     if (!selection) return;
@@ -236,9 +266,15 @@ function ExtractedImageCard({
 
   return (
     <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-white">
-      <a href={`${API}${img.file_url}`} target="_blank" rel="noreferrer" className="block aspect-video bg-gray-100 overflow-hidden">
+      <a
+        href={blobUrl ?? "#"}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => { if (!blobUrl) e.preventDefault(); }}
+        className="block aspect-video bg-gray-100 overflow-hidden"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${API}${img.file_url}`} alt="" className="w-full h-full object-cover" />
+        <img src={blobUrl ?? undefined} alt="" className="w-full h-full object-cover" />
       </a>
       <div className="px-2 py-1.5 text-[11px] text-[var(--color-text-muted)] flex items-center justify-between border-b">
         <span>{img.width}×{img.height} · {img.page_number}p</span>
@@ -298,9 +334,9 @@ function ExtractedImageCard({
           </button>
         </div>
       </div>
-      {cropOpen && (
+      {cropOpen && blobUrl && (
         <ImageCropModal
-          imageUrl={img.file_url.replace(/\?.*$/, "")}
+          imageUrl={blobUrl}
           onSave={onCropSave}
           onClose={() => setCropOpen(false)}
         />

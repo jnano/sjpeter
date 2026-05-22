@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.277";
+export const CURRENT_VERSION = "1.5.278";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,20 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.278", date: "2026-05-22", tag: "수정",
+    items: [
+      "보안 강화 — 주보 PDF 추출 사진을 admin guard 라우트로 분리 (정적 마운트 밖)",
+      "  · 저장 위치: uploads/bulletin-extracted/ → private-uploads/bulletin-extracted/ (정적 /uploads 밖)",
+      "  · DB: bulletin_extracted_images.file_path 신규 컬럼 (실제 disk 상대 path)",
+      "  · 새 라우트: GET /api/bulletins/extracted-images/{id}/file — admin guard + FileResponse",
+      "  · file_url 의미 변경: /uploads/... 정적 URL → /api/bulletins/extracted-images/{id}/file admin URL",
+      "  · construction/gallery 분류 시 공개 위치(uploads/construction, uploads/attachments)로 복사 (공개 페이지 노출 위해)",
+      "  · frontend ExtractedImagesSection: useAuthorizedImage hook 도입 — fetch + Authorization + URL.createObjectURL 로 blob URL 생성, img/a/ImageCropModal 모두 blob URL 사용",
+      "  · .gitignore: backend/private-uploads/ 추가",
+      "  · 영향: 분류 전 신자 얼굴 사진 등의 URL 추측·XSS 노출 차단",
+    ],
+  },
   {
     version: "1.5.277", date: "2026-05-22", tag: "수정",
     items: [

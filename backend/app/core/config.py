@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # 운영 기본 200/min, dev 는 .env 에서 1000+ 등 상향 권장 — /photos 무한스크롤·admin 다중 패널이 쉽게 한도 초과.
     RATE_LIMIT_PER_MINUTE: int = 200
 
+    # CORS 허용 origin (콤마 구분). 기본은 localhost:3000 만 — LAN IP·운영 도메인은 .env 에서.
+    CORS_ORIGINS: str = "http://localhost:3000"
+
     class Config:
         env_file = ".env"
 
