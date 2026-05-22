@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.282";
+export const CURRENT_VERSION = "1.5.283";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.283", date: "2026-05-22", tag: "기능",
+    items: [
+      "회원 가입 직후 자동 로그인 + 온보딩 자동 이동",
+      "  · 이전: 가입 성공 → /members/login?registered=1 → 사용자가 다시 이메일·비밀번호 입력 (이중 입력 UX 부담)",
+      "  · 새: 가입 성공 → signIn('credentials', ...) 자동 호출 → /onboarding/interests 로 이동 (분과·단체 선택)",
+      "  · NextAuth session 직접 박는 경로가 없어 같은 자격으로 signIn 호출 (backend 한 번 더 거치지만 UX 우선)",
+      "  · 자동 로그인 실패 시(어떤 이유로든) 기존 /members/login?registered=1 로 fallback",
+    ],
+  },
   {
     version: "1.5.282", date: "2026-05-22", tag: "수정",
     items: [

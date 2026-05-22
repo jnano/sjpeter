@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -90,7 +91,22 @@ export default function RegisterPage() {
         setError(data.detail || "회원가입에 실패했습니다.");
         return;
       }
-      router.push("/members/login?registered=1");
+
+      // 가입 직후 자동 로그인 — NextAuth credentials 로 backend 한 번 더 호출.
+      // (register 응답의 access_token 을 NextAuth session 에 직접 박는 경로가 없어
+      //  같은 자격으로 signIn. 첫 로그인이라 온보딩 페이지로 이동.)
+      const signInResult = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        remember: "0",
+        redirect: false,
+      });
+      if (signInResult?.ok) {
+        router.push("/onboarding/interests");
+      } else {
+        // 자동 로그인 실패해도 가입은 성공 — 로그인 페이지로 fallback
+        router.push("/members/login?registered=1");
+      }
     } catch {
       setError("서버 오류가 발생했습니다.");
     } finally {
