@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.284";
+export const CURRENT_VERSION = "1.5.285";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.285", date: "2026-05-22", tag: "기능",
+    items: [
+      "이용약관·개인정보 처리방침 페이지 + 회원가입 동의 체크박스",
+      "  · /terms (이용약관) — 한국 본당 표준 템플릿 10개 조항 (가입·서비스·게시물·탈퇴·변경 등)",
+      "  · /privacy (개인정보 처리방침) — 10개 항목 (수집·이용 목적·보유 기간·제3자 제공·위탁·회원 권리·안전성 등)",
+      "  · register 페이지에 필수 동의 체크박스 추가 — 체크 안 하면 가입 버튼 비활성, 미동의 시 명시적 에러 메시지",
+      "  · 본문에 placeholder 표시: 본당의 실제 운영 정책에 맞춰 검수·수정 필요 (시행일·연락처·DPO 등)",
+      "  · Footer 에 '이용약관 | 개인정보 처리방침' 링크 추가 (저작권 표시 위)",
+    ],
+  },
   {
     version: "1.5.284", date: "2026-05-22", tag: "수정",
     items: [

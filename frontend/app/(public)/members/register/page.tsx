@@ -32,6 +32,8 @@ export default function RegisterPage() {
     nameDayMonth: "",  // "" | "1"~"12"
     nameDayDay: "",    // "" | "1"~"31"
   });
+  // 약관·개인정보 처리방침 동의 — 필수. 가입 버튼 활성화 조건에 포함.
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +58,10 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (!agreedTerms) {
+      setError("이용약관과 개인정보 처리방침에 동의해 주세요.");
+      return;
+    }
     const pwError = validatePassword(form.password);
     if (pwError) { setError(pwError); return; }
     if (form.password !== form.passwordConfirm) {
@@ -289,9 +295,35 @@ export default function RegisterPage() {
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">세례명 성인의 축일을 선택하세요. 나중에 프로필에서 수정할 수 있습니다.</p>
           </div>
 
+          {/* 약관·개인정보 처리방침 동의 (필수) */}
+          <div className="border-t border-[var(--color-border)] pt-4">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)}
+                required
+                className="mt-0.5 w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)] cursor-pointer shrink-0"
+              />
+              <span className="text-sm text-[var(--color-text)] leading-relaxed">
+                <Link href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">
+                  이용약관
+                </Link>
+                {" 과 "}
+                <Link href="/privacy" target="_blank" className="text-[var(--color-primary)] hover:underline">
+                  개인정보 처리방침
+                </Link>
+                에 동의합니다 <span className="text-red-400">*</span>
+                <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
+                  본당 운영 목적 외에는 개인정보를 사용하지 않으며, 언제든 마이페이지에서 탈퇴할 수 있습니다.
+                </span>
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !agreedTerms}
             className="w-full py-3 bg-[var(--color-primary)] text-white font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors disabled:opacity-50"
           >
             {loading ? "가입 중..." : "회원가입"}

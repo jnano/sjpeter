@@ -241,9 +241,18 @@ export default async function Footer() {
           </div>
         </div>
 
-        {/* 구분선 + 저작권 중앙 */}
-        <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)]">
-          © {new Date().getFullYear()} {parish?.name ?? "본당 홈페이지"}. All rights reserved.
+        {/* 구분선 + 약관 링크 + 저작권 중앙 */}
+        <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)] space-y-2">
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/terms" className="hover:text-[var(--color-primary)] transition-colors">
+              이용약관
+            </Link>
+            <span className="text-[var(--color-border)]">|</span>
+            <Link href="/privacy" className="hover:text-[var(--color-primary)] transition-colors font-medium">
+              개인정보 처리방침
+            </Link>
+          </div>
+          <p>© {new Date().getFullYear()} {parish?.name ?? "본당 홈페이지"}. All rights reserved.</p>
         </div>
       </div>
     </footer>
