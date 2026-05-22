@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.279";
+export const CURRENT_VERSION = "1.5.280";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.280", date: "2026-05-22", tag: "수정",
+    items: [
+      "회원 시스템 LOW 보강 3건 — 비밀번호 정책 + avatar magic + CLAUDE.md 동기화",
+      "  · 비밀번호 정책: '특수문자 1개 필수' → 영문·숫자·특수문자 중 2종 이상 (8자 기준 유지). 'aaaaaaaa!' 같은 사전 공격 약한 비밀번호 차단, 'abcd1234'(영+숫)는 통과 — 60대 UX 절충",
+      "  · avatar 업로드 magic byte 검증: JPEG/PNG/GIF/WebP 매직 바이트 4종 확인. '.jpg' 로 이름만 바꾼 임의 파일 차단",
+      "  · CLAUDE.md '관리자 페이지 목록' 표를 사이드바 그룹 순서대로 전면 갱신 (v1.5.274 이후 추가된 20+ admin 페이지 반영)",
+    ],
+  },
   {
     version: "1.5.279", date: "2026-05-22", tag: "수정",
     items: [

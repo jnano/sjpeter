@@ -36,10 +36,22 @@ SPECIAL_CHARS = set(r"!@#$%^&*()_+-=[]{}|;':\",./<>?~`\\")
 
 
 def _validate_password(password: str) -> None:
+    """비밀번호 정책 — 8자 이상 + 영문·숫자·특수문자 중 2종류 이상.
+
+    이전엔 '특수문자 1개 필수' 였으나 'aaaaaaaa!' 같은 사전 공격 약한 비밀번호가
+    통과되는 문제. 3종 중 2종 강제로 entropy 를 올리되 60대 신자 UX 고려해
+    3종 전부는 강제하지 않는다 (보안 vs UX 절충).
+    """
     if len(password) < 8:
         raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다.")
-    if not any(c in SPECIAL_CHARS for c in password):
-        raise HTTPException(status_code=400, detail="비밀번호에 특수문자를 포함해야 합니다.")
+    has_alpha = any(c.isalpha() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    has_special = any(c in SPECIAL_CHARS for c in password)
+    if sum([has_alpha, has_digit, has_special]) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="비밀번호는 영문·숫자·특수문자 중 2종류 이상을 포함해야 합니다.",
+        )
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -680,6 +692,25 @@ def delete_me(
     db.commit()
 
 
+def _is_image_magic(data: bytes) -> bool:
+    """업로드된 파일의 매직 바이트로 이미지 여부를 검증.
+
+    확장자만으론 '.jpg' 로 이름만 바꾼 임의 파일을 막을 수 없어 추가 검증.
+    JPEG / PNG / GIF / WebP 4종을 인정 (admin 페이지·신자 프로필 사진 충분).
+    """
+    if len(data) < 12:
+        return False
+    if data.startswith(b"\xff\xd8\xff"):  # JPEG
+        return True
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):  # PNG
+        return True
+    if data.startswith(b"GIF87a") or data.startswith(b"GIF89a"):  # GIF
+        return True
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":  # WebP
+        return True
+    return False
+
+
 @router.post("/me/avatar", response_model=MemberOut)
 async def upload_avatar(
     file: UploadFile = File(...),
@@ -693,6 +724,8 @@ async def upload_avatar(
     data = await file.read()
     if len(data) > AVATAR_MAX_SIZE:
         raise HTTPException(status_code=400, detail="파일 크기는 5MB 이하여야 합니다.")
+    if not _is_image_magic(data):
+        raise HTTPException(status_code=400, detail="유효한 이미지 파일이 아닙니다.")
 
     avatar_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
     os.makedirs(avatar_dir, exist_ok=True)

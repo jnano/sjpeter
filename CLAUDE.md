@@ -150,24 +150,49 @@ PDF 업로드
 - 공개 캘린더: `/calendar` — 행사 모아보기 / 모임 모아보기 필터 칩
 
 ## 관리자 페이지 목록 (`/admin/*`)
-| 경로 | 기능 |
-|------|------|
-| /admin | 로그인 (이미 로그인 시 dashboard로 자동 리다이렉트) |
-| /admin/dashboard | 대시보드 |
-| /admin/bulletin | 주보 업로드·AI 추출 결과 목록 |
-| /admin/bulletin/[id]/result | 주보별 AI 추출 결과 확인 |
-| /admin/notices | 공지 관리 (인라인 수정, 다중선택 삭제, 월별 필터) |
-| /admin/calendar | 본당 행사·모임 일정 (인라인 수정, 다중선택 삭제, 구분 필터) |
-| /admin/drafts | AI 추출 임시저장 관리 (제호 필터, 게시/이동/삭제) |
-| /admin/boards | 게시판 관리 (게시물 수 표시) |
-| /admin/parish | 성당정보·미사시간 관리 |
-| /admin/members | 회원 관리 |
-| /admin/pastors | 역대 사목자 관리 |
-| /admin/priests | 본당 출신 사제 관리 |
-| /admin/content | 정적 콘텐츠 관리 |
-| /admin/gallery | 갤러리 관리 |
-| /admin/settings | DB 기반 사이트 설정 (SMTP, OAuth 키 등) |
-| /admin/logs | 관리자 활동 로그 |
+
+사이드바 그룹 순서 기준 (v1.5.274):
+
+| 그룹 | 경로 | 기능 |
+|------|------|------|
+| (단독) | /admin | 로그인 (이미 로그인 시 dashboard 자동 리다이렉트) |
+| (단독) | /admin/dashboard | 대시보드 |
+| (단독) | /admin/construction | 성전 건축 — 단계·마일스톤·일지 |
+| 성당 정보 | /admin/parish, /admin/parish/info | 기본 정보 |
+| 성당 정보 | /admin/parish/mass-times | 미사 시간 |
+| 성당 정보 | /admin/history | 연혁 관리 |
+| 신부님·수녀님 | /admin/parish-staff | 사목자 |
+| 신부님·수녀님 | /admin/pastors | 역대 신부님·수녀님 |
+| 신부님·수녀님 | /admin/priests | 본당 출신 사제 |
+| 말씀·기도 | /admin/vision | 사목지표 |
+| 말씀·기도 | /admin/meditation | 주일 말씀 |
+| 말씀·기도 | /admin/prayers | 기도문 관리 |
+| 말씀·기도 | /admin/saints | 성인 사전 |
+| 주보 관리 | /admin/bulletin | 주보 업로드·목록 |
+| 주보 관리 | /admin/bulletin/new | 신규 업로드 |
+| 주보 관리 | /admin/bulletin/[id]/result | 주보별 AI 추출 결과 |
+| 주보 관리 | /admin/bulletin/extractions | AI 추출 검토 (전체 큐) |
+| 주보 관리 | /admin/bulletin/stats | AI 분석 통계 |
+| 주보 관리 | /admin/drafts | AI 임시저장 (제호 필터, 게시/이동/삭제) |
+| 주보 관리 | /admin/event-mapping | AI 분류 설정 |
+| 소식·일정 | /admin/notices | 공지 관리 (인라인 수정, 다중선택 삭제, 월별 필터) |
+| 소식·일정 | /admin/calendar | 본당 행사·모임 일정 (인라인 수정, 구분 필터) |
+| 공동체 | /admin/council | 사목평의회 |
+| 공동체 | /admin/community | 단체·분과 |
+| 공동체 | /admin/boards | 게시판 관리 (게시물 수 표시) |
+| 공동체 | /admin/members, /admin/members/[id] | 회원 관리·상세 |
+| 페이지·사진·배너 | /admin/pages | 페이지 만들기 (동적 페이지) |
+| 페이지·사진·배너 | /admin/page-photos, /admin/page-photos/[slug] | 페이지 사진 슬라이드쇼 |
+| 페이지·사진·배너 | /admin/banners | 광고 배너 |
+| 페이지·사진·배너 | /admin/home-banner | 메인 사진 |
+| 레이아웃 | /admin/home | 홈 페이지 블록 빌더 |
+| 레이아웃 | /admin/menus | 메뉴 |
+| 레이아웃 | /admin/season | 전례 시기 테마 |
+| 시스템 | /admin/settings | DB 기반 사이트 설정 (SMTP, OAuth 키 등 — super-admin 전용) |
+| 시스템 | /admin/reports | 장애 신고 |
+| 시스템 | /admin/logs | 활동 로그 |
+| 시스템 | /admin/docs | 기술 문서 (CHANGELOG, API 표) |
+| (기타) | /admin/content, /admin/gallery | 정적 콘텐츠·갤러리 (구버전, 점진적 폐기) |
 
 ## 공개 페이지 목록
 | 경로 | 기능 |
