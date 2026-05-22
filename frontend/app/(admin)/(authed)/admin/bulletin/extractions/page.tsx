@@ -21,9 +21,12 @@ interface Extraction {
   title: string;
   content: string | null;
   group_name: string | null;
+  group_candidates: string[] | null;
   event_date: string | null;
   location: string | null;
   event_type: string | null;
+  temporal_kind: "future" | "timeless" | "past" | "unknown";
+  temporal_reason: string | null;
   status: "pending" | "approved" | "rejected";
   target_board_id: number | null;
   created_post_id: number | null;
@@ -35,6 +38,27 @@ interface Board {
   slug: string;
   is_active?: boolean;
 }
+
+interface CommunityGroup {
+  id: number;
+  name: string;
+  parent_id?: number | null;
+  slug?: string | null;
+}
+
+/** 항목별 검토 입력 (시점/분과/알림) — approve 시 body 에 담아 보냄. */
+interface ReviewState {
+  temporal_kind: "future" | "timeless" | "past" | "unknown";
+  group_ids: number[];
+  notify: boolean;
+}
+
+const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
+  future:   "미래 행사",
+  timeless: "상시",
+  past:     "지난 이벤트",
+  unknown:  "모호",
+};
 
 const ALL_KINDS = ["묵상", "지표", "공지", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"] as const;
 
@@ -77,11 +101,15 @@ export default function ExtractionsPage() {
     title: "", content: "", event_date: "", location: "", group_name: "", event_type: "",
   });
 
+  // 분과·단체 카탈로그 + 항목별 검토 입력 (시점·분과·알림)
+  const [communityGroups, setCommunityGroups] = useState<CommunityGroup[]>([]);
+  const [reviewByExt, setReviewByExt] = useState<Record<number, ReviewState>>({});
+
   const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
 
   useEffect(() => {
     if (!token) { router.push("/admin"); return; }
-    Promise.all([loadExtractions(), loadBoards()]).finally(() => setLoading(false));
+    Promise.all([loadExtractions(), loadBoards(), loadCommunityGroups()]).finally(() => setLoading(false));
   }, [bulletinId]);
 
   async function loadExtractions() {
@@ -89,7 +117,24 @@ export default function ExtractionsPage() {
       ? `${API}/api/bulletins/${bulletinId}/extractions`
       : `${API}/api/bulletins/extractions/pending`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setExtractions(await res.json());
+    if (res.ok) {
+      const data: Extraction[] = await res.json();
+      setExtractions(data);
+      // AI 추출 후보로 reviewByExt prefill (관리자가 수정 가능)
+      setReviewByExt((prev) => {
+        const next = { ...prev };
+        for (const e of data) {
+          if (!next[e.id]) {
+            next[e.id] = {
+              temporal_kind: e.temporal_kind ?? "unknown",
+              group_ids: [],  // 카탈로그 도착 후 후보 매칭 (별도 effect)
+              notify: true,
+            };
+          }
+        }
+        return next;
+      });
+    }
   }
 
   async function loadBoards() {
@@ -101,16 +146,58 @@ export default function ExtractionsPage() {
     }
   }
 
-  async function approve(ext: Extraction) {
+  async function loadCommunityGroups() {
+    const res = await fetch(`${API}/api/community`);
+    if (res.ok) setCommunityGroups(await res.json());
+  }
+
+  // 카탈로그 + 추출 후보 동시 준비되면 group_ids 자동 prefill (이름 fuzzy 일치)
+  useEffect(() => {
+    if (communityGroups.length === 0 || extractions.length === 0) return;
+    const norm = (s: string) => s.replace(/\s+/g, "").toLowerCase();
+    const byName = new Map<string, number>();
+    for (const g of communityGroups) byName.set(norm(g.name), g.id);
+    setReviewByExt((prev) => {
+      const next = { ...prev };
+      for (const e of extractions) {
+        const cur = next[e.id];
+        if (!cur || cur.group_ids.length > 0) continue;
+        const candidates = e.group_candidates ?? (e.group_name ? [e.group_name] : []);
+        const matched: number[] = [];
+        for (const c of candidates) {
+          const id = byName.get(norm(c));
+          if (id && !matched.includes(id)) matched.push(id);
+        }
+        if (matched.length > 0) next[e.id] = { ...cur, group_ids: matched };
+      }
+      return next;
+    });
+  }, [communityGroups, extractions]);
+
+  function setReview(extId: number, patch: Partial<ReviewState>) {
+    setReviewByExt((prev) => ({
+      ...prev,
+      [extId]: { temporal_kind: "unknown", group_ids: [], notify: true, ...(prev[extId] ?? {}), ...patch },
+    }));
+  }
+
+  async function approve(ext: Extraction, options?: { notifyOverride?: boolean }) {
     const boardId = selectedBoard[ext.id];
     if (!boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
     setError("");
     setProcessing((p) => ({ ...p, [ext.id]: true }));
+    const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
+    const notify_flag = options?.notifyOverride ?? review.notify;
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ board_id: boardId }),
+        body: JSON.stringify({
+          board_id: boardId,
+          community_group_ids: review.group_ids,
+          temporal_kind: review.temporal_kind,
+          notify: notify_flag,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "승인 실패");
       const updated: Extraction = await res.json();
@@ -554,6 +641,9 @@ export default function ExtractionsPage() {
                         onEdit={() => startEdit(ext)}
                         onSplitByDates={() => splitByDates(ext.id)}
                         processing={!!processing[ext.id]}
+                        communityGroups={communityGroups}
+                        review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind ?? "unknown", group_ids: [], notify: true }}
+                        onReviewChange={(patch) => setReview(ext.id, patch)}
                       />
                     )}
                   </div>
@@ -618,6 +708,9 @@ function ExtractionCard({
   onEdit,
   onSplitByDates,
   processing,
+  communityGroups,
+  review,
+  onReviewChange,
 }: {
   ext: Extraction;
   boards: Board[];
@@ -630,6 +723,9 @@ function ExtractionCard({
   onEdit?: () => void;
   onSplitByDates?: () => void;
   processing: boolean;
+  communityGroups: CommunityGroup[];
+  review: ReviewState;
+  onReviewChange: (patch: Partial<ReviewState>) => void;
 }) {
   const isVision = ext.event_type === "지표";
   // 캘린더 등록 시 같은 행사 카드를 게시판에 미러할지 옵션 (시나리오 A)
@@ -689,6 +785,95 @@ function ExtractionCard({
         <p className="text-sm text-[var(--color-text-muted)] leading-relaxed whitespace-pre-line line-clamp-3">
           {ext.content}
         </p>
+      )}
+
+      {/* 검토 영역 — 시점·대상 분과·알림 (지표가 아닌 항목에만 표시) */}
+      {!isVision && (
+        <div className="bg-[var(--color-surface-warm)]/60 border border-[var(--color-border)] rounded-lg p-3 space-y-2 text-xs">
+          {/* 시점 분류 */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-semibold text-[var(--color-text)] shrink-0">시점</span>
+            {(["future", "timeless", "past", "unknown"] as const).map((k) => (
+              <label key={k} className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name={`tk-${ext.id}`}
+                  checked={review.temporal_kind === k}
+                  onChange={() => onReviewChange({ temporal_kind: k })}
+                  className="accent-[var(--color-primary)]"
+                />
+                <span>{TEMPORAL_LABEL[k]}</span>
+              </label>
+            ))}
+          </div>
+          {ext.temporal_reason && (
+            <p className="text-[11px] text-[var(--color-text-muted)] italic">
+              AI: {ext.temporal_reason}
+            </p>
+          )}
+          {/* 대상 분과 — chip 으로 표시 + 추가 드롭다운 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-[var(--color-text)] shrink-0">대상 분과</span>
+            {review.group_ids.length === 0 && (
+              <span className="text-[var(--color-text-muted)]">없음</span>
+            )}
+            {review.group_ids.map((gid) => {
+              const g = communityGroups.find((x) => x.id === gid);
+              return (
+                <span key={gid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700">
+                  {g?.name ?? `#${gid}`}
+                  <button
+                    onClick={() => onReviewChange({ group_ids: review.group_ids.filter((id) => id !== gid) })}
+                    className="text-violet-500 hover:text-violet-800"
+                    aria-label="제거"
+                  >×</button>
+                </span>
+              );
+            })}
+            <select
+              value=""
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                if (id && !review.group_ids.includes(id)) {
+                  onReviewChange({ group_ids: [...review.group_ids, id] });
+                }
+              }}
+              className="border border-[var(--color-border)] rounded px-1.5 py-0.5 bg-white text-[11px]"
+            >
+              <option value="">+ 분과 추가</option>
+              {communityGroups
+                .filter((g) => !review.group_ids.includes(g.id))
+                .map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+            </select>
+          </div>
+          {/* 알림 발송 토글 */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={review.notify}
+                onChange={(e) => onReviewChange({ notify: e.target.checked })}
+                className="accent-[var(--color-primary)]"
+              />
+              <span>승인 시 관심 회원에게 알림 발송</span>
+            </label>
+            {(() => {
+              const gatePass = (review.temporal_kind === "future" || review.temporal_kind === "timeless") &&
+                (!ext.event_date || ext.event_date >= new Date().toISOString().slice(0, 10));
+              return !gatePass ? (
+                <span className="text-[11px] text-amber-700">
+                  ※ 게이트 차단 — 분류/날짜 조건 미충족 시 발송 안 됨
+                </span>
+              ) : review.group_ids.length === 0 ? (
+                <span className="text-[11px] text-[var(--color-text-muted)]">
+                  분과 미지정 시 발송 안 됨
+                </span>
+              ) : null;
+            })()}
+          </div>
+        </div>
       )}
 
       {/* 사목지표 등록 인라인 폼 (event_type='지표' 전용) */}

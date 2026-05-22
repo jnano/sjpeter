@@ -446,9 +446,12 @@ class ExtractionOut(BaseModel):
     title: str
     content: Optional[str]
     group_name: Optional[str]
+    group_candidates: Optional[list[str]] = None
     event_date: Optional[date]
     location: Optional[str]
     event_type: Optional[str]
+    temporal_kind: str = "unknown"
+    temporal_reason: Optional[str] = None
     status: str
     target_board_id: Optional[int]
     created_post_id: Optional[int]
@@ -699,6 +702,167 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         new_extractions.append(ext)
 
     return new_extractions
+
+
+def _expand_groups_bidirectional(db: Session, group_ids: list[int]) -> set[int]:
+    """주어진 community_group_ids 를 부모·자식 양방향으로 확장.
+
+    - 자식 단체만 태깅돼도 부모 분과 관심 회원이 알림 받음 (위로)
+    - 부모 분과만 태깅돼도 자식 단체 관심 회원이 알림 받음 (아래로)
+    회원 관심 등록의 자식→부모 자동 포함 정책과 의미적으로 일치.
+    """
+    from sqlalchemy import text as _text
+    expanded: set[int] = set(group_ids)
+    if not expanded:
+        return expanded
+    # 부모 방향
+    to_check = list(expanded)
+    while to_check:
+        rows = db.execute(
+            _text("SELECT DISTINCT parent_id FROM community_groups WHERE id = ANY(:ids) AND parent_id IS NOT NULL"),
+            {"ids": to_check},
+        ).fetchall()
+        new_parents = [r[0] for r in rows if r[0] not in expanded]
+        if not new_parents:
+            break
+        expanded.update(new_parents)
+        to_check = new_parents
+    # 자식 방향
+    to_check = list(group_ids)
+    while to_check:
+        rows = db.execute(
+            _text("SELECT id FROM community_groups WHERE parent_id = ANY(:ids)"),
+            {"ids": to_check},
+        ).fetchall()
+        new_children = [r[0] for r in rows if r[0] not in expanded]
+        if not new_children:
+            break
+        expanded.update(new_children)
+        to_check = new_children
+    return expanded
+
+
+def _notify_gate_passes(temporal_kind: Optional[str], event_date) -> bool:
+    """알림 발송 게이트 — temporal_kind in (future, timeless) AND (event_date is null or future)."""
+    if temporal_kind not in ("future", "timeless"):
+        return False
+    if event_date is None:
+        return True
+    from datetime import date as _date
+    return event_date >= _date.today()
+
+
+def _fanout_community_notifications(
+    db: Session,
+    *,
+    group_ids: list[int],
+    primary_group_id: Optional[int],
+    title: str,
+    body: Optional[str],
+    post_id: Optional[int],
+    event_id: Optional[int],
+) -> int:
+    """그룹 양방향 확장 → 관심 회원 SELECT → notifications insert + 카톡 stub.
+
+    notify_kakao=True 인 회원만 (글로벌 알림 동의). 중복 멤버는 DISTINCT 로 한 번만.
+    리턴: insert 건수.
+    """
+    from sqlalchemy import text as _text
+    from app.models.notification import Notification
+    if not group_ids:
+        return 0
+    expanded = list(_expand_groups_bidirectional(db, group_ids))
+    if not expanded:
+        return 0
+    rows = db.execute(
+        _text(
+            "SELECT DISTINCT m.id FROM members m "
+            "JOIN member_community_interests mci ON mci.member_id = m.id "
+            "WHERE mci.community_group_id = ANY(:gids) "
+            "AND COALESCE(m.notify_kakao, FALSE) = TRUE"
+        ),
+        {"gids": expanded},
+    ).fetchall()
+    member_ids = [r[0] for r in rows]
+    if not member_ids:
+        return 0
+    short_body = (body[:280] if body else None)
+    db.add_all([
+        Notification(
+            member_id=mid, kind="community",
+            title=title, body=short_body,
+            post_id=post_id, event_id=event_id,
+            community_group_id=primary_group_id,
+        )
+        for mid in member_ids
+    ])
+    # 카톡 stub — 채널 개설 후 어댑터로 교체. 일단 로그만.
+    logger.info("[kakao_stub] community notify: title=%r, members=%d, groups=%s", title, len(member_ids), expanded)
+    return len(member_ids)
+
+
+def _persist_targets_and_notify(
+    db: Session, ext: BulletinExtraction,
+    *, community_group_ids: list[int], temporal_kind: Optional[str], notify: bool,
+) -> None:
+    """승인 직후 ext.created_* 의 결과에 따라 m:n targets insert + 알림 fan-out.
+
+    - ext.created_post_id 또는 ext.created_notice_id 가 있으면 post_community_targets
+    - ext.created_event_id 가 있으면 event_community_targets
+    - temporal_kind 가 주어졌으면 posts/events 의 temporal_kind 도 업데이트
+    """
+    from sqlalchemy import text as _text
+    # 1) temporal_kind 정규화 + ext 에 반영
+    if temporal_kind is not None:
+        tk = (temporal_kind or "").strip().lower()
+        if tk not in ("future", "timeless", "past", "unknown"):
+            tk = "unknown"
+        ext.temporal_kind = tk
+    final_tk = ext.temporal_kind or "unknown"
+
+    # 2) 대상 post_id / event_id 결정
+    post_id = ext.created_post_id or ext.created_notice_id
+    event_id = ext.created_event_id
+
+    # 3) posts/events 의 temporal_kind 업데이트
+    if post_id and temporal_kind is not None:
+        db.execute(_text("UPDATE posts SET temporal_kind = :tk WHERE id = :id"), {"tk": final_tk, "id": post_id})
+    if event_id and temporal_kind is not None:
+        db.execute(_text("UPDATE events SET temporal_kind = :tk WHERE id = :id"), {"tk": final_tk, "id": event_id})
+
+    # 4) m:n targets insert (중복 무시 — PK 충돌 시 skip)
+    group_ids = community_group_ids or []
+    if group_ids:
+        if post_id:
+            db.execute(
+                _text(
+                    "INSERT INTO post_community_targets (post_id, community_group_id) "
+                    "SELECT :pid, gid FROM unnest(CAST(:gids AS INT[])) AS gid "
+                    "ON CONFLICT DO NOTHING"
+                ),
+                {"pid": post_id, "gids": group_ids},
+            )
+        if event_id:
+            db.execute(
+                _text(
+                    "INSERT INTO event_community_targets (event_id, community_group_id) "
+                    "SELECT :eid, gid FROM unnest(CAST(:gids AS INT[])) AS gid "
+                    "ON CONFLICT DO NOTHING"
+                ),
+                {"eid": event_id, "gids": group_ids},
+            )
+
+    # 5) 게이트 통과 + notify=True 시 fan-out
+    if notify and group_ids and _notify_gate_passes(final_tk, ext.event_date):
+        _fanout_community_notifications(
+            db,
+            group_ids=group_ids,
+            primary_group_id=group_ids[0],
+            title=ext.title or "",
+            body=ext.content,
+            post_id=post_id,
+            event_id=event_id,
+        )
 
 
 def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinExtraction:
@@ -958,6 +1122,10 @@ class ApproveBody(BaseModel):
     content: Optional[str] = None
     event_date: Optional[date] = None
     location: Optional[str] = None
+    # 검토 단계에서 확정된 시점 분류·대상 분과·알림 발송 여부
+    temporal_kind: Optional[str] = None  # future|timeless|past|unknown
+    community_group_ids: Optional[list[int]] = None
+    notify: bool = True  # True=발송, False=보류
 
 
 @router.post("/extractions/{extraction_id}/approve", response_model=ExtractionOut)
@@ -1010,6 +1178,12 @@ def approve_extraction(
         ext.target_board_id = board.id
         ext.created_post_id = post.id
         ext.status = "approved"
+        _persist_targets_and_notify(
+            db, ext,
+            community_group_ids=(body.community_group_ids or []),
+            temporal_kind=body.temporal_kind,
+            notify=bool(body.notify),
+        )
         db.commit()
         db.refresh(ext)
         log_action(db, get_admin_identifier(admin), "approve_extraction", "bulletin_extraction", ext.id, f"강제 board={board.id}")
@@ -1017,6 +1191,12 @@ def approve_extraction(
 
     # 자동 라우팅
     _apply_extraction_routing(db, ext)
+    _persist_targets_and_notify(
+        db, ext,
+        community_group_ids=((body.community_group_ids if body else None) or []),
+        temporal_kind=(body.temporal_kind if body else None),
+        notify=bool(body.notify if body else True),
+    )
     db.commit()
     db.refresh(ext)
     log_action(db, get_admin_identifier(admin), "approve_extraction", "bulletin_extraction", ext.id, f"auto type={ext.event_type}")
