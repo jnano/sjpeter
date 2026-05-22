@@ -1916,6 +1916,50 @@ class SplitByDatesBody(BaseModel):
 _DATE_PATTERN = re.compile(r'(\b\d{1,2})/(\d{1,2})(?:\s*\(([월화수목금토일])요?일?\))?')
 
 
+def _filter_content_for_date(content: str | None, target: "date") -> str | None:
+    """split-by-dates 시 분리된 행의 content 에서 target_date 외 M/D 토큰 제거.
+
+    줄 단위 처리:
+    - 줄에 M/D 가 없음: 그대로 유지 (공통 안내문)
+    - 줄에 M/D 가 있으나 모두 target 과 불일치: 줄 제거
+    - 줄에 M/D 가 여러 개이고 일부만 target 일치: 일치 토큰만 남기고 다른 M/D(±요일)
+      토큰을 제거. 후처리로 연속 쉼표/공백 정리.
+
+    이렇게 하면 다음 호 주보에 같은 날짜의 같은 행사가 추출됐을 때 fuzzy duplicate
+    (제목 + event_date) 매칭이 잘 동작 — 본문이 해당 날짜만 남아 거의 일치하기 때문.
+    """
+    if not content:
+        return content
+    target_md = (target.month, target.day)
+
+    def filter_line(line: str) -> str | None:
+        matches = list(_DATE_PATTERN.finditer(line))
+        if not matches:
+            return line  # M/D 없음 — 그대로
+        if not any((int(m.group(1)), int(m.group(2))) == target_md for m in matches):
+            return None  # 모두 불일치 — 줄 제거
+        # 일부 일치 — 불일치 매치만 (요일 포함해서) 제거
+        out = line
+        for m in reversed(matches):
+            if (int(m.group(1)), int(m.group(2))) == target_md:
+                continue
+            out = out[:m.start()] + out[m.end():]
+        # 후처리 — 연속 쉼표/중점·줄 양끝 구두점·이중 공백 정리
+        out = re.sub(r'([,·;])\s*([,·;])+', r'\1', out)
+        out = re.sub(r'^[\s,·;]+', '', out)
+        out = re.sub(r'[\s,·;]+$', '', out)
+        out = re.sub(r'\s+', ' ', out).strip()
+        return out if out else None
+
+    out_lines: list[str] = []
+    for line in content.split("\n"):
+        result = filter_line(line)
+        if result is None:
+            continue  # 줄 제거
+        out_lines.append(result)
+    return "\n".join(out_lines).strip()
+
+
 def _extract_dates_from_text(text: str, base_year: int, base_date: "date | None") -> list[date]:
     """본문에서 M/D 또는 M/D(요일) 패턴을 모두 찾아 date 리스트로 변환.
     base_year: 기본 연도. M/D 가 base_date 보다 6개월 이상 이전이면 다음 해로 처리.
@@ -1984,13 +2028,17 @@ def split_extraction_by_dates(
         }
 
     # 실제 분리 — 원본의 event_date 를 첫 날짜로, 나머지는 새 extraction 으로 INSERT
+    # 각 행의 content 는 해당 날짜 외 M/D 토큰을 제거 (다른 호 주보와 fuzzy 중복 매칭 가능)
+    original_content = ext.content or ""
     ext.event_date = dates[0]
+    ext.content = _filter_content_for_date(original_content, dates[0])
     new_extractions: list[BulletinExtraction] = []
     for d in dates[1:]:
+        filtered = _filter_content_for_date(original_content, d)
         new_ext = BulletinExtraction(
             bulletin_id=ext.bulletin_id,
             title=ext.title,
-            content=ext.content,
+            content=filtered,
             group_name=ext.group_name,
             event_date=d,
             location=ext.location,
