@@ -881,7 +881,7 @@ function ExtractionCard({
               }}
               className="border border-[var(--color-border)] rounded px-1.5 py-0.5 bg-white text-[11px]"
             >
-              <option value="">+ 분과 추가</option>
+              <option value="">+ 분과 선택</option>
               {communityGroups
                 .filter((g) => !review.group_ids.includes(g.id))
                 .map((g) => (
