@@ -59,6 +59,8 @@ export default function AdminMembersPage() {
   const [q, setQ] = useState("");
   const [inputQ, setInputQ] = useState("");
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  // 장기 미접속 필터 — 0 = 비활성, N = N개월 이상 미접속 (last_login_at NULL 포함)
+  const [inactiveMonths, setInactiveMonths] = useState<0 | 3 | 6 | 12>(0);
   const [page, setPage] = useState(1);
   const [processing, setProcessing] = useState<Record<number, boolean>>({});
   const [isSuper, setIsSuper] = useState(false);
@@ -94,6 +96,7 @@ export default function AdminMembersPage() {
       const params = new URLSearchParams({ page: String(page), size: "20" });
       if (q) params.set("q", q);
       if (filterActive !== "all") params.set("is_active", filterActive === "active" ? "true" : "false");
+      if (inactiveMonths > 0) params.set("inactive_months", String(inactiveMonths));
 
       const res = await fetch(`${API}/api/members/admin/list?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -103,7 +106,7 @@ export default function AdminMembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, q, filterActive, router]);
+  }, [token, page, q, filterActive, inactiveMonths, router]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
@@ -428,6 +431,29 @@ export default function AdminMembersPage() {
                 }`}
               >
                 {v === "all" ? "전체" : v === "active" ? "활성" : "비활성"}
+              </button>
+            ))}
+          </div>
+
+          {/* 장기 미접속 필터 — 운영자가 비활성 전환 대상 회원을 찾을 때 */}
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden text-sm">
+            {([
+              { value: 0, label: "기간 무관" },
+              { value: 3, label: "3개월+" },
+              { value: 6, label: "6개월+" },
+              { value: 12, label: "1년+" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => { setInactiveMonths(opt.value); setPage(1); }}
+                title={opt.value === 0 ? "전체" : `${opt.label} 미접속 (한 번도 로그인 안 한 회원 포함)`}
+                className={`px-3 py-2.5 transition-colors ${
+                  inactiveMonths === opt.value
+                    ? "bg-amber-500 text-white"
+                    : "bg-[var(--color-surface)] hover:bg-[var(--color-surface-warm)]"
+                }`}
+              >
+                {opt.label}
               </button>
             ))}
           </div>

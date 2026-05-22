@@ -30,6 +30,7 @@ function LoginForm() {
       localStorage.removeItem("admin_token_exp");
       localStorage.removeItem("admin_remember");
       document.cookie = "admin_authed=; path=/; max-age=0";
+      document.cookie = "admin_token=; path=/; max-age=0";
       return;
     }
     router.replace("/admin/dashboard");
@@ -62,7 +63,12 @@ function LoginForm() {
       localStorage.setItem("admin_is_super", String(data.is_super_admin));
       localStorage.setItem("admin_token_exp", String(absoluteExpiry));
       localStorage.setItem("admin_remember", remember ? "1" : "0");
-      document.cookie = `admin_authed=1; path=/; max-age=${expiresIn}; SameSite=Lax`;
+      // admin_token 을 cookie 로도 set — <img>·<a href> 같이 fetch header 를 못 보내는
+      // 요소에서 admin guard 라우트 자동 인증 (backend 가 cookie fallback 지원, v1.5.281).
+      // httpOnly 불가능 (client 가 set) → localStorage 와 동일한 XSS 노출 수준이라 trade-off 없음.
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `admin_authed=1; path=/; max-age=${expiresIn}; SameSite=Lax${secure}`;
+      document.cookie = `admin_token=${data.access_token}; path=/; max-age=${expiresIn}; SameSite=Lax${secure}`;
       router.push(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");

@@ -33,6 +33,7 @@ export default function AdminNav({
     localStorage.removeItem("admin_is_super");
     localStorage.removeItem("admin_username");
     document.cookie = "admin_authed=; Max-Age=0; path=/";
+    document.cookie = "admin_token=; Max-Age=0; path=/";
     router.push("/admin");
   }
 

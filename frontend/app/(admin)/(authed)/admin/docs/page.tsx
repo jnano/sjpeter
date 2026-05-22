@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.280";
+export const CURRENT_VERSION = "1.5.281";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.281", date: "2026-05-22", tag: "기능",
+    items: [
+      "회원 시스템 LOW 7·8 — 장기 미접속 필터 + admin_token cookie 인증",
+      "  · 7-A: admin/members 페이지에 '3개월+·6개월+·1년+' 미접속 필터 칩 추가. last_login_at NULL(한 번도 로그인 안 함) 도 포함. backend admin/list endpoint 에 inactive_months 쿼리 파라미터",
+      "  · 8-A 점진적 1단계: backend get_current_admin·get_current_super_admin 이 admin_token cookie 도 fallback 인식. Authorization Bearer 우선, 없으면 cookie",
+      "  · admin login 시 admin_token cookie 도 set (path=/, SameSite=Lax, https 시 Secure). logout 시 admin_token cookie 도 제거",
+      "  · 효과: <img>·<a href> 같이 fetch header 못 보내는 요소가 admin guard 라우트 자동 인증 가능 → 향후 bulletin-extracted 같은 라우트의 fetch+blob 우회 단순화 여지",
+      "  · 검증: Bearer header → 200, Cookie only → 200, inactive_months=6 필터 정상 동작",
+    ],
+  },
   {
     version: "1.5.280", date: "2026-05-22", tag: "수정",
     items: [

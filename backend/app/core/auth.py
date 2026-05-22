@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.config import settings
@@ -53,15 +53,41 @@ def _decode_token(token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 인증 정보입니다.")
 
 
+def _extract_admin_token(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials],
+) -> str:
+    """Authorization Bearer 우선 → 없으면 admin_token cookie fallback.
+
+    cookie fallback 으로 <img> 태그·`<a href>` 같이 fetch header 를 못 보내는
+    요소도 admin guard 라우트(예: /api/bulletins/extracted-images/{id}/file)에
+    자동 접근 가능. localStorage 와 cookie 양쪽에 동시 set 하는 frontend 흐름.
+    """
+    if credentials and credentials.credentials:
+        return credentials.credentials
+    token = request.cookies.get("admin_token")
+    if token:
+        return token
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="인증 정보가 없습니다.",
+    )
+
+
 def get_current_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
     db: Session = Depends(get_db),
 ):
-    """슈퍼 관리자(admin) 또는 운영자(is_admin=True 회원) 모두 허용."""
+    """슈퍼 관리자(admin) 또는 운영자(is_admin=True 회원) 모두 허용.
+
+    Authorization: Bearer 헤더 우선, 없으면 admin_token cookie 사용.
+    """
     from app.models.admin import Admin
     from app.models.member import Member
 
-    payload = _decode_token(credentials.credentials)
+    token = _extract_admin_token(request, credentials)
+    payload = _decode_token(token)
     role = payload.get("role")
 
     if role == "admin":
@@ -84,13 +110,18 @@ def get_current_admin(
 
 
 def get_current_super_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
     db: Session = Depends(get_db),
 ):
-    """슈퍼 관리자(admin 계정)만 허용 — 권한 부여·회수 등 민감 작업용."""
+    """슈퍼 관리자(admin 계정)만 허용 — 권한 부여·회수 등 민감 작업용.
+
+    Authorization: Bearer 헤더 우선, 없으면 admin_token cookie 사용.
+    """
     from app.models.admin import Admin
 
-    payload = _decode_token(credentials.credentials)
+    token = _extract_admin_token(request, credentials)
+    payload = _decode_token(token)
     if payload.get("role") != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="최고 관리자 권한이 필요합니다.")
 

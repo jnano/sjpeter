@@ -984,6 +984,12 @@ def admin_list_members(
     size: int = Query(20, ge=1, le=100),
     q: Optional[str] = Query(None, description="이메일 또는 닉네임 검색"),
     is_active: Optional[bool] = Query(None),
+    inactive_months: Optional[int] = Query(
+        None,
+        ge=1,
+        le=60,
+        description="N개월 이상 미접속 회원만 (last_login_at IS NULL 도 포함)",
+    ),
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
@@ -995,6 +1001,14 @@ def admin_list_members(
 
     if is_active is not None:
         query = query.filter(Member.is_active == is_active)
+
+    # 장기 미접속 필터 — 운영자가 비활성 전환 대상 회원을 찾을 때 사용.
+    # 30일/월 근사. last_login_at NULL (한 번도 로그인 안 함) 도 포함.
+    if inactive_months is not None:
+        threshold = datetime.utcnow() - timedelta(days=inactive_months * 30)
+        query = query.filter(
+            or_(Member.last_login_at == None, Member.last_login_at < threshold)
+        )
 
     total = query.count()
     members = (
