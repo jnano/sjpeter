@@ -445,7 +445,12 @@ export default function ExtractionsPage() {
     }
   }
 
-  const allPending = extractions.filter((e) => e.status === "pending");
+  // 검토 대기 항목 — 지표·묵상은 별도 처리 흐름이라 상단 고정 (검토자가 우선 인지하도록)
+  const TYPE_PRIORITY: Record<string, number> = { 지표: 0, 묵상: 1 };
+  function priorityOf(t: string | null): number { return TYPE_PRIORITY[t ?? ""] ?? 99; }
+  const allPending = extractions
+    .filter((e) => e.status === "pending")
+    .sort((a, b) => priorityOf(a.event_type) - priorityOf(b.event_type));
   const pending = filterKind === "all"
     ? allPending
     : allPending.filter((e) => (e.event_type ?? "기타") === filterKind);
