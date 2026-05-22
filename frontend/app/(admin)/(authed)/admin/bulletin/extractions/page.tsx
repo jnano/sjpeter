@@ -153,7 +153,7 @@ export default function ExtractionsPage() {
   }
 
   async function loadCommunityGroups() {
-    const res = await fetch(`${API}/api/community`);
+    const res = await fetch(`${API}/api/content/community`);
     if (res.ok) setCommunityGroups(await res.json());
   }
 
