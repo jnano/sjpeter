@@ -8,6 +8,7 @@ import { useArchiveCounts, isArchiveLinkHidden } from "./useArchiveCounts";
 import { useNavigation } from "./useNavigation";
 import { SEASON_LABELS_KO, type LiturgicalSeason } from "@/lib/season";
 import LogoFallback from "@/components/icons/LogoFallback";
+import NotificationBell from "@/components/NotificationBell";
 
 interface Breadcrumb { group: string; title: string }
 
@@ -106,7 +107,8 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
               </span>
             )}
           </div>
-          <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
+          <div className="flex items-center gap-3 text-[var(--color-text-muted)]">
+            {session && <NotificationBell />}
             {session ? (
               <div
                 className="relative"

@@ -30,6 +30,8 @@ export const DataEvent = {
   PAGE_PHOTOS: "data:page-photos",
   /** 메뉴 그룹·항목 변경 (Header, SectionSidebar) */
   MENUS: "data:menus",
+  /** 회원 알림 변경 (헤더 종 카운터 — 알림 읽음·전체 읽음 후) */
+  NOTIFICATIONS: "data:notifications",
 } as const;
 
 export type DataEventName = (typeof DataEvent)[keyof typeof DataEvent];

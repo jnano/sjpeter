@@ -67,6 +67,8 @@ app.include_router(pages.router, prefix="/api")
 app.include_router(construction.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
+from app.api import notifications as notifications_api  # noqa: E402
+app.include_router(notifications_api.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(saints.router, prefix="/api")
