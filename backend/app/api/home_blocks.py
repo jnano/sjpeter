@@ -37,6 +37,7 @@ ALLOWED_KINDS = (
     "quote",         # 마무리 인용. payload.text='...', payload.source='...'
     "two_column",    # 2열 컨테이너. payload.left={kind,payload}, payload.right={kind,payload}, payload.left_ratio=10~90. 모바일은 1열로 떨어짐. 컨테이너 류는 슬롯으로 넣을 수 없음(중첩 금지).
     "three_column",  # 3열 컨테이너. payload.left/middle/right={kind,payload}, payload.ratios=[n,n,n] fr 단위. 모바일은 1열, sm 은 동일. 컨테이너 류는 슬롯 금지.
+    "tag_cloud",     # 분과·단체 태그 클라우드. payload.title (옵션). count>0 인 분과만 노출.
 )
 
 

@@ -5,6 +5,7 @@ import BoardTabs, { type BoardTab } from "./BoardTabs";
 import MeditationCredits from "./MeditationCredits";
 import HomeHero from "./HomeHero";
 import HomeConstructionWidget, { fetchConstructionSummary } from "./HomeConstructionWidget";
+import TagCloud from "@/components/TagCloud";
 import SearchHero from "@/components/SearchHero";
 import ChurchIcon from "@/components/icons/ChurchIcon";
 import GroupsIcon from "@/components/icons/GroupsIcon";
@@ -102,6 +103,16 @@ async function getHomeBlocks(): Promise<HomeBlock[]> {
 }
 
 interface BoardMeta { slug: string; name: string; is_active: boolean; exclude_from_search: boolean; }
+interface TagCloudItem { id: number; name: string; slug: string | null; count: number; }
+async function getTagCloudItems(): Promise<TagCloudItem[]> {
+  try {
+    const r = await fetch(`${API}/api/content/community/post-counts`, { cache: "no-store" });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data as TagCloudItem[] : [];
+  } catch { return []; }
+}
+
 async function getBoardsCatalog(): Promise<BoardMeta[]> {
   try {
     const r = await fetch(`${API}/api/boards`);
@@ -156,7 +167,7 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -166,6 +177,7 @@ export default async function HomePage() {
       getSiteConfig(),
       getHomeBlocks(),
       getBoardsCatalog(),
+      getTagCloudItems(),
     ]);
 
   // board_tabs 블록들이 참조하는 게시판 slug 들을 수집해서 일괄 fetch (two_column/three_column 슬롯 안에 있는 것도 포함).
@@ -507,6 +519,23 @@ export default async function HomePage() {
     return <div className={CONTAINER}>{bannerInner(placement)}</div>;
   }
 
+  function tagCloudInner(payload: Record<string, unknown> | undefined) {
+    const customTitle = (payload?.title as string) ?? "";
+    return (
+      <div>
+        {customTitle ? (
+          <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] mb-2 text-center">
+            {customTitle}
+          </h2>
+        ) : null}
+        <TagCloud items={tagItems} />
+      </div>
+    );
+  }
+  function renderTagCloudBlock(payload: Record<string, unknown> | undefined) {
+    return wrapSection(tagCloudInner(payload), "py-6");
+  }
+
   function quoteInner(text: string, source: string) {
     return (
       <div className="text-center">
@@ -543,6 +572,7 @@ export default async function HomePage() {
       case "gallery":      return galleryInner;
       case "banner":       return bannerInner((payload?.placement as string) ?? "home_main");
       case "quote":        return quoteInner((payload?.text as string) ?? "", (payload?.source as string) ?? "");
+      case "tag_cloud":    return tagCloudInner(payload);
       // hero 는 자체 grid layout 이 복잡해 슬롯 부적합 — 통째로 fallback
       case "hero":         return heroSection;
       default:             return null;
@@ -562,6 +592,7 @@ export default async function HomePage() {
       case "quote":         return renderQuoteBlock((payload?.text as string) ?? "", (payload?.source as string) ?? "");
       case "two_column":    return renderTwoColumnBlock(payload);
       case "three_column":  return renderThreeColumnBlock(payload);
+      case "tag_cloud":     return renderTagCloudBlock(payload);
       default:              return null;
     }
   }

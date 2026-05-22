@@ -226,6 +226,107 @@ def list_community(db: Session = Depends(get_db)):
     return result
 
 
+class CommunityPostCountOut(BaseModel):
+    id: int
+    name: str
+    slug: Optional[str]
+    parent_id: Optional[int]
+    count: int
+
+
+@router.get("/community/post-counts", response_model=list[CommunityPostCountOut])
+def community_post_counts(db: Session = Depends(get_db)):
+    """각 분과·단체로 태깅된 posts + events 의 합산 카운트. 태그 클라우드용.
+
+    count = post_community_targets + event_community_targets — 같은 글이 양쪽에 들어가는 일 없음
+    (posts/events 는 서로 다른 콘텐츠 종류라 disjoint).
+    """
+    from sqlalchemy import text as _text
+    rows = db.execute(_text(
+        "SELECT cg.id, cg.name, cg.slug, cg.parent_id, "
+        "       COALESCE(pc.cnt, 0) + COALESCE(ec.cnt, 0) AS cnt "
+        "FROM community_groups cg "
+        "LEFT JOIN (SELECT community_group_id, COUNT(*) AS cnt FROM post_community_targets GROUP BY community_group_id) pc "
+        "  ON pc.community_group_id = cg.id "
+        "LEFT JOIN (SELECT community_group_id, COUNT(*) AS cnt FROM event_community_targets GROUP BY community_group_id) ec "
+        "  ON ec.community_group_id = cg.id "
+        "ORDER BY cnt DESC, cg.sort_order, cg.id"
+    )).fetchall()
+    return [
+        CommunityPostCountOut(id=r.id, name=r.name, slug=r.slug, parent_id=r.parent_id, count=int(r.cnt))
+        for r in rows
+    ]
+
+
+class CommunityTaggedItemOut(BaseModel):
+    kind: str             # 'post' | 'event'
+    id: int
+    title: str
+    excerpt: Optional[str] = None
+    item_date: Optional[date] = None  # event_date 또는 post.created_at::date
+    href: str
+    is_pinned: bool = False
+    temporal_kind: Optional[str] = None
+
+
+@router.get("/community/{slug}/tagged-items", response_model=list[CommunityTaggedItemOut])
+def community_tagged_items(
+    slug: str,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """특정 분과로 태깅된 posts + events 모아보기 (날짜 desc).
+
+    부모/자식 양방향 확장은 적용하지 않음 — 클릭한 그 분과 자체의 태깅만 표시.
+    (확장은 알림 발송에서만 사용. 모아보기는 정확히 그 분과 글만 보여주는 게 의미 명확.)
+    """
+    from sqlalchemy import text as _text
+    grp = db.execute(_text("SELECT id, name FROM community_groups WHERE slug = :slug"), {"slug": slug}).first()
+    if not grp:
+        raise HTTPException(status_code=404, detail="분과·단체를 찾을 수 없습니다.")
+    gid = grp.id
+    posts = db.execute(_text(
+        "SELECT p.id, p.title, p.content, p.created_at::date AS d, p.is_pinned, p.temporal_kind, b.slug AS board_slug "
+        "FROM posts p "
+        "JOIN post_community_targets t ON t.post_id = p.id "
+        "JOIN boards b ON b.id = p.board_id "
+        "WHERE t.community_group_id = :gid AND p.is_published = TRUE "
+        "ORDER BY p.is_pinned DESC, p.created_at DESC "
+        "LIMIT :lim"
+    ), {"gid": gid, "lim": limit}).fetchall()
+    events = db.execute(_text(
+        "SELECT e.id, e.title, e.description, e.event_date AS d, e.temporal_kind "
+        "FROM events e "
+        "JOIN event_community_targets t ON t.event_id = e.id "
+        "WHERE t.community_group_id = :gid AND e.is_public = TRUE "
+        "ORDER BY e.event_date DESC "
+        "LIMIT :lim"
+    ), {"gid": gid, "lim": limit}).fetchall()
+
+    items: list[CommunityTaggedItemOut] = []
+    for p in posts:
+        items.append(CommunityTaggedItemOut(
+            kind="post", id=p.id, title=p.title,
+            excerpt=(p.content[:120] if p.content else None),
+            item_date=p.d, href=f"/boards/{p.board_slug}/{p.id}",
+            is_pinned=bool(p.is_pinned), temporal_kind=p.temporal_kind,
+        ))
+    for e in events:
+        items.append(CommunityTaggedItemOut(
+            kind="event", id=e.id, title=e.title,
+            excerpt=(e.description[:120] if e.description else None),
+            item_date=e.d, href="/calendar",
+            temporal_kind=e.temporal_kind,
+        ))
+    # 핀 + 날짜 desc 통합 정렬 — pinned post 먼저, 그 다음 날짜 내림차순
+    from datetime import date as _date
+    items.sort(key=lambda x: (
+        not x.is_pinned,
+        -(x.item_date.toordinal() if x.item_date else _date.min.toordinal()),
+    ))
+    return items[:limit]
+
+
 @router.get("/community/slug/{slug}", response_model=CommunityGroupOut)
 def get_community_by_slug(slug: str, db: Session = Depends(get_db)):
     group = db.query(CommunityGroup).filter(CommunityGroup.slug == slug).first()

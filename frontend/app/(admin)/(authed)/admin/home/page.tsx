@@ -32,6 +32,7 @@ const BLOCK_META: Record<string, { label: string; desc: string }> = {
   quote:        { label: "인용",       desc: "성경 구절 또는 사목 메시지" },
   two_column:   { label: "2열 컨테이너", desc: "좌·우 슬롯에 다른 블록 두 개를 가로로 배치 (모바일은 자동 1열)" },
   three_column: { label: "3열 컨테이너", desc: "좌·중·우 슬롯에 블록 세 개를 가로로 배치 (모바일은 자동 1열)" },
+  tag_cloud:    { label: "분과 태그 클라우드", desc: "분과·단체 태그를 글 수에 따라 크기로 표현. 클릭 → 해당 분과 글 모아보기" },
 };
 
 const HERO_LAYOUTS = [
@@ -602,6 +603,30 @@ function BlockPayloadEditor({
 
   // 슬롯에 들어갈 수 없는 컨테이너 류 (무한 중첩 방지)
   const CONTAINER_KINDS = new Set(["two_column", "three_column"]);
+
+  if (block.kind === "tag_cloud") {
+    const title = (p.title as string) ?? "";
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-2">
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-700 mb-1">섹션 제목 (옵션)</label>
+          <input
+            type="text"
+            defaultValue={title}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== title) onChange({ ...p, title: v || undefined });
+            }}
+            placeholder="예: 우리 분과·단체"
+            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white w-full max-w-md"
+          />
+          <p className="text-[10px] text-gray-500 mt-1">
+            비우면 제목 없이 태그 클라우드만 노출됩니다. 태그가 0개면 안내 텍스트 표시.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (block.kind === "two_column") {
     type Slot = { kind?: string; payload?: Record<string, unknown> };
