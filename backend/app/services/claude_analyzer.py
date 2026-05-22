@@ -50,8 +50,33 @@ _SYSTEM = (
     "주보의 모든 안내·일정·모임·말씀 묵상·사목 방향 항목을 찾아 JSON으로만 응답하세요. "
     "설명 없이 JSON만 반환하세요. "
     "중요: content 안에 줄바꿈이 필요하면 반드시 \\n으로 escape 하고, "
-    "따옴표는 \\\" 로 escape 하세요. 응답 전체는 반드시 valid JSON이어야 합니다."
+    "따옴표는 \\\" 로 escape 하세요. 응답 전체는 반드시 valid JSON이어야 합니다.\n"
+    "\n"
+    "한국 가톨릭 본당 고유 용어는 정확히 표기하세요. 자주 오인식되는 단어:\n"
+    "- 전입가정 (轉入家庭, 다른 본당에서 이사온 신자) — '전입가경' 아님\n"
+    "- 영성체 — '영성체' (체禮)\n"
+    "- 사목회의·사목평의회·사목지표 — '사복' 아님\n"
+    "- 견진·세례·고해·혼인 등 성사 명칭\n"
+    "- 레지오·꾸리아·쁘레시디움 — 영문 외래어 음차\n"
+    "본당명·세례명·성인 이름은 원문 그대로 표기하세요."
 )
+
+
+# 자주 발견되는 AI 추출 오타 — 1:1 치환만 적용 (정상 단어 오교정 위험 최소화).
+# 새 오타가 패턴화되면 여기에 추가. 향후 site_settings.AI_TYPO_DICT 로 admin 분리 가능.
+AI_TYPO_FIX = {
+    "전입가경": "전입가정",
+}
+
+
+def fix_typos(text: str | None) -> str | None:
+    """추출된 텍스트의 알려진 오타를 사전 기반 1:1 치환으로 교정."""
+    if not text:
+        return text
+    out = text
+    for wrong, right in AI_TYPO_FIX.items():
+        out = out.replace(wrong, right)
+    return out
 
 
 def _build_prompt(published_date: date, text: str) -> str:

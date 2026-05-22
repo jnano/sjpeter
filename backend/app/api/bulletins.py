@@ -668,9 +668,12 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date, bulletin_id=bulletin_id):
             continue
 
+        # 알려진 오타 1:1 치환 (현재: 전입가경→전입가정). content/title/location 에 일괄 적용.
+        from app.services.claude_analyzer import fix_typos
         event_type = ev.get("event_type") or "모임"
-        title = ev.get("title", "")
-        content_text = ev.get("content")
+        title = fix_typos(ev.get("title", "")) or ""
+        content_text = fix_typos(ev.get("content"))
+        ev_location = fix_typos(ev.get("location"))
 
         # groups 배열(복수) 또는 group_name(단일) 정규화 → group_candidates
         groups_raw = ev.get("groups")
@@ -700,7 +703,7 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             group_name=ev.get("group_name"),
             group_candidates=group_candidates,
             event_date=parsed_date,
-            location=ev.get("location"), event_type=event_type,
+            location=ev_location, event_type=event_type,
             temporal_kind=temporal_kind,
             temporal_reason=ev.get("temporal_reason"),
             fingerprint=fp, status="pending",
