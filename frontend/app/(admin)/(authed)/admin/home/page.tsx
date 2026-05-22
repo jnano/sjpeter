@@ -31,6 +31,7 @@ const BLOCK_META: Record<string, { label: string; desc: string }> = {
   banner:       { label: "배너",       desc: "지정한 placement 의 배너 그룹 노출" },
   quote:        { label: "인용",       desc: "성경 구절 또는 사목 메시지" },
   two_column:   { label: "2열 컨테이너", desc: "좌·우 슬롯에 다른 블록 두 개를 가로로 배치 (모바일은 자동 1열)" },
+  three_column: { label: "3열 컨테이너", desc: "좌·중·우 슬롯에 블록 세 개를 가로로 배치 (모바일은 자동 1열)" },
 };
 
 const HERO_LAYOUTS = [
@@ -55,6 +56,9 @@ interface QuickLinkItem {
   icon_key: string;
 }
 
+interface BoardCatalogItem { slug: string; name: string; is_active: boolean; }
+interface BoardTabConfig { source?: "board" | "events"; board_slug?: string; label?: string; }
+
 function getToken() {
   return typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
 }
@@ -67,6 +71,7 @@ export default function AdminHomePage() {
   const router = useRouter();
   const [theme, setTheme] = useState<Theme>("warm");
   const [blocks, setBlocks] = useState<HomeBlock[]>([]);
+  const [boards, setBoards] = useState<BoardCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -77,9 +82,10 @@ export default function AdminHomePage() {
   const load = useCallback(async () => {
     if (!getToken()) { router.push("/admin"); return; }
     try {
-      const [siteRes, blocksRes] = await Promise.all([
+      const [siteRes, blocksRes, boardsRes] = await Promise.all([
         fetch(`${API}/api/public/site-config`, { cache: "no-store" }),
         fetch(`${API}/api/home/blocks/admin/all`, { headers: authHeaders(), cache: "no-store" }),
+        fetch(`${API}/api/boards`, { cache: "no-store" }),
       ]);
       if (siteRes.ok) {
         const d = (await siteRes.json()) as Record<string, string>;
@@ -89,6 +95,10 @@ export default function AdminHomePage() {
       if (blocksRes.ok) {
         const d = (await blocksRes.json()) as HomeBlock[];
         setBlocks(Array.isArray(d) ? d : []);
+      }
+      if (boardsRes.ok) {
+        const d = (await boardsRes.json()) as BoardCatalogItem[];
+        setBoards(Array.isArray(d) ? d.filter((b) => b.is_active) : []);
       }
     } finally {
       setLoading(false);
@@ -316,7 +326,7 @@ export default function AdminHomePage() {
                       <p className="text-[11px] text-gray-500 leading-snug mb-2">{meta.desc}</p>
 
                       {/* 블록별 payload 편집 */}
-                      <BlockPayloadEditor block={b} onChange={(p) => patchBlock(b.id, { payload: p })} />
+                      <BlockPayloadEditor block={b} onChange={(p) => patchBlock(b.id, { payload: p })} boards={boards} />
                     </div>
                   </div>
                 </li>
@@ -346,13 +356,15 @@ export default function AdminHomePage() {
   );
 }
 
-/** 블록 종류별 payload 인라인 편집기 — 변경 시 onChange 호출. */
+/** 블록 종류별 payload 인라인 편집기 — 변경 시 onChange 호출. boards 는 board_tabs / 슬롯 안 nested editor 까지 전달. */
 function BlockPayloadEditor({
   block,
   onChange,
+  boards,
 }: {
   block: HomeBlock;
   onChange: (payload: Record<string, unknown>) => void;
+  boards: BoardCatalogItem[];
 }) {
   const p = block.payload ?? {};
 
@@ -400,7 +412,7 @@ function BlockPayloadEditor({
     const items: QuickLinkItem[] = Array.isArray(p.items) ? (p.items as QuickLinkItem[]) : [];
     const updateItems = (next: QuickLinkItem[]) => onChange({ ...p, items: next });
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-2">
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-2 @container">
         <div className="flex items-center justify-between">
           <label className="text-[11px] font-semibold text-gray-700">바로가기 항목 ({items.length}개)</label>
           <button
@@ -415,7 +427,7 @@ function BlockPayloadEditor({
         ) : (
           <ul className="space-y-1.5">
             {items.map((it, idx) => (
-              <li key={idx} className="grid grid-cols-[1fr_1fr_120px_auto] gap-1.5 items-center">
+              <li key={idx} className="grid grid-cols-1 @md:grid-cols-[1fr_1fr_120px_auto] gap-1.5 items-center min-w-0">
                 <input
                   type="text"
                   defaultValue={it.label}
@@ -493,11 +505,112 @@ function BlockPayloadEditor({
     );
   }
 
+  if (block.kind === "board_tabs") {
+    const tabs: BoardTabConfig[] = Array.isArray(p.tabs) ? (p.tabs as BoardTabConfig[]) : [];
+    const updateTabs = (next: BoardTabConfig[]) => onChange({ ...p, tabs: next });
+    const updateTab = (idx: number, patch: Partial<BoardTabConfig>) => {
+      updateTabs(tabs.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
+    };
+    const moveTab = (idx: number, dir: -1 | 1) => {
+      const j = idx + dir;
+      if (j < 0 || j >= tabs.length) return;
+      const next = [...tabs];
+      [next[idx], next[j]] = [next[j], next[idx]];
+      updateTabs(next);
+    };
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-semibold text-gray-700">탭 ({tabs.length}개)</label>
+          <div className="flex gap-1">
+            <button
+              onClick={() => updateTabs([...tabs, { source: "board", board_slug: boards[0]?.slug ?? "" }])}
+              className="text-[11px] px-2 py-1 bg-[var(--color-primary)] text-white rounded"
+            >+ 게시판 탭</button>
+            <button
+              onClick={() => updateTabs([...tabs, { source: "events" }])}
+              className="text-[11px] px-2 py-1 bg-gray-700 text-white rounded"
+            >+ 행사·모임 탭</button>
+          </div>
+        </div>
+        {tabs.length === 0 ? (
+          <p className="text-[11px] text-gray-500 leading-snug">
+            비어 있으면 default 2개 탭(공지사항 + 행사·모임) 이 사용됩니다.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {tabs.map((t, idx) => (
+              <li key={idx} className="flex items-center gap-1.5 min-w-0">
+                <div className="flex flex-col shrink-0">
+                  <button
+                    onClick={() => moveTab(idx, -1)}
+                    disabled={idx === 0}
+                    className="w-5 h-4 text-[10px] border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-30"
+                    aria-label="위로"
+                  >↑</button>
+                  <button
+                    onClick={() => moveTab(idx, 1)}
+                    disabled={idx === tabs.length - 1}
+                    className="w-5 h-4 text-[10px] border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-30"
+                    aria-label="아래로"
+                  >↓</button>
+                </div>
+                <select
+                  value={t.source ?? "board"}
+                  onChange={(e) => updateTab(idx, { source: e.target.value as "board" | "events", board_slug: e.target.value === "board" ? (t.board_slug || boards[0]?.slug || "") : undefined })}
+                  className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white shrink-0"
+                >
+                  <option value="board">게시판</option>
+                  <option value="events">행사·모임</option>
+                </select>
+                {t.source === "events" ? (
+                  <span className="text-[11px] text-gray-500 italic shrink-0">→ /calendar 의 다가오는 행사</span>
+                ) : (
+                  <select
+                    value={t.board_slug ?? ""}
+                    onChange={(e) => updateTab(idx, { board_slug: e.target.value })}
+                    className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white flex-1 min-w-0"
+                  >
+                    <option value="">— 게시판 선택 —</option>
+                    {boards.map((b) => (
+                      <option key={b.slug} value={b.slug}>{b.name} ({b.slug})</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="text"
+                  defaultValue={t.label ?? ""}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== (t.label ?? "")) updateTab(idx, { label: v || undefined });
+                  }}
+                  placeholder="라벨 (비우면 자동)"
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white flex-1 min-w-0"
+                />
+                <button
+                  onClick={() => updateTabs(tabs.filter((_, i) => i !== idx))}
+                  className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 shrink-0"
+                  title="삭제"
+                >×</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  // 슬롯에 들어갈 수 없는 컨테이너 류 (무한 중첩 방지)
+  const CONTAINER_KINDS = new Set(["two_column", "three_column"]);
+
   if (block.kind === "two_column") {
     type Slot = { kind?: string; payload?: Record<string, unknown> };
     const left = ((p.left as Slot) ?? {}) as Slot;
     const right = ((p.right as Slot) ?? {}) as Slot;
-    const slotKinds = Object.keys(BLOCK_META).filter((k) => k !== "two_column");
+    const slotKinds = Object.keys(BLOCK_META).filter((k) => !CONTAINER_KINDS.has(k));
+    // 좌측 비율 0~100 (실제 적용은 10~90 clamp). default 50.
+    const rawRatio = Number(p.left_ratio ?? 50);
+    const leftRatio = Number.isFinite(rawRatio) ? Math.min(90, Math.max(10, rawRatio)) : 50;
 
     const updateSlotKind = (side: "left" | "right", kind: string) => {
       // 슬롯 kind 변경 시 payload 초기화 (이전 블록 종류의 payload 가 새 종류에 맞지 않을 수 있음)
@@ -506,13 +619,17 @@ function BlockPayloadEditor({
     const updateSlotPayload = (side: "left" | "right", slot: Slot, np: Record<string, unknown>) => {
       onChange({ ...p, [side]: { kind: slot.kind, payload: np } });
     };
+    const updateRatio = (value: number) => {
+      const clamped = Math.min(90, Math.max(10, Math.round(value)));
+      onChange({ ...p, left_ratio: clamped });
+    };
 
     const renderSlot = (side: "left" | "right", slot: Slot) => {
       const slotKind = slot.kind ?? "";
       const slotPayload = slot.payload ?? {};
       return (
-        <div className="border border-gray-200 rounded p-2 bg-white space-y-2">
-          <div className="flex items-center gap-2">
+        <div className="border border-gray-200 rounded p-2 bg-white space-y-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <label className="text-[11px] font-semibold text-gray-700 shrink-0">
               {side === "left" ? "왼쪽" : "오른쪽"}
             </label>
@@ -531,6 +648,7 @@ function BlockPayloadEditor({
             <BlockPayloadEditor
               block={{ id: -1, kind: slotKind, sort_order: 0, is_active: true, payload: slotPayload }}
               onChange={(np) => updateSlotPayload(side, { kind: slotKind, payload: slotPayload }, np)}
+              boards={boards}
             />
           )}
         </div>
@@ -538,9 +656,128 @@ function BlockPayloadEditor({
     };
 
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-        {renderSlot("left", left)}
-        {renderSlot("right", right)}
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-3">
+        {/* 좌·우 폭 비율 — 모바일은 1열로 떨어지므로 무관, md+ 에서만 적용 */}
+        <div className="flex items-center gap-3">
+          <label className="text-[11px] font-semibold text-gray-700 shrink-0">좌·우 비율</label>
+          <input
+            type="range"
+            min={10}
+            max={90}
+            step={5}
+            value={leftRatio}
+            onChange={(e) => updateRatio(Number(e.target.value))}
+            className="flex-1 accent-[var(--color-primary)]"
+            aria-label="좌측 컬럼 비율"
+          />
+          <div className="flex items-center gap-1 shrink-0 text-[11px] font-mono text-gray-700">
+            <input
+              type="number"
+              min={10}
+              max={90}
+              step={5}
+              value={leftRatio}
+              onChange={(e) => updateRatio(Number(e.target.value))}
+              className="w-14 border border-gray-300 rounded px-1.5 py-0.5 bg-white text-right"
+            />
+            <span>: {100 - leftRatio}</span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {renderSlot("left", left)}
+          {renderSlot("right", right)}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.kind === "three_column") {
+    type Slot = { kind?: string; payload?: Record<string, unknown> };
+    const slotKinds = Object.keys(BLOCK_META).filter((k) => !CONTAINER_KINDS.has(k));
+    const sides = ["left", "middle", "right"] as const;
+    const sideLabels: Record<typeof sides[number], string> = { left: "왼쪽", middle: "가운데", right: "오른쪽" };
+    const slots: Record<typeof sides[number], Slot> = {
+      left: ((p.left as Slot) ?? {}) as Slot,
+      middle: ((p.middle as Slot) ?? {}) as Slot,
+      right: ((p.right as Slot) ?? {}) as Slot,
+    };
+    // ratios: fr 단위 3개. default [1,1,1]. 1~10 권장.
+    const rawRatios = Array.isArray(p.ratios) ? (p.ratios as unknown[]) : [];
+    const ratios = [0, 1, 2].map((i) => {
+      const v = Number(rawRatios[i]);
+      return Number.isFinite(v) && v > 0 ? v : 1;
+    });
+
+    const updateSlotKind = (side: typeof sides[number], kind: string) => {
+      onChange({ ...p, [side]: kind ? { kind, payload: {} } : {} });
+    };
+    const updateSlotPayload = (side: typeof sides[number], slot: Slot, np: Record<string, unknown>) => {
+      onChange({ ...p, [side]: { kind: slot.kind, payload: np } });
+    };
+    const updateRatio = (idx: 0 | 1 | 2, value: number) => {
+      const clamped = Math.min(10, Math.max(1, Math.round(value || 1)));
+      const next = [...ratios];
+      next[idx] = clamped;
+      onChange({ ...p, ratios: next });
+    };
+
+    const renderSlot = (side: typeof sides[number]) => {
+      const slot = slots[side];
+      const slotKind = slot.kind ?? "";
+      const slotPayload = slot.payload ?? {};
+      return (
+        <div className="border border-gray-200 rounded p-2 bg-white space-y-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <label className="text-[11px] font-semibold text-gray-700 shrink-0">{sideLabels[side]}</label>
+            <select
+              value={slotKind}
+              onChange={(e) => updateSlotKind(side, e.target.value)}
+              className="text-xs border border-gray-300 rounded px-2 py-1 bg-white flex-1"
+            >
+              <option value="">— 선택 —</option>
+              {slotKinds.map((k) => (
+                <option key={k} value={k}>{BLOCK_META[k].label} ({k})</option>
+              ))}
+            </select>
+          </div>
+          {slotKind && (
+            <BlockPayloadEditor
+              block={{ id: -1, kind: slotKind, sort_order: 0, is_active: true, payload: slotPayload }}
+              onChange={(np) => updateSlotPayload(side, { kind: slotKind, payload: slotPayload }, np)}
+              boards={boards}
+            />
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 mt-2 space-y-3">
+        {/* 좌·중·우 fr 비율 — 합 무관, grid 가 자동 비례 분배 */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="text-[11px] font-semibold text-gray-700 shrink-0">컬럼 비율</label>
+          <div className="flex items-center gap-1 text-[11px] font-mono text-gray-700">
+            {([0, 1, 2] as const).map((i) => (
+              <span key={i} className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={ratios[i]}
+                  onChange={(e) => updateRatio(i, Number(e.target.value))}
+                  className="w-12 border border-gray-300 rounded px-1.5 py-0.5 bg-white text-right"
+                  aria-label={`${sideLabels[sides[i]]} 비율`}
+                />
+                {i < 2 && <span>:</span>}
+              </span>
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-500">fr 단위 · 1~10 · 합은 무관</span>
+        </div>
+        <div className="space-y-2">
+          {sides.map((s) => <div key={s}>{renderSlot(s)}</div>)}
+        </div>
       </div>
     );
   }

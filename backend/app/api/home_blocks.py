@@ -35,7 +35,8 @@ ALLOWED_KINDS = (
     "gallery",       # 사진 슬라이더.
     "banner",        # 배너 (placement 지정). payload.placement='home_middle' 등
     "quote",         # 마무리 인용. payload.text='...', payload.source='...'
-    "two_column",    # 2열 컨테이너. payload.left={kind,payload}, payload.right={kind,payload}. 모바일은 1열로 떨어짐. 자기 자신은 슬롯으로 넣을 수 없음(중첩 금지).
+    "two_column",    # 2열 컨테이너. payload.left={kind,payload}, payload.right={kind,payload}, payload.left_ratio=10~90. 모바일은 1열로 떨어짐. 컨테이너 류는 슬롯으로 넣을 수 없음(중첩 금지).
+    "three_column",  # 3열 컨테이너. payload.left/middle/right={kind,payload}, payload.ratios=[n,n,n] fr 단위. 모바일은 1열, sm 은 동일. 컨테이너 류는 슬롯 금지.
 )
 
 

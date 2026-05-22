@@ -331,6 +331,25 @@ export default function AdminSidebar({
     violet: "bg-violet-600 text-white",
     red: "bg-red-600 text-white",
   };
+  const TONE_RANK: Record<string, number> = { amber: 0, violet: 1, red: 2 };
+
+  /** 그룹/부모 헤더용 하위 배지 합산. children 까지 재귀로 모은다. */
+  function groupBadge(items: NavItem[]): { count: number; tone: string } | null {
+    let total = 0;
+    let strongest = "amber";
+    const walk = (list: NavItem[]) => {
+      for (const it of list) {
+        const b = badgeFor(it);
+        if (b) {
+          total += b.count;
+          if ((TONE_RANK[b.tone] ?? 0) > (TONE_RANK[strongest] ?? 0)) strongest = b.tone;
+        }
+        if (it.children?.length) walk(it.children);
+      }
+    };
+    walk(items);
+    return total > 0 ? { count: total, tone: strongest } : null;
+  }
 
   const desktopVisible = mounted && (pinned || peeking);
   const isFloating = mounted && !pinned && peeking;
@@ -438,6 +457,7 @@ export default function AdminSidebar({
             if (filteredItems.length === 0) return null;
             const open = openGroup === g.label;
             const headerId = `admin-group-${g.label}`;
+            const gBadge = groupBadge(filteredItems);
             return (
               <div key={g.label} className="mb-1">
                 <h2 className="px-2 pt-3 pb-0.5">
@@ -452,20 +472,33 @@ export default function AdminSidebar({
                       <span className="text-sm" aria-hidden="true">{g.icon}</span>
                       <span>{g.label}</span>
                     </span>
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                      className={`transition-transform ${open ? "" : "-rotate-90"}`}
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
+                    <span className="flex items-center gap-1.5">
+                      {gBadge && (
+                        <>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none normal-case tracking-normal ${toneClass[gBadge.tone] ?? toneClass.amber}`}
+                            aria-hidden="true"
+                          >
+                            {gBadge.count}
+                          </span>
+                          <span className="sr-only">{g.label} 하위 알림 합계 {gBadge.count}건</span>
+                        </>
+                      )}
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        className={`transition-transform ${open ? "" : "-rotate-90"}`}
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
                   </button>
                 </h2>
                 {open && (

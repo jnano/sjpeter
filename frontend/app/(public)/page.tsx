@@ -101,6 +101,39 @@ async function getHomeBlocks(): Promise<HomeBlock[]> {
   } catch { return []; }
 }
 
+interface BoardMeta { slug: string; name: string; is_active: boolean; exclude_from_search: boolean; }
+async function getBoardsCatalog(): Promise<BoardMeta[]> {
+  try {
+    const r = await fetch(`${API}/api/boards`);
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data as BoardMeta[] : [];
+  } catch { return []; }
+}
+
+interface BoardPostBrief { id: number; title: string; is_pinned: boolean; created_at: string; }
+async function getBoardPosts(slug: string, limit = 10): Promise<BoardPostBrief[]> {
+  try {
+    const r = await fetch(`${API}/api/boards/${encodeURIComponent(slug)}/posts?limit=${limit}`);
+    if (!r.ok) return [];
+    const data = await r.json();
+    const posts = Array.isArray(data?.posts) ? data.posts : [];
+    return posts.map((p: { id: number; title: string; is_pinned?: boolean; created_at: string }) => ({
+      id: p.id,
+      title: p.title,
+      is_pinned: !!p.is_pinned,
+      created_at: p.created_at,
+    }));
+  } catch { return []; }
+}
+
+/** board_tabs payload 구조 — admin/home 에서 편집. */
+interface BoardTabConfig {
+  source?: "board" | "events";
+  board_slug?: string;
+  label?: string;
+}
+
 
 interface QuickLink { href: string; label: string; icon_key: string; }
 
@@ -123,7 +156,7 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -132,7 +165,39 @@ export default async function HomePage() {
       fetchConstructionSummary(),
       getSiteConfig(),
       getHomeBlocks(),
+      getBoardsCatalog(),
     ]);
+
+  // board_tabs 블록들이 참조하는 게시판 slug 들을 수집해서 일괄 fetch (two_column/three_column 슬롯 안에 있는 것도 포함).
+  const referencedBoardSlugs = new Set<string>();
+  const collectFromPayload = (payload: Record<string, unknown> | undefined) => {
+    if (!payload) return;
+    const tabs = Array.isArray(payload.tabs) ? (payload.tabs as BoardTabConfig[]) : null;
+    if (!tabs || tabs.length === 0) {
+      // legacy default 는 notice 게시판 사용
+      referencedBoardSlugs.add("notice");
+    } else {
+      tabs.forEach((t) => {
+        if (t.source === "board" && t.board_slug) referencedBoardSlugs.add(t.board_slug);
+      });
+    }
+  };
+  blocks.forEach((b) => {
+    if (b.kind === "board_tabs") collectFromPayload(b.payload);
+    if (b.kind === "two_column" || b.kind === "three_column") {
+      ["left", "middle", "right"].forEach((side) => {
+        const slot = b.payload?.[side] as { kind?: string; payload?: Record<string, unknown> } | undefined;
+        if (slot?.kind === "board_tabs") collectFromPayload(slot.payload);
+      });
+    }
+  });
+  const boardPostsBySlug = new Map<string, BoardPostBrief[]>();
+  await Promise.all(
+    Array.from(referencedBoardSlugs).map(async (slug) => {
+      boardPostsBySlug.set(slug, await getBoardPosts(slug, 10));
+    }),
+  );
+  const boardMetaBySlug = new Map(boardsCatalog.map((b) => [b.slug, b]));
 
   // home_blocks 에 hero 블록이 있으면 그 payload.layout 을 우선 — 없으면 site_settings.HOME_HERO_LAYOUT fallback.
   const heroBlock = blocks.find((b) => b.kind === "hero");
@@ -268,28 +333,52 @@ export default async function HomePage() {
     </div>
   );
 
-  const boardTabs: BoardTab[] = [
-    {
-      key: "notice",
-      label: "공지사항",
-      moreHref: "/boards/notice",
-      itemBase: "/boards/notice",
-      items: sortedNotices,
-    },
-    {
-      key: "events",
-      label: "행사·모임",
-      moreHref: "/calendar",
-      itemBase: "/calendar",
-      items: upcomingEvents.map((e) => ({
-        id: e.id,
-        title: e.event_kind ? `[${e.event_kind}] ${e.title}` : e.title,
-        is_pinned: false,
-        created_at: e.event_date,
-        href: "/calendar",
-      })),
-    },
-  ];
+  // legacy default 탭 — payload 가 비어 있을 때 사용 (현재 동작 유지)
+  const eventsTab: BoardTab = {
+    key: "events",
+    label: "행사·모임",
+    moreHref: "/calendar",
+    itemBase: "/calendar",
+    items: upcomingEvents.map((e) => ({
+      id: e.id,
+      title: e.event_kind ? `[${e.event_kind}] ${e.title}` : e.title,
+      is_pinned: false,
+      created_at: e.event_date,
+      href: "/calendar",
+    })),
+  };
+  const noticeDefaultTab: BoardTab = {
+    key: "notice",
+    label: "공지사항",
+    moreHref: "/boards/notice",
+    itemBase: "/boards/notice",
+    items: sortedNotices,
+  };
+
+  /** board_tabs payload 를 BoardTab[] 로 변환. payload 가 비어 있으면 legacy default (notice + events). */
+  function buildBoardTabsForPayload(payload: Record<string, unknown> | undefined): BoardTab[] {
+    const raw = Array.isArray(payload?.tabs) ? (payload!.tabs as BoardTabConfig[]) : null;
+    if (!raw || raw.length === 0) return [noticeDefaultTab, eventsTab];
+    return raw
+      .map<BoardTab | null>((t, i) => {
+        if (t.source === "events") {
+          return { ...eventsTab, key: `events-${i}`, label: t.label?.trim() || eventsTab.label };
+        }
+        if (t.source === "board" && t.board_slug) {
+          const meta = boardMetaBySlug.get(t.board_slug);
+          const posts = boardPostsBySlug.get(t.board_slug) ?? [];
+          return {
+            key: `board-${t.board_slug}-${i}`,
+            label: t.label?.trim() || meta?.name || t.board_slug,
+            moreHref: `/boards/${t.board_slug}`,
+            itemBase: `/boards/${t.board_slug}`,
+            items: posts,
+          };
+        }
+        return null;
+      })
+      .filter((x): x is BoardTab => x !== null);
+  }
 
   // ── 블록별 JSX 정의 — admin/home 의 home_blocks 배열에 따라 render 선택됨 ──
   const heroSection = (
@@ -342,143 +431,192 @@ export default async function HomePage() {
     </section>
   );
 
-  function renderQuickLinksBlock(payload: Record<string, unknown>) {
-    // payload.items 가 비어 있으면 default 3개 사용 (호환성)
+  // 각 블록 콘텐츠는 inner(naked) + section wrapper 로 분리.
+  // - top-level dispatch 는 section wrapper (border-t + CONTAINER) 로 감싸 노출
+  // - two_column 슬롯 은 inner 만 렌더 — 슬롯끼리 가로선이 끊기지 않도록 two_column 자신이 통합 border-t 를 한 번만 그음
+  function quickLinksInner(payload: Record<string, unknown>) {
     const rawItems = Array.isArray(payload?.items) ? (payload.items as QuickLink[]) : [];
     const items = rawItems.length > 0 ? rawItems : DEFAULT_QUICK_LINKS;
     return (
-      <section>
-        <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-3">
-            <div className={`grid gap-2.5 sm:gap-3 max-w-2xl mx-auto`} style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))` }}>
-              {items.map((item, i) => (
-                <Link
-                  key={`${item.href}-${i}`}
-                  href={item.href}
-                  className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
-                >
-                  <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
-                    {ICON_BY_KEY[item.icon_key] ?? ICON_BY_KEY.church}
-                  </span>
-                  <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
-                    {item.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className={`grid gap-2.5 sm:gap-3 max-w-2xl mx-auto`} style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))` }}>
+        {items.map((item, i) => (
+          <Link
+            key={`${item.href}-${i}`}
+            href={item.href}
+            className="group flex flex-col items-center justify-center gap-1 py-1 hover:-translate-y-0.5 transition-transform duration-200"
+          >
+            <span className="flex items-center justify-center h-14 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+              {ICON_BY_KEY[item.icon_key] ?? ICON_BY_KEY.church}
+            </span>
+            <span className="text-sm font-medium text-[var(--color-text)] text-center leading-tight group-hover:text-[var(--color-primary)] transition-colors">
+              {item.label}
+            </span>
+          </Link>
+        ))}
+      </div>
     );
   }
+  function renderQuickLinksBlock(payload: Record<string, unknown>) {
+    return wrapSection(quickLinksInner(payload), "py-3");
+  }
 
-  const meditationSection = (
-    <section>
-      <div className={CONTAINER}>
-        <div className="border-t border-[var(--color-border)] py-3 flex">
-          <MeditationCredits />
+  const meditationInner = (
+    <div className="flex">
+      <MeditationCredits />
+    </div>
+  );
+  const meditationSection = wrapSection(meditationInner, "py-3");
+
+  const constructionInner = <HomeConstructionWidget summary={constructionSummary} embedded />;
+  const constructionSection = wrapSection(constructionInner, "py-6");
+
+  function boardTabsInner(payload: Record<string, unknown> | undefined) {
+    return <BoardTabs tabs={buildBoardTabsForPayload(payload)} />;
+  }
+  function renderBoardTabsBlock(payload: Record<string, unknown> | undefined) {
+    return wrapSection(boardTabsInner(payload), "py-6");
+  }
+
+  const galleryInner = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
+          <span className="text-[var(--color-accent)]">📷</span>
+          사진 갤러리
+        </h2>
+        <div className="flex items-center gap-3 text-[11px]">
+          <Link href="/gallery/liturgy" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+            전례 사진
+          </Link>
+          <span className="text-[var(--color-border-dark)]">·</span>
+          <Link href="/gallery/events" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+            행사 사진
+          </Link>
         </div>
       </div>
-    </section>
+      <PhotoSlider />
+    </>
   );
+  const gallerySection = wrapSection(galleryInner, "py-6");
 
-  const constructionSection = (
-    <section>
-      <div className={CONTAINER}>
-        <div className="border-t border-[var(--color-border)] py-6">
-          <HomeConstructionWidget summary={constructionSummary} embedded />
-        </div>
-      </div>
-    </section>
-  );
-
-  const boardTabsSection = (
-    <section>
-      <div className={CONTAINER}>
-        <div className="border-t border-[var(--color-border)] py-6">
-          <BoardTabs tabs={boardTabs} />
-        </div>
-      </div>
-    </section>
-  );
-
-  const gallerySection = (
-    <section>
-      <div className={CONTAINER}>
-        <div className="border-t border-[var(--color-border)] py-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-serif font-bold text-[var(--color-primary)] text-[13px] flex items-center gap-1.5">
-              <span className="text-[var(--color-accent)]">📷</span>
-              사진 갤러리
-            </h2>
-            <div className="flex items-center gap-3 text-[11px]">
-              <Link href="/gallery/liturgy" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-                전례 사진
-              </Link>
-              <span className="text-[var(--color-border-dark)]">·</span>
-              <Link href="/gallery/events" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
-                행사 사진
-              </Link>
-            </div>
-          </div>
-          <PhotoSlider />
-        </div>
-      </div>
-    </section>
-  );
-
+  function bannerInner(placement: string) {
+    return <BannerSlider placement={placement} className="my-2" />;
+  }
   function renderBannerBlock(placement: string) {
+    // banner 는 원래 border-t 없이 my-2 만 가지던 블록이라 wrapper 분기 처리
+    return <div className={CONTAINER}>{bannerInner(placement)}</div>;
+  }
+
+  function quoteInner(text: string, source: string) {
     return (
-      <div className={CONTAINER}>
-        <BannerSlider placement={placement} className="my-2" />
+      <div className="text-center">
+        <ConstructionIcon className="w-10 h-10 mx-auto block" />
+        <blockquote className="font-serif italic text-[var(--color-primary)] text-xs sm:text-sm mt-2 leading-relaxed">
+          &ldquo;{text}&rdquo;
+        </blockquote>
+        {source && <p className="text-[11px] text-[var(--color-text-muted)] mt-1">— {source}</p>}
       </div>
     );
   }
-
   function renderQuoteBlock(text: string, source: string) {
+    return wrapSection(quoteInner(text, source), "py-9");
+  }
+
+  /** 표준 wrapper — border-t + max-w-5xl CONTAINER + 지정 py. inner 콘텐츠를 한 줄로 감싸 일관된 섹션 형태 보장. */
+  function wrapSection(inner: React.ReactNode, pyClass: string) {
     return (
       <section>
         <div className={CONTAINER}>
-          <div className="border-t border-[var(--color-border)] py-9 text-center">
-            <ConstructionIcon className="w-10 h-10 mx-auto block" />
-            <blockquote className="font-serif italic text-[var(--color-primary)] text-xs sm:text-sm mt-2 leading-relaxed">
-              &ldquo;{text}&rdquo;
-            </blockquote>
-            {source && <p className="text-[11px] text-[var(--color-text-muted)] mt-1">— {source}</p>}
-          </div>
+          <div className={`border-t border-[var(--color-border)] ${pyClass}`}>{inner}</div>
         </div>
       </section>
     );
   }
 
-  // kind+payload 한 쌍을 렌더 — top-level map 과 two_column 슬롯에서 공통 사용.
-  // 모르는 kind / two_column 슬롯 안의 two_column(중첩) 은 null 로 silent skip.
-  function renderBlockBody(kind: string, payload: Record<string, unknown>, allowContainer: boolean): React.ReactNode {
+  /** slotMode=true: wrapper 없는 inner 만 — two_column 슬롯 안 렌더용. */
+  function renderSlotInner(kind: string, payload: Record<string, unknown>): React.ReactNode {
     switch (kind) {
+      case "quick_links":  return quickLinksInner(payload);
+      case "meditation":   return meditationInner;
+      case "construction": return constructionInner;
+      case "board_tabs":   return boardTabsInner(payload);
+      case "gallery":      return galleryInner;
+      case "banner":       return bannerInner((payload?.placement as string) ?? "home_main");
+      case "quote":        return quoteInner((payload?.text as string) ?? "", (payload?.source as string) ?? "");
+      // hero 는 자체 grid layout 이 복잡해 슬롯 부적합 — 통째로 fallback
       case "hero":         return heroSection;
-      case "quick_links":  return renderQuickLinksBlock(payload);
-      case "meditation":   return meditationSection;
-      case "construction": return constructionSection;
-      case "board_tabs":   return boardTabsSection;
-      case "gallery":      return gallerySection;
-      case "banner":       return renderBannerBlock((payload?.placement as string) ?? "home_main");
-      case "quote":        return renderQuoteBlock((payload?.text as string) ?? "", (payload?.source as string) ?? "");
-      case "two_column":   return allowContainer ? renderTwoColumnBlock(payload) : null;
       default:             return null;
     }
   }
 
+  // top-level map 용 — wrapper 포함 정규 dispatch.
+  function renderBlockBody(kind: string, payload: Record<string, unknown>): React.ReactNode {
+    switch (kind) {
+      case "hero":          return heroSection;
+      case "quick_links":   return renderQuickLinksBlock(payload);
+      case "meditation":    return meditationSection;
+      case "construction":  return constructionSection;
+      case "board_tabs":    return renderBoardTabsBlock(payload);
+      case "gallery":       return gallerySection;
+      case "banner":        return renderBannerBlock((payload?.placement as string) ?? "home_main");
+      case "quote":         return renderQuoteBlock((payload?.text as string) ?? "", (payload?.source as string) ?? "");
+      case "two_column":    return renderTwoColumnBlock(payload);
+      case "three_column":  return renderThreeColumnBlock(payload);
+      default:              return null;
+    }
+  }
+
+  /** 컨테이너 류 kind 는 슬롯에 들어갈 수 없음 — 중첩 무한루프 방지. */
+  const CONTAINER_KINDS = new Set(["two_column", "three_column"]);
+
+  type SlotDef = { kind?: string; payload?: Record<string, unknown> };
+  function renderSlot(slot: SlotDef): React.ReactNode {
+    if (!slot.kind || CONTAINER_KINDS.has(slot.kind)) return null;
+    return renderSlotInner(slot.kind, slot.payload ?? {});
+  }
+
   function renderTwoColumnBlock(payload: Record<string, unknown>) {
-    const left = (payload?.left ?? {}) as { kind?: string; payload?: Record<string, unknown> };
-    const right = (payload?.right ?? {}) as { kind?: string; payload?: Record<string, unknown> };
-    const leftNode = left.kind ? renderBlockBody(left.kind, left.payload ?? {}, false) : null;
-    const rightNode = right.kind ? renderBlockBody(right.kind, right.payload ?? {}, false) : null;
+    const left = (payload?.left ?? {}) as SlotDef;
+    const right = (payload?.right ?? {}) as SlotDef;
+    // 좌측 비율 (10~90, default 50). 우측 = 100 - leftRatio. 모바일은 1열로 떨어지므로 비율 무관.
+    const rawRatio = Number(payload?.left_ratio ?? 50);
+    const leftRatio = Math.min(90, Math.max(10, Number.isFinite(rawRatio) ? rawRatio : 50));
+    const rightRatio = 100 - leftRatio;
     return (
       <section>
         <div className={CONTAINER}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="min-w-0">{leftNode}</div>
-            <div className="min-w-0">{rightNode}</div>
+          <div
+            className="border-t border-[var(--color-border)] py-3 grid grid-cols-1 md:[grid-template-columns:var(--two-col-cols)] gap-6"
+            style={{ ["--two-col-cols" as string]: `${leftRatio}fr ${rightRatio}fr` }}
+          >
+            <div className="min-w-0">{renderSlot(left)}</div>
+            <div className="min-w-0">{renderSlot(right)}</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function renderThreeColumnBlock(payload: Record<string, unknown>) {
+    const left = (payload?.left ?? {}) as SlotDef;
+    const middle = (payload?.middle ?? {}) as SlotDef;
+    const right = (payload?.right ?? {}) as SlotDef;
+    // ratios: [n, n, n] fr 단위. default [1,1,1]. 합이 무엇이든 grid 가 fr 비례 분배.
+    const rawRatios = Array.isArray(payload?.ratios) ? (payload.ratios as unknown[]) : [];
+    const ratios = [0, 1, 2].map((i) => {
+      const v = Number(rawRatios[i]);
+      return Number.isFinite(v) && v > 0 ? v : 1;
+    });
+    return (
+      <section>
+        <div className={CONTAINER}>
+          <div
+            className="border-t border-[var(--color-border)] py-3 grid grid-cols-1 md:[grid-template-columns:var(--three-col-cols)] gap-6"
+            style={{ ["--three-col-cols" as string]: `${ratios[0]}fr ${ratios[1]}fr ${ratios[2]}fr` }}
+          >
+            <div className="min-w-0">{renderSlot(left)}</div>
+            <div className="min-w-0">{renderSlot(middle)}</div>
+            <div className="min-w-0">{renderSlot(right)}</div>
           </div>
         </div>
       </section>
@@ -488,7 +626,7 @@ export default async function HomePage() {
   return (
     <div data-home-theme={homeTheme}>
       {blocks.map((b) => (
-        <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {}, true)}</div>
+        <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {})}</div>
       ))}
     </div>
   );
