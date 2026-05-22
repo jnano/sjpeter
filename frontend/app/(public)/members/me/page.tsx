@@ -542,6 +542,22 @@ export default function MypagePage() {
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !session?.accessToken) return;
+
+    // backend 와 동일한 검증을 frontend 에서도 선검사 — 빠른 피드백.
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
+    if (!ALLOWED_EXTS.includes(ext)) {
+      alert("JPEG·PNG·GIF·WebP 이미지만 업로드할 수 있습니다.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      alert(`파일 크기는 5MB 이하여야 합니다. (현재 ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -555,7 +571,12 @@ export default function MypagePage() {
         const updated: MemberInfo = await res.json();
         setMember(updated);
         await update({ picture: updated.avatar_url ? `${API}${updated.avatar_url}` : null });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || "업로드에 실패했습니다.");
       }
+    } catch {
+      alert("네트워크 오류가 발생했습니다.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -686,6 +707,9 @@ export default function MypagePage() {
                       </button>
                     )}
                   </div>
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                    JPEG·PNG·GIF·WebP · 5MB 이하
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">

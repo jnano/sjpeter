@@ -9,7 +9,12 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  // open redirect 차단: 내부 경로만 허용. '//evil.com' 같이 //로 시작하는 경우도 거부.
+  const rawCallback = searchParams.get("callbackUrl");
+  const callbackUrl =
+    rawCallback && rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+      ? rawCallback
+      : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

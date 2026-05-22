@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.283";
+export const CURRENT_VERSION = "1.5.284";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,14 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.284", date: "2026-05-22", tag: "수정",
+    items: [
+      "회원 페이지 LOW 보강 2건 — callbackUrl open redirect 차단 + 아바타 업로드 UX",
+      "  · login 페이지 callbackUrl 검증 — '/' 시작 + '//' 미시작 (open redirect 회피)",
+      "  · 아바타 업로드: frontend 선검사(확장자·5MB) + 실패 시 alert 메시지 + 'JPEG·PNG·GIF·WebP · 5MB 이하' 안내 문구",
+    ],
+  },
   {
     version: "1.5.283", date: "2026-05-22", tag: "기능",
     items: [
