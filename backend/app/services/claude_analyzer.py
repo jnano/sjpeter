@@ -71,17 +71,32 @@ event_type 분류 기준:
 - "묵상": "주일 말씀 묵상과 실천", "복음 묵상", "한 줄 묵상", 강론·말씀 나눔 등 영적 양식 본문 (제목 + 성경 구절 출처 + 본문)
 - "지표": "사목지표", "올해의 사목 방향", "본당 슬로건" 등 본당 사목 방향성 (연간 1회 정도 등장)
 
+시점 분류 (temporal_kind) — 알림 발송 게이트:
+- "future": 발행일({date_str}) 이후의 명시적 미래 날짜가 있고 본문이 다가오는 행사 톤
+- "timeless": 날짜 없이 "모집", "신청", "안내", "방문 요망" 등 상시/기한 없는 공지
+- "past": "지난", "후기", "보고", "마쳤습니다", "있었습니다" 등 이미 끝난 이벤트 회고
+- "unknown": 판단 모호 (안전한 default)
+temporal_reason 에는 그 분류를 선택한 한 줄 근거를 한국어로.
+
+groups (복수 분과·단체):
+- 본문에서 언급된 분과/단체명을 배열로 (예: ["안나회", "레지오"])
+- 단일이면 1개 배열, 없으면 빈 배열
+- group_name 은 단일 호환 필드 — groups 의 첫 항목과 같게 두면 됨
+
 다음 JSON 형식으로만 응답하세요. scripture는 묵상 항목에만 채우고, 다른 타입은 null로 두세요.
 {{"events": [
   {{
     "title": "제목",
     "content": "원문 그대로의 상세 내용",
     "scripture": "성경 구절 출처 — 묵상에만 (예: '마태 25,31-46', 없으면 null)",
-    "group_name": "담당 모임명 (없으면 null)",
+    "group_name": "담당 모임명 단일 (없으면 null)",
+    "groups": ["복수 분과·단체"],
     "event_date": "YYYY-MM-DD (불명확하면 null)",
     "end_date": "YYYY-MM-DD (기간 종료일; 하루짜리이거나 불명확하면 null)",
     "location": "장소 (없으면 null)",
-    "event_type": "공지|행사|모임|묵상|지표"
+    "event_type": "공지|행사|모임|묵상|지표",
+    "temporal_kind": "future|timeless|past|unknown",
+    "temporal_reason": "한 줄 근거"
   }}
 ]}}
 

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Date, Text, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from app.core.database import Base
@@ -12,10 +13,16 @@ class BulletinExtraction(Base):
 
     title = Column(String(300), nullable=False)
     content = Column(Text)
-    group_name = Column(String(100))       # "안나회", "레지오" 등
+    group_name = Column(String(100))       # "안나회", "레지오" 등 (단일, 호환)
+    # 복수 분과/단체 후보 — m:n 매핑의 입력. 검토 UI 에서 community_groups 와 매칭.
+    group_candidates = Column(ARRAY(Text), nullable=True)
     event_date = Column(Date, nullable=True)
     location = Column(String(200), nullable=True)
     event_type = Column(String(50))        # "순례", "모임", "행사" 등
+
+    # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 입력.
+    temporal_kind = Column(String(10), nullable=False, server_default="unknown")
+    temporal_reason = Column(Text, nullable=True)  # AI 판단 사유 (관리자 검토에 표시)
 
     fingerprint = Column(String(64), index=True)   # 중복 감지용 해시
 

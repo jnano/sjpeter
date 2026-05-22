@@ -669,11 +669,30 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         title = ev.get("title", "")
         content_text = ev.get("content")
 
+        # groups 배열(복수) 또는 group_name(단일) 정규화 → group_candidates
+        groups_raw = ev.get("groups")
+        group_candidates: list[str] | None = None
+        if isinstance(groups_raw, list):
+            cleaned = [g.strip() for g in groups_raw if isinstance(g, str) and g.strip()]
+            if cleaned:
+                group_candidates = cleaned
+        if group_candidates is None and ev.get("group_name"):
+            group_candidates = [ev["group_name"]]
+
+        # 시점 분류 — AI 가 미응답하면 unknown 으로 안전 default
+        temporal_kind = (ev.get("temporal_kind") or "unknown").strip().lower()
+        if temporal_kind not in ("future", "timeless", "past", "unknown"):
+            temporal_kind = "unknown"
+
         # 모든 카테고리 — 관리자 검토 대기
         ext = BulletinExtraction(
             bulletin_id=bulletin_id, title=title, content=content_text,
-            group_name=ev.get("group_name"), event_date=parsed_date,
+            group_name=ev.get("group_name"),
+            group_candidates=group_candidates,
+            event_date=parsed_date,
             location=ev.get("location"), event_type=event_type,
+            temporal_kind=temporal_kind,
+            temporal_reason=ev.get("temporal_reason"),
             fingerprint=fp, status="pending",
         )
         db.add(ext)

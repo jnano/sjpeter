@@ -1344,6 +1344,68 @@ def _migrate_add_columns():
             "CREATE INDEX IF NOT EXISTS ix_issue_reports_created_at ON issue_reports(created_at DESC)"
         ))
 
+        # AI 추출 결과에 시점 분류 + 분과 후보 (v1.5.290~)
+        conn.execute(text(
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS temporal_kind VARCHAR(10) NOT NULL DEFAULT 'unknown'"
+        ))
+        conn.execute(text(
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS temporal_reason TEXT"
+        ))
+        conn.execute(text(
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS group_candidates TEXT[]"
+        ))
+
+        # 분과·단체 태깅 + 사이트 내 알림 (v1.5.290~) — 주보 AI 추출 글의 대상 분과를 태깅,
+        # 관심 회원에게 알림 즉시 발송. temporal_kind 로 과거 이벤트는 발송 제외.
+        conn.execute(text(
+            "ALTER TABLE posts  ADD COLUMN IF NOT EXISTS temporal_kind VARCHAR(10) NOT NULL DEFAULT 'unknown'"
+        ))
+        conn.execute(text(
+            "ALTER TABLE events ADD COLUMN IF NOT EXISTS temporal_kind VARCHAR(10) NOT NULL DEFAULT 'unknown'"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS post_community_targets (
+                post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                community_group_id INTEGER NOT NULL REFERENCES community_groups(id) ON DELETE CASCADE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (post_id, community_group_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_post_community_targets_group ON post_community_targets(community_group_id)"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS event_community_targets (
+                event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                community_group_id INTEGER NOT NULL REFERENCES community_groups(id) ON DELETE CASCADE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (event_id, community_group_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_event_community_targets_group ON event_community_targets(community_group_id)"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                kind VARCHAR(30) NOT NULL DEFAULT 'community',
+                title VARCHAR(300) NOT NULL,
+                body TEXT,
+                post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+                event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+                community_group_id INTEGER REFERENCES community_groups(id) ON DELETE SET NULL,
+                read_at TIMESTAMP,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_notifications_member_unread ON notifications(member_id, read_at) WHERE read_at IS NULL"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_notifications_member_created ON notifications(member_id, created_at DESC)"
+        ))
+
         conn.commit()
 
 

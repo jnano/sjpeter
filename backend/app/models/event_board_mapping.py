@@ -33,5 +33,7 @@ class Event(Base):
     is_ai_generated = Column(Boolean, default=False)
     event_kind = Column(String(10))
     source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
+    # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 (future|timeless + 미래 날짜만 OK).
+    temporal_kind = Column(String(10), nullable=False, server_default="unknown")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -7,3 +7,5 @@ from app.models.board import Board, Post, Comment
 from app.models.attachment import Attachment
 from app.models.issue_report import IssueReport
 from app.models.transport_route import TransportRoute
+from app.models.community_target import PostCommunityTarget, EventCommunityTarget
+from app.models.notification import Notification
