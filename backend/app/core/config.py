@@ -5,7 +5,9 @@ class Settings(BaseSettings):
     # 본당명 fallback. 실제 표시는 site_settings.PARISH_NAME (admin 입력) 우선.
     PROJECT_NAME: str = "본당 홈페이지"
     DATABASE_URL: str = "postgresql://user:password@localhost/cathedral"
-    SECRET_KEY: str = "change-this-in-production"
+    # JWT 서명 키. backend/.env 에서 반드시 32자 이상으로 설정해야 한다.
+    # default 가 빈 문자열이라 누락 시 settings 초기화 단계에서 fail-fast.
+    SECRET_KEY: str = ""
     UPLOAD_DIR: str = "uploads"
 
     # AWS Bedrock (Claude AI 분석)
@@ -30,3 +32,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# SECRET_KEY fail-fast — 누락·평문 기본값이면 즉시 기동 중단.
+# JWT 위조 위험을 막기 위함이며 운영뿐 아니라 dev 환경도 동일 기준을 적용한다.
+if not settings.SECRET_KEY or len(settings.SECRET_KEY) < 32:
+    raise RuntimeError(
+        "SECRET_KEY 가 backend/.env 에 설정되지 않았거나 32자 미만입니다.\n"
+        "  → openssl rand -hex 32 결과를 backend/.env 의 SECRET_KEY= 에 붙여 넣으세요."
+    )

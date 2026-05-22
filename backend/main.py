@@ -26,17 +26,25 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# CORS 허용 origin 은 backend/.env 의 CORS_ORIGINS 에서 콤마 구분으로 받는다.
+# 기본값은 localhost:3000 만 — LAN IP / 운영 도메인은 .env 에서 추가.
+_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_origins = [o.strip() for o in _origins_raw.split(",") if o.strip()]
+
 _cors_kwargs = dict(
-    allow_origins=[
-        "http://localhost:3000",
-        "http://121.152.118.40:3000",  # LAN 접속 (같은 Wi-Fi 휴대폰)
-    ],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"],
 )
-# ENABLE_TUNNEL_CORS=1 일 때만 trycloudflare.com 와일드카드 허용 (임시 시연용)
+# ENABLE_TUNNEL_CORS=1 일 때만 trycloudflare.com 와일드카드 허용 (임시 시연용).
+# production(ENV=production) 에서는 절대 켜지지 않도록 fail-fast.
 if os.getenv("ENABLE_TUNNEL_CORS") == "1":
+    if os.getenv("ENV", "").lower() == "production":
+        raise RuntimeError(
+            "ENABLE_TUNNEL_CORS=1 은 production 에서 사용할 수 없습니다. "
+            "고정 도메인은 CORS_ORIGINS env 에 등록하세요."
+        )
     _cors_kwargs["allow_origin_regex"] = r"https://.*\.trycloudflare\.com"
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 

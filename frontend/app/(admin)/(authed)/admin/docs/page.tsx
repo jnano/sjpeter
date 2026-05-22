@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.275";
+export const CURRENT_VERSION = "1.5.276";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,15 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.276", date: "2026-05-22", tag: "수정",
+    items: [
+      "보안 강화 — JWT SECRET_KEY 가드 + CORS env 분리 + 터널 CORS production 차단",
+      "  · SECRET_KEY default 평문 'change-this-in-production' 제거 → 빈 문자열 + length<32 시 startup fail-fast",
+      "  · CORS allow_origins 를 코드 박힘 → backend/.env 의 CORS_ORIGINS env 로 분리 (LAN IP·운영 도메인은 .env 에서 관리)",
+      "  · ENABLE_TUNNEL_CORS=1 이면서 ENV=production 이면 startup fail-fast (임시 시연용 와일드카드가 운영에 잘못 켜지는 사고 차단)",
+    ],
+  },
   {
     version: "1.5.275", date: "2026-05-22", tag: "수정",
     items: [
