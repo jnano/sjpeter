@@ -120,13 +120,19 @@ export default function ExtractionsPage() {
     if (res.ok) {
       const data: Extraction[] = await res.json();
       setExtractions(data);
+      const today = new Date().toISOString().slice(0, 10);
       // AI 추출 후보로 reviewByExt prefill (관리자가 수정 가능)
+      // 옛 주보를 늦게 등록한 경우 — AI 는 future 라도 오늘 이전 날짜면 past 로 보정
       setReviewByExt((prev) => {
         const next = { ...prev };
         for (const e of data) {
           if (!next[e.id]) {
+            let tk = e.temporal_kind ?? "unknown";
+            if (tk === "future" && e.event_date && e.event_date < today) {
+              tk = "past";
+            }
             next[e.id] = {
-              temporal_kind: e.temporal_kind ?? "unknown",
+              temporal_kind: tk,
               group_ids: [],  // 카탈로그 도착 후 후보 매칭 (별도 effect)
               notify: true,
             };

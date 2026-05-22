@@ -686,6 +686,13 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         temporal_kind = (ev.get("temporal_kind") or "unknown").strip().lower()
         if temporal_kind not in ("future", "timeless", "past", "unknown"):
             temporal_kind = "unknown"
+        # AI 는 주보 발행일 기준 판단(예: 발행일 5/15, 행사 5/17 → future).
+        # 그러나 옛 주보를 늦게 등록하면 추출 시점(오늘)에는 이미 과거.
+        # event_date 가 오늘 이전이면 future → past 로 보정 (검토자 시점 정렬).
+        if temporal_kind == "future" and parsed_date is not None:
+            from datetime import date as _date
+            if parsed_date < _date.today():
+                temporal_kind = "past"
 
         # 모든 카테고리 — 관리자 검토 대기
         ext = BulletinExtraction(
