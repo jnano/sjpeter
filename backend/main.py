@@ -69,6 +69,8 @@ app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
 from app.api import notifications as notifications_api  # noqa: E402
 app.include_router(notifications_api.router, prefix="/api")
+from app.api import ai_typo_rules as ai_typo_rules_api  # noqa: E402
+app.include_router(ai_typo_rules_api.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(saints.router, prefix="/api")
@@ -1344,6 +1346,24 @@ def _migrate_add_columns():
         ))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_issue_reports_created_at ON issue_reports(created_at DESC)"
+        ))
+
+        # AI 오타 사전 — admin 이 자유 추가 (v1.5.299~)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ai_typo_rules (
+                id SERIAL PRIMARY KEY,
+                wrong VARCHAR(200) NOT NULL UNIQUE,
+                replacement VARCHAR(200) NOT NULL,
+                note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        # 초기 시드 — 하드코딩 사전(전입가경→전입가정) 1건. 중복은 ON CONFLICT 로 skip.
+        conn.execute(text(
+            "INSERT INTO ai_typo_rules (wrong, replacement, note) "
+            "VALUES ('전입가경', '전입가정', 'AI Vision 자주 오인식') "
+            "ON CONFLICT (wrong) DO NOTHING"
         ))
 
         # AI 추출 결과에 시점 분류 + 분과 후보 (v1.5.290~)

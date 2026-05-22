@@ -74,6 +74,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/bulletin/extractions", label: "AI 추출 검토", badgeKey: "extractions", badgeTone: "violet", aiTag: true },
       { href: "/admin/drafts", label: "AI 임시저장", badgeKey: "drafts", badgeTone: "amber", aiTag: true },
       { href: "/admin/event-mapping", label: "AI 분류설정", aiTag: true },
+      { href: "/admin/ai-typo-rules", label: "AI 오타 사전", aiTag: true },
       { href: "/admin/bulletin/stats", label: "AI 분석 통계", aiTag: true },
     ],
   },

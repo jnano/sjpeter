@@ -53,19 +53,28 @@ _SYSTEM = (
 )
 
 
-# 자주 발견되는 AI 추출 오타 — 1:1 치환만 적용 (정상 단어 오교정 위험 최소화).
-# 새 오타가 패턴화되면 여기에 추가. 향후 site_settings.AI_TYPO_DICT 로 admin 분리 가능.
-AI_TYPO_FIX = {
-    "전입가경": "전입가정",
-}
+def _load_typo_dict(db) -> dict[str, str]:
+    """ai_typo_rules 테이블에서 사전을 매번 fetch. 작은 테이블이라 캐시 없이 충분.
+
+    admin /admin/ai-typo-rules 에서 CRUD 한 변경은 다음 추출부터 즉시 반영.
+    """
+    from sqlalchemy import text as _text
+    try:
+        rows = db.execute(_text("SELECT wrong, replacement FROM ai_typo_rules")).fetchall()
+        return {r.wrong: r.replacement for r in rows}
+    except Exception:
+        return {}
 
 
-def fix_typos(text: str | None) -> str | None:
-    """추출된 텍스트의 알려진 오타를 사전 기반 1:1 치환으로 교정."""
-    if not text:
+def fix_typos(text: str | None, db=None) -> str | None:
+    """추출된 텍스트의 알려진 오타를 사전 기반 1:1 치환으로 교정.
+
+    db session 이 주어지면 ai_typo_rules 사용. 없으면 빈 사전(=원본 그대로).
+    """
+    if not text or db is None:
         return text
     out = text
-    for wrong, right in AI_TYPO_FIX.items():
+    for wrong, right in _load_typo_dict(db).items():
         out = out.replace(wrong, right)
     return out
 

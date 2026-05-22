@@ -668,12 +668,12 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         if _is_fuzzy_duplicate(db, ev.get("title", ""), parsed_date, bulletin_id=bulletin_id):
             continue
 
-        # 알려진 오타 1:1 치환 (현재: 전입가경→전입가정). content/title/location 에 일괄 적용.
+        # 알려진 오타 1:1 치환 — ai_typo_rules 사전 (admin /admin/ai-typo-rules 에서 관리).
         from app.services.claude_analyzer import fix_typos
         event_type = ev.get("event_type") or "모임"
-        title = fix_typos(ev.get("title", "")) or ""
-        content_text = fix_typos(ev.get("content"))
-        ev_location = fix_typos(ev.get("location"))
+        title = fix_typos(ev.get("title", ""), db) or ""
+        content_text = fix_typos(ev.get("content"), db)
+        ev_location = fix_typos(ev.get("location"), db)
 
         # groups 배열(복수) 또는 group_name(단일) 정규화 → group_candidates
         groups_raw = ev.get("groups")
