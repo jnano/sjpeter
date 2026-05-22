@@ -18,8 +18,14 @@ function ResetPasswordForm() {
   const [done, setDone] = useState(false);
 
   function validatePassword(pw: string): string {
+    // backend _validate_password 와 동일 — 8자 + 영문/숫자/특수 중 2종
     if (pw.length < 8) return "8자 이상 입력해 주세요.";
-    if (!SPECIAL.test(pw)) return "특수문자를 포함해야 합니다.";
+    const hasAlpha = /[a-zA-Z]/.test(pw);
+    const hasDigit = /\d/.test(pw);
+    const hasSpecial = SPECIAL.test(pw);
+    if ([hasAlpha, hasDigit, hasSpecial].filter(Boolean).length < 2) {
+      return "영문·숫자·특수문자 중 2종류 이상을 포함해야 합니다.";
+    }
     return "";
   }
 
@@ -90,7 +96,7 @@ function ResetPasswordForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          placeholder="8자 이상, 특수문자 포함"
+          placeholder="8자 이상 · 영문·숫자·특수문자 중 2종"
           className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
             pwError ? "border-red-400" : "border-[var(--color-border)]"
           }`}

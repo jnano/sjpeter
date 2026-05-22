@@ -9,8 +9,14 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 const SPECIAL = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/~`\\]/;
 
 function validatePassword(pw: string): string | null {
+  // backend _validate_password 와 동일 — 8자 + 영문/숫자/특수 중 2종
   if (pw.length < 8) return "비밀번호는 8자 이상이어야 합니다.";
-  if (!SPECIAL.test(pw)) return "비밀번호에 특수문자를 포함해야 합니다.";
+  const hasAlpha = /[a-zA-Z]/.test(pw);
+  const hasDigit = /\d/.test(pw);
+  const hasSpecial = SPECIAL.test(pw);
+  if ([hasAlpha, hasDigit, hasSpecial].filter(Boolean).length < 2) {
+    return "비밀번호는 영문·숫자·특수문자 중 2종류 이상을 포함해야 합니다.";
+  }
   return null;
 }
 
@@ -412,7 +418,7 @@ function PasswordForm({ hasPassword, token }: { hasPassword: boolean; token: str
               ? "border-red-300 focus:border-red-400 focus:ring-red-300"
               : "border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
           }`}
-          placeholder="8자 이상, 특수문자 포함"
+          placeholder="8자 이상 · 영문·숫자·특수문자 중 2종"
         />
         {newPw && validatePassword(newPw) && (
           <p className="mt-1 text-xs text-red-500">{validatePassword(newPw)}</p>
@@ -457,7 +463,7 @@ function PasswordForm({ hasPassword, token }: { hasPassword: boolean; token: str
 
 // ── 메인 페이지 ────────────────────────────────────────────
 export default function MypagePage() {
-  const { data: session, update } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [member, setMember] = useState<MemberInfo | null>(null);
   const [posts, setPosts] = useState<MyPost[]>([]);
@@ -473,9 +479,21 @@ export default function MypagePage() {
   const [savingNotify, setSavingNotify] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 미로그인 사용자가 직접 /members/me 접근 시 로그인 페이지로 보냄.
+  // status === "loading" 동안은 대기 (initial SSR 깜박임 회피).
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/members/login?callbackUrl=/members/me");
+    }
+  }, [status, router]);
+
   useEffect(() => {
     const token = session?.accessToken;
-    if (!token) return;
+    if (!token) {
+      // status 가 unauthenticated 면 위 useEffect 가 redirect, 그 외엔 단순 대기.
+      if (status !== "loading") setLoading(false);
+      return;
+    }
     const headers = { Authorization: `Bearer ${token}` };
     const safeJson = async (r: Response) => (r.ok ? r.json() : null);
     Promise.all([
@@ -684,7 +702,10 @@ export default function MypagePage() {
                         localStorage.setItem("admin_display_name", data.display_name);
                         localStorage.setItem("admin_role", data.role);
                         localStorage.setItem("admin_is_super", String(data.is_super_admin));
-                        document.cookie = `admin_authed=1; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+                        const secure = window.location.protocol === "https:" ? "; Secure" : "";
+                        document.cookie = `admin_authed=1; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax${secure}`;
+                        // admin_token 도 cookie 로 (v1.5.281 — backend 가 cookie fallback 지원)
+                        document.cookie = `admin_token=${data.access_token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax${secure}`;
                       }
                       router.push("/admin/dashboard");
                     }}
@@ -705,6 +726,7 @@ export default function MypagePage() {
                       localStorage.removeItem("admin_role");
                       localStorage.removeItem("admin_is_super");
                       document.cookie = "admin_authed=; path=/; max-age=0";
+                      document.cookie = "admin_token=; path=/; max-age=0";
                     }
                     signOut({ callbackUrl: "/" });
                   }}
@@ -713,7 +735,12 @@ export default function MypagePage() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm("정말 탈퇴하시겠습니까?\n작성한 게시글과 댓글이 모두 삭제됩니다.")) return;
+                    if (!confirm(
+                      "정말 탈퇴하시겠습니까?\n\n" +
+                      "• 프로필 정보(이름·세례명·전화번호·아바타)는 삭제됩니다.\n" +
+                      "• 작성한 글·댓글은 '탈퇴 회원'으로 표시되며 보존됩니다.\n" +
+                      "• 같은 이메일로 다시 가입할 수 있습니다."
+                    )) return;
                     const res = await fetch(`${API}/api/members/me`, {
                       method: "DELETE",
                       headers: { Authorization: `Bearer ${session?.accessToken}` },
@@ -721,7 +748,11 @@ export default function MypagePage() {
                     if (res.ok) {
                       if (member.is_admin) {
                         localStorage.removeItem("admin_token");
+                        localStorage.removeItem("admin_display_name");
+                        localStorage.removeItem("admin_role");
+                        localStorage.removeItem("admin_is_super");
                         document.cookie = "admin_authed=; path=/; max-age=0";
+                        document.cookie = "admin_token=; path=/; max-age=0";
                       }
                       signOut({ callbackUrl: "/" });
                     }

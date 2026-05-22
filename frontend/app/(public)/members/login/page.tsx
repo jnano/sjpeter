@@ -47,7 +47,23 @@ function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      // NextAuth 는 generic error 만 반환 — 비활성 계정 등 정확한 사유를 보여주기 위해
+      // backend 에 한 번 더 직접 호출. status 403(비활성)·401(자격 불일치) 분기.
+      try {
+        const res = await fetch(`${API}/api/members/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          setError(data.detail || "비활성화된 계정입니다. 관리자에게 문의하세요.");
+        } else {
+          setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+      } catch {
+        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      }
     } else {
       router.push(callbackUrl);
     }

@@ -7,8 +7,14 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 const SPECIAL = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/~`\\]/;
 
 function validatePassword(pw: string): string | null {
+  // backend _validate_password 와 동일 — 8자 + 영문/숫자/특수 중 2종
   if (pw.length < 8) return "비밀번호는 8자 이상이어야 합니다.";
-  if (!SPECIAL.test(pw)) return "비밀번호에 특수문자를 포함해야 합니다.";
+  const hasAlpha = /[a-zA-Z]/.test(pw);
+  const hasDigit = /\d/.test(pw);
+  const hasSpecial = SPECIAL.test(pw);
+  if ([hasAlpha, hasDigit, hasSpecial].filter(Boolean).length < 2) {
+    return "비밀번호는 영문·숫자·특수문자 중 2종류 이상을 포함해야 합니다.";
+  }
   return null;
 }
 
@@ -205,7 +211,7 @@ export default function RegisterPage() {
                   ? "border-red-300 focus:ring-red-300"
                   : ""
               }`}
-              placeholder="8자 이상, 특수문자 포함"
+              placeholder="8자 이상 · 영문·숫자·특수문자 중 2종"
             />
             {form.password && validatePassword(form.password) && (
               <p className="mt-1 text-xs text-red-500">{validatePassword(form.password)}</p>

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.281";
+export const CURRENT_VERSION = "1.5.282";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,17 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.282", date: "2026-05-22", tag: "수정",
+    items: [
+      "회원 페이지 UX 일관성 보강 5건",
+      "  · 비밀번호 정책 frontend↔backend 통일 — register/reset-password/me 3곳의 validatePassword 와 placeholder 를 backend v1.5.280 정책(영문·숫자·특수 중 2종)에 맞춤. 'abcd1234' frontend 거부됐다가 backend 통과되는 모순 제거",
+      "  · 회원 탈퇴 confirm 메시지를 soft delete(v1.5.279) 동작에 맞춤 — '글·댓글 삭제' 오안내 → '탈퇴 회원으로 표시·보존' 정확 안내",
+      "  · 비활성 계정 로그인 시 정확한 사유 표시 — NextAuth generic error 대신 backend 직접 호출로 status 403(비활성)·401(자격 불일치) 분기",
+      "  · 마이페이지 미로그인 사용자 무한 로딩 차단 — status === 'unauthenticated' 면 /members/login?callbackUrl=/members/me 로 redirect",
+      "  · 마이페이지 admin 페이지 이동·로그아웃·탈퇴 시 admin_token cookie 처리 추가 (v1.5.281 도입한 cookie fallback 흐름 일관성)",
+    ],
+  },
   {
     version: "1.5.281", date: "2026-05-22", tag: "기능",
     items: [
