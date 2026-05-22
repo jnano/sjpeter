@@ -135,9 +135,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
 
       if (account?.provider === "google" || account?.provider === "kakao") {
         try {
+          // server-only INTERNAL_API_SECRET — backend 가 X-Internal-Secret 헤더로 NextAuth 호출인지 검증.
+          const internalSecret = process.env.INTERNAL_API_SECRET ?? "";
+          const headers: HeadersInit = { "Content-Type": "application/json" };
+          if (internalSecret) headers["X-Internal-Secret"] = internalSecret;
           const res = await fetch(`${API}/api/members/social-login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({
               provider: account.provider,
               provider_id: account.providerAccountId,

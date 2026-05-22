@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # CORS 허용 origin (콤마 구분). 기본은 localhost:3000 만 — LAN IP·운영 도메인은 .env 에서.
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Next.js 서버(NextAuth) → backend internal endpoint 인증용 shared secret.
+    # 빈 값이면 X-Internal-Secret 검증을 건너뛴다 (dev 편의). 운영에선 반드시 32자+ 채울 것.
+    INTERNAL_API_SECRET: str = ""
+
     class Config:
         env_file = ".env"
 

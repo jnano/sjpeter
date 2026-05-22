@@ -5,7 +5,7 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 import csv
 import io
@@ -400,7 +400,28 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/social-login", response_model=TokenResponse)
-def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
+def social_login(request: Request, body: SocialLoginRequest, db: Session = Depends(get_db)):
+    """소셜 로그인 — Next.js 서버(NextAuth) 만 호출 가능.
+
+    누구나 직접 호출하면 provider_id 임의 박아 타인의 social 계정으로
+    로그인 가능한 위험이 있어 2중 방어:
+      1) localhost IP 만 허용 (단일 머신 운영 가정)
+      2) X-Internal-Secret 헤더가 backend INTERNAL_API_SECRET 과 일치
+         (reverse proxy 뒤에서 client.host 가 항상 127.0.0.1 로 보이는 경우 대비)
+    NextAuth callbacks 은 server-side 실행이라 BACKEND_INTERNAL_URL +
+    process.env.INTERNAL_API_SECRET 으로 backend 호출 → 통과.
+    """
+    client = request.client.host if request.client else ""
+    if client not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(status_code=403, detail="Internal endpoint")
+
+    # INTERNAL_API_SECRET 이 설정돼 있으면 헤더 검증. dev 에서 비어있으면 IP 검증만.
+    expected = (settings.INTERNAL_API_SECRET or "").strip()
+    if expected:
+        provided = request.headers.get("X-Internal-Secret", "").strip()
+        if not secrets.compare_digest(provided, expected):
+            raise HTTPException(status_code=403, detail="Internal endpoint")
+
     member = db.query(Member).filter(
         Member.social_provider == body.provider,
         Member.social_id == body.provider_id,
@@ -619,18 +640,43 @@ def delete_me(
     db: Session = Depends(get_db),
     current: Member = Depends(get_current_member),
 ):
-    """회원 탈퇴 — 댓글·게시글·아바타 파일 포함 삭제."""
-    from sqlalchemy import text
+    """회원 탈퇴 — 소프트 삭제.
 
-    # 아바타 파일 삭제
+    이전엔 댓글·게시글·members row 까지 hard DELETE 했으나, 다른 회원이
+    탈퇴 회원의 글에 단 답글·댓글 트리가 끊기는 문제가 있었다.
+    CLAUDE.md "소프트 삭제: is_deleted 필드로 관리" 원칙에도 위배.
+
+    이제는 PII 만 제거하고 글·댓글은 유지:
+      - is_active=FALSE (로그인 차단)
+      - nickname → "탈퇴 회원" (게시판에서 마스킹 표시)
+      - email → "deleted-{id}@deleted.local" (UNIQUE NOT NULL 충족 + 재가입 가능)
+      - name·phone·hashed_password·social_*·avatar_url 모두 NULL
+      - avatar 파일은 디스크에서 삭제
+    """
+    # 아바타 파일 삭제 (디스크에서)
     if current.avatar_url and current.avatar_url.startswith("/uploads/avatars/"):
         old_path = os.path.join(settings.UPLOAD_DIR, current.avatar_url.lstrip("/uploads/"))
         if os.path.exists(old_path):
-            os.remove(old_path)
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
 
-    db.execute(text("DELETE FROM comments WHERE member_id = :id"), {"id": current.id})
-    db.execute(text("DELETE FROM posts WHERE member_id = :id"), {"id": current.id})
-    db.execute(text("DELETE FROM members WHERE id = :id"), {"id": current.id})
+    current.is_active = False
+    current.nickname = "탈퇴 회원"
+    current.email = f"deleted-{current.id}@deleted.local"
+    current.name = None
+    current.phone = None
+    current.hashed_password = None
+    current.social_provider = None
+    current.social_id = None
+    current.avatar_url = None
+    current.receive_notification = False
+    current.notify_kakao = False
+    current.is_email_verified = False
+    current.interest_prompt_completed = False
+    current.name_day_month = None
+    current.name_day_day = None
     db.commit()
 
 
@@ -738,28 +784,59 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
 # ── 비밀번호 찾기 ──────────────────────────────────────────
 
+def _create_and_send_reset_token(member_id: int) -> None:
+    """비밀번호 재설정 토큰 발급 + 이메일 발송 — background task 용.
+
+    별도 DB 세션을 열어 응답 흐름과 분리한다. 응답 latency 가 회원 존재
+    여부에 따라 차이 나지 않도록 (timing attack 차단) forgot_password 는
+    이 함수를 BackgroundTasks 로 위임하고 즉시 응답한다.
+    """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        m = db.get(Member, member_id)
+        if not m or not m.is_active or not m.hashed_password:
+            return
+
+        db.execute(text(
+            "UPDATE password_reset_tokens SET used = TRUE WHERE member_id = :mid AND used = FALSE"
+        ), {"mid": m.id})
+
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+        db.execute(text(
+            "INSERT INTO password_reset_tokens (member_id, token, expires_at) VALUES (:mid, :token, :exp)"
+        ), {"mid": m.id, "token": token, "exp": expires_at})
+        db.commit()
+
+        reset_url = f"{get_setting('SITE_URL', settings.SITE_URL)}/members/reset-password?token={token}"
+        try:
+            _send_reset_email(m.email, reset_url, m.nickname)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("[forgot-password] 메일 발송 실패 member_id=%s: %s", m.id, exc)
+    finally:
+        db.close()
+
+
 @router.post("/forgot-password", status_code=200)
 @limiter.limit("3/minute")
-def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """비밀번호 재설정 이메일 발송 (이메일 미존재 여부는 노출하지 않음)."""
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """비밀번호 재설정 이메일 발송 — 회원 존재 여부 노출하지 않음.
+
+    응답 latency 가 회원 존재 여부에 영향 받지 않도록 토큰 생성·이메일
+    발송을 BackgroundTasks 로 위임한다 (timing attack 으로 회원 enumeration
+    하는 시도를 차단).
+    """
     member = db.query(Member).filter(Member.email == body.email, Member.is_active == True).first()
-    if not member or not member.hashed_password:
-        return {"message": "이메일 주소로 재설정 링크를 보냈습니다."}
-
-    # 기존 미사용 토큰 무효화
-    db.execute(text(
-        "UPDATE password_reset_tokens SET used = TRUE WHERE member_id = :mid AND used = FALSE"
-    ), {"mid": member.id})
-
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=1)
-    db.execute(text(
-        "INSERT INTO password_reset_tokens (member_id, token, expires_at) VALUES (:mid, :token, :exp)"
-    ), {"mid": member.id, "token": token, "exp": expires_at})
-    db.commit()
-
-    reset_url = f"{get_setting("SITE_URL", settings.SITE_URL)}/members/reset-password?token={token}"
-    _send_reset_email(member.email, reset_url, member.nickname)
+    if member and member.hashed_password:
+        background_tasks.add_task(_create_and_send_reset_token, member.id)
+    # 회원 존재·미존재 모두 같은 메시지·같은 흐름 — latency 균일.
     return {"message": "이메일 주소로 재설정 링크를 보냈습니다."}
 
 
@@ -993,18 +1070,44 @@ def admin_delete_member(
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
+    """admin 이 회원을 삭제. 본인 탈퇴(DELETE /me)와 동일한 소프트 삭제 적용.
+
+    이전엔 hard DELETE 라 회원의 글·댓글이 모두 사라져 게시판 흐름이 끊겼다.
+    이제는 PII 만 제거하고 글·댓글은 보존, nickname 은 '탈퇴 회원' 으로 마스킹.
+    """
     member = _get_member_or_404(member_id, db)
     # 자기 자신 삭제 방지
     if isinstance(_admin, Member) and _admin.id == member.id:
         raise HTTPException(status_code=400, detail="자신을 삭제할 수 없습니다.")
-    member_email = member.email
-    from sqlalchemy import text
-    # 댓글 → 게시글 → 회원 순서로 삭제 (FK 제약 우회)
-    db.execute(text("DELETE FROM comments WHERE member_id = :id"), {"id": member_id})
-    db.execute(text("DELETE FROM posts WHERE member_id = :id"), {"id": member_id})
-    db.execute(text("DELETE FROM members WHERE id = :id"), {"id": member_id})
+    original_email = member.email
+
+    # 아바타 파일 삭제
+    if member.avatar_url and member.avatar_url.startswith("/uploads/avatars/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, member.avatar_url.lstrip("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+    member.is_active = False
+    member.nickname = "탈퇴 회원"
+    member.email = f"deleted-{member.id}@deleted.local"
+    member.name = None
+    member.phone = None
+    member.hashed_password = None
+    member.social_provider = None
+    member.social_id = None
+    member.avatar_url = None
+    member.receive_notification = False
+    member.notify_kakao = False
+    member.is_email_verified = False
+    member.interest_prompt_completed = False
+    member.name_day_month = None
+    member.name_day_day = None
+    member.is_admin = False  # 권한도 회수
     db.commit()
-    log_action(db, get_admin_identifier(_admin), "delete_member", "member", member_id, member_email)
+    log_action(db, get_admin_identifier(_admin), "delete_member", "member", member_id, original_email)
     return {"ok": True}
 
 

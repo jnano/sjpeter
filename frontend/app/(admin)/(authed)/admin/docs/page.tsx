@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.278";
+export const CURRENT_VERSION = "1.5.279";
 export const LAST_UPDATED = "2026-05-22";
 
 // 버전 규칙:
@@ -15,6 +15,16 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.279", date: "2026-05-22", tag: "수정",
+    items: [
+      "회원 시스템 보안 강화 3건 — 출시 전 점검 항목",
+      "  · /api/members/social-login 2중 방어: localhost IP 검증 + X-Internal-Secret 헤더 검증. NextAuth 외 직접 호출로 타인 소셜 ID 도용 차단",
+      "  · INTERNAL_API_SECRET env 신설 (backend/.env, frontend/.env.local 동일 값). NEXT_PUBLIC_ 접두사 없음 = 브라우저 미노출",
+      "  · 회원 탈퇴 hard delete → soft delete: is_active=FALSE + PII NULL + nickname '탈퇴 회원' + email 'deleted-{id}@deleted.local'. 본인 탈퇴(DELETE /me) + admin 삭제(DELETE /admin/{id}) 양쪽 동일. 글·댓글 보존되어 게시판 흐름 끊김 방지 (CLAUDE.md 소프트 삭제 원칙 일치)",
+      "  · /api/members/forgot-password timing 균일화: 토큰 생성·이메일 발송을 BackgroundTasks 로 위임 → 회원 존재/미존재 응답 latency 동일 (회원 enumeration 차단). 검증: 두 케이스 모두 ~30ms",
+    ],
+  },
   {
     version: "1.5.278", date: "2026-05-22", tag: "수정",
     items: [
