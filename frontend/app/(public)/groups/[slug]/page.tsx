@@ -137,12 +137,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           {group.photo_urls && group.photo_urls.length > 0 && (
             <section>
               {group.photo_urls.length === 1 ? (
-                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-[var(--color-border)]">
+                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-warm)]">
                   <Image
                     src={group.photo_urls[0].startsWith("http") ? group.photo_urls[0] : `${API}${group.photo_urls[0]}`}
                     alt={`${group.name} 사진`}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 768px) 100vw, 720px"
                     priority
                   />
@@ -150,12 +150,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
               ) : group.photo_display_mode === "grid" ? (
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {group.photo_urls.map((url, i) => (
-                    <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-[var(--color-border)]">
+                    <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-warm)]">
                       <Image
                         src={url.startsWith("http") ? url : `${API}${url}`}
                         alt={`${group.name} 사진 ${i + 1}`}
                         fill
-                        className="object-cover"
+                        className="object-contain"
                         sizes="(max-width: 640px) 50vw, 50vw"
                       />
                     </div>

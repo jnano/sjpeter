@@ -30,7 +30,7 @@ export default function CommunitySlideshow({ photos, alt, intervalMs = 5000, dur
 
   return (
     <div
-      className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-[var(--color-border)] bg-gray-100"
+      className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-warm)]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -40,7 +40,7 @@ export default function CommunitySlideshow({ photos, alt, intervalMs = 5000, dur
           src={url.startsWith("http") ? url : `${API}${url}`}
           alt={`${alt} ${i + 1}`}
           fill
-          className="object-cover transition-opacity"
+          className="object-contain transition-opacity"
           style={{
             opacity: i === index ? 1 : 0,
             transitionDuration: `${durationMs}ms`,
