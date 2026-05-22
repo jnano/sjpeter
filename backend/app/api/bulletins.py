@@ -1914,33 +1914,71 @@ class SplitByDatesBody(BaseModel):
 
 # 본문에 등장하는 'M/D' 또는 'M/D(요일)' 패턴 — 같은 행사에 여러 날짜가 나열될 때
 _DATE_PATTERN = re.compile(r'(\b\d{1,2})/(\d{1,2})(?:\s*\(([월화수목금토일])요?일?\))?')
+# 한국어 표기 'M월 D일' 또는 'M월 D일(요일)' — 슬래시 표기와 동등 처리
+_DATE_PATTERN_KO = re.compile(r'(\d{1,2})월\s*(\d{1,2})일(?:\s*\(([월화수목금토일])요?일?\))?')
+# 범위 표기 — 같은 형식의 두 날짜 사이에 ~ - – — 중 하나. 시작 날짜의 (요일) 부분도 흡수.
+_RANGE_SLASH = re.compile(
+    r'(\d{1,2})/(\d{1,2})(?:\s*\([월화수목금토일]요?일?\))?'
+    r'\s*[~\-–—]\s*'
+    r'(\d{1,2})/(\d{1,2})'
+)
+_RANGE_KO = re.compile(
+    r'(\d{1,2})월\s*(\d{1,2})일(?:\s*\([월화수목금토일]요?일?\))?'
+    r'\s*[~\-–—]\s*'
+    r'(\d{1,2})월\s*(\d{1,2})일'
+)
 
 
 def _filter_content_for_date(content: str | None, target: "date") -> str | None:
     """split-by-dates 시 분리된 행의 content 에서 target_date 외 M/D 토큰 제거.
 
     줄 단위 처리:
-    - 줄에 M/D 가 없음: 그대로 유지 (공통 안내문)
-    - 줄에 M/D 가 있으나 모두 target 과 불일치: 줄 제거
-    - 줄에 M/D 가 여러 개이고 일부만 target 일치: 일치 토큰만 남기고 다른 M/D(±요일)
-      토큰을 제거. 후처리로 연속 쉼표/공백 정리.
+    - 줄에 날짜 범위(M/D ~ M/D 또는 M월D일~M월D일) 가 있고 target 이 그 안에 포함:
+      줄 그대로 유지 (range 안내문 보존)
+    - 줄에 날짜가 없음: 그대로 유지 (공통 안내문)
+    - 줄에 날짜가 있으나 모두 target 과 불일치: 줄 제거
+    - 줄에 날짜가 여러 개이고 일부만 target 일치: 일치 토큰만 남기고 다른 토큰
+      (요일 부분 포함) 제거. 후처리로 연속 쉼표/공백 정리.
 
-    이렇게 하면 다음 호 주보에 같은 날짜의 같은 행사가 추출됐을 때 fuzzy duplicate
-    (제목 + event_date) 매칭이 잘 동작 — 본문이 해당 날짜만 남아 거의 일치하기 때문.
+    M/D 슬래시·M월 D일 한국어 두 표기 모두 인식.
     """
     if not content:
         return content
     target_md = (target.month, target.day)
 
+    def range_contains_target(line: str) -> bool:
+        for m in _RANGE_SLASH.finditer(line):
+            m1, d1, m2, d2 = (int(m.group(i)) for i in (1, 2, 3, 4))
+            try:
+                start = date(target.year, m1, d1)
+                end = date(target.year, m2, d2)
+            except ValueError:
+                continue
+            if start <= target <= end:
+                return True
+        for m in _RANGE_KO.finditer(line):
+            m1, d1, m2, d2 = (int(m.group(i)) for i in (1, 2, 3, 4))
+            try:
+                start = date(target.year, m1, d1)
+                end = date(target.year, m2, d2)
+            except ValueError:
+                continue
+            if start <= target <= end:
+                return True
+        return False
+
     def filter_line(line: str) -> str | None:
-        matches = list(_DATE_PATTERN.finditer(line))
+        if range_contains_target(line):
+            return line  # 범위 줄 안에 target 포함 — 그대로
+        matches = list(_DATE_PATTERN.finditer(line)) + list(_DATE_PATTERN_KO.finditer(line))
         if not matches:
-            return line  # M/D 없음 — 그대로
+            return line  # 날짜 없음 — 그대로
         if not any((int(m.group(1)), int(m.group(2))) == target_md for m in matches):
             return None  # 모두 불일치 — 줄 제거
-        # 일부 일치 — 불일치 매치만 (요일 포함해서) 제거
+        # 일부 일치 — 불일치 토큰만 제거. 위치 역순(겹치는 인덱스 보호).
+        sorted_matches = sorted(matches, key=lambda m: m.start(), reverse=True)
         out = line
-        for m in reversed(matches):
+        for m in sorted_matches:
             if (int(m.group(1)), int(m.group(2))) == target_md:
                 continue
             out = out[:m.start()] + out[m.end():]
@@ -1961,36 +1999,76 @@ def _filter_content_for_date(content: str | None, target: "date") -> str | None:
 
 
 def _extract_dates_from_text(text: str, base_year: int, base_date: "date | None") -> list[date]:
-    """본문에서 M/D 또는 M/D(요일) 패턴을 모두 찾아 date 리스트로 변환.
-    base_year: 기본 연도. M/D 가 base_date 보다 6개월 이상 이전이면 다음 해로 처리.
-    중복 제거, 발행순 정렬."""
+    """본문에서 날짜 패턴을 모두 찾아 date 리스트로 변환.
+
+    지원 표기:
+    - M/D 또는 M/D(요일)
+    - M월 D일 또는 M월 D일(요일)
+    - 범위: M/D ~ M/D, M월 D일 ~ M월 D일 (~ - – — 중 어느 구분자든) →
+      시작·종료 사이 모든 날짜 enumerate (최대 60일 cap — 의도 외 거대 범위 방어)
+
+    중복 제거, 날짜순 정렬. base_date 보다 6개월 이상 이전이면 다음 해로 처리.
+    """
     if not text:
         return []
+    from datetime import timedelta as _td
     results: list[date] = []
     seen: set[tuple[int, int]] = set()
-    for m in _DATE_PATTERN.finditer(text):
+
+    def adjusted(mo: int, dy: int) -> "date | None":
+        if not (1 <= mo <= 12 and 1 <= dy <= 31):
+            return None
         try:
-            mo = int(m.group(1))
-            dy = int(m.group(2))
-            if not (1 <= mo <= 12 and 1 <= dy <= 31):
-                continue
-            if (mo, dy) in seen:
-                continue
-            seen.add((mo, dy))
-            year = base_year
+            d = date(base_year, mo, dy)
+        except ValueError:
+            return None
+        if base_date and (base_date - d).days > 180:
             try:
-                d = date(year, mo, dy)
+                d = date(base_year + 1, mo, dy)
             except ValueError:
-                continue
-            # base_date 보다 6개월 이상 이전이면 다음 해로 (예: 발행 12월, 본문에 1월 = 다음해)
-            if base_date and (base_date - d).days > 180:
-                try:
-                    d = date(year + 1, mo, dy)
-                except ValueError:
-                    continue
-            results.append(d)
-        except (ValueError, IndexError):
-            continue
+                return None
+        return d
+
+    def add_one(mo: int, dy: int) -> None:
+        if (mo, dy) in seen:
+            return
+        d = adjusted(mo, dy)
+        if d is None:
+            return
+        seen.add((mo, dy))
+        results.append(d)
+
+    def add_range(m1: int, d1: int, m2: int, d2: int) -> None:
+        start = adjusted(m1, d1)
+        end = adjusted(m2, d2)
+        if start is None or end is None:
+            return
+        if end < start:
+            try:
+                end = date(end.year + 1, end.month, end.day)
+            except ValueError:
+                return
+        if (end - start).days > 60:
+            return  # 의도 외 거대 범위 방어
+        cur = start
+        while cur <= end:
+            if (cur.month, cur.day) not in seen:
+                seen.add((cur.month, cur.day))
+                results.append(cur)
+            cur += _td(days=1)
+
+    # 1) 범위 먼저 — enumerate 된 날짜들이 우선 들어가야 단일 매치에서 중복 처리 안전.
+    for m in _RANGE_SLASH.finditer(text):
+        add_range(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+    for m in _RANGE_KO.finditer(text):
+        add_range(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+
+    # 2) 단일 — 슬래시 + 한국어 표기. 이미 범위로 잡힌 (mo,dy) 는 seen 으로 skip.
+    for m in _DATE_PATTERN.finditer(text):
+        add_one(int(m.group(1)), int(m.group(2)))
+    for m in _DATE_PATTERN_KO.finditer(text):
+        add_one(int(m.group(1)), int(m.group(2)))
+
     results.sort()
     return results
 
