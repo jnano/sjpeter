@@ -13,6 +13,13 @@ interface VisionPayload {
   is_current: boolean;
 }
 
+interface MeditationPayload {
+  title: string;
+  body: string;
+  author: string;
+  is_published: boolean;
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Extraction {
@@ -255,6 +262,26 @@ export default function ExtractionsPage() {
       notify(DataEvent.EXTRACTIONS_COUNT);
     } catch (err) {
       setError(err instanceof Error ? err.message : "본당 사목지표 등록에 실패했습니다.");
+    } finally {
+      setProcessing((p) => ({ ...p, [ext.id]: false }));
+    }
+  }
+
+  async function approveAsMeditation(ext: Extraction, payload: MeditationPayload) {
+    setError("");
+    setProcessing((p) => ({ ...p, [ext.id]: true }));
+    try {
+      const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-meditation`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "묵상 등록 실패");
+      const updated: Extraction = await res.json();
+      setExtractions((prev) => prev.map((e) => (e.id === ext.id ? updated : e)));
+      notify(DataEvent.EXTRACTIONS_COUNT);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "묵상 등록에 실패했습니다.");
     } finally {
       setProcessing((p) => ({ ...p, [ext.id]: false }));
     }
@@ -643,6 +670,7 @@ export default function ExtractionsPage() {
                         onApprove={() => approve(ext)}
                         onApproveAsEvent={(mirrorBoardSlug) => approveAsEvent(ext, mirrorBoardSlug)}
                         onApproveAsVision={(payload) => approveAsVision(ext, payload)}
+                        onApproveAsMeditation={(payload) => approveAsMeditation(ext, payload)}
                         onReject={() => reject(ext.id)}
                         onEdit={() => startEdit(ext)}
                         onSplitByDates={() => splitByDates(ext.id)}
@@ -710,6 +738,7 @@ function ExtractionCard({
   onApprove,
   onApproveAsEvent,
   onApproveAsVision,
+  onApproveAsMeditation,
   onReject,
   onEdit,
   onSplitByDates,
@@ -725,6 +754,7 @@ function ExtractionCard({
   onApprove: () => void;
   onApproveAsEvent: (mirrorBoardSlug?: string) => void;
   onApproveAsVision: (payload: VisionPayload) => void;
+  onApproveAsMeditation: (payload: MeditationPayload) => void;
   onReject: () => void;
   onEdit?: () => void;
   onSplitByDates?: () => void;
@@ -734,6 +764,9 @@ function ExtractionCard({
   onReviewChange: (patch: Partial<ReviewState>) => void;
 }) {
   const isVision = ext.event_type === "지표";
+  const isMeditation = ext.event_type === "묵상";
+  // 지표·묵상은 일반 게시판/캘린더 라우팅과 분리 — 검토 영역(시점·분과·알림)도 노출 안 함.
+  const isSpecial = isVision || isMeditation;
   // 캘린더 등록 시 같은 행사 카드를 게시판에 미러할지 옵션 (시나리오 A)
   const [mirrorEnabled, setMirrorEnabled] = useState(false);
   const [mirrorBoardSlug, setMirrorBoardSlug] = useState<string>("");
@@ -750,6 +783,8 @@ function ExtractionCard({
             className={`text-xs px-2 py-0.5 rounded-full mr-2 border ${
               isVision
                 ? "bg-violet-50 border-violet-200 text-violet-700 font-semibold"
+                : isMeditation
+                ? "bg-teal-50 border-teal-200 text-teal-700 font-semibold"
                 : "bg-[var(--color-surface-warm)] border-[var(--color-border)] text-[var(--color-text-muted)]"
             }`}
           >
@@ -769,7 +804,7 @@ function ExtractionCard({
               편집
             </button>
           )}
-          {onSplitByDates && !isVision && distinctDateCount >= 2 && (
+          {onSplitByDates && !isSpecial && distinctDateCount >= 2 && (
             <button
               onClick={onSplitByDates}
               className="text-xs text-emerald-700 hover:underline"
@@ -793,8 +828,8 @@ function ExtractionCard({
         </p>
       )}
 
-      {/* 검토 영역 — 시점·대상 분과·알림 (지표가 아닌 항목에만 표시) */}
-      {!isVision && (
+      {/* 검토 영역 — 시점·대상 분과·알림 (지표·묵상 제외) */}
+      {!isSpecial && (
         <div className="bg-[var(--color-surface-warm)]/60 border border-[var(--color-border)] rounded-lg p-3 space-y-2 text-xs">
           {/* 시점 분류 */}
           <div className="flex items-center gap-3 flex-wrap">
@@ -892,8 +927,18 @@ function ExtractionCard({
         />
       )}
 
-      {/* 액션 영역 — 지표가 아닐 때만 게시판/캘린더 등록 표시 */}
-      {!isVision && (
+      {/* 묵상 등록 인라인 폼 (event_type='묵상' 전용) */}
+      {isMeditation && (
+        <MeditationApproveForm
+          ext={ext}
+          processing={processing}
+          onApprove={onApproveAsMeditation}
+          onReject={onReject}
+        />
+      )}
+
+      {/* 액션 영역 — 지표·묵상 제외 (별도 폼이 그 자리 차지) */}
+      {!isSpecial && (
         <div className="pt-1 space-y-2">
           {/* 게시판 승인 행 */}
           <div className="flex gap-2">
@@ -1049,6 +1094,101 @@ function VisionApproveForm({
           onClick={onReject}
           disabled={processing}
           className="px-4 py-2 border border-violet-200 text-violet-700 hover:bg-violet-100 rounded-lg text-sm disabled:opacity-50 transition-colors"
+        >
+          거부
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MeditationApproveForm({
+  ext,
+  processing,
+  onApprove,
+  onReject,
+}: {
+  ext: Extraction;
+  processing: boolean;
+  onApprove: (payload: MeditationPayload) => void;
+  onReject: () => void;
+}) {
+  // AI 가 content 끝에 '글 | 작성자' 식으로 author 를 함께 넣어 보내는 경우가 있어,
+  // 그 패턴을 단순 정규식으로 한 번 분리 시도. 백엔드 _extract_meditation_author 와 비슷한 분할.
+  function splitAuthor(content: string | null): { body: string; author: string } {
+    if (!content) return { body: "", author: "" };
+    const m = content.match(/^([\s\S]*?)\n?\s*글\s*[\|｜]\s*([^\n]+?)\s*$/);
+    if (m) return { body: m[1].trim(), author: m[2].trim() };
+    return { body: content, author: "" };
+  }
+  const initial = splitAuthor(ext.content);
+  const [title, setTitle] = useState<string>(ext.title);
+  const [body, setBody] = useState<string>(initial.body);
+  const [author, setAuthor] = useState<string>(initial.author);
+  const [isPublished, setIsPublished] = useState<boolean>(true);
+
+  return (
+    <div className="mt-1 rounded-lg border border-teal-200 bg-teal-50/60 p-4 space-y-3">
+      <p className="text-xs font-semibold text-teal-800">
+        묵상으로 등록 — meditations 테이블에 저장됩니다
+      </p>
+
+      <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+        <label className="text-xs text-teal-900">제목</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500"
+        />
+
+        <label className="text-xs text-teal-900">작성자</label>
+        <input
+          type="text"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="예: 김아무개 신부 (선택)"
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500"
+        />
+
+        <label className="text-xs text-teal-900 pt-1.5">본문</label>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={5}
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500 leading-relaxed resize-y"
+        />
+      </div>
+
+      <label className="flex items-center gap-2 text-xs text-teal-900 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isPublished}
+          onChange={(e) => setIsPublished(e.target.checked)}
+          className="accent-teal-600"
+        />
+        공개 (홈 묵상 위젯·/word 페이지에 노출, 최신 묵상으로 자동 핀)
+      </label>
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={() =>
+            onApprove({
+              title: title.trim(),
+              body: body.trim(),
+              author: author.trim(),
+              is_published: isPublished,
+            })
+          }
+          disabled={processing || !title.trim() || !body.trim()}
+          className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {processing ? "등록 중…" : "묵상으로 등록"}
+        </button>
+        <button
+          onClick={onReject}
+          disabled={processing}
+          className="px-4 py-2 border border-teal-200 text-teal-700 hover:bg-teal-100 rounded-lg text-sm disabled:opacity-50 transition-colors"
         >
           거부
         </button>

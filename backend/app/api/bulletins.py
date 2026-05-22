@@ -899,6 +899,11 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
             status_code=400,
             detail="지표는 일괄 승인 대상이 아닙니다. approve-as-vision 으로 처리하세요.",
         )
+    if ext.event_type == "묵상":
+        raise HTTPException(
+            status_code=400,
+            detail="묵상은 일괄 승인 대상이 아닙니다. approve-as-meditation 으로 처리하세요.",
+        )
 
     bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
     if not bulletin:
@@ -1241,6 +1246,9 @@ def bulk_approve_extractions(
             continue
         if ext.event_type == "지표":
             skipped.append({"id": ext.id, "reason": "지표는 approve-as-vision 으로 별도 처리"})
+            continue
+        if ext.event_type == "묵상":
+            skipped.append({"id": ext.id, "reason": "묵상은 approve-as-meditation 으로 별도 처리"})
             continue
         # savepoint 로 부분 실패 격리 — 한 건 실패해도 세션 unstable 되지 않음
         sp = db.begin_nested()
@@ -1777,6 +1785,70 @@ def approve_extraction_as_vision(
     db.commit()
     db.refresh(ext)
     log_action(db, get_admin_identifier(admin), "approve_as_vision", "bulletin_extraction", ext.id, f"vision={ext.created_vision_id} year={year}")
+    return ext
+
+
+class ApproveAsMeditationBody(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    author: str | None = None
+    is_published: bool = True
+
+
+@router.post("/extractions/{extraction_id}/approve-as-meditation", response_model=ExtractionOut)
+def approve_extraction_as_meditation(
+    extraction_id: int,
+    body: ApproveAsMeditationBody,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    """AI 가 뽑은 '묵상' 추출 항목을 meditations 테이블에 등록.
+
+    body 의 title/body/author 가 비어 있으면 ext 에서 자동 채움. is_published=True 면
+    _repin_latest_meditation 로 최신 핀 정리.
+    """
+    ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
+    if not ext:
+        raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
+    if ext.status != "pending":
+        raise HTTPException(status_code=400, detail="이미 처리된 항목입니다.")
+
+    bulletin = db.query(Bulletin).filter(Bulletin.id == ext.bulletin_id).first()
+    title = (body.title or ext.title or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="title 은 비울 수 없습니다.")
+
+    # body 가 명시되면 그것, 아니면 ext.content 에서 author 분리 후 출처 푸터 부착
+    if body.body is not None:
+        meditation_body = body.body
+        meditation_author = body.author
+    else:
+        cleaned_text, author_from_text = _extract_meditation_author(ext.content or "")
+        meditation_body = cleaned_text + (_format_source_footer(bulletin) if bulletin else "")
+        meditation_author = body.author if body.author is not None else author_from_text
+
+    pdate = bulletin.published_date if bulletin else date.today()
+    published_ts = datetime.combine(pdate, time(12, 0))
+
+    row = db.execute(
+        text(
+            "INSERT INTO meditations (title, body, author, published_date, is_published, source_bulletin_id, created_at, updated_at) "
+            "VALUES (:title, :body, :author, :pdate, :pub, :src, :ts, :ts) RETURNING id"
+        ),
+        {
+            "title": title, "body": meditation_body, "author": meditation_author,
+            "pdate": pdate, "pub": body.is_published, "src": ext.bulletin_id, "ts": published_ts,
+        },
+    ).first()
+    ext.created_meditation_id = row[0] if row else None
+
+    if body.is_published and ext.created_meditation_id:
+        _repin_latest_meditation(db)
+
+    ext.status = "approved"
+    db.commit()
+    db.refresh(ext)
+    log_action(db, get_admin_identifier(admin), "approve_as_meditation", "bulletin_extraction", ext.id, f"meditation={ext.created_meditation_id}")
     return ext
 
 
