@@ -868,6 +868,38 @@ export default function MypagePage() {
         </>
       )}
 
+      {/* 관심 콘텐츠 알림 (사목지표·주일말씀) — 분과·단체와 독립, 이메일·사이트 알림 */}
+      {member && (
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 mb-4">
+          <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">관심 콘텐츠 알림</h2>
+          <p className="text-xs text-[var(--color-text-muted)] mb-4">
+            새 사목지표·주일말씀이 등록되면 이메일과 사이트 알림으로 받아볼 수 있습니다.
+          </p>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyVision}
+                disabled={savingNotify}
+                onChange={() => saveNotifyFlags({ notify_vision: !notifyVision })}
+                className="w-4 h-4 accent-[var(--color-primary)]"
+              />
+              <span className="text-sm">사목지표 알림 받기</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyMeditation}
+                disabled={savingNotify}
+                onChange={() => saveNotifyFlags({ notify_meditation: !notifyMeditation })}
+                className="w-4 h-4 accent-[var(--color-primary)]"
+              />
+              <span className="text-sm">주일말씀 알림 받기</span>
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* 내 관심 분과·단체 */}
       {member && (
         <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 mb-4">
@@ -915,38 +947,6 @@ export default function MypagePage() {
               </label>
             </>
           )}
-        </div>
-      )}
-
-      {/* 관심 콘텐츠 알림 (사목지표·주일말씀) — 분과·단체와 독립, 이메일·사이트 알림 */}
-      {member && (
-        <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 mb-4">
-          <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">관심 콘텐츠 알림</h2>
-          <p className="text-xs text-[var(--color-text-muted)] mb-4">
-            새 사목지표·주일말씀이 등록되면 이메일과 사이트 알림으로 받아볼 수 있습니다.
-          </p>
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={notifyVision}
-                disabled={savingNotify}
-                onChange={() => saveNotifyFlags({ notify_vision: !notifyVision })}
-                className="w-4 h-4 accent-[var(--color-primary)]"
-              />
-              <span className="text-sm">사목지표 알림 받기</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={notifyMeditation}
-                disabled={savingNotify}
-                onChange={() => saveNotifyFlags({ notify_meditation: !notifyMeditation })}
-                className="w-4 h-4 accent-[var(--color-primary)]"
-              />
-              <span className="text-sm">주일말씀 알림 받기</span>
-            </label>
-          </div>
         </div>
       )}
 
