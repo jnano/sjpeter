@@ -129,6 +129,7 @@ def create_vision(
                 title=f"{vision.year}년 사목지표: {vision.motto}",
                 body_preview=vision.body,
                 target_id=vision.id,
+                admin_username=get_admin_identifier(admin),
             )
         except Exception as e:
             import logging
@@ -783,6 +784,7 @@ def create_meditation(
                 title=item.title,
                 body_preview=item.body,
                 target_id=item.id,
+                admin_username=get_admin_identifier(admin),
             )
         except Exception as e:
             import logging

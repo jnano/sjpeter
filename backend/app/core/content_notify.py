@@ -108,15 +108,34 @@ def fanout_content_notification(
     title: str,
     body_preview: Optional[str] = None,
     target_id: Optional[int] = None,
+    admin_username: Optional[str] = None,
 ) -> dict:
     """수신 동의 회원에게 site notification + email 동시 발송. 결과 dict 반환.
 
     target_id: 알림이 가리키는 vision.id 또는 meditation.id. 주보 삭제 등으로 그 row 가
     사라지면 FK SET NULL 로 NULL 이 되어, 프론트가 '원글 삭제됨' 판정에 사용.
+    v1.5.327: NotificationBatch row 생성 — 모니터링 페이지에서 batch 단위 추적.
     """
     meta = _KIND_META.get(kind)
     if not meta:
         return {"site": 0, "email": 0}
+
+    from app.models.notification import Notification, NotificationBatch
+
+    def _make_batch(*, target_count: int, site_sent: int, email_sent: int, failed_reason: Optional[str]) -> NotificationBatch:
+        batch = NotificationBatch(
+            kind=kind, title=title[:300],
+            source_vision_id=target_id if kind == "vision" else None,
+            source_meditation_id=target_id if kind == "meditation" else None,
+            community_group_ids=[],
+            admin_username=admin_username,
+            target_count=target_count,
+            site_sent=site_sent, email_sent=email_sent, kakao_sent=0,
+            failed_reason=failed_reason,
+        )
+        db.add(batch)
+        db.flush()
+        return batch
 
     rows = db.execute(
         text(
@@ -126,28 +145,18 @@ def fanout_content_notification(
     ).fetchall()
     if not rows:
         logger.info("[content_notify] kind=%s 수신 동의 회원 없음", kind)
+        _make_batch(target_count=0, site_sent=0, email_sent=0, failed_reason="no_subscribers")
+        db.commit()
         return {"site": 0, "email": 0}
 
-    from app.models.notification import Notification
     short_body = (body_preview[:280] if body_preview else None)
     extra: dict = {}
     if kind == "vision":
         extra["vision_id"] = target_id
     elif kind == "meditation":
         extra["meditation_id"] = target_id
-    db.add_all([
-        Notification(
-            member_id=r.id, kind=kind,
-            title=title, body=short_body,
-            post_id=None, event_id=None, community_group_id=None,
-            **extra,
-        )
-        for r in rows
-    ])
-    db.commit()
     site_count = len(rows)
-
-    # 이메일은 verified·실제 이메일만
+    # 이메일은 verified·실제 이메일만 — 발송 카운트는 _send_email_batch 후 확정
     email_targets = [
         r.email for r in rows
         if r.is_email_verified and r.email and not r.email.startswith("deleted-")
@@ -158,8 +167,25 @@ def fanout_content_notification(
     html = _build_email_html(kind, title, body_preview, href)
     email_count = _send_email_batch(email_targets, subject, html)
 
+    # batch row 먼저 생성 → notifications.batch_id 채움
+    batch = _make_batch(
+        target_count=site_count, site_sent=site_count, email_sent=email_count,
+        failed_reason=None,
+    )
+    db.add_all([
+        Notification(
+            member_id=r.id, kind=kind,
+            title=title, body=short_body,
+            post_id=None, event_id=None, community_group_id=None,
+            batch_id=batch.id,
+            **extra,
+        )
+        for r in rows
+    ])
+    db.commit()
+
     logger.info(
-        "[content_notify] kind=%s sent: site=%d, email=%d/%d",
-        kind, site_count, email_count, len(email_targets),
+        "[content_notify] kind=%s sent: site=%d, email=%d/%d, batch=%d",
+        kind, site_count, email_count, len(email_targets), batch.id,
     )
     return {"site": site_count, "email": email_count}

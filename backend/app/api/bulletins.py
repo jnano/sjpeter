@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from difflib import SequenceMatcher
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File, Form
@@ -778,18 +778,45 @@ def _fanout_community_notifications(
     body: Optional[str],
     post_id: Optional[int],
     event_id: Optional[int],
+    extraction_id: Optional[int] = None,
+    admin_username: Optional[str] = None,
 ) -> int:
-    """그룹 양방향 확장 → 관심 회원 SELECT → notifications insert + 카톡 stub.
+    """그룹 양방향 확장 → 관심 회원 SELECT → notifications insert + batch 기록 + 카톡 stub.
 
     notify_kakao=True 인 회원만 (글로벌 알림 동의). 중복 멤버는 DISTINCT 로 한 번만.
-    리턴: insert 건수.
+    실패(분과 미선택·대상 0명) 케이스도 batch row 로 기록 — 모니터링 페이지에서 추적.
+    리턴: insert 건수 (대상 회원 수).
     """
     from sqlalchemy import text as _text
-    from app.models.notification import Notification
+    from app.models.notification import Notification, NotificationBatch
+
+    def _make_batch(*, target_count: int, sent: int, failed_reason: Optional[str]) -> NotificationBatch:
+        batch = NotificationBatch(
+            kind="community",
+            title=title[:300],
+            source_post_id=post_id,
+            source_event_id=event_id,
+            source_extraction_id=extraction_id,
+            community_group_ids=list(group_ids or []),
+            admin_username=admin_username,
+            target_count=target_count,
+            site_sent=sent,
+            email_sent=0,
+            kakao_sent=0,
+            failed_reason=failed_reason,
+        )
+        db.add(batch)
+        db.flush()
+        return batch
+
+    # 분과 미선택 — batch 만 기록 + skip
     if not group_ids:
+        _make_batch(target_count=0, sent=0, failed_reason="no_group")
+        logger.info("[community_fanout] skipped — no_group title=%r", title)
         return 0
     expanded = list(_expand_groups_bidirectional(db, group_ids))
     if not expanded:
+        _make_batch(target_count=0, sent=0, failed_reason="no_group")
         return 0
     rows = db.execute(
         _text(
@@ -802,14 +829,17 @@ def _fanout_community_notifications(
     ).fetchall()
     member_ids = [r[0] for r in rows]
     if not member_ids:
+        _make_batch(target_count=0, sent=0, failed_reason="no_subscribers")
         return 0
     short_body = (body[:280] if body else None)
+    batch = _make_batch(target_count=len(member_ids), sent=len(member_ids), failed_reason=None)
     db.add_all([
         Notification(
             member_id=mid, kind="community",
             title=title, body=short_body,
             post_id=post_id, event_id=event_id,
             community_group_id=primary_group_id,
+            batch_id=batch.id,
         )
         for mid in member_ids
     ])
@@ -843,6 +873,7 @@ def _auto_match_community_groups(db: Session, ext: BulletinExtraction) -> list[i
 def _persist_targets_and_notify(
     db: Session, ext: BulletinExtraction,
     *, community_group_ids: list[int], temporal_kind: Optional[str], notify: bool,
+    admin_username: Optional[str] = None,
 ) -> None:
     """승인 직후 ext.created_* 의 결과에 따라 m:n targets insert + 알림 fan-out.
 
@@ -891,17 +922,33 @@ def _persist_targets_and_notify(
                 {"eid": event_id, "gids": group_ids},
             )
 
-    # 5) 게이트 통과 + notify=True 시 fan-out
-    if notify and group_ids and _notify_gate_passes(final_tk, ext.event_date):
-        _fanout_community_notifications(
-            db,
-            group_ids=group_ids,
-            primary_group_id=group_ids[0],
-            title=ext.title or "",
-            body=ext.content,
-            post_id=post_id,
-            event_id=event_id,
-        )
+    # 5) notify=True 일 때 fan-out — 분과 미선택·게이트 차단도 batch 로 기록(모니터링).
+    if notify:
+        gate_ok = _notify_gate_passes(final_tk, ext.event_date)
+        if not gate_ok:
+            # 게이트 차단 (예: 지난 future) — batch 기록만, 회원 발송 없음
+            from app.models.notification import NotificationBatch
+            db.add(NotificationBatch(
+                kind="community", title=(ext.title or "")[:300],
+                source_post_id=post_id, source_event_id=event_id,
+                source_extraction_id=ext.id,
+                community_group_ids=group_ids,
+                admin_username=admin_username,
+                target_count=0, site_sent=0, email_sent=0, kakao_sent=0,
+                failed_reason="gate_blocked",
+            ))
+        else:
+            _fanout_community_notifications(
+                db,
+                group_ids=group_ids,
+                primary_group_id=group_ids[0] if group_ids else None,
+                title=ext.title or "",
+                body=ext.content,
+                post_id=post_id,
+                event_id=event_id,
+                extraction_id=ext.id,
+                admin_username=admin_username,
+            )
 
 
 def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinExtraction:
@@ -1106,6 +1153,90 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
     return ext
 
 
+class NotifyPreviewMatch(BaseModel):
+    batch_id: int
+    kind: str
+    title: str
+    community_group_ids: list[int]
+    target_count: int
+    site_sent: int
+    failed_reason: Optional[str] = None
+    created_at: datetime
+
+
+class NotifyPreviewOut(BaseModel):
+    """이 ext 를 알림 발송 시 중복 가능성 확인.
+    target_count: 알림 받게 될 회원 수(예상). matches: 최근 N일 내 같은 분과·유사 제목 batch.
+    """
+    matches: list[NotifyPreviewMatch]
+    estimated_target_count: int
+
+
+def _normalize_title(t: str) -> str:
+    """공백·구두점 제거 + 소문자 — 중복 판정용."""
+    import re
+    return re.sub(r"[\s\W_]+", "", (t or "").strip()).lower()
+
+
+@router.get("/extractions/{extraction_id}/notify-preview", response_model=NotifyPreviewOut)
+def notify_preview(
+    extraction_id: int,
+    group_ids: str = "",   # CSV "1,2,3"
+    days: int = 14,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    """이 ext 를 현재 review state(분과 선택·제목) 로 발송 시 중복 위험 미리보기."""
+    from app.models.notification import NotificationBatch
+    ext = db.query(BulletinExtraction).filter(BulletinExtraction.id == extraction_id).first()
+    if not ext:
+        raise HTTPException(status_code=404, detail="추출 항목을 찾을 수 없습니다.")
+    gids = [int(x) for x in group_ids.split(",") if x.strip().isdigit()]
+    target_count = 0
+    if gids:
+        from sqlalchemy import text as _text
+        expanded = list(_expand_groups_bidirectional(db, gids))
+        if expanded:
+            row = db.execute(
+                _text(
+                    "SELECT COUNT(DISTINCT m.id) FROM members m "
+                    "JOIN member_community_interests mci ON mci.member_id = m.id "
+                    "WHERE mci.community_group_id = ANY(:gids) AND COALESCE(m.notify_kakao, FALSE) = TRUE"
+                ),
+                {"gids": expanded},
+            ).first()
+            target_count = int(row[0]) if row else 0
+
+    # 중복 매칭: 최근 days 일 + 분과 교집합 + 정규화 제목 동일
+    matches: list[NotifyPreviewMatch] = []
+    if gids:
+        from sqlalchemy import text as _text
+        since = datetime.utcnow() - timedelta(days=max(1, min(days, 90)))
+        ext_title_norm = _normalize_title(ext.title or "")
+        if ext_title_norm:
+            # PostgreSQL ARRAY 교집합 연산자 && 사용 (raw SQL)
+            rows = db.execute(
+                _text(
+                    "SELECT id, kind, title, community_group_ids, target_count, site_sent, "
+                    "       failed_reason, created_at "
+                    "FROM notification_batches "
+                    "WHERE kind = 'community' AND created_at >= :since "
+                    "  AND community_group_ids && CAST(:gids AS INT[]) "
+                    "ORDER BY created_at DESC LIMIT 20"
+                ),
+                {"since": since, "gids": gids},
+            ).fetchall()
+            for b in rows:
+                if _normalize_title(b.title) == ext_title_norm:
+                    matches.append(NotifyPreviewMatch(
+                        batch_id=b.id, kind=b.kind, title=b.title,
+                        community_group_ids=list(b.community_group_ids or []),
+                        target_count=b.target_count, site_sent=b.site_sent,
+                        failed_reason=b.failed_reason, created_at=b.created_at,
+                    ))
+    return NotifyPreviewOut(matches=matches, estimated_target_count=target_count)
+
+
 @router.get("/extractions/pending", response_model=list[ExtractionOut])
 def list_pending_extractions(
     db: Session = Depends(get_db),
@@ -1227,6 +1358,7 @@ def approve_extraction(
             community_group_ids=(body.community_group_ids or []),
             temporal_kind=body.temporal_kind,
             notify=bool(body.notify),
+            admin_username=get_admin_identifier(admin),
         )
         db.commit()
         db.refresh(ext)
@@ -1240,6 +1372,7 @@ def approve_extraction(
         community_group_ids=((body.community_group_ids if body else None) or []),
         temporal_kind=(body.temporal_kind if body else None),
         notify=bool(body.notify if body else True),
+        admin_username=get_admin_identifier(admin),
     )
     db.commit()
     db.refresh(ext)
@@ -1307,6 +1440,7 @@ def bulk_approve_extractions(
                 community_group_ids=gids,
                 temporal_kind=tk,
                 notify=notify_flag,
+                admin_username=get_admin_identifier(admin),
             )
             sp.commit()
             approved.append(ext.id)
@@ -1849,6 +1983,7 @@ def approve_extraction_as_vision(
                 title=f"{year}년 사목지표: {motto}",
                 body_preview=vision_body,
                 target_id=ext.created_vision_id,
+                admin_username=get_admin_identifier(admin),
             )
         except Exception as e:
             logger.error("approve_as_vision 알림 발송 실패: %s", e)
@@ -1926,6 +2061,7 @@ def approve_extraction_as_meditation(
                 title=title,
                 body_preview=meditation_body,
                 target_id=ext.created_meditation_id,
+                admin_username=get_admin_identifier(admin),
             )
         except Exception as e:
             logger.error("approve_as_meditation 알림 발송 실패: %s", e)
@@ -2022,6 +2158,7 @@ def approve_extraction_as_event(
         community_group_ids=(body.community_group_ids if body else None) or [],
         temporal_kind=(body.temporal_kind if body else None),
         notify=bool(body.notify if body else True),
+        admin_username=get_admin_identifier(admin),
     )
     db.commit()
     db.refresh(ext)

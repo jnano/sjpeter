@@ -8,5 +8,5 @@ from app.models.attachment import Attachment
 from app.models.issue_report import IssueReport
 from app.models.transport_route import TransportRoute
 from app.models.community_target import PostCommunityTarget, EventCommunityTarget
-from app.models.notification import Notification
+from app.models.notification import Notification, NotificationBatch
 from app.models.ai_typo_rule import AiTypoRule

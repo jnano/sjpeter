@@ -69,6 +69,8 @@ app.include_router(banners.router, prefix="/api")
 app.include_router(issue_reports.router, prefix="/api")
 from app.api import notifications as notifications_api  # noqa: E402
 app.include_router(notifications_api.router, prefix="/api")
+from app.api import notification_log as notification_log_api  # noqa: E402
+app.include_router(notification_log_api.router, prefix="/api")
 from app.api import ai_typo_rules as ai_typo_rules_api  # noqa: E402
 app.include_router(ai_typo_rules_api.router, prefix="/api")
 app.include_router(transport_routes.router, prefix="/api")
@@ -1461,6 +1463,42 @@ def _migrate_add_columns():
                 ))
             except Exception:
                 pass
+
+        # v1.5.327: notification_batches 테이블 + notifications.batch_id 추가.
+        # fanout 한 번 = batch 1 row. 누구에게 몇 번 발송했는지·실패 사유 모니터링용.
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS notification_batches (
+                id SERIAL PRIMARY KEY,
+                kind VARCHAR(30) NOT NULL,
+                title VARCHAR(300) NOT NULL,
+                source_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+                source_event_id INTEGER REFERENCES events(id) ON DELETE SET NULL,
+                source_vision_id INTEGER REFERENCES visions(id) ON DELETE SET NULL,
+                source_meditation_id INTEGER REFERENCES meditations(id) ON DELETE SET NULL,
+                source_extraction_id INTEGER,
+                community_group_ids INTEGER[] DEFAULT '{}',
+                admin_username VARCHAR(100),
+                target_count INTEGER NOT NULL DEFAULT 0,
+                site_sent INTEGER NOT NULL DEFAULT 0,
+                email_sent INTEGER NOT NULL DEFAULT 0,
+                kakao_sent INTEGER NOT NULL DEFAULT 0,
+                failed_reason VARCHAR(100),
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_notification_batches_created ON notification_batches(created_at DESC)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_notification_batches_kind ON notification_batches(kind, created_at DESC)"
+        ))
+        try:
+            conn.execute(text(
+                "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS batch_id INTEGER "
+                "REFERENCES notification_batches(id) ON DELETE SET NULL"
+            ))
+        except Exception:
+            pass
 
         # 여기서 한 번 commit — ALTER 와 backfill 을 분리해 backfill 의 SQL 오류가 ALTER 를 막지 않게.
         conn.commit()

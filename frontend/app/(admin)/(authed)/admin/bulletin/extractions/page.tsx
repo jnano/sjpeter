@@ -200,9 +200,16 @@ export default function ExtractionsPage() {
     const boardId = selectedBoard[ext.id];
     if (!boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
     setError("");
-    setProcessing((p) => ({ ...p, [ext.id]: true }));
     const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
     const notify_flag = options?.notifyOverride ?? review.notify;
+    // 분과 미선택 + 알림 발송 의도 시 가드 — 발송 대상이 0명이 되어 조용히 누락되는 실수 방지
+    if (notify_flag && review.group_ids.length === 0) {
+      const proceed = confirm(
+        `"${ext.title}"\n\n알림 발송이 켜져 있는데 대상 분과가 선택되지 않았습니다.\n이대로 등록하면 알림이 발송되지 않습니다.\n\n그래도 계속하시겠습니까?\n\n(취소를 누르면 분과를 먼저 선택할 수 있습니다)`
+      );
+      if (!proceed) return;
+    }
+    setProcessing((p) => ({ ...p, [ext.id]: true }));
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve`, {
         method: "POST",
@@ -303,13 +310,29 @@ export default function ExtractionsPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     setError(""); setInfo("");
-    setBulkProcessing(true);
     // 선택된 각 ext 의 현재 review state 동봉 — 사용자가 수동으로 고친 분과·시점·알림 우선
     const reviews: Record<number, { community_group_ids: number[]; temporal_kind: string; notify: boolean }> = {};
     for (const id of ids) {
       const r = reviewByExt[id];
       if (r) reviews[id] = { community_group_ids: r.group_ids, temporal_kind: r.temporal_kind, notify: r.notify };
     }
+    // 분과 미선택 + notify=true 인 항목 추출 — 사용자에게 한 번에 안내
+    const noGroupNotify = ids.filter((id) => {
+      const r = reviews[id];
+      return r && r.notify && r.community_group_ids.length === 0;
+    });
+    if (noGroupNotify.length > 0) {
+      const sample = noGroupNotify.slice(0, 3).map((id) => {
+        const e = extractions.find((x) => x.id === id);
+        return `• ${e?.title ?? id}`;
+      }).join("\n");
+      const more = noGroupNotify.length > 3 ? `\n• 외 ${noGroupNotify.length - 3}건` : "";
+      const proceed = confirm(
+        `다음 ${noGroupNotify.length}건은 알림 발송이 켜져 있는데 대상 분과가 선택되지 않았습니다.\n이대로 진행하면 해당 항목은 알림이 발송되지 않습니다.\n\n${sample}${more}\n\n그래도 일괄 승인하시겠습니까?`
+      );
+      if (!proceed) return;
+    }
+    setBulkProcessing(true);
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/bulk-approve`, {
         method: "POST",
@@ -701,6 +724,7 @@ export default function ExtractionsPage() {
                         communityGroups={communityGroups}
                         review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind ?? "unknown", group_ids: [], notify: true }}
                         onReviewChange={(patch) => setReview(ext.id, patch)}
+                        token={token}
                       />
                     )}
                   </div>
@@ -769,6 +793,7 @@ function ExtractionCard({
   communityGroups,
   review,
   onReviewChange,
+  token,
 }: {
   ext: Extraction;
   boards: Board[];
@@ -785,11 +810,31 @@ function ExtractionCard({
   communityGroups: CommunityGroup[];
   review: ReviewState;
   onReviewChange: (patch: Partial<ReviewState>) => void;
+  token: string;
 }) {
   const isVision = ext.event_type === "지표";
   const isMeditation = ext.event_type === "묵상";
   // 지표·묵상은 일반 게시판/캘린더 라우팅과 분리 — 검토 영역(시점·분과·알림)도 노출 안 함.
   const isSpecial = isVision || isMeditation;
+
+  // 중복 알림 사전 경고 — review.group_ids·notify 변경 시 fetch (debounce 400ms)
+  const [preview, setPreview] = useState<{ matches: Array<{ batch_id: number; title: string; created_at: string; target_count: number }>; estimated_target_count: number } | null>(null);
+  useEffect(() => {
+    if (isSpecial || !review.notify || review.group_ids.length === 0 || !token) {
+      setPreview(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API}/api/bulletins/extractions/${ext.id}/notify-preview?group_ids=${review.group_ids.join(",")}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) setPreview(await res.json());
+      } catch { /* silent */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [ext.id, review.group_ids.join(","), review.notify, isSpecial, token]);
   // 캘린더 등록 시 같은 행사 카드를 게시판에 미러할지 옵션 (시나리오 A)
   const [mirrorEnabled, setMirrorEnabled] = useState(false);
   const [mirrorBoardSlug, setMirrorBoardSlug] = useState<string>("");
@@ -942,6 +987,25 @@ function ExtractionCard({
               return null;
             })()}
           </div>
+          {/* 중복 알림 사전 경고 — 같은 분과·동일 제목 batch 최근 14일 매칭 시 */}
+          {preview && preview.matches.length > 0 && (
+            <div className="mt-1 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-2.5 py-1.5 text-[11px] text-amber-900">
+              <span className="shrink-0">⚠️</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">중복 알림 주의 — 최근 14일 내 같은 제목·분과로 {preview.matches.length}건 발송됨</p>
+                {preview.matches.slice(0, 2).map((m) => (
+                  <p key={m.batch_id} className="text-amber-800">
+                    · {new Date(m.created_at).toLocaleDateString("ko-KR")} 대상 {m.target_count}명
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {preview && preview.matches.length === 0 && review.group_ids.length > 0 && (
+            <p className="text-[11px] text-[var(--color-text-muted)]">
+              예상 발송 대상: 약 {preview.estimated_target_count}명 (분과 회원 중 카톡 알림 동의)
+            </p>
+          )}
         </div>
       )}
 
