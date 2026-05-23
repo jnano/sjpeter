@@ -181,12 +181,12 @@ PDF 업로드
 | 공동체 | /admin/community | 단체·분과 |
 | 공동체 | /admin/boards | 게시판 관리 (게시물 수 표시) |
 | 공동체 | /admin/members, /admin/members/[id] | 회원 관리·상세 |
-| 페이지·사진·배너 | /admin/pages | 페이지 만들기 (동적 페이지) |
-| 페이지·사진·배너 | /admin/page-photos, /admin/page-photos/[slug] | 페이지 사진 슬라이드쇼 |
-| 페이지·사진·배너 | /admin/banners | 광고 배너 |
-| 페이지·사진·배너 | /admin/home-banner | 메인 사진 |
+| 페이지·배너 | /admin/pages | 페이지 만들기 (동적 페이지) |
+| 페이지·배너 | /admin/banners | 광고 배너 |
 | 레이아웃 | /admin/home | 홈 페이지 블록 빌더 |
 | 레이아웃 | /admin/menus | 메뉴 |
+| 레이아웃 | /admin/home-banner | 메인 사진 |
+| 레이아웃 | /admin/page-photos, /admin/page-photos/[slug] | 페이지 사진 슬라이드쇼 |
 | 레이아웃 | /admin/season | 전례 시기 테마 |
 | 시스템 | /admin/settings | DB 기반 사이트 설정 (SMTP, OAuth 키 등 — super-admin 전용) |
 | 시스템 | /admin/reports | 장애 신고 |

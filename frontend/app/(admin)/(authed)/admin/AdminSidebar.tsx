@@ -97,13 +97,11 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "페이지·사진·배너",
+    label: "페이지·배너",
     icon: "🖼",
     items: [
       { href: "/admin/pages", label: "페이지 만들기" },
-      { href: "/admin/page-photos", label: "페이지 사진" },
       { href: "/admin/banners", label: "광고 배너" },
-      { href: "/admin/home-banner", label: "메인 사진" },
     ],
   },
   {
@@ -112,6 +110,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/home", label: "홈 페이지" },
       { href: "/admin/menus", label: "메뉴" },
+      { href: "/admin/home-banner", label: "메인 사진" },
+      { href: "/admin/page-photos", label: "페이지 사진" },
       { href: "/admin/season", label: "전례 시기 테마" },
     ],
   },
