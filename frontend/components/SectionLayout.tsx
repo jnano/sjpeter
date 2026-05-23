@@ -124,7 +124,10 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           aria-hidden={collapsed ? true : undefined}
         >
           <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-          <div className="md:overflow-hidden">
+          {/* overflow-hidden 은 SectionSidebar 의 collapsed 시 width 0 으로 줄어들 때 내용물 잘림 보완.
+              그러나 overflow-hidden ancestor 는 자식 sticky 의 컨테이너가 되어 sticky 를 깸 →
+              이 wrapper 자체에 sticky 를 적용해 viewport 추종 효과 유지 (v1.5.324). */}
+          <div className="md:overflow-hidden md:sticky md:self-start md:top-28">
             <SectionSidebar
               groupTitle={currentGroup.label}
               imageSrc={currentGroup.sidebar_image_url ?? undefined}
