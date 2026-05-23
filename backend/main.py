@@ -1421,8 +1421,8 @@ def _migrate_add_columns():
                 kind VARCHAR(30) NOT NULL DEFAULT 'community',
                 title VARCHAR(300) NOT NULL,
                 body TEXT,
-                post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
-                event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+                post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+                event_id INTEGER REFERENCES events(id) ON DELETE SET NULL,
                 community_group_id INTEGER REFERENCES community_groups(id) ON DELETE SET NULL,
                 read_at TIMESTAMP,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -1434,6 +1434,21 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_notifications_member_created ON notifications(member_id, created_at DESC)"
         ))
+        # v1.5.319: post_id/event_id FK 를 CASCADE → SET NULL 로 전환.
+        # 원글이 삭제되어도 알림은 보존(title·body 그대로) — 회원의 알림 history 유지.
+        # 클릭 시 프론트에서 "(원글 삭제됨)" 표시.
+        for fk_name, col, ref_table in [
+            ("notifications_post_id_fkey", "post_id", "posts"),
+            ("notifications_event_id_fkey", "event_id", "events"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE notifications DROP CONSTRAINT IF EXISTS {fk_name}"))
+                conn.execute(text(
+                    f"ALTER TABLE notifications ADD CONSTRAINT {fk_name} "
+                    f"FOREIGN KEY ({col}) REFERENCES {ref_table}(id) ON DELETE SET NULL"
+                ))
+            except Exception:
+                pass
 
         conn.commit()
 

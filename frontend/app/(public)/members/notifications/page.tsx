@@ -118,11 +118,13 @@ export default function NotificationsPage() {
             {items.map((n) => {
               const href = targetHref(n);
               const isUnread = !n.read_at;
+              // 원글 삭제 판정: community 알림인데 post_id·event_id 가 둘 다 NULL — FK SET NULL 결과
+              const isDeleted = n.kind === "community" && !n.post_id && !n.event_id;
               const inner = (
                 <div
                   className={`flex items-start gap-3 px-4 py-3 transition-colors ${
                     isUnread ? "bg-[var(--color-primary)]/5" : "bg-white"
-                  } ${href ? "hover:bg-[var(--color-surface-warm)] cursor-pointer" : ""}`}
+                  } ${isDeleted ? "opacity-60" : ""} ${href && !isDeleted ? "hover:bg-[var(--color-surface-warm)] cursor-pointer" : ""}`}
                 >
                   <span
                     className={`inline-block w-2 h-2 mt-2 rounded-full shrink-0 ${
@@ -137,7 +139,23 @@ export default function NotificationsPage() {
                           {n.community_group_name}
                         </span>
                       )}
-                      <span className={`text-sm ${isUnread ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}`}>
+                      {isDeleted && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 text-gray-600 font-semibold"
+                          title="원글이 삭제되었습니다"
+                        >
+                          🗑️ 삭제됨
+                        </span>
+                      )}
+                      <span
+                        className={`text-sm ${
+                          isDeleted
+                            ? "line-through text-[var(--color-text-muted)]"
+                            : isUnread
+                              ? "font-semibold text-[var(--color-text)]"
+                              : "text-[var(--color-text-muted)]"
+                        }`}
+                      >
                         {n.title}
                       </span>
                     </div>
@@ -148,6 +166,7 @@ export default function NotificationsPage() {
                     )}
                     <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
                       {new Date(n.created_at).toLocaleString("ko-KR")}
+                      {isDeleted && " · 원글이 삭제되어 이동할 수 없습니다"}
                     </p>
                   </div>
                   {isUnread && (
@@ -166,7 +185,7 @@ export default function NotificationsPage() {
               );
               return (
                 <li key={n.id}>
-                  {href ? (
+                  {href && !isDeleted ? (
                     <Link
                       href={href}
                       onClick={() => isUnread && markRead(n.id)}
