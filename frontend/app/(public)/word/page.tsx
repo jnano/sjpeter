@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
+import GospelText from "./GospelText";
 
 export const metadata: Metadata = {
   title: "오늘의 복음",
@@ -82,9 +83,8 @@ export default async function WordPage() {
 
               {gospel.gospel_text ? (
                 // 60대 신자 가독성 고려: 18px + leading 1.8 + 약간의 자간 + 100% 흰색
-                <p className="text-white text-[18px] leading-[1.8] tracking-wide whitespace-pre-line">
-                  {gospel.gospel_text}
-                </p>
+                // 3줄 요약 + 클릭 시 전체 펼치기 (GospelText client component)
+                <GospelText text={gospel.gospel_text} />
               ) : (
                 <p className="text-white/50 italic text-sm">복음 본문을 가져오지 못했습니다.</p>
               )}
