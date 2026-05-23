@@ -24,6 +24,7 @@ export default function OnboardingInterestsPage() {
   const [notify, setNotify] = useState(false);
   const [notifyVision, setNotifyVision] = useState(false);
   const [notifyMeditation, setNotifyMeditation] = useState(false);
+  const [hasPhone, setHasPhone] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // 이미 응답한 회원이 수정 모드로 재진입
@@ -55,6 +56,7 @@ export default function OnboardingInterestsPage() {
         if (typeof mine?.notify_kakao === "boolean") setNotify(mine.notify_kakao);
         if (typeof mine?.notify_vision === "boolean") setNotifyVision(mine.notify_vision);
         if (typeof mine?.notify_meditation === "boolean") setNotifyMeditation(mine.notify_meditation);
+        if (typeof mine?.has_phone === "boolean") setHasPhone(mine.has_phone);
         setIsEditing(!!mine?.interest_prompt_completed);
         setLoading(false);
       })
@@ -106,7 +108,7 @@ export default function OnboardingInterestsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           community_ids: Array.from(selected),
-          notify_kakao: notify && selected.size > 0,
+          notify_kakao: notify && selected.size > 0 && hasPhone,
           notify_vision: notifyVision,
           notify_meditation: notifyMeditation,
         }),
@@ -220,24 +222,34 @@ export default function OnboardingInterestsPage() {
           </div>
         )}
 
-        {/* 카톡 알림 동의 — 분과 1개 이상 선택 시에만 활성 */}
-        <div className={`bg-white border border-[var(--color-border)] rounded-xl p-4 ${selected.size === 0 ? "opacity-50" : ""}`}>
-          <label className="flex items-start gap-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={notify}
-              onChange={(e) => setNotify(e.target.checked)}
-              disabled={selected.size === 0}
-              className="w-5 h-5 accent-[var(--color-primary)] shrink-0 mt-0.5"
-            />
-            <div>
-              <p className="text-sm font-medium">카카오톡으로 소식 받기</p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                선택한 분과·단체에 새 글이나 행사가 등록되면 카톡으로 알려드립니다. (준비 중 — 채널 개설 후 활성화)
-              </p>
+        {/* 카톡 알림 동의 — 분과 1개 이상 + 전화번호 등록 시 활성 */}
+        {(() => {
+          const kakaoDisabled = selected.size === 0 || !hasPhone;
+          return (
+            <div className={`bg-white border border-[var(--color-border)] rounded-xl p-4 ${kakaoDisabled ? "opacity-60" : ""}`}>
+              <label className={`flex items-start gap-3 select-none ${kakaoDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                <input
+                  type="checkbox"
+                  checked={notify && !kakaoDisabled}
+                  onChange={(e) => setNotify(e.target.checked)}
+                  disabled={kakaoDisabled}
+                  className="w-5 h-5 accent-[var(--color-primary)] shrink-0 mt-0.5"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">카카오톡으로 소식 받기</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                    선택한 분과·단체에 새 글이나 행사가 등록되면 카톡으로 알려드립니다. (준비 중 — 채널 개설 후 활성화)
+                  </p>
+                  {!hasPhone && (
+                    <p className="text-xs text-amber-700 mt-2">
+                      ⚠️ 전화번호가 등록되어 있지 않습니다 — 카톡 발송이 불가합니다. 가입 완료 후 마이페이지 &gt; 프로필 편집에서 전화번호를 등록해 주세요.
+                    </p>
+                  )}
+                </div>
+              </label>
             </div>
-          </label>
-        </div>
+          );
+        })()}
 
         {/* 관심 콘텐츠 — 사목지표·주일말씀 (이메일·사이트 알림, 분과 선택과 독립) */}
         <div className="bg-white border border-[var(--color-border)] rounded-xl p-4">

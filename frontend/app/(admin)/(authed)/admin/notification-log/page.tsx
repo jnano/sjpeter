@@ -19,6 +19,7 @@ interface Batch {
   site_sent: number;
   email_sent: number;
   kakao_sent: number;
+  kakao_skipped_no_phone: number;
   failed_reason: string | null;
   created_at: string;
   read_count: number;
@@ -154,6 +155,11 @@ export default function NotificationLogPage() {
                       {b.admin_username && <span>by {b.admin_username}</span>}
                       <span>대상 {b.target_count}명</span>
                       <span>사이트 {b.site_sent} / 이메일 {b.email_sent}{b.kakao_sent > 0 ? ` / 카톡 ${b.kakao_sent}` : ""}</span>
+                      {b.kakao_skipped_no_phone > 0 && (
+                        <span className="text-amber-700" title="카톡 알림 ON 상태인데 전화번호가 없어 발송 못 함">
+                          카톡 skip {b.kakao_skipped_no_phone} (전화번호 없음)
+                        </span>
+                      )}
                       <span className="text-emerald-600">읽음 {b.read_count}/{b.site_sent}</span>
                     </div>
                   </div>

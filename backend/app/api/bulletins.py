@@ -790,7 +790,10 @@ def _fanout_community_notifications(
     from sqlalchemy import text as _text
     from app.models.notification import Notification, NotificationBatch
 
-    def _make_batch(*, target_count: int, sent: int, failed_reason: Optional[str]) -> NotificationBatch:
+    def _make_batch(
+        *, target_count: int, site_sent: int, kakao_skipped_no_phone: int = 0,
+        failed_reason: Optional[str],
+    ) -> NotificationBatch:
         batch = NotificationBatch(
             kind="community",
             title=title[:300],
@@ -800,9 +803,10 @@ def _fanout_community_notifications(
             community_group_ids=list(group_ids or []),
             admin_username=admin_username,
             target_count=target_count,
-            site_sent=sent,
+            site_sent=site_sent,
             email_sent=0,
-            kakao_sent=0,
+            kakao_sent=0,  # stub — 채널 개설 후 실제 발송 수로 채움
+            kakao_skipped_no_phone=kakao_skipped_no_phone,
             failed_reason=failed_reason,
         )
         db.add(batch)
@@ -811,28 +815,34 @@ def _fanout_community_notifications(
 
     # 분과 미선택 — batch 만 기록 + skip
     if not group_ids:
-        _make_batch(target_count=0, sent=0, failed_reason="no_group")
+        _make_batch(target_count=0, site_sent=0, failed_reason="no_group")
         logger.info("[community_fanout] skipped — no_group title=%r", title)
         return 0
     expanded = list(_expand_groups_bidirectional(db, group_ids))
     if not expanded:
-        _make_batch(target_count=0, sent=0, failed_reason="no_group")
+        _make_batch(target_count=0, site_sent=0, failed_reason="no_group")
         return 0
+    # 사이트 알림은 phone 무관 모두 받음. 카톡 발송 가능 회원은 phone 있는 회원만.
     rows = db.execute(
         _text(
-            "SELECT DISTINCT m.id FROM members m "
+            "SELECT DISTINCT m.id, COALESCE(m.phone, '') AS phone FROM members m "
             "JOIN member_community_interests mci ON mci.member_id = m.id "
             "WHERE mci.community_group_id = ANY(:gids) "
             "AND COALESCE(m.notify_kakao, FALSE) = TRUE"
         ),
         {"gids": expanded},
     ).fetchall()
-    member_ids = [r[0] for r in rows]
-    if not member_ids:
-        _make_batch(target_count=0, sent=0, failed_reason="no_subscribers")
+    if not rows:
+        _make_batch(target_count=0, site_sent=0, failed_reason="no_subscribers")
         return 0
+    member_ids = [r.id for r in rows]
+    kakao_eligible = sum(1 for r in rows if r.phone.strip())
+    kakao_skipped = len(rows) - kakao_eligible
     short_body = (body[:280] if body else None)
-    batch = _make_batch(target_count=len(member_ids), sent=len(member_ids), failed_reason=None)
+    batch = _make_batch(
+        target_count=len(member_ids), site_sent=len(member_ids),
+        kakao_skipped_no_phone=kakao_skipped, failed_reason=None,
+    )
     db.add_all([
         Notification(
             member_id=mid, kind="community",
@@ -843,8 +853,11 @@ def _fanout_community_notifications(
         )
         for mid in member_ids
     ])
-    # 카톡 stub — 채널 개설 후 어댑터로 교체. 일단 로그만.
-    logger.info("[kakao_stub] community notify: title=%r, members=%d, groups=%s", title, len(member_ids), expanded)
+    # 카톡 stub — 채널 개설 후 어댑터로 교체. 전화번호 있는 회원 대상.
+    logger.info(
+        "[kakao_stub] community notify: title=%r, members=%d (kakao_eligible=%d, no_phone=%d), groups=%s",
+        title, len(member_ids), kakao_eligible, kakao_skipped, expanded,
+    )
     return len(member_ids)
 
 

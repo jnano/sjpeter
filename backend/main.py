@@ -1499,6 +1499,14 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+        # v1.5.328: 전화번호 없는 회원이 카톡 알림 ON 상태일 때 발송 시 skip 카운트
+        try:
+            conn.execute(text(
+                "ALTER TABLE notification_batches ADD COLUMN IF NOT EXISTS "
+                "kakao_skipped_no_phone INTEGER NOT NULL DEFAULT 0"
+            ))
+        except Exception:
+            pass
 
         # 여기서 한 번 commit — ALTER 와 backfill 을 분리해 backfill 의 SQL 오류가 ALTER 를 막지 않게.
         conn.commit()

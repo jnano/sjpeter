@@ -34,6 +34,7 @@ class BatchOut(BaseModel):
     site_sent: int
     email_sent: int
     kakao_sent: int
+    kakao_skipped_no_phone: int = 0  # 카톡 ON 인데 전화번호 없어 skip
     failed_reason: Optional[str] = None
     created_at: datetime
     read_count: int = 0   # batch_id 매칭 알림 중 read_at IS NOT NULL
@@ -103,6 +104,7 @@ def list_batches(
             site_sent=r.site_sent,
             email_sent=r.email_sent,
             kakao_sent=r.kakao_sent,
+            kakao_skipped_no_phone=getattr(r, "kakao_skipped_no_phone", 0),
             failed_reason=r.failed_reason,
             created_at=r.created_at,
             read_count=read_map.get(r.id, 0),

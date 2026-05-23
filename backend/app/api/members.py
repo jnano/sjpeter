@@ -529,6 +529,7 @@ class MyInterestsOut(BaseModel):
     notify_vision: bool
     notify_meditation: bool
     interest_prompt_completed: bool
+    has_phone: bool  # 카톡 알림 발송 가능 여부 — 프론트 토글 가드용
 
 
 class UpdateInterestsRequest(BaseModel):
@@ -581,6 +582,7 @@ def get_my_interests(
         notify_vision=bool(getattr(current, "notify_vision", False)),
         notify_meditation=bool(getattr(current, "notify_meditation", False)),
         interest_prompt_completed=bool(getattr(current, "interest_prompt_completed", False)),
+        has_phone=bool((current.phone or "").strip()),
     )
 
 

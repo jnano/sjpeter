@@ -28,6 +28,8 @@ class NotificationBatch(Base):
     site_sent = Column(Integer, nullable=False, server_default=text("0"))
     email_sent = Column(Integer, nullable=False, server_default=text("0"))
     kakao_sent = Column(Integer, nullable=False, server_default=text("0"))
+    # v1.5.328: 카톡 알림 ON 인데 전화번호 없어 발송 skip 된 회원 수
+    kakao_skipped_no_phone = Column(Integer, nullable=False, server_default=text("0"))
     failed_reason = Column(String(100))  # 'no_group' | 'no_subscribers' | NULL
     created_at = Column(TIMESTAMP, nullable=False, server_default=text("NOW()"))
 

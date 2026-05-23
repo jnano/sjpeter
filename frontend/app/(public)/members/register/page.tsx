@@ -203,6 +203,9 @@ export default function RegisterPage() {
               className={inputClass}
               placeholder="010-0000-0000"
             />
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              관심 분과의 새 글·행사를 <strong>카카오톡으로 받으시려면 전화번호가 필요</strong>합니다 (선택).
+            </p>
             <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
               <input
                 type="checkbox"

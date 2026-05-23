@@ -403,6 +403,9 @@ export default function ProfileEditPage() {
           {/* 전화번호 */}
           <div className="bg-white border border-[var(--color-border)] rounded-xl p-6">
             <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">전화번호 · 이메일 알림</h2>
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">
+              관심 분과의 새 글·행사를 <strong>카카오톡으로 받으려면 전화번호가 필요</strong>합니다. 전화번호가 없으면 카톡 알림 토글은 비활성됩니다.
+            </p>
             <PhoneForm member={member} token={session?.accessToken as string} onSaved={(updated) => setMember(updated)} />
           </div>
 

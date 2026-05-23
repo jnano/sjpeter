@@ -25,6 +25,7 @@ export default function MyInterestsPage() {
   const [notifyKakao, setNotifyKakao] = useState(false);
   const [notifyVision, setNotifyVision] = useState(false);
   const [notifyMeditation, setNotifyMeditation] = useState(false);
+  const [hasPhone, setHasPhone] = useState(true);  // 카톡 알림 전화번호 가드
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
@@ -53,6 +54,7 @@ export default function MyInterestsPage() {
         if (typeof mine?.notify_kakao === "boolean") setNotifyKakao(mine.notify_kakao);
         if (typeof mine?.notify_vision === "boolean") setNotifyVision(mine.notify_vision);
         if (typeof mine?.notify_meditation === "boolean") setNotifyMeditation(mine.notify_meditation);
+        if (typeof mine?.has_phone === "boolean") setHasPhone(mine.has_phone);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -101,7 +103,7 @@ export default function MyInterestsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           community_ids: Array.from(selected),
-          notify_kakao: notifyKakao && selected.size > 0,
+          notify_kakao: notifyKakao && selected.size > 0 && hasPhone,
           notify_vision: notifyVision,
           notify_meditation: notifyMeditation,
         }),
@@ -192,20 +194,31 @@ export default function MyInterestsPage() {
             )}
           </div>
 
-          {/* 카톡 알림 — 분과 1개 이상 선택 시 활성 */}
-          <div className={`bg-white border border-[var(--color-border)] rounded-xl p-4 ${selected.size === 0 ? "opacity-50" : ""}`}>
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input type="checkbox" checked={notifyKakao} disabled={selected.size === 0}
-                onChange={(e) => setNotifyKakao(e.target.checked)}
-                className="w-5 h-5 accent-[var(--color-primary)] shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">카카오톡으로 분과·단체 소식 받기</p>
-                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  선택한 분과·단체에 새 글이나 행사가 등록되면 카톡으로 알려드립니다. (준비 중 — 채널 개설 후 활성화)
-                </p>
+          {/* 카톡 알림 — 분과 1개 이상 선택 + 전화번호 등록 시 활성 */}
+          {(() => {
+            const kakaoDisabled = selected.size === 0 || !hasPhone;
+            return (
+              <div className={`bg-white border border-[var(--color-border)] rounded-xl p-4 ${kakaoDisabled ? "opacity-60" : ""}`}>
+                <label className={`flex items-start gap-3 select-none ${kakaoDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                  <input type="checkbox" checked={notifyKakao && !kakaoDisabled} disabled={kakaoDisabled}
+                    onChange={(e) => setNotifyKakao(e.target.checked)}
+                    className="w-5 h-5 accent-[var(--color-primary)] shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">카카오톡으로 분과·단체 소식 받기</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      선택한 분과·단체에 새 글이나 행사가 등록되면 카톡으로 알려드립니다. (준비 중 — 채널 개설 후 활성화)
+                    </p>
+                    {!hasPhone && (
+                      <p className="text-xs text-amber-700 mt-2">
+                        ⚠️ 전화번호가 등록되어 있지 않습니다 — 카톡 발송이 불가합니다.{" "}
+                        <Link href="/members/me/profile" className="underline font-medium">프로필에서 전화번호 등록</Link>
+                      </p>
+                    )}
+                  </div>
+                </label>
               </div>
-            </label>
-          </div>
+            );
+          })()}
 
           {/* 저장 버튼 */}
           <div className="flex items-center gap-3 pt-2">
