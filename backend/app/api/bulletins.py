@@ -818,6 +818,28 @@ def _fanout_community_notifications(
     return len(member_ids)
 
 
+def _auto_match_community_groups(db: Session, ext: BulletinExtraction) -> list[int]:
+    """ext.group_candidates 와 community_groups.name 자동 매칭 (공백 제거 + lower).
+
+    bulk approve 시 사용자가 검토 UI 에서 분과를 명시 지정하지 못하는 경우의 fallback.
+    """
+    from sqlalchemy import text as _text
+    candidates = list(ext.group_candidates or [])
+    if not candidates and ext.group_name:
+        candidates = [ext.group_name]
+    if not candidates:
+        return []
+    norm = lambda s: "".join((s or "").split()).lower()
+    rows = db.execute(_text("SELECT id, name FROM community_groups")).fetchall()
+    by_name = {norm(r.name): r.id for r in rows}
+    matched: list[int] = []
+    for c in candidates:
+        gid = by_name.get(norm(c))
+        if gid and gid not in matched:
+            matched.append(gid)
+    return matched
+
+
 def _persist_targets_and_notify(
     db: Session, ext: BulletinExtraction,
     *, community_group_ids: list[int], temporal_kind: Optional[str], notify: bool,
@@ -1261,6 +1283,14 @@ def bulk_approve_extractions(
         sp = db.begin_nested()
         try:
             _apply_extraction_routing(db, ext)
+            # 일괄 승인은 ext 별 분과 정보를 body 로 못 받음 — group_candidates 자동 매칭으로 추정.
+            # temporal_kind 는 저장된 값 그대로 사용. notify=True 기본 (게이트가 안전망).
+            _persist_targets_and_notify(
+                db, ext,
+                community_group_ids=_auto_match_community_groups(db, ext),
+                temporal_kind=ext.temporal_kind,
+                notify=True,
+            )
             sp.commit()
             approved.append(ext.id)
         except HTTPException as e:
