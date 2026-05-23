@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import MarkdownContent from "@/components/MarkdownContent";
@@ -81,10 +82,11 @@ export default async function VisionPage() {
             // DB 의 is_current 가 여러 건 TRUE 인 경우에도 표시는 1건으로 보정.
             const isLatest = v.id === current?.id;
             return (
-              <div
+              <Link
                 key={v.id}
+                href={`/vision/${v.id}`}
                 className={`flex items-center gap-6 px-6 py-4 ${
-                  isLatest ? "bg-blue-50" : "hover:bg-[var(--color-surface-warm)]"
+                  isLatest ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-[var(--color-surface-warm)]"
                 } transition-colors`}
               >
                 <span
@@ -106,7 +108,7 @@ export default async function VisionPage() {
                     올해
                   </span>
                 )}
-              </div>
+              </Link>
             );
           })}
         </div>
