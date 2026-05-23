@@ -234,11 +234,13 @@ export default function AdminMenusPage() {
   // ─── Item CRUD ───────────────────────────────────────
 
   async function saveItem(body: Partial<MenuItem>, item: MenuItem | null, groupId: number): Promise<boolean> {
+    // body 에 키가 있으면 그 값을 그대로 사용 (null/false 도 의도적 변경값).
+    // ?? 로 fallback 하면 '최상위로 이동'(parent_id=null) 이나 '비활성화'(is_active=false) 가 무력화됨.
     const payload = {
       label: body.label ?? "",
       sort_order: item?.sort_order ?? 0,
-      is_active: body.is_active ?? true,
-      parent_id: body.parent_id ?? item?.parent_id ?? null,
+      is_active: "is_active" in body ? body.is_active : (item?.is_active ?? true),
+      parent_id: "parent_id" in body ? body.parent_id : (item?.parent_id ?? null),
       link_type: body.link_type ?? "external",
       static_page_slug: body.static_page_slug ?? null,
       board_id: body.board_id ?? null,
