@@ -165,7 +165,7 @@ def update_phase(
         setattr(phase, k, v)
     db.commit()
     db.refresh(phase)
-    log_action(db, get_admin_identifier(admin), "update_construction_phase", "construction_phase", phase.id, phase.title)
+    log_action(db, get_admin_identifier(admin), "update_construction_phase", "construction_phase", phase.id, phase.name)
     return phase
 
 
@@ -178,7 +178,7 @@ def delete_phase(
     phase = db.query(ConstructionPhase).filter(ConstructionPhase.id == phase_id).first()
     if not phase:
         raise HTTPException(status_code=404, detail="단계를 찾을 수 없습니다.")
-    snapshot = phase.title
+    snapshot = phase.name
     _delete_photo_file(phase.photo_url)
     db.delete(phase)
     db.commit()
@@ -202,7 +202,7 @@ async def upload_phase_photo(
     phase.photo_url = new_url
     db.commit()
     db.refresh(phase)
-    log_action(db, get_admin_identifier(admin), "upload_construction_phase_photo", "construction_phase", phase.id, phase.title)
+    log_action(db, get_admin_identifier(admin), "upload_construction_phase_photo", "construction_phase", phase.id, phase.name)
     return phase
 
 
