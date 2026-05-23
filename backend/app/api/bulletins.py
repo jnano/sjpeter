@@ -1247,8 +1247,17 @@ def approve_extraction(
     return ext
 
 
+class BulkReviewItem(BaseModel):
+    """일괄 승인 시 ext 별 사용자 명시 분과·시점·알림 정보."""
+    community_group_ids: list[int] | None = None
+    temporal_kind: str | None = None
+    notify: bool = True
+
+
 class BulkApproveBody(BaseModel):
     extraction_ids: list[int]
+    # ext id → review. 없으면 자동 매칭 fallback.
+    reviews: dict[int, BulkReviewItem] | None = None
 
 
 @router.post("/extractions/bulk-approve")
@@ -1283,13 +1292,21 @@ def bulk_approve_extractions(
         sp = db.begin_nested()
         try:
             _apply_extraction_routing(db, ext)
-            # 일괄 승인은 ext 별 분과 정보를 body 로 못 받음 — group_candidates 자동 매칭으로 추정.
-            # temporal_kind 는 저장된 값 그대로 사용. notify=True 기본 (게이트가 안전망).
+            # 사용자 명시 review 우선, 없으면 group_candidates 자동 매칭 fallback
+            user_review = (body.reviews or {}).get(ext.id)
+            if user_review is not None:
+                gids = user_review.community_group_ids or []
+                tk = user_review.temporal_kind or ext.temporal_kind
+                notify_flag = user_review.notify
+            else:
+                gids = _auto_match_community_groups(db, ext)
+                tk = ext.temporal_kind
+                notify_flag = True
             _persist_targets_and_notify(
                 db, ext,
-                community_group_ids=_auto_match_community_groups(db, ext),
-                temporal_kind=ext.temporal_kind,
-                notify=True,
+                community_group_ids=gids,
+                temporal_kind=tk,
+                notify=notify_flag,
             )
             sp.commit()
             approved.append(ext.id)

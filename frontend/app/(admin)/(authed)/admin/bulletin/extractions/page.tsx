@@ -298,11 +298,17 @@ export default function ExtractionsPage() {
     if (ids.length === 0) return;
     setError(""); setInfo("");
     setBulkProcessing(true);
+    // 선택된 각 ext 의 현재 review state 동봉 — 사용자가 수동으로 고친 분과·시점·알림 우선
+    const reviews: Record<number, { community_group_ids: number[]; temporal_kind: string; notify: boolean }> = {};
+    for (const id of ids) {
+      const r = reviewByExt[id];
+      if (r) reviews[id] = { community_group_ids: r.group_ids, temporal_kind: r.temporal_kind, notify: r.notify };
+    }
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/bulk-approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ extraction_ids: ids }),
+        body: JSON.stringify({ extraction_ids: ids, reviews }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "일괄 승인 실패");
       const result: { approved: number[]; skipped: { id: number; reason: string }[]; failed: { id: number; reason: string }[] } = await res.json();
