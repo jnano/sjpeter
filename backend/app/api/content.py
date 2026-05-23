@@ -128,6 +128,7 @@ def create_vision(
                 db, kind="vision",
                 title=f"{vision.year}년 사목지표: {vision.motto}",
                 body_preview=vision.body,
+                target_id=vision.id,
             )
         except Exception as e:
             import logging
@@ -781,6 +782,7 @@ def create_meditation(
                 db, kind="meditation",
                 title=item.title,
                 body_preview=item.body,
+                target_id=item.id,
             )
         except Exception as e:
             import logging

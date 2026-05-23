@@ -1848,6 +1848,7 @@ def approve_extraction_as_vision(
                 db, kind="vision",
                 title=f"{year}년 사목지표: {motto}",
                 body_preview=vision_body,
+                target_id=ext.created_vision_id,
             )
         except Exception as e:
             logger.error("approve_as_vision 알림 발송 실패: %s", e)
@@ -1924,6 +1925,7 @@ def approve_extraction_as_meditation(
                 db, kind="meditation",
                 title=title,
                 body_preview=meditation_body,
+                target_id=ext.created_meditation_id,
             )
         except Exception as e:
             logger.error("approve_as_meditation 알림 발송 실패: %s", e)

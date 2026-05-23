@@ -16,6 +16,8 @@ interface NotificationItem {
   body: string | null;
   post_id: number | null;
   event_id: number | null;
+  vision_id: number | null;
+  meditation_id: number | null;
   community_group_id: number | null;
   community_group_name: string | null;
   board_slug: string | null;
@@ -118,8 +120,14 @@ export default function NotificationsPage() {
             {items.map((n) => {
               const href = targetHref(n);
               const isUnread = !n.read_at;
-              // 원글 삭제 판정: community 알림인데 post_id·event_id 가 둘 다 NULL — FK SET NULL 결과
-              const isDeleted = n.kind === "community" && !n.post_id && !n.event_id;
+              // 원글 삭제 판정: FK SET NULL 로 가리키는 row 가 사라진 경우.
+              //  - community : post_id·event_id 둘 다 NULL
+              //  - vision    : vision_id NULL (주보 삭제 등으로 visions row 사라짐)
+              //  - meditation: meditation_id NULL
+              const isDeleted =
+                (n.kind === "community" && !n.post_id && !n.event_id) ||
+                (n.kind === "vision" && !n.vision_id) ||
+                (n.kind === "meditation" && !n.meditation_id);
               const inner = (
                 <div
                   className={`flex items-start gap-3 px-4 py-3 transition-colors ${

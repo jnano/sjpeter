@@ -31,6 +31,8 @@ class NotificationOut(BaseModel):
     body: Optional[str] = None
     post_id: Optional[int] = None
     event_id: Optional[int] = None
+    vision_id: Optional[int] = None
+    meditation_id: Optional[int] = None
     community_group_id: Optional[int] = None
     community_group_name: Optional[str] = None  # JOIN 으로 채움
     board_slug: Optional[str] = None             # post 가 속한 게시판 slug — 이동 URL 구성용
@@ -54,6 +56,7 @@ def list_notifications(
     rows = db.execute(
         _text(
             "SELECT n.id, n.kind, n.title, n.body, n.post_id, n.event_id, "
+            "       n.vision_id, n.meditation_id, "
             "       n.community_group_id, cg.name AS community_group_name, "
             "       b.slug AS board_slug, "
             "       n.read_at, n.created_at "
@@ -72,6 +75,7 @@ def list_notifications(
         NotificationOut(
             id=r.id, kind=r.kind, title=r.title, body=r.body,
             post_id=r.post_id, event_id=r.event_id,
+            vision_id=r.vision_id, meditation_id=r.meditation_id,
             community_group_id=r.community_group_id,
             community_group_name=r.community_group_name,
             board_slug=r.board_slug,

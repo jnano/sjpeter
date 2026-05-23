@@ -107,8 +107,13 @@ def fanout_content_notification(
     kind: ContentKind,
     title: str,
     body_preview: Optional[str] = None,
+    target_id: Optional[int] = None,
 ) -> dict:
-    """수신 동의 회원에게 site notification + email 동시 발송. 결과 dict 반환."""
+    """수신 동의 회원에게 site notification + email 동시 발송. 결과 dict 반환.
+
+    target_id: 알림이 가리키는 vision.id 또는 meditation.id. 주보 삭제 등으로 그 row 가
+    사라지면 FK SET NULL 로 NULL 이 되어, 프론트가 '원글 삭제됨' 판정에 사용.
+    """
     meta = _KIND_META.get(kind)
     if not meta:
         return {"site": 0, "email": 0}
@@ -125,11 +130,17 @@ def fanout_content_notification(
 
     from app.models.notification import Notification
     short_body = (body_preview[:280] if body_preview else None)
+    extra: dict = {}
+    if kind == "vision":
+        extra["vision_id"] = target_id
+    elif kind == "meditation":
+        extra["meditation_id"] = target_id
     db.add_all([
         Notification(
             member_id=r.id, kind=kind,
             title=title, body=short_body,
             post_id=None, event_id=None, community_group_id=None,
+            **extra,
         )
         for r in rows
     ])

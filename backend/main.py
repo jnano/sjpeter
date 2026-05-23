@@ -1450,7 +1450,46 @@ def _migrate_add_columns():
             except Exception:
                 pass
 
+        # v1.5.320: vision_id / meditation_id 컬럼 추가 (FK SET NULL).
+        # 주보 PDF 삭제 시 visions·meditations 가 CASCADE 로 사라지는데, 그걸 가리키는
+        # 알림은 살아있어야 — 클릭 시 '(원글 삭제됨)' 안내. fanout 시점에 INSERT.
+        for col, ref_table in [("vision_id", "visions"), ("meditation_id", "meditations")]:
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE notifications ADD COLUMN IF NOT EXISTS {col} INTEGER "
+                    f"REFERENCES {ref_table}(id) ON DELETE SET NULL"
+                ))
+            except Exception:
+                pass
+
+        # 여기서 한 번 commit — ALTER 와 backfill 을 분리해 backfill 의 SQL 오류가 ALTER 를 막지 않게.
         conn.commit()
+
+    # backfill 은 새 트랜잭션에서 (visions 엔 created_at 컬럼이 없어 id DESC 만 사용)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                UPDATE notifications n SET vision_id = (
+                    SELECT v.id FROM visions v ORDER BY v.id DESC LIMIT 1
+                )
+                WHERE n.kind = 'vision' AND n.vision_id IS NULL
+            """))
+            conn.commit()
+        except Exception:
+            pass
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                UPDATE notifications n SET meditation_id = (
+                    SELECT m.id FROM meditations m
+                    WHERE m.created_at <= n.created_at
+                    ORDER BY m.created_at DESC LIMIT 1
+                )
+                WHERE n.kind = 'meditation' AND n.meditation_id IS NULL
+            """))
+            conn.commit()
+        except Exception:
+            pass
 
 
 def _seed_initial_data():
