@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 const SPECIAL = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/~`\\]/;
@@ -627,7 +628,8 @@ export default function MypagePage() {
   return (
     <>
       <PageHeader group="회원" title="마이페이지" subtitle="내 정보와 활동을 관리합니다." />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout>
+      <div className="max-w-3xl mx-auto">
 
       {member && (
         <>
@@ -997,6 +999,7 @@ export default function MypagePage() {
         </div>
       )}
     </div>
+    </SectionLayout>
     </>
   );
 }

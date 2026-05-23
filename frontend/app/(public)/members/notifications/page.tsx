@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import { DataEvent, notify } from "@/components/dataEvents";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -93,7 +94,8 @@ export default function NotificationsPage() {
   return (
     <>
       <PageHeader group="회원" title="알림함" subtitle={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}건` : "새 알림이 없습니다"} />
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <SectionLayout>
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">
             ← 마이페이지
@@ -210,6 +212,7 @@ export default function NotificationsPage() {
           </ul>
         )}
       </div>
+      </SectionLayout>
     </>
   );
 }
