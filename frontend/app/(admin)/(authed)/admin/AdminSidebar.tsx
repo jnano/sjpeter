@@ -87,11 +87,17 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "공동체",
-    icon: "💬",
+    label: "단체·분과",
+    icon: "👥",
     items: [
       { href: "/admin/council", label: "사목평의회" },
       { href: "/admin/community", label: "단체·분과" },
+    ],
+  },
+  {
+    label: "게시판·회원",
+    icon: "💬",
+    items: [
       { href: "/admin/boards", label: "게시판 관리" },
       { href: "/admin/members", label: "회원 관리" },
     ],

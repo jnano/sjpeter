@@ -177,10 +177,10 @@ PDF 업로드
 | 주보 관리 | /admin/event-mapping | AI 분류 설정 |
 | 소식·일정 | /admin/notices | 공지 관리 (인라인 수정, 다중선택 삭제, 월별 필터) |
 | 소식·일정 | /admin/calendar | 본당 행사·모임 일정 (인라인 수정, 구분 필터) |
-| 공동체 | /admin/council | 사목평의회 |
-| 공동체 | /admin/community | 단체·분과 |
-| 공동체 | /admin/boards | 게시판 관리 (게시물 수 표시) |
-| 공동체 | /admin/members, /admin/members/[id] | 회원 관리·상세 |
+| 단체·분과 | /admin/council | 사목평의회 |
+| 단체·분과 | /admin/community | 단체·분과 |
+| 게시판·회원 | /admin/boards | 게시판 관리 (게시물 수 표시) |
+| 게시판·회원 | /admin/members, /admin/members/[id] | 회원 관리·상세 |
 | 페이지·배너 | /admin/pages | 페이지 만들기 (동적 페이지) |
 | 페이지·배너 | /admin/banners | 광고 배너 |
 | 레이아웃 | /admin/home | 홈 페이지 블록 빌더 |
