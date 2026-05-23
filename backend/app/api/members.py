@@ -111,6 +111,8 @@ class MemberOut(BaseModel):
     is_email_verified: bool = False
     interest_prompt_completed: bool = False
     notify_kakao: bool = False
+    notify_vision: bool = False
+    notify_meditation: bool = False
     name_day_month: Optional[int] = None
     name_day_day: Optional[int] = None
     created_at: datetime
@@ -496,6 +498,8 @@ def _member_out(member: Member) -> MemberOut:
         is_email_verified=bool(member.is_email_verified),
         interest_prompt_completed=bool(getattr(member, "interest_prompt_completed", False)),
         notify_kakao=bool(getattr(member, "notify_kakao", False)),
+        notify_vision=bool(getattr(member, "notify_vision", False)),
+        notify_meditation=bool(getattr(member, "notify_meditation", False)),
         name_day_month=getattr(member, "name_day_month", None),
         name_day_day=getattr(member, "name_day_day", None),
         created_at=member.created_at,
@@ -522,12 +526,16 @@ class InterestGroupOut(BaseModel):
 class MyInterestsOut(BaseModel):
     groups: list[InterestGroupOut]
     notify_kakao: bool
+    notify_vision: bool
+    notify_meditation: bool
     interest_prompt_completed: bool
 
 
 class UpdateInterestsRequest(BaseModel):
     community_ids: list[int] = []
     notify_kakao: bool = False
+    notify_vision: bool = False
+    notify_meditation: bool = False
 
 
 def _expand_with_ancestors(db: Session, ids: list[int]) -> list[int]:
@@ -570,6 +578,8 @@ def get_my_interests(
     return MyInterestsOut(
         groups=[InterestGroupOut.model_validate(g) for g in rows],
         notify_kakao=bool(getattr(current, "notify_kakao", False)),
+        notify_vision=bool(getattr(current, "notify_vision", False)),
+        notify_meditation=bool(getattr(current, "notify_meditation", False)),
         interest_prompt_completed=bool(getattr(current, "interest_prompt_completed", False)),
     )
 
@@ -592,6 +602,8 @@ def update_my_interests(
     for gid in valid_ids:
         db.add(MemberCommunityInterest(member_id=current.id, community_group_id=gid))
     current.notify_kakao = bool(body.notify_kakao)
+    current.notify_vision = bool(body.notify_vision)
+    current.notify_meditation = bool(body.notify_meditation)
     current.interest_prompt_completed = True
     db.commit()
     db.refresh(current)
@@ -685,6 +697,8 @@ def delete_me(
     current.avatar_url = None
     current.receive_notification = False
     current.notify_kakao = False
+    current.notify_vision = False
+    current.notify_meditation = False
     current.is_email_verified = False
     current.interest_prompt_completed = False
     current.name_day_month = None
@@ -1148,6 +1162,8 @@ def admin_delete_member(
     member.avatar_url = None
     member.receive_notification = False
     member.notify_kakao = False
+    member.notify_vision = False
+    member.notify_meditation = False
     member.is_email_verified = False
     member.interest_prompt_completed = False
     member.name_day_month = None

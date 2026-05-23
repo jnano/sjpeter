@@ -47,6 +47,9 @@ class Member(Base):
     is_email_verified = Column(Boolean, default=False)
     interest_prompt_completed = Column(Boolean, default=False, nullable=False)  # 관심분과 온보딩 응답 여부
     notify_kakao = Column(Boolean, default=False, nullable=False)               # 카톡 알림 수신 동의 (글로벌)
+    # 사목지표·주일말씀 알림 (이메일+사이트 알림, v1.5.313). 글로벌 카톡 토글과는 독립.
+    notify_vision = Column(Boolean, default=False, nullable=False)
+    notify_meditation = Column(Boolean, default=False, nullable=False)
     # 영명축일 (세례명 성인의 축일) — 월·일 모두 입력해야 의미. 둘 다 NULL 허용 (선택 사항).
     name_day_month = Column(Integer, nullable=True)
     name_day_day = Column(Integer, nullable=True)

@@ -476,6 +476,8 @@ export default function MypagePage() {
   const [verificationSent, setVerificationSent] = useState(false);
   const [interests, setInterests] = useState<InterestGroup[]>([]);
   const [notifyKakao, setNotifyKakao] = useState(false);
+  const [notifyVision, setNotifyVision] = useState(false);
+  const [notifyMeditation, setNotifyMeditation] = useState(false);
   const [savingNotify, setSavingNotify] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -513,11 +515,21 @@ export default function MypagePage() {
       if (interestsData && typeof interestsData.notify_kakao === "boolean") {
         setNotifyKakao(interestsData.notify_kakao);
       }
+      if (interestsData && typeof interestsData.notify_vision === "boolean") {
+        setNotifyVision(interestsData.notify_vision);
+      }
+      if (interestsData && typeof interestsData.notify_meditation === "boolean") {
+        setNotifyMeditation(interestsData.notify_meditation);
+      }
       setLoading(false);
     });
   }, [session?.accessToken]);
 
-  async function toggleNotifyKakao() {
+  async function saveNotifyFlags(overrides: {
+    notify_kakao?: boolean;
+    notify_vision?: boolean;
+    notify_meditation?: boolean;
+  }) {
     const token = session?.accessToken;
     if (!token || savingNotify) return;
     setSavingNotify(true);
@@ -527,12 +539,16 @@ export default function MypagePage() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           community_ids: interests.map((g) => g.id),
-          notify_kakao: !notifyKakao,
+          notify_kakao: overrides.notify_kakao ?? notifyKakao,
+          notify_vision: overrides.notify_vision ?? notifyVision,
+          notify_meditation: overrides.notify_meditation ?? notifyMeditation,
         }),
       });
       if (res.ok) {
         const data = await res.json();
         setNotifyKakao(!!data.notify_kakao);
+        setNotifyVision(!!data.notify_vision);
+        setNotifyMeditation(!!data.notify_meditation);
       }
     } finally {
       setSavingNotify(false);
@@ -889,7 +905,7 @@ export default function MypagePage() {
                   type="checkbox"
                   checked={notifyKakao}
                   disabled={savingNotify}
-                  onChange={toggleNotifyKakao}
+                  onChange={() => saveNotifyFlags({ notify_kakao: !notifyKakao })}
                   className="w-4 h-4 accent-[var(--color-primary)]"
                 />
                 <span className="text-sm">
@@ -899,6 +915,38 @@ export default function MypagePage() {
               </label>
             </>
           )}
+        </div>
+      )}
+
+      {/* 관심 콘텐츠 알림 (사목지표·주일말씀) — 분과·단체와 독립, 이메일·사이트 알림 */}
+      {member && (
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 mb-4">
+          <h2 className="text-sm font-bold text-[var(--color-primary)] mb-3">관심 콘텐츠 알림</h2>
+          <p className="text-xs text-[var(--color-text-muted)] mb-4">
+            새 사목지표·주일말씀이 등록되면 이메일과 사이트 알림으로 받아볼 수 있습니다.
+          </p>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyVision}
+                disabled={savingNotify}
+                onChange={() => saveNotifyFlags({ notify_vision: !notifyVision })}
+                className="w-4 h-4 accent-[var(--color-primary)]"
+              />
+              <span className="text-sm">사목지표 알림 받기</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyMeditation}
+                disabled={savingNotify}
+                onChange={() => saveNotifyFlags({ notify_meditation: !notifyMeditation })}
+                className="w-4 h-4 accent-[var(--color-primary)]"
+              />
+              <span className="text-sm">주일말씀 알림 받기</span>
+            </label>
+          </div>
         </div>
       )}
 

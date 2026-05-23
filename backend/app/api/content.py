@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, or_, and_
 from pydantic import BaseModel, field_validator
@@ -110,12 +110,28 @@ def list_visions(db: Session = Depends(get_db)):
 
 
 @router.post("/visions", response_model=VisionOut)
-def create_vision(body: VisionIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
+def create_vision(
+    body: VisionIn,
+    notify: bool = Query(False, description="등록 시 수신 동의 회원에게 이메일·사이트 알림 발송"),
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
     vision = Vision(**body.model_dump())
     db.add(vision)
     db.commit()
     db.refresh(vision)
     log_action(db, get_admin_identifier(admin), "create_vision", "vision", vision.id, f"{vision.year}: {vision.motto}")
+    if notify:
+        from app.core.content_notify import fanout_content_notification
+        try:
+            fanout_content_notification(
+                db, kind="vision",
+                title=f"{vision.year}년 사목지표: {vision.motto}",
+                body_preview=vision.body,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("vision 알림 발송 실패: %s", e)
     return vision
 
 
@@ -747,12 +763,28 @@ def get_meditation(item_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/meditations", response_model=MeditationOut, status_code=201)
-def create_meditation(body: MeditationIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
+def create_meditation(
+    body: MeditationIn,
+    notify: bool = Query(False, description="등록 시 수신 동의 회원에게 이메일·사이트 알림 발송"),
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
     item = Meditation(**body.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
     log_action(db, get_admin_identifier(admin), "create_meditation", "meditation", item.id, body.title)
+    if notify:
+        from app.core.content_notify import fanout_content_notification
+        try:
+            fanout_content_notification(
+                db, kind="meditation",
+                title=item.title,
+                body_preview=item.body,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("meditation 알림 발송 실패: %s", e)
     return item
 
 

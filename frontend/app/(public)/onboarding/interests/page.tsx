@@ -22,6 +22,8 @@ export default function OnboardingInterestsPage() {
   const [groups, setGroups] = useState<CommunityGroup[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [notify, setNotify] = useState(false);
+  const [notifyVision, setNotifyVision] = useState(false);
+  const [notifyMeditation, setNotifyMeditation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // 이미 응답한 회원이 수정 모드로 재진입
@@ -51,6 +53,8 @@ export default function OnboardingInterestsPage() {
           setSelected(new Set(mine.groups.map((g: CommunityGroup) => g.id)));
         }
         if (typeof mine?.notify_kakao === "boolean") setNotify(mine.notify_kakao);
+        if (typeof mine?.notify_vision === "boolean") setNotifyVision(mine.notify_vision);
+        if (typeof mine?.notify_meditation === "boolean") setNotifyMeditation(mine.notify_meditation);
         setIsEditing(!!mine?.interest_prompt_completed);
         setLoading(false);
       })
@@ -103,6 +107,8 @@ export default function OnboardingInterestsPage() {
         body: JSON.stringify({
           community_ids: Array.from(selected),
           notify_kakao: notify && selected.size > 0,
+          notify_vision: notifyVision,
+          notify_meditation: notifyMeditation,
         }),
       });
       if (res.ok) {
@@ -231,6 +237,34 @@ export default function OnboardingInterestsPage() {
               </p>
             </div>
           </label>
+        </div>
+
+        {/* 관심 콘텐츠 — 사목지표·주일말씀 (이메일·사이트 알림, 분과 선택과 독립) */}
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-4">
+          <p className="text-sm font-medium mb-1">관심 콘텐츠 알림</p>
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">
+            새 사목지표·주일말씀이 등록되면 이메일과 사이트 알림으로 받아볼 수 있습니다.
+          </p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyVision}
+                onChange={(e) => setNotifyVision(e.target.checked)}
+                className="w-5 h-5 accent-[var(--color-primary)] shrink-0"
+              />
+              <span className="text-sm">사목지표 알림 받기</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={notifyMeditation}
+                onChange={(e) => setNotifyMeditation(e.target.checked)}
+                className="w-5 h-5 accent-[var(--color-primary)] shrink-0"
+              />
+              <span className="text-sm">주일말씀 알림 받기</span>
+            </label>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">

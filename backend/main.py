@@ -177,6 +177,9 @@ def _migrate_add_columns():
             ("is_admin", "BOOLEAN DEFAULT FALSE"),
             ("interest_prompt_completed", "BOOLEAN DEFAULT FALSE NOT NULL"),
             ("notify_kakao", "BOOLEAN DEFAULT FALSE NOT NULL"),
+            # 사목지표·주일말씀 알림 수신 동의 (이메일+사이트 알림, v1.5.313)
+            ("notify_vision", "BOOLEAN DEFAULT FALSE NOT NULL"),
+            ("notify_meditation", "BOOLEAN DEFAULT FALSE NOT NULL"),
             # 영명축일 (월·일 별도 INT, 둘 다 NULL 허용. v1.5.141)
             ("name_day_month", "INTEGER"),
             ("name_day_day", "INTEGER"),

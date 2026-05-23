@@ -278,6 +278,7 @@ export function HistoryTab() {
 export function VisionTab() {
   const [items, setItems] = useState<Vision[]>([]);
   const [form, setForm] = useState({ year: new Date().getFullYear(), motto: "", body: "", is_current: false });
+  const [notifyOnCreate, setNotifyOnCreate] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ year: 0, motto: "", body: "", is_current: false });
   const [loading, setLoading] = useState(false);
@@ -297,13 +298,20 @@ export function VisionTab() {
     e.preventDefault();
     if (!form.motto.trim()) return;
     setLoading(true);
-    const res = await fetch(`${API}/api/content/visions`, {
+    const url = `${API}/api/content/visions${notifyOnCreate ? "?notify=true" : ""}`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify(form),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ year: new Date().getFullYear(), motto: "", body: "", is_current: false }); setShowCreate(false); load(); }
+    if (res.ok) {
+      setMsg(notifyOnCreate ? "추가되었습니다. 수신 동의 회원에게 알림을 발송했습니다." : "추가되었습니다.");
+      setForm({ year: new Date().getFullYear(), motto: "", body: "", is_current: false });
+      setNotifyOnCreate(false);
+      setShowCreate(false);
+      load();
+    }
   }
 
   async function update(id: number) {
@@ -395,6 +403,13 @@ export function VisionTab() {
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.is_current} onChange={(e) => setForm((p) => ({ ...p, is_current: e.target.checked }))} className="rounded" />
             올해 지표로 표시
+          </label>
+          <label className="flex items-start gap-2 text-sm cursor-pointer p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <input type="checkbox" checked={notifyOnCreate} onChange={(e) => setNotifyOnCreate(e.target.checked)} className="rounded mt-0.5" />
+            <span>
+              <span className="font-medium text-amber-900">등록 시 알림 발송</span>
+              <span className="block text-xs text-amber-700 mt-0.5">사목지표 알림 수신에 동의한 회원에게 이메일·사이트 알림을 보냅니다.</span>
+            </span>
           </label>
           <button type="submit" disabled={loading} className={btnPrimary}>추가</button>
         </form>
@@ -1288,6 +1303,7 @@ export function MeditationTab() {
   const [items, setItems] = useState<Meditation[]>([]);
   const [total, setTotal] = useState(0);
   const [form, setForm] = useState({ ...emptyMedForm });
+  const [notifyOnCreate, setNotifyOnCreate] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ ...emptyMedForm });
   const [loading, setLoading] = useState(false);
@@ -1326,13 +1342,21 @@ export function MeditationTab() {
       published_date: form.published_date,
       is_published: form.is_published,
     };
-    const res = await fetch(`${API}/api/content/meditations`, {
+    const url = `${API}/api/content/meditations${notifyOnCreate ? "?notify=true" : ""}`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.ok) { flash("등록되었습니다."); setForm({ ...emptyMedForm }); setShowCreate(false); load(); notify(DataEvent.MEDITATION_CURRENT); }
+    if (res.ok) {
+      flash(notifyOnCreate ? "등록되었습니다. 수신 동의 회원에게 알림을 발송했습니다." : "등록되었습니다.");
+      setForm({ ...emptyMedForm });
+      setNotifyOnCreate(false);
+      setShowCreate(false);
+      load();
+      notify(DataEvent.MEDITATION_CURRENT);
+    }
   }
 
   async function update(id: number) {
@@ -1546,6 +1570,13 @@ export function MeditationTab() {
               바로 게시
             </label>
           </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <input type="checkbox" checked={notifyOnCreate} onChange={(e) => setNotifyOnCreate(e.target.checked)} className="rounded mt-0.5" />
+            <span>
+              <span className="font-medium text-amber-900">등록 시 알림 발송</span>
+              <span className="block text-xs text-amber-700 mt-0.5">주일말씀 알림 수신에 동의한 회원에게 이메일·사이트 알림을 보냅니다.</span>
+            </span>
+          </label>
           <button type="submit" disabled={loading} className={btnPrimary}>등록</button>
         </form>
       </section>
