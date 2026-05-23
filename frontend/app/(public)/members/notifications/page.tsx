@@ -18,14 +18,16 @@ interface NotificationItem {
   event_id: number | null;
   community_group_id: number | null;
   community_group_name: string | null;
+  board_slug: string | null;
   read_at: string | null;
   created_at: string;
 }
 
 function targetHref(n: NotificationItem): string | null {
-  // 분과 글 → 분과 글 모아보기 (P4 에서 신설 예정). 임시로 그룹 페이지.
-  if (n.event_id) return `/calendar`;
-  if (n.post_id) return `/boards/notice/${n.post_id}`;
+  if (n.kind === "vision") return "/vision";
+  if (n.kind === "meditation") return "/meditation";
+  if (n.post_id) return `/boards/${n.board_slug ?? "notice"}/${n.post_id}`;
+  if (n.event_id) return "/calendar";
   return null;
 }
 
@@ -112,63 +114,69 @@ export default function NotificationsPage() {
         ) : items.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)] text-center py-12">알림이 없습니다.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-border)]/60 border border-[var(--color-border)] rounded-lg bg-white">
+          <ul className="divide-y divide-[var(--color-border)]/60 border border-[var(--color-border)] rounded-lg bg-white overflow-hidden">
             {items.map((n) => {
               const href = targetHref(n);
               const isUnread = !n.read_at;
+              const inner = (
+                <div
+                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                    isUnread ? "bg-[var(--color-primary)]/5" : "bg-white"
+                  } ${href ? "hover:bg-[var(--color-surface-warm)] cursor-pointer" : ""}`}
+                >
+                  <span
+                    className={`inline-block w-2 h-2 mt-2 rounded-full shrink-0 ${
+                      isUnread ? "bg-red-500" : "bg-transparent"
+                    }`}
+                    aria-hidden
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      {n.community_group_name && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 border border-violet-200 text-violet-700 font-semibold">
+                          {n.community_group_name}
+                        </span>
+                      )}
+                      <span className={`text-sm ${isUnread ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}`}>
+                        {n.title}
+                      </span>
+                    </div>
+                    {n.body && (
+                      <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 leading-snug">
+                        {n.body}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                      {new Date(n.created_at).toLocaleString("ko-KR")}
+                    </p>
+                  </div>
+                  {isUnread && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        markRead(n.id);
+                      }}
+                      className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] shrink-0 mt-1"
+                    >
+                      읽음
+                    </button>
+                  )}
+                </div>
+              );
               return (
                 <li key={n.id}>
-                  <div
-                    className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                      isUnread ? "bg-[var(--color-primary)]/5" : "bg-white"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block w-2 h-2 mt-2 rounded-full shrink-0 ${
-                        isUnread ? "bg-red-500" : "bg-transparent"
-                      }`}
-                      aria-hidden
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        {n.community_group_name && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 border border-violet-200 text-violet-700 font-semibold">
-                            {n.community_group_name}
-                          </span>
-                        )}
-                        <span className={`text-sm ${isUnread ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}`}>
-                          {n.title}
-                        </span>
-                      </div>
-                      {n.body && (
-                        <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 leading-snug">
-                          {n.body}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-                        {new Date(n.created_at).toLocaleString("ko-KR")}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      {href && (
-                        <Link
-                          href={href}
-                          onClick={() => isUnread && markRead(n.id)}
-                          className="text-xs px-2 py-1 bg-[var(--color-primary)] text-white rounded hover:opacity-90"
-                        >
-                          보기
-                        </Link>
-                      )}
-                      {isUnread && (
-                        <button
-                          onClick={() => markRead(n.id)}
-                          className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
-                        >
-                          읽음
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  {href ? (
+                    <Link
+                      href={href}
+                      onClick={() => isUnread && markRead(n.id)}
+                      className="block"
+                    >
+                      {inner}
+                    </Link>
+                  ) : (
+                    inner
+                  )}
                 </li>
               );
             })}
