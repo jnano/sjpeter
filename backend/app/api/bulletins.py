@@ -753,13 +753,20 @@ def _expand_groups_bidirectional(db: Session, group_ids: list[int]) -> set[int]:
 
 
 def _notify_gate_passes(temporal_kind: Optional[str], event_date) -> bool:
-    """알림 발송 게이트 — temporal_kind in (future, timeless) AND (event_date is null or future)."""
-    if temporal_kind not in ("future", "timeless"):
-        return False
-    if event_date is None:
+    """알림 발송 게이트.
+
+    - past·unknown·None: 차단
+    - timeless: event_date 무관 항상 통과 (상시·기한 없음 — 정의상 날짜 무관)
+    - future: event_date IS NULL OR event_date >= today (미래여야 자연)
+    """
+    if temporal_kind == "timeless":
         return True
-    from datetime import date as _date
-    return event_date >= _date.today()
+    if temporal_kind == "future":
+        if event_date is None:
+            return True
+        from datetime import date as _date
+        return event_date >= _date.today()
+    return False  # past · unknown · 기타
 
 
 def _fanout_community_notifications(

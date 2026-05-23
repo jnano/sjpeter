@@ -912,17 +912,22 @@ function ExtractionCard({
               <span>승인 시 관심 회원에게 알림 발송</span>
             </label>
             {(() => {
-              const gatePass = (review.temporal_kind === "future" || review.temporal_kind === "timeless") &&
-                (!ext.event_date || ext.event_date >= new Date().toISOString().slice(0, 10));
-              return !gatePass ? (
-                <span className="text-[11px] text-amber-700">
-                  ※ 게이트 차단 — 분류/날짜 조건 미충족 시 발송 안 됨
-                </span>
-              ) : review.group_ids.length === 0 ? (
-                <span className="text-[11px] text-[var(--color-text-muted)]">
-                  분과 미지정 시 발송 안 됨
-                </span>
-              ) : null;
+              // 백엔드 _notify_gate_passes 와 동일 로직 시뮬
+              const tk = review.temporal_kind;
+              const today = new Date().toISOString().slice(0, 10);
+              let blockReason: string | null = null;
+              if (tk === "past") blockReason = "지난 이벤트로 분류 — 차단";
+              else if (tk === "unknown") blockReason = "시점 모호 — 차단";
+              else if (tk === "future" && ext.event_date && ext.event_date < today) {
+                blockReason = `event_date ${ext.event_date} 가 오늘 이전 — 차단`;
+              }
+              if (blockReason) {
+                return <span className="text-[11px] text-amber-700">※ {blockReason}</span>;
+              }
+              if (review.group_ids.length === 0) {
+                return <span className="text-[11px] text-[var(--color-text-muted)]">분과 미지정 시 발송 안 됨</span>;
+              }
+              return null;
             })()}
           </div>
         </div>
