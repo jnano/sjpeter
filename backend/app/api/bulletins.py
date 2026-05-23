@@ -1854,8 +1854,14 @@ def approve_extraction_as_meditation(
 
 class ApproveAsEventBody(BaseModel):
     """캘린더 등록 옵션. board_slug 지정 시 같은 행사를 가리키는 카드 게시글도 함께 생성.
-    카드 본문은 events.description 을 복사하지 않고 짧은 링크만 보유 → DB 중복 회피."""
+    카드 본문은 events.description 을 복사하지 않고 짧은 링크만 보유 → DB 중복 회피.
+
+    분과 태깅 + 알림 — 일반 approve 와 동일 게이트로 처리.
+    """
     board_slug: str | None = None
+    community_group_ids: list[int] | None = None
+    temporal_kind: str | None = None  # future|timeless|past|unknown
+    notify: bool = True
 
 
 @router.post("/extractions/{extraction_id}/approve-as-event", response_model=ExtractionOut)
@@ -1930,6 +1936,13 @@ def approve_extraction_as_event(
         ext.target_board_id = target_board.id
         ext.created_post_id = post.id
 
+    # 분과 태깅 + 알림 — 일반 approve 와 동일 흐름
+    _persist_targets_and_notify(
+        db, ext,
+        community_group_ids=(body.community_group_ids if body else None) or [],
+        temporal_kind=(body.temporal_kind if body else None),
+        notify=bool(body.notify if body else True),
+    )
     db.commit()
     db.refresh(ext)
     log_action(db, get_admin_identifier(admin), "approve_as_event", "bulletin_extraction", ext.id, f"event={ext.created_event_id} board={board_slug or '-'}")

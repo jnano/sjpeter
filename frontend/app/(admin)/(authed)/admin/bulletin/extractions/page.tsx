@@ -230,11 +230,17 @@ export default function ExtractionsPage() {
     }
     setError("");
     setProcessing((p) => ({ ...p, [ext.id]: true }));
+    const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-event`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ board_slug: mirrorBoardSlug ?? null }),
+        body: JSON.stringify({
+          board_slug: mirrorBoardSlug ?? null,
+          community_group_ids: review.group_ids,
+          temporal_kind: review.temporal_kind,
+          notify: review.notify,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "캘린더 등록 실패");
       const updated: Extraction = await res.json();
