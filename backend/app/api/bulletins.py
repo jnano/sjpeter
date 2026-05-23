@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime, time
 from difflib import SequenceMatcher
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 logger = logging.getLogger(__name__)
@@ -1794,6 +1794,7 @@ class ApproveAsVisionBody(BaseModel):
 def approve_extraction_as_vision(
     extraction_id: int,
     body: ApproveAsVisionBody,
+    notify: bool = Query(False, description="등록 시 수신 동의 회원에게 이메일·사이트 알림 발송"),
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin),
 ):
@@ -1839,6 +1840,17 @@ def approve_extraction_as_vision(
     db.commit()
     db.refresh(ext)
     log_action(db, get_admin_identifier(admin), "approve_as_vision", "bulletin_extraction", ext.id, f"vision={ext.created_vision_id} year={year}")
+
+    if notify and ext.created_vision_id:
+        from app.core.content_notify import fanout_content_notification
+        try:
+            fanout_content_notification(
+                db, kind="vision",
+                title=f"{year}년 사목지표: {motto}",
+                body_preview=vision_body,
+            )
+        except Exception as e:
+            logger.error("approve_as_vision 알림 발송 실패: %s", e)
     return ext
 
 
@@ -1853,6 +1865,7 @@ class ApproveAsMeditationBody(BaseModel):
 def approve_extraction_as_meditation(
     extraction_id: int,
     body: ApproveAsMeditationBody,
+    notify: bool = Query(False, description="등록 시 수신 동의 회원에게 이메일·사이트 알림 발송"),
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin),
 ):
@@ -1903,6 +1916,17 @@ def approve_extraction_as_meditation(
     db.commit()
     db.refresh(ext)
     log_action(db, get_admin_identifier(admin), "approve_as_meditation", "bulletin_extraction", ext.id, f"meditation={ext.created_meditation_id}")
+
+    if notify and ext.created_meditation_id:
+        from app.core.content_notify import fanout_content_notification
+        try:
+            fanout_content_notification(
+                db, kind="meditation",
+                title=title,
+                body_preview=meditation_body,
+            )
+        except Exception as e:
+            logger.error("approve_as_meditation 알림 발송 실패: %s", e)
     return ext
 
 

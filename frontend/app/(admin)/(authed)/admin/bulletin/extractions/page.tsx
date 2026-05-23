@@ -11,6 +11,7 @@ interface VisionPayload {
   motto: string;
   body: string;
   is_current: boolean;
+  notify: boolean;
 }
 
 interface MeditationPayload {
@@ -18,6 +19,7 @@ interface MeditationPayload {
   body: string;
   author: string;
   is_published: boolean;
+  notify: boolean;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -257,10 +259,12 @@ export default function ExtractionsPage() {
     setError("");
     setProcessing((p) => ({ ...p, [ext.id]: true }));
     try {
-      const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-vision`, {
+      const { notify: notifyFlag, ...bodyPayload } = payload;
+      const url = `${API}/api/bulletins/extractions/${ext.id}/approve-as-vision${notifyFlag ? "?notify=true" : ""}`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(bodyPayload),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "본당 사목지표 등록 실패");
       const updated: Extraction = await res.json();
@@ -277,10 +281,12 @@ export default function ExtractionsPage() {
     setError("");
     setProcessing((p) => ({ ...p, [ext.id]: true }));
     try {
-      const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-meditation`, {
+      const { notify: notifyFlag, ...bodyPayload } = payload;
+      const url = `${API}/api/bulletins/extractions/${ext.id}/approve-as-meditation${notifyFlag ? "?notify=true" : ""}`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(bodyPayload),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "묵상 등록 실패");
       const updated: Extraction = await res.json();
@@ -1053,6 +1059,7 @@ function VisionApproveForm({
   const [motto, setMotto] = useState<string>(ext.title);
   const [body, setBody] = useState<string>(ext.content ?? "");
   const [isCurrent, setIsCurrent] = useState<boolean>(true);
+  const [notifyOnApprove, setNotifyOnApprove] = useState<boolean>(false);
 
   return (
     <div className="mt-1 rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-3">
@@ -1097,6 +1104,19 @@ function VisionApproveForm({
         올해의 본당 사목지표로 표시 (같은 해 기존 표시는 자동 해제)
       </label>
 
+      <label className="flex items-start gap-2 text-xs cursor-pointer p-2 bg-amber-50 border border-amber-200 rounded-md">
+        <input
+          type="checkbox"
+          checked={notifyOnApprove}
+          onChange={(e) => setNotifyOnApprove(e.target.checked)}
+          className="accent-amber-600 mt-0.5"
+        />
+        <span>
+          <span className="font-medium text-amber-900">등록 시 알림 발송</span>
+          <span className="block text-[11px] text-amber-700 mt-0.5">사목지표 알림 수신에 동의한 회원에게 이메일·사이트 알림을 보냅니다.</span>
+        </span>
+      </label>
+
       <div className="flex gap-2 pt-1">
         <button
           onClick={() =>
@@ -1105,6 +1125,7 @@ function VisionApproveForm({
               motto: motto.trim(),
               body: body.trim(),
               is_current: isCurrent,
+              notify: notifyOnApprove,
             })
           }
           disabled={processing || !motto.trim()}
@@ -1148,6 +1169,7 @@ function MeditationApproveForm({
   const [body, setBody] = useState<string>(initial.body);
   const [author, setAuthor] = useState<string>(initial.author);
   const [isPublished, setIsPublished] = useState<boolean>(true);
+  const [notifyOnApprove, setNotifyOnApprove] = useState<boolean>(false);
 
   return (
     <div className="mt-1 rounded-lg border border-teal-200 bg-teal-50/60 p-4 space-y-3">
@@ -1192,6 +1214,19 @@ function MeditationApproveForm({
         공개 (홈 묵상 위젯·/word 페이지에 노출, 최신 묵상으로 자동 핀)
       </label>
 
+      <label className="flex items-start gap-2 text-xs cursor-pointer p-2 bg-amber-50 border border-amber-200 rounded-md">
+        <input
+          type="checkbox"
+          checked={notifyOnApprove}
+          onChange={(e) => setNotifyOnApprove(e.target.checked)}
+          className="accent-amber-600 mt-0.5"
+        />
+        <span>
+          <span className="font-medium text-amber-900">등록 시 알림 발송</span>
+          <span className="block text-[11px] text-amber-700 mt-0.5">주일말씀 알림 수신에 동의한 회원에게 이메일·사이트 알림을 보냅니다.</span>
+        </span>
+      </label>
+
       <div className="flex gap-2 pt-1">
         <button
           onClick={() =>
@@ -1200,6 +1235,7 @@ function MeditationApproveForm({
               body: body.trim(),
               author: author.trim(),
               is_published: isPublished,
+              notify: notifyOnApprove,
             })
           }
           disabled={processing || !title.trim() || !body.trim()}
