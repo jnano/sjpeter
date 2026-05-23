@@ -1213,7 +1213,7 @@ def approve_extraction(
             board_id=board.id, member_id=None,
             title=f"[{issue_label}] {ext.title}" if issue_label else ext.title,
             content=ext.content or "",
-            is_published=False,
+            is_published=True,
             source_bulletin_id=ext.bulletin_id,
             created_at=published_ts,
         )
