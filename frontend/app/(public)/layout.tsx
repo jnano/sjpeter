@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import MobileTabBar from "@/components/MobileTabBar";
 import { fetchParishMin, fetchParishNameEn } from "@/lib/parish";
 import { fetchCurrentSeason } from "@/lib/season";
 
@@ -34,7 +35,7 @@ export default async function PublicLayout({
     fetchCurrentSeason(),
   ]);
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)]">
+    <div className="min-h-screen flex flex-col bg-[var(--color-background)] pb-[58px] md:pb-0">
       <Header
         parishName={parish.name}
         parishNameEn={parishNameEn}
@@ -43,6 +44,8 @@ export default async function PublicLayout({
       />
       <main className="flex-1">{children}</main>
       <Footer />
+      {/* 모바일 하단 탭바 (md 미만) — fixed 라 본문 하단 여백은 wrapper pb 로 확보 */}
+      <MobileTabBar />
     </div>
   );
 }

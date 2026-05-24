@@ -11,6 +11,10 @@ import { fetchCurrentSkin, isShowcaseSkin } from "@/lib/skin";
 import SkinEditorial from "./skins/SkinEditorial";
 import SkinDashboard from "./skins/SkinDashboard";
 import SkinConstruction from "./skins/SkinConstruction";
+import SkinEditorialMobile from "./skins/SkinEditorialMobile";
+import SkinDashboardMobile from "./skins/SkinDashboardMobile";
+import SkinConstructionMobile from "./skins/SkinConstructionMobile";
+import MobileSearchBar from "./MobileSearchBar";
 import ChurchIcon from "@/components/icons/ChurchIcon";
 import GroupsIcon from "@/components/icons/GroupsIcon";
 import BulletinIcon from "@/components/icons/BulletinIcon";
@@ -871,9 +875,52 @@ export default async function HomePage() {
     )
   ) : null;
 
+  // 시안 스킨이면 모바일도 시안 모바일 컴포넌트 (검색바 + 본문). 아니면 기존 mobileLayout.
+  const mobileShowcase = isShowcaseSkin(currentSkin) ? (
+    <div className="md:hidden">
+      <MobileSearchBar />
+      {currentSkin === "editorial" ? (
+        <SkinEditorialMobile
+          parish={parish}
+          gospel={gospel}
+          notices={showcaseNotices}
+          construction={constructionSummary}
+          phases={constructionPhases}
+          reflection={sundayReflection}
+          gallery={dashboardGallery}
+        />
+      ) : currentSkin === "dashboard" ? (
+        <SkinDashboardMobile
+          parish={parish}
+          gospel={gospel}
+          notices={showcaseNotices}
+          events={upcomingEvents}
+          construction={constructionSummary}
+          phases={constructionPhases}
+          latestIssue={latestBulletinIssue}
+          offeringCount={offeringCount}
+          reflection={sundayReflection}
+          gallery={dashboardGallery}
+        />
+      ) : (
+        <SkinConstructionMobile
+          parish={parish}
+          gospel={gospel}
+          notices={showcaseNotices}
+          events={upcomingEvents}
+          construction={constructionSummary}
+          phases={constructionPhases}
+          offeringCount={offeringCount}
+          reflection={sundayReflection}
+          gallery={dashboardGallery}
+        />
+      )}
+    </div>
+  ) : null;
+
   return (
     <div data-home-theme={homeTheme}>
-      {mobileLayout}
+      {mobileShowcase ?? mobileLayout}
       <div className="hidden md:block">
         {desktopShowcase ? desktopShowcase : blocks.map((b) => (
           <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {})}</div>

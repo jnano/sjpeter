@@ -90,6 +90,8 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
 
   return (
     <header className="site-header-root">
+      {/* ══ 데스크탑 헤더 (md+) ══ */}
+      <div className="hidden md:block">
       {/* ── topbar ── */}
       <div className="site-topbar">
         <div className="site-topbar-inner">
@@ -318,10 +320,49 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
             </div>
           </div>
         )}
+      </div>
+      </div>
 
-        {/* 모바일 메뉴 — 그룹 아코디언 (기존 동작 유지) */}
-        {menuOpen && (
-          <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
+      {/* ══ 모바일 app-header (md 미만) ══ */}
+      <div className="app-header md:hidden">
+        <div className="app-header-inner">
+          <button
+            className="hamburger"
+            onClick={() => { setMenuOpen(!menuOpen); setOpenGroup(null); }}
+            aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
+            aria-expanded={menuOpen}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              {menuOpen ? (
+                <><line x1="5" y1="6" x2="19" y2="18" /><line x1="19" y1="6" x2="5" y2="18" /></>
+              ) : (
+                <><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></>
+              )}
+            </svg>
+          </button>
+          <Link href="/" className="logo-mini">
+            {logoUrl ? (
+              <img src={logoUrl.startsWith("http") ? logoUrl : `${API}${logoUrl}`} alt={parishName} className="mk" style={{ objectFit: "contain" }} />
+            ) : (
+              <LogoFallback className="mk" />
+            )}
+            <b>{parishName}</b>
+          </Link>
+          <div className="right-icons">
+            {session ? (
+              <NotificationBell />
+            ) : (
+              <Link href="/members/login" className="icon-btn" aria-label="로그인">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="9" cy="6" r="3" /><path d="M3.5 16c0-3 2.5-5 5.5-5s5.5 2 5.5 5" /></svg>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일 메뉴 — 그룹 아코디언 (기존 동작 유지) */}
+      {menuOpen && (
+        <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
             <form onSubmit={handleSearch} className="px-3 py-2 flex gap-2">
               <input
                 value={searchQuery}
@@ -396,7 +437,6 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
             })}
           </nav>
         )}
-      </div>
     </header>
   );
 }
