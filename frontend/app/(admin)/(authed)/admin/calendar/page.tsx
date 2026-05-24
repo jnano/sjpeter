@@ -40,20 +40,17 @@ function AiBadge() {
   );
 }
 
+// event_kind(한글) → 시안 카테고리 키(data-cat) — globals.css 의 --cat-* 색 사용
+const KIND_TO_CAT: Record<string, string> = {
+  "행사": "event", "모임": "meeting", "봉사": "service",
+  "순례": "pilgrim", "피정": "retreat", "강의": "lecture", "기타": "other",
+};
+
 function KindBadge({ kind }: { kind: string | null }) {
-  if (kind === "행사")
-    return (
-      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-medium shrink-0">
-        행사
-      </span>
-    );
-  if (kind === "모임")
-    return (
-      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 border border-green-200 font-medium shrink-0">
-        모임
-      </span>
-    );
-  return null;
+  if (!kind || !KIND_TO_CAT[kind]) return null;
+  return (
+    <span data-cat={KIND_TO_CAT[kind]} className="cal-tag soft shrink-0">{kind}</span>
+  );
 }
 
 interface Event {
@@ -127,15 +124,27 @@ function compareEvents(a: Event, b: Event): number {
   return (a.start_time ?? "").localeCompare(b.start_time ?? "");
 }
 
+// event_kind 별 색 (admin — cat 팔레트 근사 Tailwind 유틸)
+const KIND_BAR: Record<string, string> = {
+  "행사": "bg-blue-100 text-blue-700", "모임": "bg-green-100 text-green-700",
+  "봉사": "bg-amber-100 text-amber-700", "순례": "bg-purple-100 text-purple-700",
+  "피정": "bg-cyan-100 text-cyan-700", "강의": "bg-rose-100 text-rose-700",
+  "기타": "bg-gray-200 text-gray-700",
+};
+const KIND_CHIP: Record<string, string> = {
+  "행사": "bg-blue-50 text-blue-700 border-blue-200", "모임": "bg-green-50 text-green-700 border-green-200",
+  "봉사": "bg-amber-50 text-amber-700 border-amber-200", "순례": "bg-purple-50 text-purple-700 border-purple-200",
+  "피정": "bg-cyan-50 text-cyan-700 border-cyan-200", "강의": "bg-rose-50 text-rose-700 border-rose-200",
+  "기타": "bg-gray-50 text-gray-700 border-gray-200",
+};
+
 function barStyle(e: Event): string {
-  if (e.event_kind === "모임") return "bg-green-100 text-green-700";
-  if (e.event_kind === "행사") return "bg-blue-100 text-blue-700";
+  if (e.event_kind && KIND_BAR[e.event_kind]) return KIND_BAR[e.event_kind];
   return BAR_COLOR[e.category] ?? BAR_COLOR.general;
 }
 
 function chipStyle(e: Event): string {
-  if (e.event_kind === "모임") return "bg-green-50 text-green-700 border-green-200";
-  if (e.event_kind === "행사") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (e.event_kind && KIND_CHIP[e.event_kind]) return KIND_CHIP[e.event_kind];
   return CHIP_COLOR[e.category] ?? CHIP_COLOR.general;
 }
 
@@ -244,6 +253,11 @@ function EventForm({
               <option value="">없음</option>
               <option value="행사">행사</option>
               <option value="모임">모임</option>
+              <option value="봉사">봉사</option>
+              <option value="순례">순례</option>
+              <option value="피정">피정</option>
+              <option value="강의">강의</option>
+              <option value="기타">기타</option>
             </select>
           </div>
 

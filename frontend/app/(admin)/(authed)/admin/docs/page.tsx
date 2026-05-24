@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.360";
+export const CURRENT_VERSION = "1.5.363";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,9 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.363", date: "2026-05-25", tag: "디자인", items: ["행사 일정(/calendar)을 시안과 정밀 재현 — date-nav pill·다크 뷰스위치(월주일목록)·카테고리 칩(점+카운트)·월그리드 소프트 이벤트칩·목록/일/주뷰·다가오는 일정 카드 + 모바일 미니캘린더·선택일 상세", "행사 카테고리 7종(행사·모임·봉사·순례·피정·강의·기타) 색 토큰 신설 + admin 구분 드롭다운 확장"] },
+  { version: "1.5.362", date: "2026-05-25", tag: "수정", items: ["사이드바 '메뉴 접기' 펼침 토글을 시안 pill 모양으로"] },
+  { version: "1.5.361", date: "2026-05-25", tag: "수정", items: ["묵상 본문·인용·실천 글꼴을 시안 Pretendard 로 통일 (Noto Sans 폴백 방지)"] },
   { version: "1.5.360", date: "2026-05-25", tag: "디자인", items: ["주일 말씀 묵상 상세를 시안과 정밀 재현 — eyebrow·큰 제목·저자 메타·복음 인용·드롭캡 본문·풀쿼트·이번 주 실천·이전다음·최근묵상(PC 3단 + 모바일)"] },
   { version: "1.5.359", date: "2026-05-25", tag: "기능", items: ["메뉴 접기 토글 개선 — 펼침 '‹ 메뉴 접기' / 접힘 동그라미 '›'", "묵상 풀쿼트·이번 주 실천 컬럼 + admin 입력 신설"] },
   { version: "1.5.358", date: "2026-05-25", tag: "디자인", items: ["게시판·소개 서브페이지를 시안 톤으로 — 제목 Pretendard, 게시판 고정 핀 와인색"] },
