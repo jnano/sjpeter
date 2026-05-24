@@ -30,7 +30,7 @@ export default function AdminSkinPage() {
     setSaving(key);
     setMsg("");
     try {
-      const res = await fetch(`${API}/api/settings/SKIN`, {
+      const res = await fetch(`${API}/api/admin/settings/SKIN`, {
         method: "PATCH",
         headers: { ...headers(), "Content-Type": "application/json" },
         body: JSON.stringify({ value: key }),
