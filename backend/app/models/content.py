@@ -109,6 +109,10 @@ class Meditation(Base):
     title = Column(String(200), nullable=False)
     scripture = Column(String(300), nullable=True)   # 성경 구절 (예: 요한 3,16)
     body = Column(Text, nullable=False)
+    # 시안 묵상 상세 — 본문 중 강조 인용구 (pull quote). 비면 미노출
+    pull_quote = Column(Text, nullable=True)
+    # 이번 주 실천 — 줄 단위(\n) 리스트. 비면 실천 섹션 미노출
+    practice = Column(Text, nullable=True)
     author = Column(String(100), nullable=True)      # 작성자 이름 (선택)
     published_date = Column(Date, nullable=False)    # 발행일
     is_published = Column(Boolean, default=True)

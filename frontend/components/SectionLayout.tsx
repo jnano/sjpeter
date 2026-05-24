@@ -55,18 +55,39 @@ export function useSidebarCollapsed(): [boolean, () => void] {
  * SectionLayout 외에 SectionSidebar 를 자체 호출하는 페이지(/calendar 등)에서도 사용.
  */
 export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  // 접힌 상태 — 동그라미 안 '›' 만 (텍스트 없음)
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={collapsed}
+        aria-label="메뉴 펼치기"
+        title="메뉴 펼치기"
+        style={{ top: "calc(-2rem - 1px)" }}
+        className="hidden md:flex items-center justify-center absolute left-0 z-10 w-7 h-7 bg-white border border-[var(--color-border)] rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+      >
+        <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <polyline points="4 2 6.5 5 4 8" />
+        </svg>
+      </button>
+    );
+  }
+  // 펼친 상태 — '‹ 메뉴 접기'
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-pressed={collapsed}
-      aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
-      title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+      aria-label="메뉴 접기"
+      title="메뉴 접기"
       style={{ top: "calc(-2rem - 1px)" }}
-      className="hidden md:inline-flex items-center gap-1 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+      className="hidden md:inline-flex items-center gap-1.5 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
     >
-      <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-      <span>{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+      <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <polyline points="6 2 3 5 6 8" />
+      </svg>
+      <span>메뉴 접기</span>
     </button>
   );
 }

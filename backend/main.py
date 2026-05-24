@@ -1167,6 +1167,8 @@ def _migrate_add_columns():
             "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_gradient VARCHAR(10) NOT NULL DEFAULT 'none'",
             "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS background_gradient_size INTEGER NOT NULL DEFAULT 100",
             "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS body_font_size_px INTEGER NOT NULL DEFAULT 15",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS pull_quote TEXT",
+            "ALTER TABLE meditations ADD COLUMN IF NOT EXISTS practice TEXT",
         ]:
             try:
                 conn.execute(text(col_sql))

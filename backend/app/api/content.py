@@ -571,6 +571,8 @@ class MeditationIn(BaseModel):
     title: str
     scripture: Optional[str] = None
     body: str
+    pull_quote: Optional[str] = None
+    practice: Optional[str] = None
     author: Optional[str] = None
     published_date: date
     is_published: bool = True
@@ -581,6 +583,8 @@ class MeditationOut(BaseModel):
     title: str
     scripture: Optional[str]
     body: str
+    pull_quote: Optional[str] = None
+    practice: Optional[str] = None
     author: Optional[str]
     published_date: date
     is_published: bool

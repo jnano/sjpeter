@@ -1254,6 +1254,8 @@ interface Meditation {
   title: string;
   scripture: string | null;
   body: string;
+  pull_quote?: string | null;
+  practice?: string | null;
   author: string | null;
   published_date: string;
   is_published: boolean;
@@ -1293,6 +1295,8 @@ const emptyMedForm = {
   title: "",
   scripture: "",
   body: "",
+  pull_quote: "",
+  practice: "",
   author: "",
   published_date: new Date().toISOString().slice(0, 10),
   is_published: true,
@@ -1338,6 +1342,8 @@ export function MeditationTab() {
       title: form.title.trim(),
       scripture: form.scripture.trim() || null,
       body: form.body.trim(),
+      pull_quote: form.pull_quote.trim() || null,
+      practice: form.practice.trim() || null,
       author: form.author.trim() || null,
       published_date: form.published_date,
       is_published: form.is_published,
@@ -1365,6 +1371,8 @@ export function MeditationTab() {
       title: editForm.title.trim(),
       scripture: editForm.scripture.trim() || null,
       body: editForm.body.trim(),
+      pull_quote: editForm.pull_quote.trim() || null,
+      practice: editForm.practice.trim() || null,
       author: editForm.author.trim() || null,
       published_date: editForm.published_date,
       is_published: editForm.is_published,
@@ -1420,6 +1428,8 @@ export function MeditationTab() {
       title: item.title,
       scripture: item.scripture ?? "",
       body: item.body,
+      pull_quote: item.pull_quote ?? "",
+      practice: item.practice ?? "",
       author: item.author ?? "",
       published_date: item.published_date,
       is_published: item.is_published,
@@ -1550,6 +1560,32 @@ export function MeditationTab() {
               height={320}
             />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              강조 인용구 (선택)
+              <span className="ml-2 font-normal text-gray-400">본문 중간 큰 인용. 마지막 줄을 ‘— 출처’로 쓰면 출처로 표시</span>
+            </label>
+            <textarea
+              value={form.pull_quote}
+              onChange={(e) => setForm((p) => ({ ...p, pull_quote: e.target.value }))}
+              className={inputCls}
+              rows={2}
+              placeholder={"보라, 내가 세상 끝날까지 언제나 너희와 함께 있겠다.\n— 마태오 28,20"}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              이번 주 실천 (선택)
+              <span className="ml-2 font-normal text-gray-400">한 줄에 하나씩 — 번호는 자동 부여</span>
+            </label>
+            <textarea
+              value={form.practice}
+              onChange={(e) => setForm((p) => ({ ...p, practice: e.target.value }))}
+              className={inputCls}
+              rows={3}
+              placeholder={"주님과 늘 함께하심을 믿고 희망을 품고 살아갑시다.\n이웃 안에 계신 하느님을 바라봅시다.\n힘들 때 하늘을 바라보며 은총을 청합시다."}
+            />
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-600 mb-1">작성자 (선택)</label>
@@ -1657,6 +1693,14 @@ export function MeditationTab() {
                       onChange={(v) => setEditForm((p) => ({ ...p, body: v }))}
                       height={320}
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">강조 인용구 (선택) <span className="font-normal text-gray-400">— 마지막 줄 ‘— 출처’</span></label>
+                    <textarea value={editForm.pull_quote} onChange={(e) => setEditForm((p) => ({ ...p, pull_quote: e.target.value }))} className={inputCls} rows={2} placeholder={"보라, 내가 세상 끝날까지 너희와 함께 있겠다.\n— 마태오 28,20"} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">이번 주 실천 (선택) <span className="font-normal text-gray-400">— 한 줄에 하나</span></label>
+                    <textarea value={editForm.practice} onChange={(e) => setEditForm((p) => ({ ...p, practice: e.target.value }))} className={inputCls} rows={3} placeholder={"실천 1\n실천 2\n실천 3"} />
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex-1">
