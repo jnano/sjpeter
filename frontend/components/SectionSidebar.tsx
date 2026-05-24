@@ -25,9 +25,16 @@ interface Props {
   items: MenuItem[];      // 트리 구조 (children 포함)
 }
 
+/** pathname 이 href 또는 그 자식 경로(예: /boards/liturgy/691) 인지.
+ *  v1.5.333: 글 상세 페이지에서도 사이드바 메뉴가 active 로 보이도록 prefix 매칭. */
+function matchesHref(href: string, pathname: string): boolean {
+  if (!href) return false;
+  return href === pathname || pathname.startsWith(href + "/");
+}
+
 /** 현재 pathname이 item이나 그 자식 중 어디에 매칭되는지 */
 function isItemActive(item: MenuItem, pathname: string): boolean {
-  if (item.href === pathname) return true;
+  if (matchesHref(item.href, pathname)) return true;
   return (item.children ?? []).some((c) => isItemActive(c, pathname));
 }
 
@@ -57,7 +64,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
     imageSrc && imageSrc.startsWith("/uploads/") ? `${API}${imageSrc}` : imageSrc;
 
   function Chip({ item, kind }: { item: MenuItem; kind: "top" | "sub" }) {
-    const active = pathname === item.href || (kind === "top" && isItemActive(item, pathname));
+    const active = matchesHref(item.href, pathname) || (kind === "top" && isItemActive(item, pathname));
     return (
       <Link
         href={item.href}
@@ -79,7 +86,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   }
 
   function DesktopRow({ item }: { item: MenuItem }) {
-    const active = pathname === item.href;
+    const active = matchesHref(item.href, pathname);
     const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname));
     const hasChildren = (item.children?.length ?? 0) > 0;
     const [hovered, setHovered] = React.useState(false);
@@ -149,7 +156,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             <div className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden" style={{ minWidth: "200px" }}>
             <ul className="py-1 overflow-y-auto overscroll-contain" style={{ maxHeight: `${popupMaxH}px` }}>
               {item.children!.map((c) => {
-                const cActive = pathname === c.href;
+                const cActive = matchesHref(c.href, pathname);
                 return (
                   <li key={c.id}>
                     <Link
