@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.357";
+export const CURRENT_VERSION = "1.5.360";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,9 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.360", date: "2026-05-25", tag: "디자인", items: ["주일 말씀 묵상 상세를 시안과 정밀 재현 — eyebrow·큰 제목·저자 메타·복음 인용·드롭캡 본문·풀쿼트·이번 주 실천·이전다음·최근묵상(PC 3단 + 모바일)"] },
+  { version: "1.5.359", date: "2026-05-25", tag: "기능", items: ["메뉴 접기 토글 개선 — 펼침 '‹ 메뉴 접기' / 접힘 동그라미 '›'", "묵상 풀쿼트·이번 주 실천 컬럼 + admin 입력 신설"] },
+  { version: "1.5.358", date: "2026-05-25", tag: "디자인", items: ["게시판·소개 서브페이지를 시안 톤으로 — 제목 Pretendard, 게시판 고정 핀 와인색"] },
   { version: "1.5.357", date: "2026-05-25", tag: "디자인", items: ["서브페이지 공통 헤더(PageHeader)를 시안 톤으로 — 큰 Pretendard 제목·여백 확대"] },
   { version: "1.5.356", date: "2026-05-24", tag: "디자인", items: ["모바일 시안 3종 재현 — 상단 앱헤더·검색바·하단 탭바(홈/주보/기도/행사/내정보) + 스킨별 본문"] },
   { version: "1.5.355", date: "2026-05-24", tag: "디자인", items: ["editorial·construction 홈을 시안과 픽셀 단위로 재현"] },
