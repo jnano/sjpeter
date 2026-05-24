@@ -211,6 +211,25 @@ export default async function HomePage() {
   );
   const boardMetaBySlug = new Map(boardsCatalog.map((b) => [b.slug, b]));
 
+  // v1.5.337: hero 안 모바일 전용 construction 카드 중복 회피 — 블록 빌더 어디든
+  // construction 슬롯이 있으면 hero 의 모바일 카드 숨김.
+  const hasConstructionInBlocks = blocks.some((b) => {
+    if (b.kind === "construction") return true;
+    const p = b.payload as Record<string, unknown> | undefined;
+    if (b.kind === "two_column") {
+      const left = p?.left as { kind?: string } | undefined;
+      const right = p?.right as { kind?: string } | undefined;
+      return left?.kind === "construction" || right?.kind === "construction";
+    }
+    if (b.kind === "three_column") {
+      const left = p?.left as { kind?: string } | undefined;
+      const middle = p?.middle as { kind?: string } | undefined;
+      const right = p?.right as { kind?: string } | undefined;
+      return [left, middle, right].some((s) => s?.kind === "construction");
+    }
+    return false;
+  });
+
   // home_blocks 에 hero 블록이 있으면 그 payload.layout 을 우선 — 없으면 site_settings.HOME_HERO_LAYOUT fallback.
   const heroBlock = blocks.find((b) => b.kind === "hero");
   const heroLayoutFromBlock = heroBlock?.payload?.["layout"] as string | undefined;
@@ -428,9 +447,13 @@ export default async function HomePage() {
                 <div>{bannerCardEl}</div>
               </div>
               <div className="min-w-0">{massCardEl}</div>
-              <div className="md:hidden min-w-0">
-                <HomeConstructionWidget summary={constructionSummary} embedded />
-              </div>
+              {/* v1.5.337: 블록 빌더(home_blocks)에 construction 이 어디에도 없을 때만
+                  hero 안 모바일 전용 카드 노출. 있으면 그쪽에서만 1회 표시되어 중복 회피. */}
+              {!hasConstructionInBlocks && (
+                <div className="md:hidden min-w-0">
+                  <HomeConstructionWidget summary={constructionSummary} embedded />
+                </div>
+              )}
             </>
           ) : (
             <>
