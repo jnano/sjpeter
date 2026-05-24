@@ -7,6 +7,10 @@ import HomeHero from "./HomeHero";
 import HomeConstructionWidget, { fetchConstructionSummary } from "./HomeConstructionWidget";
 import TagCloud from "@/components/TagCloud";
 import SearchHero from "@/components/SearchHero";
+import { fetchCurrentSkin, isShowcaseSkin } from "@/lib/skin";
+import SkinEditorial from "./skins/SkinEditorial";
+import SkinDashboard from "./skins/SkinDashboard";
+import SkinConstruction from "./skins/SkinConstruction";
 import ChurchIcon from "@/components/icons/ChurchIcon";
 import GroupsIcon from "@/components/icons/GroupsIcon";
 import BulletinIcon from "@/components/icons/BulletinIcon";
@@ -171,7 +175,7 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems, currentSkin] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -182,6 +186,7 @@ export default async function HomePage() {
       getHomeBlocks(),
       getBoardsCatalog(),
       getTagCloudItems(),
+      fetchCurrentSkin(),
     ]);
 
   // board_tabs 블록들이 참조하는 게시판 slug 들을 수집해서 일괄 fetch (two_column/three_column 슬롯 안에 있는 것도 포함).
@@ -729,11 +734,28 @@ export default async function HomePage() {
     </div>
   );
 
+  // v1.5.350: Claude Design 시안 기반 본격 스킨(editorial/dashboard/construction) 일 때
+  // 데스크탑 영역에서 home_blocks loop 대신 전용 home component 렌더.
+  // 모바일은 기존 dispatch 그대로 — 시안이 1440px 고정 디자인이라 모바일은 보장 안 함.
+  const desktopShowcase = isShowcaseSkin(currentSkin) ? (
+    currentSkin === "editorial" ? (
+      <SkinEditorial parish={parish} gospel={gospel} />
+    ) : currentSkin === "dashboard" ? (
+      <SkinDashboard parish={parish} gospel={gospel} />
+    ) : (
+      <SkinConstruction
+        parish={parish}
+        gospel={gospel}
+        construction={constructionSummary as { current_phase_name?: string | null; overall_percent?: number; total_donated?: number; goal_amount?: number } | null}
+      />
+    )
+  ) : null;
+
   return (
     <div data-home-theme={homeTheme}>
       {mobileLayout}
       <div className="hidden md:block">
-        {blocks.map((b) => (
+        {desktopShowcase ? desktopShowcase : blocks.map((b) => (
           <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {})}</div>
         ))}
       </div>

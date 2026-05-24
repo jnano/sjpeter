@@ -63,6 +63,13 @@ export default async function RootLayout({
       data-skin={skin}
       className={`${notoSansKR.variable} ${notoSerifKR.variable} ${playfairDisplay.variable}`}
     >
+      <head>
+        {/* Pretendard — editorial/dashboard/construction 스킨용 (v1.5.350) */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+        />
+      </head>
       <body className="bg-[var(--color-background)]">
         <SessionProvider>
           <MenusProvider initial={initialMenus}>

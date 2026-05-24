@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Pretendard 폰트는 app/layout.tsx 의 <head> 에서 <link> 로 로드 (v1.5.350)
+   — globals.css 에 @import 시 PostCSS 가 Pretendard 내부 @font-face/@import
+     까지 통합하다 충돌 발생. */
+
 @theme {
   /* 색상 — 마리아 블루 + 전례 금색 */
   --color-primary: #1a365d;
@@ -293,6 +297,173 @@ h1, h2, h3, h4, h5, h6 {
   --section-py: 2.5rem;             /* py-10 */
   --font-display: var(--font-sans); /* 헤딩도 산세리프 — 깔끔 */
   --color-border: #eee9e0;          /* 옅은 테두리 */
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   v1.5.350 — Claude Design 시안 기반 3 본격 스킨.
+   tokens.css (외부 시안 공통 토큰) 의 와인+골드 팔레트·Pretendard·라운드/그림자 통합.
+   각 스킨의 본격 시각 정의는 EditorialHome/DashboardHome/ConstructionHome 컴포넌트.
+   page.tsx 의 데스크탑 영역이 SKIN 값에 따라 다른 home component 렌더.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* 공통 — 3 새 스킨의 색·라운드·폰트 (시안 tokens.css 와 동일) */
+[data-skin="editorial"],
+[data-skin="dashboard"],
+[data-skin="construction"] {
+  --color-primary: #7A1F2B;        /* 와인 색 */
+  --color-primary-light: #92293A;
+  --color-primary-dark: #5C1820;
+  --color-accent: #C9A961;          /* 골드 */
+  --color-accent-light: #D9BC7C;
+  --color-background: #FAF4F1;      /* 베이지 */
+  --color-surface: #FFFFFF;
+  --color-surface-warm: #F2EAE3;
+  --color-text: #2C2620;
+  --color-text-muted: #6B6660;
+  --color-border: #E8DFD6;
+  --color-border-dark: #D6CCBE;
+  --radius-card: 12px;
+  --radius-button: 100px;            /* pill 버튼 */
+  --shadow-card: 0 1px 2px rgba(44, 38, 32, 0.04);
+  --shadow-card-hover: 0 4px 16px rgba(44, 38, 32, 0.06);
+  --shadow-elevated: 0 12px 40px rgba(44, 38, 32, 0.08);
+  --card-padding: 28px;
+  --font-display: 'Pretendard Variable', Pretendard, var(--font-sans);
+  --font-body: 'Pretendard Variable', Pretendard, var(--font-sans);
+}
+
+/* editorial 미세 차이 — 큰 타이포 강조용 */
+[data-skin="editorial"] {
+  --section-py: 3rem;
+}
+
+/* dashboard — 카드 밀집형, 라운드 조금 더 작게 */
+[data-skin="dashboard"] {
+  --radius-card: 10px;
+  --section-py: 2rem;
+}
+
+/* construction — 어두운 영역 강조, 표준 라운드 */
+[data-skin="construction"] {
+  --radius-card: 12px;
+  --section-py: 2.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   v1.5.350 — Claude Design 시안 v1/v2/v3 기반 home 스킨 CSS.
+   각 component(SkinEditorial/SkinDashboard/SkinConstruction) 가 prefix
+   className 으로 사용. 시안 원본 tokens.css 의 변수(--bg/--ink 등) 를
+   우리 토큰(--color-background/--color-text 등) 으로 치환.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* ── SkinEditorial (v1: 에디토리얼 미니멀) ── */
+.skin-editorial { font-family: var(--font-body); color: var(--color-text); background: var(--color-background); }
+.skin-editorial .ed-hero { padding: 100px 56px 80px; }
+.skin-editorial .ed-hero-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 80px; align-items: start; }
+.skin-editorial .ed-hero-main { padding-top: 8px; }
+.skin-editorial .ed-eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-primary); font-weight: 700; display: inline-flex; align-items: center; gap: 14px; margin-bottom: 36px; }
+.skin-editorial .ed-eyebrow::before { content:''; width: 32px; height: 1px; background: var(--color-primary); }
+.skin-editorial .ed-gospel-meta { font-size: 14px; color: var(--color-text-muted); margin-bottom: 28px; display: flex; gap: 24px; flex-wrap: wrap; }
+.skin-editorial .ed-gospel-meta strong { color: var(--color-text); font-weight: 600; }
+.skin-editorial .ed-gospel-quote { font-size: 52px; line-height: 1.25; font-weight: 700; letter-spacing: -0.035em; color: var(--color-text); }
+.skin-editorial .ed-q-mark { color: var(--color-accent); font-weight: 700; }
+.skin-editorial .ed-gospel-cite { margin-top: 32px; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--color-text-muted); font-weight: 500; flex-wrap: wrap; }
+.skin-editorial .ed-gospel-cite-key { color: var(--color-primary); font-weight: 700; padding: 4px 10px; background: rgba(122, 31, 43, 0.06); border-radius: 4px; }
+.skin-editorial .ed-hero-actions { margin-top: 48px; display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+.skin-editorial .ed-btn-link { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--color-text); }
+.skin-editorial .ed-btn-link.muted { color: var(--color-text-muted); border-bottom-color: var(--color-text-muted); font-weight: 500; }
+.skin-editorial .ed-mass-card { background: var(--color-surface); border: 1px solid var(--color-border); padding: 36px 32px; }
+.skin-editorial .ed-mass-card h3 { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px; }
+.skin-editorial .ed-mass-card h2 { font-size: 22px; letter-spacing: -0.02em; font-weight: 700; padding-bottom: 24px; border-bottom: 1px solid var(--color-text); margin-bottom: 8px; }
+.skin-editorial .ed-mass-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; padding: 14px 0; border-bottom: 1px dashed var(--color-border); font-size: 14px; align-items: baseline; }
+.skin-editorial .ed-mass-row:last-of-type { border-bottom: none; }
+.skin-editorial .ed-mass-day { font-weight: 600; color: var(--color-text); }
+.skin-editorial .ed-mass-row.sun .ed-mass-day { color: var(--color-primary); }
+.skin-editorial .ed-mass-time { color: var(--color-text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.skin-editorial .ed-mass-label { color: var(--color-text-muted); font-size: 12px; }
+.skin-editorial .ed-mass-empty { font-size: 13px; color: var(--color-text-muted); padding: 20px 0; }
+.skin-editorial .ed-mass-foot { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-muted); display: flex; justify-content: space-between; align-items: center; }
+.skin-editorial .ed-mass-foot a { color: var(--color-primary); font-weight: 600; }
+.skin-editorial .ed-stub { padding: 80px 56px; background: var(--color-surface-warm); border-top: 1px solid var(--color-border); }
+.skin-editorial .ed-stub-inner { max-width: 1280px; margin: 0 auto; }
+
+/* 모바일 fallback — 1440 fixed 디자인을 좁은 화면에서도 망가지지 않게 */
+@media (max-width: 1024px) {
+  .skin-editorial .ed-hero { padding: 48px 24px 40px; }
+  .skin-editorial .ed-hero-inner { grid-template-columns: 1fr; gap: 40px; }
+  .skin-editorial .ed-gospel-quote { font-size: 32px; }
+  .skin-editorial .ed-stub { padding: 40px 24px; }
+}
+
+/* ── SkinDashboard (v2: 대시보드 카드) ── */
+.skin-dashboard { font-family: var(--font-body); color: var(--color-text); background: var(--color-background); }
+.skin-dashboard .ds-page-head { padding: 48px 56px 24px; max-width: 1320px; margin: 0 auto; display: flex; justify-content: space-between; align-items: end; gap: 40px; }
+.skin-dashboard .ds-page-head h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; }
+.skin-dashboard .ds-page-head h1 small { display: block; font-size: 12px; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+.skin-dashboard .ds-dash { max-width: 1320px; margin: 0 auto; padding: 24px 56px 64px; }
+.skin-dashboard .ds-grid12 { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+.skin-dashboard .ds-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 28px; position: relative; }
+.skin-dashboard .ds-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.skin-dashboard .ds-card-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; }
+.skin-dashboard .ds-card-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+.skin-dashboard .ds-card-link { font-size: 12px; color: var(--color-text-muted); font-weight: 500; }
+.skin-dashboard .ds-col-8 { grid-column: span 8; }
+.skin-dashboard .ds-col-4 { grid-column: span 4; }
+.skin-dashboard .ds-gospel { background: var(--color-text); color: #FFF; border-color: var(--color-text); padding: 36px 40px; min-height: 280px; }
+.skin-dashboard .ds-gospel .ds-card-eyebrow { color: var(--color-accent); }
+.skin-dashboard .ds-gospel .ds-card-head { border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 20px; margin-bottom: 24px; }
+.skin-dashboard .ds-gospel .ds-card-link { color: rgba(255,255,255,0.6); }
+.skin-dashboard .ds-gospel-quote { font-size: 32px; line-height: 1.35; font-weight: 600; letter-spacing: -0.025em; }
+.skin-dashboard .ds-q { color: var(--color-accent); }
+.skin-dashboard .ds-gospel-detail { margin-top: 24px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.skin-dashboard .ds-gospel-bible { font-size: 13px; color: rgba(255,255,255,0.5); flex: 1; line-height: 1.5; }
+.skin-dashboard .ds-gospel-bible strong { display: block; color: var(--color-accent); margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em; }
+.skin-dashboard .ds-gospel-action { padding: 12px 22px; background: var(--color-accent); color: var(--color-text); border-radius: 100px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.skin-dashboard .ds-mass-list li { display: grid; grid-template-columns: 60px 1fr; gap: 10px; padding: 11px 0; border-bottom: 1px dashed var(--color-border); font-size: 14px; align-items: baseline; }
+.skin-dashboard .ds-mass-list li:last-child { border-bottom: none; }
+.skin-dashboard .ds-mass-list .day { font-weight: 700; color: var(--color-text); }
+.skin-dashboard .ds-mass-list li.sun .day { color: var(--color-primary); }
+.skin-dashboard .ds-mass-list .time { color: var(--color-text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+@media (max-width: 1024px) {
+  .skin-dashboard .ds-page-head { padding: 32px 24px 16px; flex-direction: column; align-items: start; }
+  .skin-dashboard .ds-page-head h1 { font-size: 28px; }
+  .skin-dashboard .ds-dash { padding: 16px 24px 40px; }
+  .skin-dashboard .ds-grid12 { grid-template-columns: 1fr; }
+  .skin-dashboard .ds-col-8, .skin-dashboard .ds-col-4 { grid-column: span 1; }
+  .skin-dashboard .ds-gospel-quote { font-size: 22px; }
+}
+
+/* ── SkinConstruction (v3: 함께 짓는 성전) ── */
+.skin-construction { font-family: var(--font-body); color: var(--color-text); background: var(--color-background); }
+.skin-construction .cn-hero { padding: 80px 56px 96px; position: relative; overflow: hidden; }
+.skin-construction .cn-hero-inner { max-width: 1320px; margin: 0 auto; }
+.skin-construction .cn-hero-eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-primary); font-weight: 700; display: inline-flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.skin-construction .cn-hero-eyebrow::before { content:''; width: 32px; height: 1px; background: var(--color-primary); }
+.skin-construction .cn-tag-live { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--color-primary); color: #FFF; border-radius: 100px; font-size: 10px; letter-spacing: 0.1em; }
+.skin-construction .cn-tag-live::before { content:''; width: 6px; height: 6px; border-radius: 50%; background: #FFF; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.skin-construction .cn-hero-grid { display: grid; grid-template-columns: 1fr 520px; gap: 80px; align-items: center; }
+.skin-construction .cn-hero-headline { font-size: 84px; line-height: 1.02; font-weight: 800; letter-spacing: -0.045em; color: var(--color-text); text-wrap: balance; }
+.skin-construction .cn-hero-headline em { color: var(--color-primary); font-style: normal; position: relative; display: inline-block; }
+.skin-construction .cn-hero-headline em::after { content:''; position: absolute; left: 0; right: 0; bottom: 6px; height: 14px; background: var(--color-accent); opacity: 0.35; z-index: -1; }
+.skin-construction .cn-hero-sub { font-size: 17px; line-height: 1.7; color: var(--color-text-muted); margin-top: 32px; max-width: 480px; }
+.skin-construction .cn-hero-cta-row { display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; }
+.skin-construction .cn-btn-pri { padding: 14px 28px; background: var(--color-text); color: #FFF; border-radius: 100px; font-size: 14px; font-weight: 600; }
+.skin-construction .cn-btn-pri:hover { background: var(--color-primary); }
+.skin-construction .cn-btn-sec { padding: 14px 28px; background: transparent; color: var(--color-text); border-radius: 100px; font-size: 14px; font-weight: 600; border: 1px solid var(--color-text); }
+.skin-construction .cn-progress-wrap { background: var(--color-surface); border: 1px solid var(--color-border); padding: 36px 32px; border-radius: var(--radius-card); }
+.skin-construction .cn-progress-label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 8px; }
+.skin-construction .cn-progress-pct { font-size: 88px; font-weight: 700; line-height: 1; letter-spacing: -0.05em; color: var(--color-accent); font-variant-numeric: tabular-nums; }
+.skin-construction .cn-progress-pct sup { font-size: 28px; vertical-align: top; margin-left: 4px; font-weight: 600; opacity: 0.8; }
+.skin-construction .cn-progress-stage { margin-top: 12px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+.skin-construction .cn-progress-bar { margin-top: 20px; height: 2px; background: var(--color-border); position: relative; }
+.skin-construction .cn-progress-bar > i { display: block; height: 100%; background: var(--color-accent); }
+
+@media (max-width: 1024px) {
+  .skin-construction .cn-hero { padding: 48px 24px 56px; }
+  .skin-construction .cn-hero-grid { grid-template-columns: 1fr; gap: 40px; }
+  .skin-construction .cn-hero-headline { font-size: 44px; }
 }
 
 /* v1.5.348: utility 자동 매핑 제거.
