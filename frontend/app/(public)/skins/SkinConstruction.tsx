@@ -1,26 +1,16 @@
 import Link from "next/link";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
-import { formatKRWShort, formatKRWFull, fundPercent } from "@/lib/fund";
 
-interface Parish {
-  name: string;
-  mass_schedule?: { entries?: MassEntry[]; note?: string } | null;
-}
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+interface Parish { name: string; mass_schedule?: { entries?: MassEntry[] } | null; }
 interface GospelToday {
   date: string;
   liturgical_season: string | null;
   gospel_reference: string | null;
   gospel_text: string | null;
 }
-
-interface SummaryPhase {
-  id: number;
-  name: string;
-  status: string;
-  progress_percent: number;
-  description?: string | null;
-}
+interface SummaryPhase { id: number; name: string; status: string; progress_percent: number; description?: string | null; }
 interface ConstructionSummary {
   current_phase: SummaryPhase | null;
   overall_percent: number;
@@ -28,52 +18,31 @@ interface ConstructionSummary {
   completed_phases: number;
   latest_journal: { entry_date: string; note: string } | null;
 }
-
 interface Phase {
-  id: number;
-  name: string;
-  status: string;
-  progress_percent: number;
-  sort_order: number;
-  expected_completion_date: string | null;
+  id: number; name: string; status: string; progress_percent: number;
+  sort_order: number; started_at?: string | null; completed_at?: string | null; expected_completion_date: string | null;
+  description?: string | null;
 }
-
-interface Fund {
-  goal_amount: number;
-  raised_amount: number;
-  donor_count: number;
-  account_info: string | null;
-  note: string | null;
-  is_active: boolean;
-}
-
 interface NoticeBrief { id: number; title: string; is_pinned: boolean; created_at: string; }
 interface EventBrief { id: number; title: string; event_date: string; event_kind: string | null; }
+interface Reflection { id: number; title: string; body: string; }
+interface GalleryPhoto { id: number; title: string; thumbnail_url: string; source: "liturgy" | "events"; }
 
-const STATUS_LABEL: Record<string, string> = {
-  planned: "예정",
-  in_progress: "진행 중",
-  completed: "완료",
-};
-
-function shortDate(iso: string): string {
+function ymd(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${d.getMonth() + 1}.${d.getDate()}`;
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+function yearMonth(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/**
- * 시안 v3 — 함께 짓는 성전.
- * 큰 헤드라인 hero + 공지·복음·미사 카드 + 건축 단계 타임라인 + 헌금 현황·후원 CTA.
- */
+/** 시안 v3 — 함께 짓는 성전 (home-v3.html 정밀 재현). */
 export default function SkinConstruction({
-  parish,
-  gospel,
-  notices,
-  events,
-  construction,
-  phases,
-  fund,
+  parish, gospel, notices, events, construction, phases, offeringCount, reflection, gallery,
 }: {
   parish: Parish | null;
   gospel: GospelToday | null;
@@ -81,205 +50,310 @@ export default function SkinConstruction({
   events: EventBrief[];
   construction: ConstructionSummary | null;
   phases: Phase[];
-  fund: Fund | null;
+  offeringCount: number;
+  reflection: Reflection | null;
+  gallery: GalleryPhoto[];
 }) {
-  const pct = Math.max(0, Math.min(100, construction?.overall_percent ?? 0));
-  const currentName = construction?.current_phase?.name ?? null;
   const massRows = buildMassRows(parish?.mass_schedule?.entries ?? []);
+  const overallPct = Math.max(0, Math.min(100, construction?.overall_percent ?? 0));
   const sortedPhases = [...phases].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
-  const fundActive = !!fund?.is_active && (fund.goal_amount > 0 || fund.raised_amount > 0);
-  const fundPct = fund ? fundPercent(fund.raised_amount, fund.goal_amount) : 0;
+  let curIdx = sortedPhases.findIndex((p) => p.status === "in_progress");
+  if (curIdx < 0) curIdx = sortedPhases.findIndex((p) => p.status !== "completed");
+  const curPhase = curIdx >= 0 ? sortedPhases[curIdx] : null;
+  const total = sortedPhases.length;
+  const completed = construction?.completed_phases ?? 0;
+  const tlProgressPct = total > 1 ? (Math.max(0, curIdx) / (total - 1)) * 80 : 0;
+  const lastPhase = sortedPhases[sortedPhases.length - 1];
+  const journal = construction?.latest_journal ?? null;
+
+  const heroName = parish?.name ?? "본당";
 
   return (
     <div className="skin-construction">
-      {/* ── Hero ── */}
-      <section className="cn-hero">
-        <div className="cn-hero-inner">
-          <div className="cn-hero-eyebrow">
-            <span>성전 건축 프로젝트</span>
-            <span className="cn-tag-live">LIVE</span>
-          </div>
-          <div className="cn-hero-grid">
-            <div>
-              <h1 className="cn-hero-headline">
-                함께 짓는 <em>{parish?.name ?? "본당"}</em>의 새 성전
+      {/* HERO — Cathedral story */}
+      <section className="hero">
+        <div className="hero-inner">
+          <div className="hero-grid">
+            <div className="hero-left">
+              <div className="hero-eyebrow">
+                <span>성전 건축 일지 · Cathedral Build</span>
+                <span className="tag-live">LIVE</span>
+              </div>
+              <h1 className="hero-headline">
+                한 단계씩,<br />우리가 <em>함께 짓는</em><br />새 성전.
               </h1>
-              <p className="cn-hero-sub">
-                {gospel?.gospel_text
-                  ? gospel.gospel_text.split("\n")[0].slice(0, 70)
-                  : "본당 공동체가 한마음으로 일구는 새 성전 건축의 여정을 함께해 주세요."}
+              <p className="hero-sub">
+                {heroName}의 새 성전이 한 단계씩 자라나고 있습니다.
+                기도와 봉헌으로 함께해 주신 모든 분의 이름 위에 한 장의 벽돌이 더해집니다.
               </p>
-              <div className="cn-hero-cta-row">
-                <Link href="/construction" className="cn-btn-pri">건축 진행 상황 →</Link>
-                <Link href="/word" className="cn-btn-sec">오늘의 복음</Link>
+              <div className="hero-cta-row">
+                <Link href="/construction" className="btn-pri">
+                  건축 현황 보기
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="2" y1="7" x2="12" y2="7" /><polyline points="8 3 12 7 8 11" /></svg>
+                </Link>
+                <Link href="/boards/build_offering" className="btn-sec">한 줄 봉헌하기 ✍︎</Link>
               </div>
             </div>
-            <div className="cn-progress-wrap">
-              <div className="cn-progress-label">현재 진행률</div>
-              <div className="cn-progress-pct">
-                {pct}<sup>%</sup>
+
+            <div className="cathedral-vis">
+              <svg viewBox="0 0 320 320" className="cathedral-svg" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="20" y1="280" x2="300" y2="280" strokeWidth="1" />
+                <line x1="40" y1="280" x2="40" y2="260" strokeWidth="0.8" opacity="0.4" />
+                <circle cx="40" cy="256" r="6" opacity="0.4" />
+                <line x1="280" y1="280" x2="280" y2="262" strokeWidth="0.8" opacity="0.4" />
+                <circle cx="280" cy="258" r="5" opacity="0.4" />
+                <rect x="100" y="170" width="120" height="110" />
+                <polygon points="100,170 160,110 220,170" />
+                <rect x="70" y="200" width="30" height="80" />
+                <rect x="220" y="200" width="30" height="80" />
+                <line x1="70" y1="200" x2="85" y2="180" /><line x1="85" y1="180" x2="100" y2="170" />
+                <line x1="220" y1="170" x2="235" y2="180" /><line x1="235" y1="180" x2="250" y2="200" />
+                <rect x="150" y="60" width="20" height="110" />
+                <polygon points="150,60 160,30 170,60" />
+                <line x1="160" y1="30" x2="160" y2="14" strokeWidth="1.6" /><line x1="155" y1="22" x2="165" y2="22" strokeWidth="1.6" />
+                <line x1="155" y1="90" x2="155" y2="105" /><line x1="165" y1="90" x2="165" y2="105" />
+                <circle cx="160" cy="200" r="14" className="glow" stroke="currentColor" />
+                <line x1="160" y1="186" x2="160" y2="214" strokeWidth="0.8" opacity="0.5" />
+                <line x1="146" y1="200" x2="174" y2="200" strokeWidth="0.8" opacity="0.5" />
+                <line x1="150" y1="190" x2="170" y2="210" strokeWidth="0.8" opacity="0.5" />
+                <line x1="170" y1="190" x2="150" y2="210" strokeWidth="0.8" opacity="0.5" />
+                <path d="M148 280 Q148 240 160 240 Q172 240 172 280" />
+                <line x1="160" y1="240" x2="160" y2="280" opacity="0.4" />
+                <rect x="80" y="220" width="10" height="20" /><rect x="230" y="220" width="10" height="20" />
+                <g className="scaffold">
+                  <line x1="60" y1="80" x2="60" y2="280" /><line x1="60" y1="100" x2="100" y2="100" />
+                  <line x1="60" y1="140" x2="100" y2="140" /><line x1="60" y1="180" x2="80" y2="180" /><line x1="60" y1="220" x2="80" y2="220" />
+                </g>
+                <g className="crane">
+                  <line x1="250" y1="280" x2="250" y2="40" strokeWidth="1.2" />
+                  <line x1="250" y1="40" x2="200" y2="50" strokeWidth="1.2" /><line x1="250" y1="40" x2="290" y2="40" strokeWidth="1.2" />
+                  <line x1="220" y1="50" x2="220" y2="68" strokeWidth="1" /><rect x="214" y="68" width="12" height="10" strokeWidth="1" />
+                </g>
+              </svg>
+
+              <div className="cathedral-overlay-pct">
+                <b>{overallPct}<sup style={{ fontSize: 14 }}>%</sup></b>
+                <span>완료</span>
               </div>
-              {currentName && <div className="cn-progress-stage">{currentName}</div>}
-              <div className="cn-progress-bar"><i style={{ width: `${pct}%` }} /></div>
+
+              <div className="cathedral-overlay-card">
+                <span className="dot" />
+                <div className="info">
+                  <b>{curPhase ? `${curPhase.name} 진행 중` : "건축 진행 중"}</b>
+                  <span>{journal?.note ?? curPhase?.description ?? "성전 건축이 진행되고 있습니다"}</span>
+                </div>
+                {journal && <div className="day">{ymd(journal.entry_date).split(".").slice(0, 1)}<br />{ymd(journal.entry_date).split(".").slice(1).join(".")}</div>}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 공지 + 복음 + 미사 카드 ── */}
-      <section className="cn-info">
-        <div className="cn-info-inner">
-          <div className="cn-info-grid">
-            {/* 공지 */}
-            <div className="cn-card">
-              <div className="cn-card-head">
-                <h3>본당 소식</h3>
-                <Link href="/boards/notice">전체 →</Link>
-              </div>
-              {notices.length === 0 ? (
-                <p className="cn-empty">등록된 공지가 없습니다.</p>
-              ) : (
-                <ul className="cn-list">
-                  {notices.slice(0, 5).map((n) => (
-                    <li key={n.id}>
-                      <Link href={`/boards/notice/${n.id}`}>
-                        {n.is_pinned && <span className="cn-pin">고정</span>}
-                        <span className="cn-list-title">{n.title}</span>
-                        <time>{shortDate(n.created_at)}</time>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* 복음 — 어두운 카드 */}
-            <Link href="/word" className="cn-card cn-gospel">
-              <div className="cn-card-head">
-                <h3>오늘의 복음</h3>
-                {gospel?.liturgical_season && <span className="cn-gospel-season">{gospel.liturgical_season}</span>}
-              </div>
-              <p className="cn-gospel-quote">
-                <span className="cn-q">&ldquo;</span>
-                {gospel?.gospel_text
-                  ? gospel.gospel_text.split("\n").slice(0, 3).join(" ").slice(0, 120)
-                  : "오늘의 복음 본문이 곧 게재됩니다."}
-                <span className="cn-q">&rdquo;</span>
-              </p>
-              {gospel?.gospel_reference && <cite className="cn-gospel-cite">— {gospel.gospel_reference}</cite>}
-            </Link>
-
-            {/* 미사 */}
-            <div className="cn-card">
-              <div className="cn-card-head">
-                <h3>미사 시간</h3>
-                <Link href="/info">안내 →</Link>
-              </div>
-              {massRows.length === 0 ? (
-                <p className="cn-empty">미사 시간 정보가 없습니다.</p>
-              ) : (
-                <ul className="cn-mass">
-                  {massRows.map((r, i) => (
-                    <li key={i} className={r.label.includes("주일") ? "sun" : ""}>
-                      <span className="day">{r.label}</span>
-                      <span className="time tnum">{r.value}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+      {/* KPI row */}
+      <section style={{ background: "var(--bg)", padding: "0 56px 96px" }}>
+        <div className="kpi-row">
+          <div className="kpi">
+            <div className="kpi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 19V8l8-5 8 5v11" /><rect x="9" y="13" width="4" height="6" /></svg></div>
+            <div className="kpi-text"><div className="kpi-num">{completed} / {total}</div><div className="kpi-label">완료 단계</div></div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="8" /><polyline points="11 6 11 11 14 13" /></svg></div>
+            <div className="kpi-text"><div className="kpi-num">{yearMonth(lastPhase?.expected_completion_date ?? null)}</div><div className="kpi-label">입당 예정</div></div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 19s-7-4-7-10a4 4 0 0 1 7-3 4 4 0 0 1 7 3c0 6-7 10-7 10z" /></svg></div>
+            <div className="kpi-text"><div className="kpi-num">{offeringCount.toLocaleString("ko-KR")} <sup style={{ fontSize: 12 }}>줄</sup></div><div className="kpi-label">한 줄 봉헌</div></div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="7" r="3" /><path d="M4 19c0-4 3-7 7-7s7 3 7 7" /></svg></div>
+            <div className="kpi-text"><div className="kpi-num">{events.length} 건</div><div className="kpi-label">다가오는 일정</div></div>
           </div>
         </div>
       </section>
 
-      {/* ── 건축 단계 타임라인 ── */}
-      {sortedPhases.length > 0 && (
-        <section className="cn-timeline-sec">
-          <div className="cn-timeline-inner">
-            <div className="cn-sec-head">
-              <p className="cn-sec-eyebrow">건축 여정</p>
-              <h2>한 단계씩, 함께 지어 갑니다</h2>
-              {construction && (
-                <p className="cn-sec-sub">
-                  전체 {construction.total_phases}단계 중 {construction.completed_phases}단계 완료 · 전체 진행률 {pct}%
-                </p>
-              )}
-            </div>
-            <ol className="cn-timeline">
-              {sortedPhases.map((p) => (
-                <li key={p.id} className={`cn-tl-item is-${p.status}`}>
-                  <span className="cn-tl-dot" />
-                  <div className="cn-tl-body">
-                    <div className="cn-tl-top">
-                      <span className="cn-tl-name">{p.name}</span>
-                      <span className="cn-tl-status">{STATUS_LABEL[p.status] ?? p.status}</span>
-                    </div>
-                    <div className="cn-tl-bar"><i style={{ width: `${p.progress_percent}%` }} /></div>
-                    <div className="cn-tl-meta">
-                      <span>{p.progress_percent}%</span>
-                      {p.expected_completion_date && p.status !== "completed" && (
-                        <span>예상 완료 {p.expected_completion_date}</span>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-      )}
-
-      {/* ── 헌금 현황 + 후원 CTA ── */}
-      {fundActive && fund && (
-        <section className="cn-fund-sec">
-          <div className="cn-fund-inner">
-            <div className="cn-fund-grid">
-              <div className="cn-fund-main">
-                <p className="cn-sec-eyebrow">건축 헌금 현황</p>
-                <div className="cn-fund-amounts">
-                  <span className="cn-fund-raised">{formatKRWShort(fund.raised_amount)}<small>원</small></span>
-                  <span className="cn-fund-goal">목표 {formatKRWShort(fund.goal_amount)}원</span>
-                </div>
-                <div className="cn-fund-bar"><i style={{ width: `${fundPct}%` }} /></div>
-                <div className="cn-fund-stats">
-                  <span><strong>{fundPct}%</strong> 달성</span>
-                  {fund.donor_count > 0 && <span><strong>{fund.donor_count.toLocaleString("ko-KR")}</strong>명 후원</span>}
-                  <span className="cn-fund-full">{formatKRWFull(fund.raised_amount)}</span>
-                </div>
+      {/* timeline */}
+      {total > 0 && (
+        <section className="timeline-section">
+          <div className="timeline-inner">
+            <div className="section-head">
+              <div className="left">
+                <div className="section-eyebrow">단계별 진행 — Build Timeline</div>
+                <h2>다섯 단계,<br /><em>다섯 번의 봉헌.</em></h2>
               </div>
-              <div className="cn-fund-cta">
-                <h3>함께 지어 주세요</h3>
-                <p>{fund.note || "작은 정성이 모여 새 성전이 됩니다. 본당 가족 여러분의 참여를 기다립니다."}</p>
-                {fund.account_info && <div className="cn-fund-account">{fund.account_info}</div>}
-                <Link href="/construction" className="cn-btn-pri">건축 후원 안내 →</Link>
+              <div className="right">
+                기공식부터 입당까지. 본당의 새 성전이 완성되기까지의 단계를 매주 주보에 기록합니다.
+              </div>
+            </div>
+
+            <div className="timeline">
+              <div className="timeline-track">
+                <span className="tl-progress" style={{ width: `${tlProgressPct}%` }} />
+                {sortedPhases.map((p) => {
+                  const node = p.status === "completed" ? "done" : p.status === "in_progress" ? "current" : "";
+                  const startY = p.started_at ? new Date(p.started_at).getFullYear() : (p.expected_completion_date ? new Date(p.expected_completion_date).getFullYear() : "");
+                  const statusCls = p.status === "completed" ? "done" : p.status === "in_progress" ? "current" : "next";
+                  const statusLabel = p.status === "completed" ? "완료" : p.status === "in_progress" ? `진행 중 · ${p.progress_percent}%` : "대기 중";
+                  const dateText = p.status === "completed"
+                    ? (p.completed_at ? `~ ${ymd(p.completed_at).slice(5)}` : "완료")
+                    : (p.expected_completion_date ? `예상 ${ymd(p.expected_completion_date).slice(5)}` : "");
+                  return (
+                    <div key={p.id} className={`tl-node ${node}`}>
+                      <div className="tl-year">{startY}</div>
+                      <div className="tl-dot" />
+                      <div className="tl-name">{p.name}</div>
+                      <span className={`tl-status ${statusCls}`}>{statusLabel}</span>
+                      <div className="tl-date">{dateText}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="timeline-foot">
+                <div className="tl-foot-item">
+                  <b>최근 일지{journal ? ` · ${ymd(journal.entry_date)}` : ""}</b>
+                  {journal?.note ?? "건축 일지가 곧 게재됩니다."}
+                </div>
+                <div className="tl-foot-item">
+                  <b>현재 단계</b>
+                  {curPhase?.description ?? curPhase?.name ?? "준비 중"}
+                </div>
+                <div className="tl-foot-item">
+                  <b>관련 페이지</b>
+                  <Link href="/construction" style={{ color: "var(--primary)", fontWeight: 600 }}>건축 일지 →</Link> · <Link href="/gallery" style={{ color: "var(--primary)", fontWeight: 600 }}>사진 →</Link>
+                </div>
               </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* ── 다가오는 행사·모임 ── */}
-      {events.length > 0 && (
-        <section className="cn-events-sec">
-          <div className="cn-events-inner">
-            <div className="cn-sec-head row">
-              <h2>다가오는 행사·모임</h2>
-              <Link href="/calendar" className="cn-more">전체 일정 →</Link>
+      {/* gospel + mass */}
+      <section className="row-section">
+        <div className="row-inner">
+          <div className="gospel-block">
+            <div className="eyebrow">오늘의 복음 · Today&apos;s Gospel</div>
+            <h3>{gospel?.gospel_text ? gospel.gospel_text.replace(/\n/g, " ").slice(0, 80) : "오늘의 복음 본문이 곧 게재됩니다."}</h3>
+            <div className="meta">
+              {gospel?.gospel_reference && <span><strong>{gospel.gospel_reference}</strong></span>}
+              <span>{ymd(gospel?.date ?? "")}{gospel?.liturgical_season ? ` · ${gospel.liturgical_season}` : ""}</span>
             </div>
-            <ul className="cn-events">
-              {events.slice(0, 4).map((e) => (
-                <li key={e.id}>
-                  <Link href="/calendar">
-                    <span className="cn-ev-date">{shortDate(e.event_date)}</span>
-                    {e.event_kind && <span className={`cn-ev-kind ${e.event_kind === "행사" ? "ev" : "mt"}`}>{e.event_kind}</span>}
-                    <span className="cn-ev-title">{e.title}</span>
-                  </Link>
+            <div className="gospel-block-bottom">
+              <Link href="/word" className="gb-btn">전체 복음 보기 →</Link>
+              <Link href="/meditation" className="gb-btn-2">주일 묵상 읽기</Link>
+            </div>
+          </div>
+
+          <div className="mass-block">
+            <div className="head">
+              <div><small>Mass Schedule</small><h3>미사 시간</h3></div>
+              <span className="tag">매주</span>
+            </div>
+            <ul>
+              {massRows.map((r, i) => (
+                <li key={i} className={r.label.includes("주일") ? "sun" : ""}>
+                  <span className="day">{r.label}</span>
+                  <span className="time">{r.value}</span>
+                  <span className="label" />
                 </li>
               ))}
             </ul>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/* community */}
+      <section className="community">
+        <div className="community-inner">
+          <div className="section-head" style={{ marginBottom: 32 }}>
+            <div className="left">
+              <div className="section-eyebrow">본당 소식 · Community</div>
+              <h2>한 주의 공동체 일.</h2>
+            </div>
+            <div className="right">본당의 공지와 행사, 묵상. 매주 주보를 통해 함께 나눕니다.</div>
+          </div>
+
+          <div className="community-grid">
+            <article className="notice-card">
+              <div className="head">
+                <h3>공지사항</h3>
+                <Link href="/boards/notice">전체 보기 →</Link>
+              </div>
+              <div className="notice-tabs">
+                <span className="on">전체</span>
+                <span>공지</span>
+                <span>행사·모임</span>
+              </div>
+              <ul>
+                {notices.length === 0 ? (
+                  <li><span className="nopin" /><span className="title">등록된 공지가 없습니다</span><span /></li>
+                ) : (
+                  notices.slice(0, 6).map((n) => (
+                    <li key={n.id}>
+                      {n.is_pinned ? <span className="pin">고정</span> : <span className="nopin" />}
+                      <Link href={`/boards/notice/${n.id}`} className="title">{n.title}</Link>
+                      <span className="date">{ymd(n.created_at)}</span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </article>
+
+            <article className="reflection-card">
+              <div className="eyebrow">주일 말씀 묵상</div>
+              {reflection ? (
+                <>
+                  <h3>{reflection.title}</h3>
+                  <div className="meta"><b>주일 말씀 묵상</b> · {ymd(gospel?.date ?? "")}</div>
+                  {reflection.body.split("\n").filter(Boolean).slice(0, 2).map((para, i) => (
+                    <p key={i}>{para.slice(0, 150)}</p>
+                  ))}
+                  <Link href="/meditation" className="more">묵상 전체 읽기 →</Link>
+                </>
+              ) : (
+                <p>주일 말씀 묵상이 곧 게재됩니다.</p>
+              )}
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* gallery wide */}
+      <section className="gallery-wide">
+        <div className="gallery-wide-inner">
+          <div className="gallery-wide-head">
+            <h2><small>Photo Gallery</small>모든 날 모든 순간</h2>
+            <div className="gallery-wide-tabs">
+              <Link href="/gallery" className="on">전체</Link>
+              <Link href="/gallery/liturgy">전례 사진</Link>
+              <Link href="/gallery/events">행사 사진</Link>
+              <Link href="/gallery">모두 보기 →</Link>
+            </div>
+          </div>
+          <div className="gallery-wide-grid">
+            {Array.from({ length: 6 }).map((_, i) => {
+              const p = gallery[i];
+              const wide = i === 0 || i === 5;
+              const cls = wide ? "gw-item wide" : "gw-item";
+              if (!p) return <div key={i} className={cls}><div className="ph">사진 준비 중</div></div>;
+              const href = p.source === "events" ? `/gallery/events/${p.id}` : "/gallery/liturgy";
+              return (
+                <Link key={p.id} href={href} className={cls}>
+                  <img src={`${API}${p.thumbnail_url}`} alt={p.title} />
+                  <span className="gw-cap">{p.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* closing */}
+      <section className="closing">
+        <div className="closing-inner">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.4"><line x1="16" y1="4" x2="16" y2="28" /><line x1="9" y1="11" x2="23" y2="11" /></svg>
+          <p>&ldquo;너는 베드로이다.<br />나는 이 반석 위에 내 교회를 세우겠다.&rdquo;</p>
+          <cite>— 마태오 16,18</cite>
+        </div>
+      </section>
     </div>
   );
 }

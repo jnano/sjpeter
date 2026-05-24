@@ -101,6 +101,7 @@ interface ConstructionPhase {
   started_at: string | null;
   completed_at: string | null;
   expected_completion_date: string | null;
+  description: string | null;
 }
 async function getConstructionPhases(): Promise<ConstructionPhase[]> {
   try {
@@ -836,9 +837,10 @@ export default async function HomePage() {
         parish={parish}
         gospel={gospel}
         notices={showcaseNotices}
-        events={showcaseEvents}
         construction={constructionSummary}
-        fund={constructionFund}
+        phases={constructionPhases}
+        reflection={sundayReflection}
+        gallery={dashboardGallery}
       />
     ) : currentSkin === "dashboard" ? (
       <SkinDashboard
@@ -859,10 +861,12 @@ export default async function HomePage() {
         parish={parish}
         gospel={gospel}
         notices={showcaseNotices}
-        events={showcaseEvents}
+        events={upcomingEvents}
         construction={constructionSummary}
         phases={constructionPhases}
-        fund={constructionFund}
+        offeringCount={offeringCount}
+        reflection={sundayReflection}
+        gallery={dashboardGallery}
       />
     )
   ) : null;
