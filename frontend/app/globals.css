@@ -395,43 +395,166 @@ h1, h2, h3, h4, h5, h6 {
   .skin-editorial .ed-stub { padding: 40px 24px; }
 }
 
-/* ── SkinDashboard (v2: 대시보드 카드) ── */
-.skin-dashboard { font-family: var(--font-body); color: var(--color-text); background: var(--color-background); }
-.skin-dashboard .ds-page-head { padding: 48px 56px 24px; max-width: 1320px; margin: 0 auto; display: flex; justify-content: space-between; align-items: end; gap: 40px; }
-.skin-dashboard .ds-page-head h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; }
-.skin-dashboard .ds-page-head h1 small { display: block; font-size: 12px; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-.skin-dashboard .ds-dash { max-width: 1320px; margin: 0 auto; padding: 24px 56px 64px; }
-.skin-dashboard .ds-grid12 { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
-.skin-dashboard .ds-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 28px; position: relative; }
-.skin-dashboard .ds-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.skin-dashboard .ds-card-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; }
-.skin-dashboard .ds-card-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
-.skin-dashboard .ds-card-link { font-size: 12px; color: var(--color-text-muted); font-weight: 500; }
-.skin-dashboard .ds-col-8 { grid-column: span 8; }
-.skin-dashboard .ds-col-4 { grid-column: span 4; }
-.skin-dashboard .ds-gospel { background: var(--color-text); color: #FFF; border-color: var(--color-text); padding: 36px 40px; min-height: 280px; }
-.skin-dashboard .ds-gospel .ds-card-eyebrow { color: var(--color-accent); }
-.skin-dashboard .ds-gospel .ds-card-head { border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 20px; margin-bottom: 24px; }
-.skin-dashboard .ds-gospel .ds-card-link { color: rgba(255,255,255,0.6); }
-.skin-dashboard .ds-gospel-quote { font-size: 32px; line-height: 1.35; font-weight: 600; letter-spacing: -0.025em; }
-.skin-dashboard .ds-q { color: var(--color-accent); }
-.skin-dashboard .ds-gospel-detail { margin-top: 24px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
-.skin-dashboard .ds-gospel-bible { font-size: 13px; color: rgba(255,255,255,0.5); flex: 1; line-height: 1.5; }
-.skin-dashboard .ds-gospel-bible strong { display: block; color: var(--color-accent); margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em; }
-.skin-dashboard .ds-gospel-action { padding: 12px 22px; background: var(--color-accent); color: var(--color-text); border-radius: 100px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
-.skin-dashboard .ds-mass-list li { display: grid; grid-template-columns: 60px 1fr; gap: 10px; padding: 11px 0; border-bottom: 1px dashed var(--color-border); font-size: 14px; align-items: baseline; }
-.skin-dashboard .ds-mass-list li:last-child { border-bottom: none; }
-.skin-dashboard .ds-mass-list .day { font-weight: 700; color: var(--color-text); }
-.skin-dashboard .ds-mass-list li.sun .day { color: var(--color-primary); }
-.skin-dashboard .ds-mass-list .time { color: var(--color-text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+/* ── SkinDashboard (v2: 대시보드 카드) — home-v2.html 시안 정밀 이식 ──
+   시안 원본 변수명(--bg/--ink/--primary 등)을 .skin-dashboard 에 그대로 정의하고
+   시안 CSS 를 클래스명까지 1:1 로 옮겨 폰트·크기·굵기·간격을 픽셀 단위로 일치. */
+.skin-dashboard {
+  --bg: #FAF4F1; --bg-2: #F2EAE3; --surface: #FFFFFF;
+  --primary: #7A1F2B; --primary-2: #5C1820;
+  --accent: #C9A961; --accent-2: #B5934A;
+  --ink: #2C2620; --ink-2: #6B6660; --ink-3: #9E9892;
+  --line: #E8DFD6; --line-2: #D6CCBE;
+  --r-sm: 6px; --r-md: 12px; --r-lg: 20px;
+  font-family: 'Pretendard Variable', Pretendard, var(--font-sans);
+  color: var(--ink); background: var(--bg); letter-spacing: -0.01em;
+}
+.skin-dashboard a { color: inherit; }
 
+/* page head */
+.skin-dashboard .page-head { padding: 48px 56px 24px; max-width: 1320px; margin: 0 auto; display: flex; justify-content: space-between; align-items: end; gap: 40px; }
+.skin-dashboard .page-head h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; }
+.skin-dashboard .page-head h1 small { display: block; font-size: 14px; color: var(--ink-3); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+.skin-dashboard .head-meta { display: flex; gap: 32px; align-items: end; padding-bottom: 6px; }
+.skin-dashboard .head-meta .kpi { text-align: right; }
+.skin-dashboard .head-meta .kpi b { display: block; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.skin-dashboard .head-meta .kpi span { font-size: 12px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* dash + grid */
+.skin-dashboard .dash { max-width: 1320px; margin: 0 auto; padding: 24px 56px 64px; }
+.skin-dashboard .grid12 { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+
+/* card base */
+.skin-dashboard .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 28px; position: relative; }
+.skin-dashboard .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.skin-dashboard .card-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.skin-dashboard .card-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+.skin-dashboard .card-link { font-size: 12px; color: var(--ink-2); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+.skin-dashboard .tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; background: var(--bg-2); color: var(--ink-2); }
+.skin-dashboard .tag.pri { background: rgba(122,31,43,0.08); color: var(--primary); }
+.skin-dashboard .tag.acc { background: rgba(201,169,97,0.18); color: var(--accent-2); }
+.skin-dashboard .tag.dot::before { content:''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+.skin-dashboard .col-8 { grid-column: span 8; }
+.skin-dashboard .col-4 { grid-column: span 4; }
+.skin-dashboard .col-6 { grid-column: span 6; }
+.skin-dashboard .col-3 { grid-column: span 3; }
+.skin-dashboard .col-12 { grid-column: span 12; }
+
+/* gospel card */
+.skin-dashboard .card.gospel { background: var(--ink); color: #FFF; border-color: var(--ink); padding: 36px 40px; min-height: 280px; }
+.skin-dashboard .card.gospel .card-eyebrow { color: var(--accent); }
+.skin-dashboard .card.gospel .card-head { border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 20px; margin-bottom: 24px; }
+.skin-dashboard .card.gospel .card-link { color: rgba(255,255,255,0.6); }
+.skin-dashboard .gospel-quote { font-size: 32px; line-height: 1.35; font-weight: 600; letter-spacing: -0.025em; text-wrap: balance; }
+.skin-dashboard .gospel-quote .q { color: var(--accent); }
+.skin-dashboard .gospel-detail { margin-top: 24px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.skin-dashboard .gospel-bible { font-size: 13px; color: rgba(255,255,255,0.5); flex: 1; line-height: 1.5; }
+.skin-dashboard .gospel-bible strong { display: block; color: var(--accent); margin-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; }
+.skin-dashboard .gospel-action { padding: 12px 22px; background: var(--accent); color: var(--ink); border-radius: 100px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* mass card */
+.skin-dashboard .mass-list li { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; padding: 11px 0; border-bottom: 1px dashed var(--line); font-size: 14px; align-items: baseline; }
+.skin-dashboard .mass-list li:last-child { border-bottom: none; }
+.skin-dashboard .mass-list .day { font-weight: 700; color: var(--ink); }
+.skin-dashboard .mass-list li.sun .day { color: var(--primary); }
+.skin-dashboard .mass-list .time { color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.skin-dashboard .mass-list .label { font-size: 11px; color: var(--ink-3); text-align: right; }
+
+/* construction card */
+.skin-dashboard .con-card { background: linear-gradient(180deg, var(--bg-2) 0%, var(--surface) 100%); border: 1px solid var(--line); border-radius: var(--r-md); padding: 28px; position: relative; overflow: hidden; }
+.skin-dashboard .con-illustration { position: absolute; right: -20px; top: -20px; width: 200px; height: 200px; opacity: 0.18; pointer-events: none; }
+.skin-dashboard .con-pct-row { display: flex; align-items: baseline; gap: 16px; margin: 20px 0 16px; }
+.skin-dashboard .con-pct { font-size: 56px; font-weight: 700; letter-spacing: -0.04em; color: var(--primary); line-height: 1; font-variant-numeric: tabular-nums; }
+.skin-dashboard .con-pct sup { font-size: 22px; vertical-align: top; margin-left: 2px; }
+.skin-dashboard .con-stage-name { font-size: 18px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.skin-dashboard .con-stage-name span { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+.skin-dashboard .con-bar { height: 6px; background: var(--bg-2); border-radius: 100px; overflow: hidden; position: relative; margin-bottom: 14px; border: 1px solid var(--line); }
+.skin-dashboard .con-bar i { display: block; height: 100%; background: var(--primary); border-radius: 100px; }
+.skin-dashboard .con-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); gap: 12px; }
+.skin-dashboard .con-foot strong { color: var(--ink); font-weight: 600; }
+
+/* patron / today */
+.skin-dashboard .patron-card { display: flex; gap: 20px; align-items: stretch; }
+.skin-dashboard .patron-img { width: 96px; height: 96px; flex-shrink: 0; border-radius: var(--r-sm); overflow: hidden; }
+.skin-dashboard .patron-img .ph { width: 100%; height: 100%; font-size: 10px; }
+.skin-dashboard .patron-body h4 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 4px; }
+.skin-dashboard .patron-body .feast { font-size: 12px; color: var(--accent-2); font-weight: 600; letter-spacing: 0.05em; margin-bottom: 12px; }
+.skin-dashboard .patron-body p { font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+
+/* quick action row */
+.skin-dashboard .quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.skin-dashboard .quick-pill { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px 18px; display: flex; align-items: center; gap: 14px; transition: all 0.15s; }
+.skin-dashboard .quick-pill:hover { border-color: var(--ink); transform: translateY(-1px); }
+.skin-dashboard .quick-pill .q-icon { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); border-radius: var(--r-sm); color: var(--primary); }
+.skin-dashboard .quick-pill .q-text strong { display: block; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.skin-dashboard .quick-pill .q-text span { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; margin-top: 2px; }
+
+/* notice card */
+.skin-dashboard .notice-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+.skin-dashboard .notice-tabs .tab { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.skin-dashboard .notice-tabs .tab.on { background: var(--ink); color: #FFF; }
+.skin-dashboard .notice-list-card li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14px; align-items: center; }
+.skin-dashboard .notice-list-card li:last-child { border-bottom: none; }
+.skin-dashboard .notice-list-card .pin { font-size: 10px; padding: 2px 7px; font-weight: 700; letter-spacing: 0.04em; background: var(--primary); color: #FFF; border-radius: 3px; }
+.skin-dashboard .notice-list-card .title { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skin-dashboard .notice-list-card a:hover .title { color: var(--primary); }
+.skin-dashboard .notice-list-card .date { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* calendar mini */
+.skin-dashboard .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.skin-dashboard .cal-month { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+.skin-dashboard .cal-nav { display: flex; gap: 4px; }
+.skin-dashboard .cal-nav button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.skin-dashboard .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; font-size: 12px; text-align: center; }
+.skin-dashboard .cal-grid .dow { padding: 4px 0; color: var(--ink-3); font-weight: 600; font-size: 11px; }
+.skin-dashboard .cal-grid .dow.sun { color: var(--primary); }
+.skin-dashboard .cal-grid .day { padding: 8px 0; border-radius: var(--r-sm); position: relative; font-variant-numeric: tabular-nums; }
+.skin-dashboard .cal-grid .day.muted { color: var(--ink-3); opacity: 0.5; }
+.skin-dashboard .cal-grid .day.sun { color: var(--primary); font-weight: 600; }
+.skin-dashboard .cal-grid .day.today { background: var(--ink); color: #FFF; font-weight: 700; }
+.skin-dashboard .cal-grid .day.has::after { content:''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+
+/* offering card */
+.skin-dashboard .offering { background: var(--ink); color: #FFF; border-color: var(--ink); }
+.skin-dashboard .offering .card-head h3 { color: #FFF; }
+.skin-dashboard .offering .card-eyebrow { color: var(--accent); }
+.skin-dashboard .offering-amt { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin: 12px 0 4px; color: #FFF; }
+.skin-dashboard .offering-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+.skin-dashboard .offering-cta { display: block; padding: 14px; background: var(--accent); color: var(--ink); text-align: center; font-weight: 600; font-size: 14px; border-radius: var(--r-sm); }
+
+/* gallery card */
+.skin-dashboard .gallery-card { grid-column: span 12; padding: 0; overflow: hidden; }
+.skin-dashboard .gallery-card-head { padding: 28px 28px 20px; display: flex; justify-content: space-between; align-items: end; }
+.skin-dashboard .gallery-card-head h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.skin-dashboard .gallery-card-head h3 small { display: block; font-size: 11px; color: var(--ink-3); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.skin-dashboard .gallery-tabs { display: flex; gap: 4px; }
+.skin-dashboard .gallery-tabs button, .skin-dashboard .gallery-tabs a { padding: 6px 12px; border-radius: 100px; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.skin-dashboard .gallery-tabs button.on { background: var(--ink); color: #FFF; font-weight: 600; }
+.skin-dashboard .gallery-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 0 28px 28px; }
+.skin-dashboard .gallery-strip .gi { aspect-ratio: 1 / 1; background: var(--bg-2); position: relative; overflow: hidden; display: block; }
+.skin-dashboard .gallery-strip .gi img { width: 100%; height: 100%; object-fit: cover; }
+.skin-dashboard .gallery-strip .gi .ph { width: 100%; height: 100%; font-size: 10px; }
+
+/* reflection */
+.skin-dashboard .reflection { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 28px; }
+.skin-dashboard .reflection .meta { font-size: 12px; color: var(--ink-3); }
+.skin-dashboard .reflection .meta b { color: var(--ink-2); font-weight: 600; }
+.skin-dashboard .reflection h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.4; text-wrap: balance; }
+.skin-dashboard .reflection p { font-size: 14px; line-height: 1.7; color: var(--ink-2); margin: 14px 0 16px; max-width: 920px; text-wrap: pretty; }
+.skin-dashboard .reflection .more { font-size: 13px; font-weight: 600; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; }
+
+/* mobile fallback */
 @media (max-width: 1024px) {
-  .skin-dashboard .ds-page-head { padding: 32px 24px 16px; flex-direction: column; align-items: start; }
-  .skin-dashboard .ds-page-head h1 { font-size: 28px; }
-  .skin-dashboard .ds-dash { padding: 16px 24px 40px; }
-  .skin-dashboard .ds-grid12 { grid-template-columns: 1fr; }
-  .skin-dashboard .ds-col-8, .skin-dashboard .ds-col-4 { grid-column: span 1; }
-  .skin-dashboard .ds-gospel-quote { font-size: 22px; }
+  .skin-dashboard .page-head { padding: 32px 24px 16px; flex-direction: column; align-items: start; gap: 20px; }
+  .skin-dashboard .page-head h1 { font-size: 28px; }
+  .skin-dashboard .head-meta { gap: 20px; }
+  .skin-dashboard .head-meta .kpi { text-align: left; }
+  .skin-dashboard .dash { padding: 16px 24px 40px; }
+  .skin-dashboard .grid12 { grid-template-columns: 1fr; }
+  .skin-dashboard [class*="col-"] { grid-column: span 1 !important; }
+  .skin-dashboard .quick-row { grid-template-columns: repeat(2, 1fr); }
+  .skin-dashboard .gallery-strip { grid-template-columns: repeat(3, 1fr); }
+  .skin-dashboard .gospel-quote { font-size: 22px; }
 }
 
 /* ── SkinConstruction (v3: 함께 짓는 성전) ── */
@@ -629,33 +752,6 @@ h1, h2, h3, h4, h5, h6 {
   .skin-editorial .ed-construction-head { font-size: 28px; }
   .skin-editorial .ed-gallery { padding: 40px 24px; }
   .skin-editorial .ed-footer { padding: 40px 24px; }
-}
-
-/* ── SkinDashboard 추가 카드 ── */
-.skin-dashboard .ds-empty { font-size: 13px; color: var(--color-text-muted); padding: 8px 0; }
-.skin-dashboard .ds-link-list li a { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px dashed var(--color-border); font-size: 13.5px; }
-.skin-dashboard .ds-link-list li:last-child a { border-bottom: none; }
-.skin-dashboard .ds-ll-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); }
-.skin-dashboard .ds-link-list li a:hover .ds-ll-title { color: var(--color-primary); }
-.skin-dashboard .ds-link-list time { font-size: 12px; color: var(--color-text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.skin-dashboard .ds-pin { font-size: 10px; color: var(--color-primary); background: rgba(122,31,43,0.08); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
-.skin-dashboard .ds-kind { font-size: 10px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; font-weight: 600; }
-.skin-dashboard .ds-kind.ev { color: #1d4ed8; background: rgba(29,78,216,0.1); }
-.skin-dashboard .ds-kind.mt { color: #15803d; background: rgba(21,128,61,0.1); }
-.skin-dashboard a.ds-card { transition: border-color .2s; }
-.skin-dashboard a.ds-card:hover { border-color: var(--color-primary); }
-.skin-dashboard .ds-kpi { display: block; }
-.skin-dashboard .ds-kpi-num { font-size: 44px; font-weight: 800; letter-spacing: -0.04em; color: var(--color-primary); line-height: 1; margin-top: 8px; font-variant-numeric: tabular-nums; }
-.skin-dashboard .ds-kpi-num sup { font-size: 20px; vertical-align: top; margin-left: 2px; }
-.skin-dashboard .ds-kpi-num small { font-size: 20px; font-weight: 700; margin-left: 2px; }
-.skin-dashboard .ds-kpi-label { font-size: 12px; color: var(--color-text-muted); margin-top: 8px; }
-.skin-dashboard .ds-kpi-bar { height: 6px; border-radius: 100px; background: var(--color-border); overflow: hidden; margin-top: 12px; }
-.skin-dashboard .ds-kpi-bar i { display: block; height: 100%; background: var(--color-primary); border-radius: 100px; }
-.skin-dashboard .ds-kpi-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 10px; line-height: 1.4; }
-.skin-dashboard .ds-col-12 { grid-column: span 12; }
-
-@media (max-width: 1024px) {
-  .skin-dashboard .ds-col-12 { grid-column: span 1; }
 }
 
 /* v1.5.348: utility 자동 매핑 제거.

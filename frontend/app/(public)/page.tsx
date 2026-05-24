@@ -128,6 +128,52 @@ async function getConstructionFund(): Promise<ConstructionFund | null> {
   } catch { return null; }
 }
 
+// 쇼케이스 스킨(dashboard) 전용 추가 데이터
+async function getLatestBulletinIssue(): Promise<number | null> {
+  try {
+    const r = await fetch(`${API}/api/bulletins/`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    return Array.isArray(data) && data[0] ? (data[0].issue_number ?? null) : null;
+  } catch { return null; }
+}
+async function getOfferingCount(): Promise<number> {
+  try {
+    const r = await fetch(`${API}/api/boards/build_offering/posts?limit=1`);
+    if (!r.ok) return 0;
+    const d = await r.json();
+    return d.total ?? 0;
+  } catch { return 0; }
+}
+interface SundayReflection { id: number; title: string; body: string; }
+async function getSundayReflection(): Promise<SundayReflection | null> {
+  try {
+    const r = await fetch(`${API}/api/content/meditations`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const items = Array.isArray(d?.items) ? d.items : [];
+    return items[0] ?? null;
+  } catch { return null; }
+}
+interface GalleryPhoto { id: number; title: string; thumbnail_url: string; source: "liturgy" | "events"; }
+async function getDashboardGallery(): Promise<GalleryPhoto[]> {
+  try {
+    const [lit, evt] = await Promise.all([
+      fetch(`${API}/api/boards/liturgy/posts?page=1`).then((r) => (r.ok ? r.json() : { posts: [] })),
+      fetch(`${API}/api/boards/events/posts?page=1`).then((r) => (r.ok ? r.json() : { posts: [] })),
+    ]);
+    type RawP = { id: number; title: string; thumbnail_url: string | null };
+    const pick = (arr: RawP[], src: "liturgy" | "events"): GalleryPhoto[] =>
+      (arr || []).filter((p) => p.thumbnail_url).map((p) => ({ id: p.id, title: p.title, thumbnail_url: p.thumbnail_url as string, source: src }));
+    const l = pick(lit.posts, "liturgy");
+    const e = pick(evt.posts, "events");
+    const merged: GalleryPhoto[] = [];
+    const max = Math.max(l.length, e.length);
+    for (let i = 0; i < max; i++) { if (l[i]) merged.push(l[i]); if (e[i]) merged.push(e[i]); }
+    return merged.slice(0, 6);
+  } catch { return []; }
+}
+
 async function getSiteConfig(): Promise<Record<string, string>> {
   try {
     const r = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
@@ -212,7 +258,7 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems, currentSkin, constructionPhases, constructionFund] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems, currentSkin, constructionPhases, constructionFund, latestBulletinIssue, offeringCount, sundayReflection, dashboardGallery] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -226,6 +272,10 @@ export default async function HomePage() {
       fetchCurrentSkin(),
       getConstructionPhases(),
       getConstructionFund(),
+      getLatestBulletinIssue(),
+      getOfferingCount(),
+      getSundayReflection(),
+      getDashboardGallery(),
     ]);
 
   // board_tabs 블록들이 참조하는 게시판 slug 들을 수집해서 일괄 fetch (two_column/three_column 슬롯 안에 있는 것도 포함).
@@ -795,9 +845,14 @@ export default async function HomePage() {
         parish={parish}
         gospel={gospel}
         notices={showcaseNotices}
-        events={showcaseEvents}
+        events={upcomingEvents}
         construction={constructionSummary}
+        phases={constructionPhases}
         fund={constructionFund}
+        latestIssue={latestBulletinIssue}
+        offeringCount={offeringCount}
+        reflection={sundayReflection}
+        gallery={dashboardGallery}
       />
     ) : (
       <SkinConstruction
