@@ -238,7 +238,7 @@ export default async function BoardPage({
               const baseQp = new URLSearchParams();
               if (q) baseQp.set("q", q);
               if (sort !== "latest") baseQp.set("sort", sort);
-              if (currentView !== "list") baseQp.set("view", currentView);
+              if (currentView !== kindDefault) baseQp.set("view", currentView);
               const allHref = `/boards/${slug}${baseQp.toString() ? `?${baseQp}` : ""}`;
               return (
                 <>
@@ -280,7 +280,7 @@ export default async function BoardPage({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {board.show_search_form && (
             <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
-              {currentView !== "list" && <input type="hidden" name="view" value={currentView} />}
+              {currentView !== kindDefault && <input type="hidden" name="view" value={currentView} />}
               {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
               {category && <input type="hidden" name="category" value={category} />}
               <input
@@ -292,7 +292,7 @@ export default async function BoardPage({
               />
               {q && (
                 <Link
-                  href={`/boards/${slug}${currentView !== "list" ? `?view=${currentView}` : ""}`}
+                  href={`/boards/${slug}${currentView !== kindDefault ? `?view=${currentView}` : ""}`}
                   className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
                 >
                   지우기
@@ -310,7 +310,7 @@ export default async function BoardPage({
             {SORT_OPTIONS.map((o) => {
               const qp = new URLSearchParams();
               if (q) qp.set("q", q);
-              if (currentView !== "list") qp.set("view", currentView);
+              if (currentView !== kindDefault) qp.set("view", currentView);
               if (category) qp.set("category", category);
               if (o.value !== "latest") qp.set("sort", o.value);
               const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
@@ -339,7 +339,10 @@ export default async function BoardPage({
                 if (q) qp.set("q", q);
                 if (sort !== "latest") qp.set("sort", sort);
                 if (category) qp.set("category", category);
-                if (o.value !== "list") qp.set("view", o.value);
+                // 게시판 kind 의 default 뷰가 아닐 때만 view 파라미터 명시.
+                // v1.5.334: kind='gallery' 의 default 는 'photo' 라, '목록' 클릭 시
+                //   view 파라미터를 빼면 default(photo) 로 돌아가 목록 진입 불가했음.
+                if (o.value !== kindDefault) qp.set("view", o.value);
                 const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
                 const active = currentView === o.value;
                 return (
@@ -373,6 +376,7 @@ export default async function BoardPage({
           currentPage={page}
           totalPages={totalPages}
           currentView={currentView}
+          kindDefault={kindDefault}
           cols={{
             list_show_number: board.list_show_number ?? false,
             list_show_author: board.list_show_author ?? true,

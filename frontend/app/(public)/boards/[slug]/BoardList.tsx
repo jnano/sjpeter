@@ -94,6 +94,8 @@ interface Props {
   currentPage: number;
   totalPages: number;
   currentView: "list" | "photo" | "card";
+  /** 게시판 종류별 default 뷰 — kindDefault 와 동일한 view 라면 URL 에 view 파라미터 생략 (v1.5.334) */
+  kindDefault: "list" | "photo";
   cols: BoardCols;
   currentQ?: string;
   currentSort?: string;
@@ -120,12 +122,12 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default function BoardList({ posts, slug, currentPage, totalPages, currentView, cols, currentQ, currentSort, currentCategory }: Props) {
+export default function BoardList({ posts, slug, currentPage, totalPages, currentView, kindDefault, cols, currentQ, currentSort, currentCategory }: Props) {
   // 글 상세 → 삭제·뒤로 돌아갈 때 현재 페이지·필터를 복원하기 위해 링크에 from= 첨부
   function detailHref(postId: number) {
     const qp = new URLSearchParams();
     if (currentPage > 1) qp.set("page", String(currentPage));
-    if (currentView && currentView !== "list") qp.set("view", currentView);
+    if (currentView && currentView !== kindDefault) qp.set("view", currentView);
     if (currentQ) qp.set("q", currentQ);
     if (currentSort && currentSort !== "latest") qp.set("sort", currentSort);
     if (currentCategory) qp.set("category", currentCategory);
