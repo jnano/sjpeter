@@ -73,7 +73,7 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
       </button>
     );
   }
-  // 펼친 상태 — '‹ 메뉴 접기'
+  // 펼친 상태 — '‹ 메뉴 접기' (시안 .side-collapse: 완전 둥근 pill · 전체 테두리 · 사이드바 상단)
   return (
     <button
       type="button"
@@ -81,8 +81,7 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
       aria-pressed={collapsed}
       aria-label="메뉴 접기"
       title="메뉴 접기"
-      style={{ top: "calc(-2rem - 1px)" }}
-      className="hidden md:inline-flex items-center gap-1.5 absolute left-0 z-10 px-3 py-1 bg-white border border-[var(--color-border)] border-t-0 rounded-b-md text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+      className="hidden md:inline-flex items-center gap-1.5 mb-5 px-3 py-1.5 rounded-full border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
     >
       <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <polyline points="6 2 3 5 6 8" />
