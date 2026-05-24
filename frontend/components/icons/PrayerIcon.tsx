@@ -6,7 +6,7 @@ export default function PrayerIcon({ className = "w-14 h-14" }: { className?: st
       id="Capa_1"
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
-      viewBox="0 0 57.674 57.674"
+      viewBox="0 -14 57.674 71.674"
       xmlSpace="preserve"
       fill="#000000"
       className={className}
@@ -15,6 +15,13 @@ export default function PrayerIcon({ className = "w-14 h-14" }: { className?: st
       <g id="SVGRepo_bgCarrier" strokeWidth={0} />
       <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
       <g id="SVGRepo_iconCarrier">
+        {/* v1.5.342: 묵주 위쪽 작은 십자가 — 묵주의 가장 위쪽 알(cx=24.337,cy=3) 위에 매달린 모양 */}
+        <g style={{ fill: "#805333" }}>
+          {/* 세로 막대 */}
+          <rect x="23" y="-13" width="2.674" height="11" />
+          {/* 가로 막대 */}
+          <rect x="20" y="-9.5" width="8.674" height="2.674" />
+        </g>
         <path
           style={{ fill: "#805333" }}
           d="M33.317,39.442l-4.222,2.422l-2.436-4.292L22.337,40l 2.436,4.292l-4.272,2.425l2.425,4.272 l4.272-2.425l4.774,8.41c0.377,0.664,1.221,0.897,1.885,0.52l1.901-1.079c0.666-0.378,0.898-1.226,0.517-1.89l-4.805-8.385 l4.272-2.425L33.317,39.442z"
