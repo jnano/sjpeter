@@ -1289,3 +1289,22 @@ h1, h2, h3, h4, h5, h6 {
 .skin-m-construction .closing svg { width: 26px; height: 26px; margin: 0 auto 20px; color: var(--accent); }
 .skin-m-construction .closing p { font-size: 24px; line-height: 1.4; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
 .skin-m-construction .closing cite { display: block; margin-top: 18px; font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; font-style: normal; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   v1.5.358 — 시안 스킨일 때 서브페이지(게시판·소개 등) 톤 통일.
+   본문 카드는 이미 --color-*(와인/베이지)·--radius-card(12px) 토큰을 쓰므로
+   시안 스킨에선 자동으로 와인 카드. 제목 폰트(.font-serif=Noto Serif)만
+   Pretendard(var(--font-display))로 통일해 홈 시안과 일관되게.
+   ══════════════════════════════════════════════════════════════════════ */
+[data-skin="editorial"] .font-serif,
+[data-skin="dashboard"] .font-serif,
+[data-skin="construction"] .font-serif { font-family: var(--font-display); letter-spacing: -0.02em; }
+
+/* 게시판 고정(핀) 뱃지 — 시안 스킨에선 amber 대신 와인 톤으로 통일 */
+[data-skin="editorial"] .pin-amber,
+[data-skin="dashboard"] .pin-amber,
+[data-skin="construction"] .pin-amber {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}

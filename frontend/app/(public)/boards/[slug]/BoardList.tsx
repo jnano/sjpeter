@@ -183,7 +183,7 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
               </span>
             )}
             {post.is_pinned && (
-              <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded shrink-0 font-semibold" title="상단 고정">
+              <span className="text-[10px] px-1.5 py-0.5 pin-amber bg-amber-100 text-amber-700 border border-amber-300 rounded shrink-0 font-semibold" title="상단 고정">
                 📌 고정
               </span>
             )}
@@ -257,7 +257,7 @@ function CardView({ posts, slug: _slug, cols, hrefFor }: { posts: Post[]; slug: 
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium flex items-center gap-1.5 min-w-0">
                   {post.is_pinned && (
-                    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 rounded font-semibold shrink-0">
+                    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 pin-amber bg-amber-100 text-amber-700 border border-amber-300 rounded font-semibold shrink-0">
                       📌 고정
                     </span>
                   )}
