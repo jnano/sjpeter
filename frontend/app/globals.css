@@ -766,3 +766,80 @@ h1, h2, h3, h4, h5, h6 {
 [data-skin] .skin-card    { border-radius: var(--radius-card); }
 [data-skin] .skin-button  { border-radius: var(--radius-button); }
 [data-skin] .skin-pill    { border-radius: var(--radius-pill); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   v1.5.353 — 시안(home-v*.html) 공통 헤더/푸터.
+   레이아웃·타이포·간격은 시안 정밀 재현, 색은 --color-* 토큰이라
+   data-skin(전례시기/스킨)별로 자동 적용. 동적 메뉴·로그인·검색 기능은
+   Header.tsx/Footer.tsx 로직 그대로 유지.
+   ══════════════════════════════════════════════════════════════════════ */
+.site-header-root { position: sticky; top: 0; z-index: 50; font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
+
+/* topbar */
+.site-topbar { background: var(--color-background); border-bottom: 1px solid var(--color-border); }
+.site-topbar-inner { max-width: 1320px; margin: 0 auto; padding: 12px 56px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--color-text-muted); }
+.site-topbar .liturgy { display: inline-flex; align-items: center; gap: 10px; }
+.site-topbar .liturgy::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); }
+.site-topbar-right { display: flex; align-items: center; gap: 14px; }
+.site-topbar-right a:hover, .site-topbar-right button:hover { color: var(--color-primary); }
+
+/* main header */
+.site-shell-header { background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.site-header-inner { max-width: 1320px; margin: 0 auto; padding: 20px 56px; display: flex; align-items: center; gap: 40px; }
+.site-logo { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.site-logo-mark { width: 40px; height: 40px; flex-shrink: 0; }
+.site-logo-text { font-weight: 700; font-size: 19px; letter-spacing: -0.02em; line-height: 1.1; color: var(--color-primary); }
+.site-logo-en { display: block; font-size: 10px; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+.site-nav { display: flex; gap: 38px; flex: 1; justify-content: center; align-items: center; height: 100%; }
+.site-nav-item { position: relative; display: flex; align-items: center; }
+.site-nav-link { font-weight: 500; font-size: 15px; color: var(--color-text); white-space: nowrap; transition: color 0.15s; }
+.site-nav-link:hover { color: var(--color-primary); }
+.site-nav-link.on { color: var(--color-primary); font-weight: 700; }
+.site-header-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.site-search-btn { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--color-background); border-radius: 100px; font-size: 13px; color: var(--color-text-muted); border: 1px solid var(--color-border); width: 230px; transition: border-color 0.15s; }
+.site-search-btn:hover { border-color: var(--color-primary); }
+.site-search-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.site-search-btn input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 13px; color: var(--color-text); }
+.site-search-btn input::placeholder { color: var(--color-text-muted); }
+.site-cta { padding: 10px 18px; background: var(--color-text); color: #FFF; border-radius: 100px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; transition: background 0.15s; }
+.site-cta:hover { background: var(--color-primary); }
+/* nav 드롭다운 (동적 메뉴 하위) — 시안엔 없지만 기능 유지, 시안 톤으로 */
+.site-nav-dropdown { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card, 12px); box-shadow: var(--shadow-lg, 0 12px 40px rgba(44,38,32,0.08)); min-width: 200px; padding: 8px; z-index: 60; }
+.site-nav-dropdown a { display: block; padding: 9px 14px; font-size: 14px; color: var(--color-text); border-radius: 8px; transition: background 0.12s, color 0.12s; }
+.site-nav-dropdown a:hover { background: var(--color-surface-warm); color: var(--color-primary); }
+.site-mobile-toggle { display: none; }
+
+/* footer */
+.site-foot { background: var(--color-surface-warm); padding: 64px 56px 32px; margin-top: 32px; border-top: 1px solid var(--color-border); font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
+.site-foot-inner { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; }
+.site-foot .site-logo { margin-bottom: 20px; }
+.site-foot-brand p { font-size: 13px; color: var(--color-text-muted); line-height: 1.7; }
+.site-foot-brand .phones { margin-top: 14px; font-size: 13px; color: var(--color-text-muted); }
+.site-foot-brand .diocese { margin-top: 12px; font-size: 12px; color: var(--color-text-muted); }
+.site-foot h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; color: var(--color-text); }
+.site-foot ul li { padding: 5px 0; font-size: 13px; color: var(--color-text-muted); }
+.site-foot ul li a:hover { color: var(--color-primary); }
+.site-foot-mass { display: grid; grid-template-columns: 44px 1fr; gap: 6px 14px; font-size: 13px; }
+.site-foot-mass dt { color: var(--color-text-muted); }
+.site-foot-mass dd { color: var(--color-text); }
+.site-foot-bottom { max-width: 1320px; margin: 48px auto 0; padding-top: 20px; border-top: 1px solid var(--color-border-dark); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--color-text-muted); }
+.site-foot-bottom-links { display: flex; gap: 20px; }
+.site-foot-bottom-links a:hover { color: var(--color-primary); }
+
+/* 모바일 — 시안은 1440 고정이라 좁은 화면은 합리적 축소 + 토글 메뉴 */
+@media (max-width: 1024px) {
+  .site-topbar-inner, .site-header-inner { padding-left: 20px; padding-right: 20px; }
+  .site-header-inner { gap: 16px; }
+  .site-nav { display: none; }
+  .site-search-btn { width: auto; }
+  .site-search-btn span { display: none; }
+  .site-cta { display: none; }
+  .site-mobile-toggle { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; color: var(--color-text); }
+  .site-mobile-toggle:hover { background: var(--color-surface-warm); }
+  .site-foot { padding: 40px 20px 24px; }
+  .site-foot-inner { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .site-foot-bottom { flex-direction: column; gap: 10px; }
+}
+@media (max-width: 560px) {
+  .site-foot-inner { grid-template-columns: 1fr; }
+}

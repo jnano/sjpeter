@@ -115,144 +115,103 @@ export default async function Footer() {
   // admin/menus 에서 토글로 켠 그룹만 노출. 항목이 없으면 영역 자체 미렌더.
   const footerGroups = menus.filter((g) => g.show_in_footer && g.items.length > 0);
 
+  const labelOf = (href: string, fallback: string) =>
+    quickLinks.find((q) => q.href === href)?.label ?? fallback;
+  const logoSrc = parish?.logo_url
+    ? (parish.logo_url.startsWith("http") ? parish.logo_url : `${API}${parish.logo_url}`)
+    : null;
+
   return (
-    <footer className="bg-[var(--color-surface-warm)] border-t border-[var(--color-border)] text-[var(--color-text)] mt-16">
-      <div className="max-w-6xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="site-foot">
+      <div className="site-foot-inner">
 
-          {/* 성당 정보 */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              {parish?.logo_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={parish.logo_url.startsWith("http") ? parish.logo_url : `${API}${parish.logo_url}`}
-                  alt={parish?.name ?? "본당 홈페이지"}
-                  className="h-7 w-7 object-contain"
-                />
-              ) : (
-                <LogoFallback className="h-7 w-7" />
-              )}
-              <span className="font-serif font-bold text-[var(--color-primary)] text-lg">
-                {parish?.name ?? "본당 홈페이지"}
-              </span>
-            </div>
-            <address className="not-italic text-sm leading-relaxed space-y-1 text-[var(--color-text-muted)]">
-              {parish?.address && <p>{parish.address}</p>}
-              {(parish?.phone || parish?.fax) && (
-                <p>
-                  {parish.phone && <>☏ {parish.phone}</>}
-                  {parish.phone && parish.fax && <span className="mx-1.5 text-[var(--color-border-dark)]">|</span>}
-                  {parish.fax && <>팩스 {parish.fax}</>}
-                </p>
-              )}
-              {parish?.diocese && <p>{parish.diocese} 소속</p>}
-            </address>
-          </div>
-
-          {/* 미사 시간 */}
-          <div>
-            <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">미사 시간</h3>
-            {massRows.length > 0 ? (
-              <table className="text-sm w-full">
-                <tbody>
-                  {massRows.map((row) => (
-                    <tr key={row.label}>
-                      <td className="text-[var(--color-text-muted)] pr-4 pb-1.5 whitespace-nowrap align-top w-12">
-                        {row.label}
-                      </td>
-                      <td className="pb-1.5 text-[var(--color-text)]">{row.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* 브랜드 */}
+        <div className="site-foot-brand">
+          <Link href="/" className="site-logo">
+            {logoSrc ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={logoSrc} alt={parish?.name ?? "본당 홈페이지"} className="site-logo-mark" style={{ objectFit: "contain" }} />
             ) : (
-              <p className="text-sm text-[var(--color-text-muted)]">미사 시간 정보 없음</p>
+              <LogoFallback className="site-logo-mark" />
             )}
-            {parish?.mass_schedule?.note && (
-              <p className="text-xs text-[var(--color-text-muted)] mt-3">※ {parish.mass_schedule.note}</p>
-            )}
-          </div>
-
-          {/* 바로가기 — quickLinks 그리드 → 장애 신고 → 관련 사이트(footer 그룹) 순으로 한 칼럼에 묶음 */}
-          <div>
-            <h3 className="font-serif font-bold text-[var(--color-primary)] mb-4">바로가기</h3>
-            <nav className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              {quickLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-            <div className="mt-4 text-sm">
-              {/* ReportLink 는 useSearchParams 사용 → Suspense 로 감싸 정적 prerender 시 CSR bail-out 차단 회피 */}
-              <Suspense fallback={null}>
-                <ReportLink className="inline-flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
-                  <span aria-hidden>🛠️</span>
-                  <span>장애 신고</span>
-                </ReportLink>
-              </Suspense>
+            <span className="site-logo-text">{parish?.name ?? "본당 홈페이지"}</span>
+          </Link>
+          {parish?.address && <p>{parish.address}</p>}
+          {(parish?.phone || parish?.fax) && (
+            <div className="phones">
+              {parish.phone && <>☎ {parish.phone}</>}
+              {parish.phone && parish.fax && " · "}
+              {parish.fax && <>팩스 {parish.fax}</>}
             </div>
-
-            {/* 관련 사이트(외부 링크) — show_in_footer 그룹에 등록한 항목들.
-                바로가기 칼럼 안 아래쪽에 배치. image_url 있으면 원형 사진 + 라벨, 없으면 라벨만. */}
-            {footerGroups.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60">
-                {footerGroups.map((g) => (
-                  <div key={g.id} className="mb-4 last:mb-0">
-                    <h4 className="font-serif font-semibold text-[var(--color-primary)] mb-2 text-xs">{g.label}</h4>
-                    <nav className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                      {flattenServer(g.items).map((it) => {
-                        const href = it.is_external ? (it.external_url ?? it.href) : it.href;
-                        const img = it.image_url
-                          ? (it.image_url.startsWith("http") ? it.image_url : `${API}${it.image_url}`)
-                          : null;
-                        return (
-                          <a
-                            key={it.id}
-                            href={href}
-                            target={it.is_external ? "_blank" : undefined}
-                            rel={it.is_external ? "noopener noreferrer" : undefined}
-                            className="group inline-flex items-center gap-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                          >
-                            {img && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img
-                                src={img}
-                                alt={it.label}
-                                loading="lazy"
-                                className="h-8 w-8 rounded-full object-cover border border-[var(--color-border)] group-hover:border-[var(--color-primary)] transition-colors"
-                              />
-                            )}
-                            <span>{it.label}</span>
-                            {it.is_external && <span aria-hidden className="text-[10px] opacity-60">↗</span>}
-                          </a>
-                        );
-                      })}
-                    </nav>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
+          {parish?.diocese && <div className="diocese">{parish.diocese} 소속</div>}
         </div>
 
-        {/* 구분선 + 약관 링크 + 저작권 중앙 */}
-        <div className="border-t border-[var(--color-border)] mt-8 pt-6 text-center text-xs text-[var(--color-text-muted)] space-y-2">
-          <div className="flex items-center justify-center gap-3">
-            <Link href="/p/terms" className="hover:text-[var(--color-primary)] transition-colors">
-              이용약관
-            </Link>
-            <span className="text-[var(--color-border)]">|</span>
-            <Link href="/p/privacy" className="hover:text-[var(--color-primary)] transition-colors font-medium">
-              개인정보 처리방침
-            </Link>
-          </div>
-          <p>© {new Date().getFullYear()} {parish?.name ?? "본당 홈페이지"}. All rights reserved.</p>
+        {/* 미사 시간 */}
+        <div>
+          <h4>미사 시간</h4>
+          {massRows.length > 0 ? (
+            <dl className="site-foot-mass">
+              {massRows.map((row) => (
+                <div key={row.label} style={{ display: "contents" }}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p style={{ fontSize: 13, color: "var(--color-text-muted)" }}>미사 시간 정보 없음</p>
+          )}
+        </div>
+
+        {/* 바로가기 */}
+        <div>
+          <h4>바로가기</h4>
+          <ul>
+            <li><Link href="/bulletin">{labelOf("/bulletin", "주보 아카이브")}</Link></li>
+            <li><Link href="/pastor">{labelOf("/pastor", "주임신부님")}</Link></li>
+            <li><Link href="/word">{labelOf("/word", "오늘의 복음")}</Link></li>
+            <li>
+              <Suspense fallback={null}>
+                <ReportLink>장애 신고</ReportLink>
+              </Suspense>
+            </li>
+          </ul>
+        </div>
+
+        {/* 둘러보기 */}
+        <div>
+          <h4>둘러보기</h4>
+          <ul>
+            <li><Link href="/about">{labelOf("/about", "성당 안내")}</Link></li>
+            <li><Link href="/history">{labelOf("/history", "본당 연혁")}</Link></li>
+            <li><Link href="/info">{labelOf("/info", "찾아오시는 길")}</Link></li>
+            {footerGroups.flatMap((g) =>
+              flattenServer(g.items).map((it) => {
+                const href = it.is_external ? (it.external_url ?? it.href) : it.href;
+                return (
+                  <li key={it.id}>
+                    <a
+                      href={href}
+                      target={it.is_external ? "_blank" : undefined}
+                      rel={it.is_external ? "noopener noreferrer" : undefined}
+                    >
+                      {it.label}
+                      {it.is_external && <span aria-hidden style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>↗</span>}
+                    </a>
+                  </li>
+                );
+              }),
+            )}
+          </ul>
+        </div>
+      </div>
+
+      <div className="site-foot-bottom">
+        <span>© {new Date().getFullYear()} {parish?.name ?? "본당 홈페이지"}. All rights reserved.</span>
+        <div className="site-foot-bottom-links">
+          <Link href="/p/terms">이용약관</Link>
+          <Link href="/p/privacy">개인정보 처리방침</Link>
         </div>
       </div>
     </footer>
