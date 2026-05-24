@@ -12,6 +12,7 @@ import GroupsIcon from "@/components/icons/GroupsIcon";
 import BulletinIcon from "@/components/icons/BulletinIcon";
 import CrossIcon from "@/components/icons/CrossIcon";
 import ConstructionIcon from "@/components/icons/ConstructionIcon";
+import SaintIcon from "@/components/icons/SaintIcon";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
 
 // admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
@@ -155,6 +156,7 @@ const ICON_BY_KEY: Record<string, React.ReactNode> = {
   bulletin:     <BulletinIcon className="w-14 h-14 text-[var(--color-primary)]" />,
   cross:        <CrossIcon className="w-14 h-14 text-[var(--color-primary)]" />,
   construction: <ConstructionIcon className="w-14 h-14 text-[var(--color-primary)]" />,
+  saint:        <SaintIcon className="w-14 h-14 text-[var(--color-primary)]" />,
 };
 
 // quick_links 블록 payload.items 가 비어 있으면 사용되는 default 3개.

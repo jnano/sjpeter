@@ -49,6 +49,7 @@ const QUICK_LINK_ICONS = [
   { key: "bulletin",     label: "📖 주보" },
   { key: "cross",        label: "✝ 십자가" },
   { key: "construction", label: "🏗 건축" },
+  { key: "saint",        label: "🙏 성인" },
 ];
 
 interface QuickLinkItem {
