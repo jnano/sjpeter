@@ -672,11 +672,67 @@ export default async function HomePage() {
     );
   }
 
+  // v1.5.339: 모바일 전용 순서 (PC 는 home_blocks 그대로). 사용자 요구 11단계:
+  //   검색 → 메인사진 → 빠른메뉴 → 복음 → 주일말씀 → 미사시간 → 성전건축 → 배너 → 공지 → 갤러리 → 인용
+  const mobileQuickLinksPayload = (() => {
+    for (const b of blocks) {
+      if (b.kind === "quick_links") return b.payload ?? {};
+      if (b.kind === "two_column") {
+        const left = (b.payload as { left?: { kind?: string; payload?: Record<string, unknown> } } | undefined)?.left;
+        const right = (b.payload as { right?: { kind?: string; payload?: Record<string, unknown> } } | undefined)?.right;
+        if (left?.kind === "quick_links") return left.payload ?? {};
+        if (right?.kind === "quick_links") return right.payload ?? {};
+      }
+    }
+    return {};
+  })();
+  const mobileQuoteBlock = blocks.find((b) => b.kind === "quote");
+
+  const mobileLayout = (
+    <div className="md:hidden">
+      {/* 1. 검색 */}
+      <div className={`${CONTAINER} py-3`}>
+        <SearchHero initialQ="" autoFocus={false} variant="pill" placeholder="무엇을 찾으시나요?" />
+      </div>
+      {/* 2. 메인사진 */}
+      <div className={`${CONTAINER} py-3`}>
+        <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
+      </div>
+      {/* 3. 빠른 메뉴 (성당소개/새항목/주보아카이브) */}
+      {wrapSection(quickLinksInner(mobileQuickLinksPayload), "py-3")}
+      {/* 4. 오늘의 복음 */}
+      {wrapSection(gospelCardEl, "py-3")}
+      {/* 5. 주일말씀 */}
+      {meditationSection}
+      {/* 6. 미사시간 */}
+      {wrapSection(massCardEl, "py-3")}
+      {/* 7. 성전건축 */}
+      {constructionSection}
+      {/* 8. 배너 */}
+      {wrapSection(bannerCardEl, "py-3")}
+      {/* 9. 공지사항 */}
+      {wrapSection(boardTabsInner({}), "py-6")}
+      {/* 10. 사진갤러리 */}
+      {gallerySection}
+      {/* 11. 인용 */}
+      {mobileQuoteBlock && wrapSection(
+        quoteInner(
+          (mobileQuoteBlock.payload?.text as string) ?? "",
+          (mobileQuoteBlock.payload?.source as string) ?? "",
+        ),
+        "py-9",
+      )}
+    </div>
+  );
+
   return (
     <div data-home-theme={homeTheme}>
-      {blocks.map((b) => (
-        <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {})}</div>
-      ))}
+      {mobileLayout}
+      <div className="hidden md:block">
+        {blocks.map((b) => (
+          <div key={b.id}>{renderBlockBody(b.kind, b.payload ?? {})}</div>
+        ))}
+      </div>
     </div>
   );
 }
