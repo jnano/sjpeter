@@ -1089,7 +1089,7 @@ export default function CalendarPage() {
         }
       />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
             <div

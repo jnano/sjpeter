@@ -88,7 +88,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   // 매칭된 그룹이 없거나 항목이 없으면 사이드바·칩·토글 모두 생략
   if (!currentGroup || currentGroup.items.length === 0) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
         {autoHero && <AutoPageHero />}
         {children}
       </div>
@@ -98,7 +98,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   // chipsOnly: 풀폭 본문 + 본문 위 가로 칩 메뉴 — 사이드바 자체가 없어 토글 의미 없음
   if (chipsOnly) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
         <SectionSidebar
           groupTitle={currentGroup.label}
           items={currentGroup.items}
@@ -111,7 +111,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
       <div className="flex flex-col md:flex-row md:gap-10">
         {/* 사이드바 영역 — collapsed 시 width 0 + opacity 0 로 transition.
             wrapper 에는 overflow-visible (default) — 토글(absolute, top:-2rem) 이 잘리지 않도록.
