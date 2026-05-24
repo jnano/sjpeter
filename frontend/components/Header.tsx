@@ -120,7 +120,9 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
                   onClick={() => setUserMenuOpen((v) => !v)}
                   className="flex items-center gap-1.5 hover:text-[var(--color-primary)] transition-colors">
                   {session.user?.image ? (
-                    <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                    <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
                   ) : (
                     <span className="w-5 h-5 rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text)]">
                       {session.user?.name?.[0]}

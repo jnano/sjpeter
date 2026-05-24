@@ -84,6 +84,8 @@ function Avatar({ author, size = 24 }: { author: Author | null; size?: number })
         width={size}
         height={size}
         className="rounded-full object-cover shrink-0"
+        referrerPolicy="no-referrer"
+        unoptimized={src.startsWith("http")}
       />
     );
   }

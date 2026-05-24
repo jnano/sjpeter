@@ -366,7 +366,9 @@ export default function ProfileEditPage() {
             <div className="flex items-center gap-5">
               <div className="relative group">
                 {avatarSrc ? (
-                  <img src={avatarSrc} alt={member.nickname} className="w-20 h-20 rounded-full object-cover border-2 border-[var(--color-border)]" />
+                  <img src={avatarSrc} alt={member.nickname} className="w-20 h-20 rounded-full object-cover border-2 border-[var(--color-border)]"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-[var(--color-primary)]/15 flex items-center justify-center text-3xl font-bold text-[var(--color-primary)]">
                     {(member.name ?? member.nickname ?? "?").charAt(0)}

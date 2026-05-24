@@ -49,7 +49,9 @@ function AuthorChip({ author, size = "sm", nameFirst = false }: { author: Author
     <span className={`${dim} rounded-full bg-[var(--color-surface-warm)] border border-[var(--color-border)] flex items-center justify-center overflow-hidden shrink-0`}>
       {src ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <img src={src} alt="" className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+          onError={(e) => { e.currentTarget.style.display = "none"; }} />
       ) : (
         <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{initial}</span>
       )}
