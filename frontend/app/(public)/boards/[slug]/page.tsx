@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import LineBoard from "./LineBoard";
@@ -174,11 +175,16 @@ export default async function BoardPage({
 
   const token = (session as { accessToken?: string } | null)?.accessToken;
   const memberId = (session as { memberId?: number } | null)?.memberId ?? null;
-  // 운영자 권한: admin / 운영자(is_admin 회원) / 게시판 운영자
-  const isOperator = !!(session as { isAdmin?: boolean } | null)?.isAdmin;
-  const canWrite = board.moderator_only_write
-    ? memberId !== null && (memberId === board.moderator_id || isOperator)
-    : !board.members_only_write || !!session;
+  // 운영자 권한: admin / 운영자(is_admin 회원) / 게시판 운영자.
+  // v1.5.332: admin_token cookie 도 인식 — 슈퍼관리자가 회원 세션 없이 접근해도
+  // 글쓰기 버튼 노출 (백엔드 cookie fallback v1.5.281 과 일관성).
+  const adminCookie = (await cookies()).get("admin_token")?.value || (await cookies()).get("admin_authed")?.value;
+  const isOperator = !!(session as { isAdmin?: boolean } | null)?.isAdmin || !!adminCookie;
+  const canWrite = isOperator
+    ? true
+    : board.moderator_only_write
+      ? memberId !== null && memberId === board.moderator_id
+      : !board.members_only_write || !!session;
 
   // 한 줄 메시지 게시판은 별도 UI로 분기 (목록·작성·추천을 카드 그리드로 노출)
   if (board.kind === "line") {
