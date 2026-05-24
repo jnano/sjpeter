@@ -12,7 +12,7 @@ import GroupsIcon from "@/components/icons/GroupsIcon";
 import BulletinIcon from "@/components/icons/BulletinIcon";
 import CrossIcon from "@/components/icons/CrossIcon";
 import ConstructionIcon from "@/components/icons/ConstructionIcon";
-import { buildMassRows, formatTodayMass, type MassEntry } from "@/lib/mass";
+import { buildMassRows, type MassEntry } from "@/lib/mass";
 
 // admin이 변경한 공지·일정·주보 등이 새로고침 없이 반영되도록
 export const dynamic = "force-dynamic";
@@ -423,11 +423,6 @@ export default async function HomePage() {
                 autoFocus={false}
                 variant="pill"
                 placeholder="무엇을 찾으시나요?"
-                rotatingPlaceholders={
-                  parish?.mass_schedule?.entries
-                    ? ["무엇을 찾으시나요?", formatTodayMass(parish.mass_schedule.entries)]
-                    : undefined
-                }
               />
             </div>
             <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
