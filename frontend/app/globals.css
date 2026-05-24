@@ -302,3 +302,19 @@ h1, h2, h3, h4, h5, h6 {
 [data-skin] .rounded-xl  { border-radius: var(--radius-card); }
 [data-skin] .rounded-2xl { border-radius: calc(var(--radius-card) * 1.4); }
 [data-skin] .rounded-lg  { border-radius: var(--radius-button); }
+
+/* v1.5.347: 미디어 태그(img/picture/video/canvas) 는 위 매핑에서 제외.
+   사진은 스킨과 독립된 사진 본연의 라운드 유지가 자연스러움 (특히 프로필·메인사진).
+   Tailwind default 값으로 복원. */
+[data-skin] img.rounded-xl,
+[data-skin] picture.rounded-xl,
+[data-skin] video.rounded-xl,
+[data-skin] canvas.rounded-xl { border-radius: 0.75rem; }
+[data-skin] img.rounded-2xl,
+[data-skin] picture.rounded-2xl,
+[data-skin] video.rounded-2xl,
+[data-skin] canvas.rounded-2xl { border-radius: 1rem; }
+[data-skin] img.rounded-lg,
+[data-skin] picture.rounded-lg,
+[data-skin] video.rounded-lg,
+[data-skin] canvas.rounded-lg { border-radius: 0.5rem; }
