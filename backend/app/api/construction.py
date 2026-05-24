@@ -19,7 +19,7 @@ from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.admin import Admin
-from app.models.construction import ConstructionPhase, ConstructionJournalEntry
+from app.models.construction import ConstructionPhase, ConstructionJournalEntry, ConstructionFund
 
 router = APIRouter(prefix="/construction", tags=["construction"])
 
@@ -84,6 +84,29 @@ class SummaryOut(BaseModel):
     total_phases: int = 0
     completed_phases: int = 0
     latest_journal: Optional[JournalOut] = None
+
+
+class FundOut(BaseModel):
+    """성전 건축 헌금 모금 현황."""
+    goal_amount: int = 0
+    raised_amount: int = 0
+    donor_count: int = 0
+    account_info: Optional[str] = None
+    note: Optional[str] = None
+    is_active: bool = False
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FundIn(BaseModel):
+    goal_amount: int = 0
+    raised_amount: int = 0
+    donor_count: int = 0
+    account_info: Optional[str] = None
+    note: Optional[str] = None
+    is_active: bool = False
 
 
 def _validate_phase(body: PhaseIn) -> None:
@@ -324,3 +347,43 @@ def get_summary(db: Session = Depends(get_db)):
         completed_phases=completed,
         latest_journal=latest,
     )
+
+
+# ─── Fund (헌금 모금 현황) ─────────────────────────────
+
+def _get_or_create_fund(db: Session) -> ConstructionFund:
+    """단일 행(id=1) 조회. 없으면 생성 — startup 시드가 누락된 환경 대비."""
+    fund = db.query(ConstructionFund).filter(ConstructionFund.id == 1).first()
+    if not fund:
+        fund = ConstructionFund(id=1, goal_amount=0, raised_amount=0, donor_count=0, is_active=False)
+        db.add(fund)
+        db.commit()
+        db.refresh(fund)
+    return fund
+
+
+@router.get("/fund", response_model=FundOut)
+def get_fund(db: Session = Depends(get_db)):
+    """헌금 모금 현황 (공개). is_active=False 라도 값 자체는 반환 — 노출 여부는 프론트가 판단."""
+    return _get_or_create_fund(db)
+
+
+@router.put("/fund", response_model=FundOut)
+def update_fund(
+    body: FundIn,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    if body.goal_amount < 0 or body.raised_amount < 0 or body.donor_count < 0:
+        raise HTTPException(status_code=400, detail="금액·후원자 수는 0 이상이어야 합니다.")
+    fund = _get_or_create_fund(db)
+    fund.goal_amount = body.goal_amount
+    fund.raised_amount = body.raised_amount
+    fund.donor_count = body.donor_count
+    fund.account_info = (body.account_info or "").strip() or None
+    fund.note = (body.note or "").strip() or None
+    fund.is_active = body.is_active
+    db.commit()
+    db.refresh(fund)
+    log_action(db, get_admin_identifier(admin), "update_construction_fund", "construction_fund", fund.id, str(fund.raised_amount))
+    return fund

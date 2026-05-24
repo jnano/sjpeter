@@ -30,6 +30,24 @@ interface JournalEntry {
   photo_url: string | null;
 }
 
+interface Fund {
+  goal_amount: number;
+  raised_amount: number;
+  donor_count: number;
+  account_info: string | null;
+  note: string | null;
+  is_active: boolean;
+}
+
+const EMPTY_FUND: Fund = {
+  goal_amount: 0,
+  raised_amount: 0,
+  donor_count: 0,
+  account_info: "",
+  note: "",
+  is_active: false,
+};
+
 const EMPTY_PHASE: Omit<Phase, "id"> = {
   name: "",
   description: "",
@@ -46,8 +64,9 @@ export default function AdminConstructionPage() {
   const router = useRouter();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [fund, setFund] = useState<Fund>(EMPTY_FUND);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"phases" | "journal">("phases");
+  const [tab, setTab] = useState<"phases" | "journal" | "fund">("phases");
 
   const authHeader = useCallback((): HeadersInit => {
     const token = localStorage.getItem("admin_token");
@@ -56,12 +75,23 @@ export default function AdminConstructionPage() {
 
   const reload = useCallback(async () => {
     const headers = authHeader();
-    const [p, j] = await Promise.all([
+    const [p, j, f] = await Promise.all([
       fetch(`${API}/api/construction/phases`, { headers }).then((r) => (r.ok ? r.json() : [])),
       fetch(`${API}/api/construction/journal`, { headers }).then((r) => (r.ok ? r.json() : [])),
+      fetch(`${API}/api/construction/fund`, { headers }).then((r) => (r.ok ? r.json() : null)),
     ]);
     setPhases(Array.isArray(p) ? p : []);
     setJournal(Array.isArray(j) ? j : []);
+    if (f) {
+      setFund({
+        goal_amount: f.goal_amount ?? 0,
+        raised_amount: f.raised_amount ?? 0,
+        donor_count: f.donor_count ?? 0,
+        account_info: f.account_info ?? "",
+        note: f.note ?? "",
+        is_active: !!f.is_active,
+      });
+    }
   }, [authHeader]);
 
   useEffect(() => {
@@ -165,6 +195,31 @@ export default function AdminConstructionPage() {
     if (res.ok) await reload();
   }
 
+  // ─── Fund 핸들러 ───
+  async function saveFund(next: Fund) {
+    setError(null);
+    const body = {
+      goal_amount: next.goal_amount,
+      raised_amount: next.raised_amount,
+      donor_count: next.donor_count,
+      account_info: next.account_info || null,
+      note: next.note || null,
+      is_active: next.is_active,
+    };
+    const res = await fetch(`${API}/api/construction/fund`, {
+      method: "PUT",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.detail || "저장 실패");
+      return false;
+    }
+    await reload();
+    return true;
+  }
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
@@ -182,10 +237,11 @@ export default function AdminConstructionPage() {
         {[
           { id: "phases", label: `단계 마일스톤 (${phases.length})` },
           { id: "journal", label: `한 줄 일지 (${journal.length})` },
+          { id: "fund", label: "헌금 현황" },
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id as "phases" | "journal")}
+            onClick={() => setTab(t.id as "phases" | "journal" | "fund")}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === t.id
                 ? "border-[var(--color-primary)] text-[var(--color-primary)]"
@@ -214,6 +270,160 @@ export default function AdminConstructionPage() {
           onUploadPhoto={uploadJournalPhoto}
         />
       )}
+
+      {tab === "fund" && <FundSection fund={fund} onSave={saveFund} />}
+    </div>
+  );
+}
+
+// ─── 헌금 현황 섹션 ─────────────────────────────────────
+
+function formatWon(n: number): string {
+  return n > 0 ? `${n.toLocaleString("ko-KR")}원` : "—";
+}
+
+function FundSection({
+  fund,
+  onSave,
+}: {
+  fund: Fund;
+  onSave: (f: Fund) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState<Fund>(fund);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  useEffect(() => setDraft(fund), [fund]);
+
+  const pct = draft.goal_amount > 0
+    ? Math.min(100, Math.round((draft.raised_amount / draft.goal_amount) * 100))
+    : 0;
+
+  const dirty =
+    draft.goal_amount !== fund.goal_amount ||
+    draft.raised_amount !== fund.raised_amount ||
+    draft.donor_count !== fund.donor_count ||
+    (draft.account_info ?? "") !== (fund.account_info ?? "") ||
+    (draft.note ?? "") !== (fund.note ?? "") ||
+    draft.is_active !== fund.is_active;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const ok = await onSave(draft);
+      if (ok) setSavedAt(Date.now());
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <p className="text-xs text-[var(--color-text-muted)]">
+        성전 건축 헌금 모금 현황입니다. 모금액은 관리자가 직접 입력합니다(실시간 결제 연동 아님).
+        "함께 짓는 성전" 스킨과 홈 화면에 노출됩니다.
+      </p>
+
+      <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 space-y-4">
+        {/* 표시 여부 */}
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={draft.is_active}
+            onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
+            className="w-4 h-4"
+          />
+          헌금 현황을 공개 페이지에 노출
+        </label>
+
+        {/* 목표액 */}
+        <div>
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1">목표액 (원)</label>
+          <input
+            type="number"
+            min={0}
+            value={draft.goal_amount}
+            onChange={(e) => setDraft({ ...draft, goal_amount: Math.max(0, Number(e.target.value)) })}
+            className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg"
+            placeholder="예: 3000000000"
+          />
+          <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{formatWon(draft.goal_amount)}</p>
+        </div>
+
+        {/* 모금액 */}
+        <div>
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1">현재 모금액 (원)</label>
+          <input
+            type="number"
+            min={0}
+            value={draft.raised_amount}
+            onChange={(e) => setDraft({ ...draft, raised_amount: Math.max(0, Number(e.target.value)) })}
+            className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg"
+            placeholder="예: 1240000000"
+          />
+          <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{formatWon(draft.raised_amount)}</p>
+        </div>
+
+        {/* 달성률 미리보기 */}
+        <div>
+          <div className="flex justify-between text-xs text-[var(--color-text-muted)] mb-1">
+            <span>달성률</span>
+            <span className="font-semibold text-[var(--color-primary)]">{pct}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-[var(--color-border)] overflow-hidden">
+            <div className="h-full bg-[var(--color-primary)] transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+
+        {/* 후원자 수 */}
+        <div>
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1">후원자 수 (명·가구)</label>
+          <input
+            type="number"
+            min={0}
+            value={draft.donor_count}
+            onChange={(e) => setDraft({ ...draft, donor_count: Math.max(0, Number(e.target.value)) })}
+            className="w-40 px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg"
+          />
+        </div>
+
+        {/* 계좌 안내 */}
+        <div>
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1">후원 계좌 안내</label>
+          <textarea
+            value={draft.account_info ?? ""}
+            onChange={(e) => setDraft({ ...draft, account_info: e.target.value })}
+            rows={2}
+            placeholder="예: 국민은행 123-45-678901 (예금주: ○○천주교회)"
+            className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg resize-none"
+          />
+        </div>
+
+        {/* 안내 문구 */}
+        <div>
+          <label className="block text-xs text-[var(--color-text-muted)] mb-1">안내 문구 (선택)</label>
+          <textarea
+            value={draft.note ?? ""}
+            onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+            rows={2}
+            placeholder="예: 작은 정성이 모여 새 성전이 됩니다. 함께해 주세요."
+            className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg resize-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            onClick={handleSave}
+            disabled={saving || !dirty}
+            className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors disabled:opacity-40"
+          >
+            {saving ? "저장 중…" : "저장"}
+          </button>
+          {savedAt && !dirty && (
+            <span className="text-xs text-green-600">저장되었습니다.</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

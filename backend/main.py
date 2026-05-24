@@ -438,6 +438,25 @@ def _migrate_add_columns():
             "CREATE INDEX IF NOT EXISTS ix_construction_journal_date ON construction_journal(entry_date DESC)"
         ))
 
+        # 성전 건축 헌금 모금 현황 — 단일 행(id=1), admin 이 수동 갱신
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS construction_fund (
+                id SERIAL PRIMARY KEY,
+                goal_amount BIGINT DEFAULT 0 NOT NULL,
+                raised_amount BIGINT DEFAULT 0 NOT NULL,
+                donor_count INTEGER DEFAULT 0 NOT NULL,
+                account_info TEXT,
+                note TEXT,
+                is_active BOOLEAN DEFAULT FALSE NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        # 단일 행 보장 — 없으면 빈 행 생성 (admin 이 채울 때까지 is_active=FALSE 라 비노출)
+        conn.execute(text(
+            "INSERT INTO construction_fund (id, goal_amount, raised_amount, donor_count, is_active, updated_at) "
+            "VALUES (1, 0, 0, 0, FALSE, NOW()) ON CONFLICT (id) DO NOTHING"
+        ))
+
         # 가톨릭 성인 사전 — 세례명으로 축일 조회
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS saints (

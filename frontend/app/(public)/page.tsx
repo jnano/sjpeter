@@ -91,6 +91,43 @@ async function getGospelToday(): Promise<GospelToday | null> {
   } catch { return null; }
 }
 
+// 건축 단계 타임라인 — 쇼케이스 스킨(construction/dashboard)용
+interface ConstructionPhase {
+  id: number;
+  name: string;
+  status: string;
+  progress_percent: number;
+  sort_order: number;
+  started_at: string | null;
+  completed_at: string | null;
+  expected_completion_date: string | null;
+}
+async function getConstructionPhases(): Promise<ConstructionPhase[]> {
+  try {
+    const r = await fetch(`${API}/api/construction/phases`);
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch { return []; }
+}
+
+// 건축 헌금 모금 현황 — 쇼케이스 스킨용
+interface ConstructionFund {
+  goal_amount: number;
+  raised_amount: number;
+  donor_count: number;
+  account_info: string | null;
+  note: string | null;
+  is_active: boolean;
+}
+async function getConstructionFund(): Promise<ConstructionFund | null> {
+  try {
+    const r = await fetch(`${API}/api/construction/fund`);
+    if (!r.ok) return null;
+    return (await r.json()) as ConstructionFund;
+  } catch { return null; }
+}
+
 async function getSiteConfig(): Promise<Record<string, string>> {
   try {
     const r = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
@@ -175,7 +212,7 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
 const CONTAINER = "max-w-5xl mx-auto px-4";
 
 export default async function HomePage() {
-  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems, currentSkin] =
+  const [parish, notices, gospel, upcomingEvents, constructionSummary, siteConfig, blocks, boardsCatalog, tagItems, currentSkin, constructionPhases, constructionFund] =
     await Promise.all([
       getParish(),
       getNotices(),
@@ -187,6 +224,8 @@ export default async function HomePage() {
       getBoardsCatalog(),
       getTagCloudItems(),
       fetchCurrentSkin(),
+      getConstructionPhases(),
+      getConstructionFund(),
     ]);
 
   // board_tabs 블록들이 참조하는 게시판 slug 들을 수집해서 일괄 fetch (two_column/three_column 슬롯 안에 있는 것도 포함).
@@ -737,16 +776,38 @@ export default async function HomePage() {
   // v1.5.350: Claude Design 시안 기반 본격 스킨(editorial/dashboard/construction) 일 때
   // 데스크탑 영역에서 home_blocks loop 대신 전용 home component 렌더.
   // 모바일은 기존 dispatch 그대로 — 시안이 1440px 고정 디자인이라 모바일은 보장 안 함.
+  // 쇼케이스 스킨 공통 props — 공지·행사는 정렬된 형태로 전달
+  const showcaseNotices = sortedNotices.slice(0, 6);
+  const showcaseEvents = upcomingEvents.slice(0, 6);
+
   const desktopShowcase = isShowcaseSkin(currentSkin) ? (
     currentSkin === "editorial" ? (
-      <SkinEditorial parish={parish} gospel={gospel} />
+      <SkinEditorial
+        parish={parish}
+        gospel={gospel}
+        notices={showcaseNotices}
+        events={showcaseEvents}
+        construction={constructionSummary}
+        fund={constructionFund}
+      />
     ) : currentSkin === "dashboard" ? (
-      <SkinDashboard parish={parish} gospel={gospel} />
+      <SkinDashboard
+        parish={parish}
+        gospel={gospel}
+        notices={showcaseNotices}
+        events={showcaseEvents}
+        construction={constructionSummary}
+        fund={constructionFund}
+      />
     ) : (
       <SkinConstruction
         parish={parish}
         gospel={gospel}
-        construction={constructionSummary as { current_phase_name?: string | null; overall_percent?: number; total_donated?: number; goal_amount?: number } | null}
+        notices={showcaseNotices}
+        events={showcaseEvents}
+        construction={constructionSummary}
+        phases={constructionPhases}
+        fund={constructionFund}
       />
     )
   ) : null;

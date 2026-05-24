@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
+import { formatKRWShort, fundPercent } from "@/lib/fund";
+import PhotoSlider from "../PhotoSlider";
 
 interface Parish {
   name: string;
@@ -13,13 +15,54 @@ interface GospelToday {
   gospel_text: string | null;
 }
 
+interface SummaryPhase { id: number; name: string; status: string; progress_percent: number; }
+interface ConstructionSummary {
+  current_phase: SummaryPhase | null;
+  overall_percent: number;
+  total_phases: number;
+  completed_phases: number;
+}
+
+interface Fund {
+  goal_amount: number;
+  raised_amount: number;
+  donor_count: number;
+  is_active: boolean;
+}
+
+interface NoticeBrief { id: number; title: string; is_pinned: boolean; created_at: string; }
+interface EventBrief { id: number; title: string; event_date: string; event_kind: string | null; }
+
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getMonth() + 1}.${d.getDate()}`;
+}
+
 /**
  * 시안 v2 — 대시보드 카드.
- * 12-grid 카드 밀집형 정보 레이아웃. 어두운 hero 카드 + 미사·공지·일정 등 카드.
- * v1.5.350: 1차 stub — hero(gospel dark card) + mass card. 나머지 후속.
+ * 12-grid 카드 밀집형. gospel 어두운 카드 + 미사 + 공지·일정·성전건축·헌금 KPI + 갤러리.
  */
-export default function SkinDashboard({ parish, gospel }: { parish: Parish | null; gospel: GospelToday | null }) {
+export default function SkinDashboard({
+  parish,
+  gospel,
+  notices,
+  events,
+  construction,
+  fund,
+}: {
+  parish: Parish | null;
+  gospel: GospelToday | null;
+  notices: NoticeBrief[];
+  events: EventBrief[];
+  construction: ConstructionSummary | null;
+  fund: Fund | null;
+}) {
   const massRows = buildMassRows(parish?.mass_schedule?.entries ?? []);
+  const cPct = Math.max(0, Math.min(100, construction?.overall_percent ?? 0));
+  const hasConstruction = !!construction && construction.total_phases > 0;
+  const fundActive = !!fund?.is_active && (fund.goal_amount > 0 || fund.raised_amount > 0);
+  const fundPct = fund ? fundPercent(fund.raised_amount, fund.goal_amount) : 0;
 
   return (
     <div className="skin-dashboard">
@@ -68,18 +111,96 @@ export default function SkinDashboard({ parish, gospel }: { parish: Parish | nul
               ))}
             </ul>
           </div>
+
+          {/* 공지 — 4col */}
+          <div className="ds-card ds-col-4">
+            <div className="ds-card-head">
+              <h3>본당 소식</h3>
+              <Link href="/boards/notice" className="ds-card-link">전체</Link>
+            </div>
+            {notices.length === 0 ? (
+              <p className="ds-empty">공지가 없습니다.</p>
+            ) : (
+              <ul className="ds-link-list">
+                {notices.slice(0, 5).map((n) => (
+                  <li key={n.id}>
+                    <Link href={`/boards/notice/${n.id}`}>
+                      {n.is_pinned && <span className="ds-pin">고정</span>}
+                      <span className="ds-ll-title">{n.title}</span>
+                      <time>{shortDate(n.created_at)}</time>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* 일정 — 4col */}
+          <div className="ds-card ds-col-4">
+            <div className="ds-card-head">
+              <h3>다가오는 일정</h3>
+              <Link href="/calendar" className="ds-card-link">달력</Link>
+            </div>
+            {events.length === 0 ? (
+              <p className="ds-empty">예정된 일정이 없습니다.</p>
+            ) : (
+              <ul className="ds-link-list">
+                {events.slice(0, 5).map((e) => (
+                  <li key={e.id}>
+                    <Link href="/calendar">
+                      {e.event_kind && <span className={`ds-kind ${e.event_kind === "행사" ? "ev" : "mt"}`}>{e.event_kind}</span>}
+                      <span className="ds-ll-title">{e.title}</span>
+                      <time>{shortDate(e.event_date)}</time>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* 성전건축 KPI — 4col */}
+          {hasConstruction && (
+            <Link href="/construction" className="ds-card ds-kpi ds-col-4">
+              <div className="ds-card-head">
+                <h3>성전 건축</h3>
+                <span className="ds-card-link">현황 →</span>
+              </div>
+              <div className="ds-kpi-num">{cPct}<sup>%</sup></div>
+              <div className="ds-kpi-label">전체 진행률</div>
+              <div className="ds-kpi-bar"><i style={{ width: `${cPct}%` }} /></div>
+              <div className="ds-kpi-sub">
+                {construction!.completed_phases}/{construction!.total_phases} 단계 완료
+                {construction!.current_phase && ` · ${construction!.current_phase.name}`}
+              </div>
+            </Link>
+          )}
+
+          {/* 헌금 KPI — 4col */}
+          {fundActive && fund && (
+            <Link href="/construction" className="ds-card ds-kpi ds-fund ds-col-4">
+              <div className="ds-card-head">
+                <h3>건축 헌금</h3>
+                <span className="ds-card-link">후원 →</span>
+              </div>
+              <div className="ds-kpi-num">{formatKRWShort(fund.raised_amount)}<small>원</small></div>
+              <div className="ds-kpi-label">목표 {formatKRWShort(fund.goal_amount)}원 · {fundPct}%</div>
+              <div className="ds-kpi-bar"><i style={{ width: `${fundPct}%` }} /></div>
+              {fund.donor_count > 0 && (
+                <div className="ds-kpi-sub">{fund.donor_count.toLocaleString("ko-KR")}명이 함께하고 있습니다</div>
+              )}
+            </Link>
+          )}
+
+          {/* 갤러리 — 가로 전체 */}
+          <div className="ds-card ds-col-12 ds-gallery-card">
+            <div className="ds-card-head">
+              <h3>사진 갤러리</h3>
+              <Link href="/gallery" className="ds-card-link">전체 →</Link>
+            </div>
+            <PhotoSlider />
+          </div>
         </div>
       </div>
-
-      <section className="ed-stub">
-        <div className="ed-stub-inner">
-          <p className="ed-eyebrow" style={{ marginBottom: 12 }}>STUB · 1차 commit</p>
-          <p style={{ fontSize: 17, lineHeight: 1.7, maxWidth: 760, color: "var(--color-text-muted)" }}>
-            이 스킨은 시안 v2 (대시보드 카드) 의 hero(gospel dark card + mass card) 만 적용된 상태입니다.
-            나머지 카드(공지·일정·성전건축·갤러리 등 12-grid) 와 KPI·tag 시스템은 다음 commit 에서 보강.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }
