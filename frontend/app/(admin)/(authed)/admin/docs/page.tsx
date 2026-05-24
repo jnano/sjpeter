@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.335";
-export const LAST_UPDATED = "2026-05-24";
+export const CURRENT_VERSION = "1.5.357";
+export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,28 @@ export const LAST_UPDATED = "2026-05-24";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.357", date: "2026-05-25", tag: "디자인", items: ["서브페이지 공통 헤더(PageHeader)를 시안 톤으로 — 큰 Pretendard 제목·여백 확대"] },
+  { version: "1.5.356", date: "2026-05-24", tag: "디자인", items: ["모바일 시안 3종 재현 — 상단 앱헤더·검색바·하단 탭바(홈/주보/기도/행사/내정보) + 스킨별 본문"] },
+  { version: "1.5.355", date: "2026-05-24", tag: "디자인", items: ["editorial·construction 홈을 시안과 픽셀 단위로 재현"] },
+  { version: "1.5.354", date: "2026-05-24", tag: "디자인", items: ["서브페이지 본문 폭을 홈·헤더와 동일한 1320px로 확장·정렬"] },
+  { version: "1.5.353", date: "2026-05-24", tag: "디자인", items: ["헤더·푸터를 시안 비주얼로 정밀 재현(전 페이지 공통, 동적 메뉴·검색 기능 유지)"] },
+  { version: "1.5.352", date: "2026-05-24", tag: "디자인", items: ["dashboard 홈을 시안과 픽셀 단위로 재현 — KPI·월 달력·일러스트·갤러리"] },
+  { version: "1.5.351", date: "2026-05-24", tag: "기능", items: ["쇼케이스 스킨 3종 본문 완성", "성전 건축 헌금 모금 기능 신설 — 목표·모금액 admin 입력 + 공개 표시"] },
+  { version: "1.5.350", date: "2026-05-24", tag: "디자인", items: ["Claude Design 시안 3종 스킨 추가 — editorial / dashboard / construction"] },
+  { version: "1.5.349", date: "2026-05-24", tag: "수정", items: ["구글·카카오 외부 프로필 사진 로드 실패(referrer 차단) 보정"] },
+  { version: "1.5.348", date: "2026-05-24", tag: "수정", items: ["스킨 utility 자동 매핑 제거 — opt-in 클래스 방식으로(사진 라운드 부작용 해소)"] },
+  { version: "1.5.347", date: "2026-05-24", tag: "수정", items: ["스킨 변경 시 프로필 사진 등 미디어 라운드 깨짐 수정"] },
+  { version: "1.5.346", date: "2026-05-24", tag: "수정", items: ["admin/skin 저장 'Not Found' — PATCH 엔드포인트 경로 보정"] },
+  { version: "1.5.345", date: "2026-05-24", tag: "기능", items: ["스킨 시스템 1단계 — 디자인 토큰 + 3 프리셋(기본/고전/현대) + admin/skin UI"] },
+  { version: "1.5.344", date: "2026-05-24", tag: "디자인", items: ["기도문 아이콘 시각 크기 균형 조정"] },
+  { version: "1.5.343", date: "2026-05-24", tag: "디자인", items: ["기도문 아이콘 십자가 크기 조정"] },
+  { version: "1.5.342", date: "2026-05-24", tag: "디자인", items: ["기도문 아이콘에 작은 십자가 추가"] },
+  { version: "1.5.341", date: "2026-05-24", tag: "기능", items: ["빠른메뉴 '기도문' 아이콘(묵주 형상) 추가"] },
+  { version: "1.5.340", date: "2026-05-24", tag: "기능", items: ["빠른메뉴 '성인사전' 아이콘 추가"] },
+  { version: "1.5.339", date: "2026-05-24", tag: "디자인", items: ["홈 모바일 전용 섹션 순서 분기(PC 레이아웃 유지)"] },
+  { version: "1.5.338", date: "2026-05-24", tag: "디자인", items: ["모바일 검색 placeholder를 '무엇을 찾으시나요?'로 통일"] },
+  { version: "1.5.337", date: "2026-05-24", tag: "수정", items: ["모바일 홈 '성전 건축' 카드 중복 노출 수정"] },
+  { version: "1.5.336", date: "2026-05-24", tag: "기능", items: ["주보 AI 추출 라우팅 개편 — 공지 묻힘 해소"] },
   {
     version: "1.5.335", date: "2026-05-24", tag: "인프라",
     items: ["백업 사전 작업으로 /admin/docs CHANGELOG v1.5.288~v1.5.334 일괄 동기화"],

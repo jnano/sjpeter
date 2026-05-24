@@ -65,10 +65,10 @@ export default function PageHeader({ group, title, subtitle, action }: Props) {
 
   return (
     <div className="bg-white border-b border-[var(--color-border)] w-full">
-      <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-6 sm:py-8">
+      <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8 sm:py-10">
         <p
           ref={ref}
-          className="text-xs text-[var(--color-text-muted)] mb-3 truncate"
+          className="text-[11px] tracking-[0.04em] text-[var(--color-text-muted)] mb-3 truncate"
         >
           {resolvedGroup}
           <span className="mx-2 text-[var(--color-border-dark)]">›</span>
@@ -76,7 +76,10 @@ export default function PageHeader({ group, title, subtitle, action }: Props) {
         </p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-serif text-[1.4rem] sm:text-[1.6rem] font-bold text-[var(--color-primary)] mb-1 break-words tracking-tight">
+            <h1
+              className="text-[1.75rem] sm:text-[2.125rem] font-bold text-[var(--color-primary)] mb-1.5 break-words tracking-[-0.03em] leading-[1.15]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
               {resolvedTitle}
             </h1>
             <p className="text-sm text-[var(--color-text-muted)]">{subtitle}</p>
