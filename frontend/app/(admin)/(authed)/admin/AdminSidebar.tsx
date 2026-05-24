@@ -119,6 +119,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/home-banner", label: "메인 사진" },
       { href: "/admin/page-photos", label: "페이지 사진" },
       { href: "/admin/season", label: "전례 시기 테마" },
+      { href: "/admin/skin", label: "스킨" },
     ],
   },
   {

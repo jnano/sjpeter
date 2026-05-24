@@ -29,6 +29,20 @@
   /* Breakpoint — md 만 기본값(48rem=768px)에서 10% 줄여
      데스크톱 레이아웃이 더 좁은 폭까지 유지되도록 함. */
   --breakpoint-md: 43.2rem;
+
+  /* ── 형태 토큰 (v1.5.345) — 스킨 시스템 1단계.
+     모든 카드/페이지헤더/버튼이 이 변수를 참조하면 admin/skin 클릭만으로
+     사이트 전체 분위기 전환. data-skin="..." 셀렉터에서 값 오버라이드. */
+  --radius-card: 0.75rem;          /* 카드 모서리 — rounded-xl 기본값과 동일 */
+  --radius-button: 0.5rem;         /* 버튼 — rounded-lg 와 동일 */
+  --radius-pill: 9999px;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-elevated: 0 10px 30px rgba(15, 23, 42, 0.10);
+  --card-padding: 1.5rem;          /* p-6 */
+  --section-py: 1.5rem;            /* py-6 */
+  --font-display: var(--font-serif);  /* 헤딩·강조 */
+  --font-body: var(--font-sans);
 }
 
 /* 배너 슬라이더 Ken Burns 효과 — 활성 컷이 천천히 확대·이동.
@@ -235,3 +249,56 @@ h1, h2, h3, h4, h5, h6 {
   0%   { transform: scale(1)    translate(0%,    0%); }
   100% { transform: scale(1.12) translate(-2.5%, -1.5%); }
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   스킨 시스템 (v1.5.345) — 사이트 전체 톤 프리셋.
+   site_settings.SKIN 값을 app/layout.tsx 가 읽어 <html data-skin="..."> 로 주입.
+   각 스킨이 형태 토큰(--radius-*, --shadow-*, --card-padding, --section-py, --font-*) 을 오버라이드.
+   default = "basic" (속성 미부여 시 :root 기본값).
+   ────────────────────────────────────────────────────────────────────── */
+
+/* basic — 현재 톤. 명시적 설정 시 default 값 유지 (변경 없음). */
+[data-skin="basic"] {
+  /* :root 기본값과 동일 — 명시만으로 기본 톤 보장 */
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --card-padding: 1.5rem;
+  --section-py: 1.5rem;
+}
+
+/* classic — 묵직한 그림자, 작은 라운드, 진한 세리프 강조, 컴팩트 여백 */
+[data-skin="classic"] {
+  --radius-card: 0.25rem;          /* 살짝만 둥근 사각 */
+  --radius-button: 0.125rem;
+  --shadow-card: 0 2px 4px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 6px 16px rgba(15, 23, 42, 0.12);
+  --shadow-elevated: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --card-padding: 1.25rem;         /* p-5 */
+  --section-py: 1.25rem;
+  --font-display: var(--font-serif);  /* 헤딩 세리프 강조 */
+  --color-border: #c9b99a;          /* 좀 더 진한 베이지 */
+  --color-surface-warm: #f5f0e6;
+}
+
+/* modern — 큰 라운드, 옅은 그림자, 넓은 여백, 산세리프 헤딩 */
+[data-skin="modern"] {
+  --radius-card: 1.5rem;           /* 둥글둥글 */
+  --radius-button: 0.75rem;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03);
+  --shadow-card-hover: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-elevated: 0 20px 50px rgba(15, 23, 42, 0.06);
+  --card-padding: 2rem;            /* p-8 — 여백 큼 */
+  --section-py: 2.5rem;             /* py-10 */
+  --font-display: var(--font-sans); /* 헤딩도 산세리프 — 깔끔 */
+  --color-border: #eee9e0;          /* 옅은 테두리 */
+}
+
+/* ── Tailwind utility 매핑 — 모든 카드/버튼이 스킨 토큰 따르게.
+   기존 컴포넌트 코드(rounded-xl·rounded-lg 사용 중) 무수정으로 즉시 적용.
+   specificity: [data-skin] .X = 0,1,1 > Tailwind 의 .X = 0,1,0 — 자연 override.
+   shadow 는 일부 hover 강조 의도가 있어 자동 매핑 안 함 (컴포넌트별 필요 시 var 직접 사용). */
+[data-skin] .rounded-xl  { border-radius: var(--radius-card); }
+[data-skin] .rounded-2xl { border-radius: calc(var(--radius-card) * 1.4); }
+[data-skin] .rounded-lg  { border-radius: var(--radius-button); }
