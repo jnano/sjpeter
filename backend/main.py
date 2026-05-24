@@ -1207,6 +1207,17 @@ def _migrate_add_columns():
             ON CONFLICT (slug) DO NOTHING
         """))
 
+        # v1.5.336: '이번 주 안내' 게시판 — 주보에서 추출한 단발성 안내 모음.
+        # 진짜 영속 공지는 notice 에, 단발성은 여기로 분리해 공지 묻힘 회피.
+        conn.execute(text("""
+            INSERT INTO boards (name, slug, is_active, moderator_only_write,
+                                members_only_write, members_only_read, members_selected,
+                                exclude_from_search, description)
+            VALUES ('이번 주 안내', 'this-week', TRUE, TRUE, TRUE, FALSE, FALSE, FALSE,
+                    '이번 주 주보에서 안내된 단발성 소식. 일정이 지나면 자동으로 정리됩니다.')
+            ON CONFLICT (slug) DO NOTHING
+        """))
+
         # 갤러리 — kind='gallery' 인 게시판은 /gallery/{slug} 로 라우팅됨
         conn.execute(text("""
             INSERT INTO boards (name, slug, is_active, moderator_only_write,
@@ -1384,6 +1395,25 @@ def _migrate_add_columns():
         ))
         conn.execute(text(
             "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS group_candidates TEXT[]"
+        ))
+
+        # v1.5.336: 주보 AI 추출 라우팅 개편 — 자잘한 안내가 공지를 묻는 문제 해결.
+        # importance: high/normal/low — 중요도. 알림 발송·정렬 우선순위.
+        # weekly_bundle: true 면 단발성(이번 주만 유효) → /boards/this-week 자동 라우팅.
+        # expires_at: 만료일. 지나면 목록에서 자동 숨김. event_date+1일 또는 7일 후 default.
+        for col_sql in [
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS importance VARCHAR(10) NOT NULL DEFAULT 'normal'",
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS weekly_bundle BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE bulletin_extractions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS importance VARCHAR(10) NOT NULL DEFAULT 'normal'",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP",
+        ]:
+            try:
+                conn.execute(text(col_sql))
+            except Exception:
+                pass
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_posts_board_expires ON posts(board_id, expires_at)"
         ))
 
         # 분과·단체 태깅 + 사이트 내 알림 (v1.5.290~) — 주보 AI 추출 글의 대상 분과를 태깅,

@@ -97,6 +97,9 @@ class Post(Base):
     source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
     # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 (future|timeless 만 OK).
     temporal_kind = Column(String(10), nullable=False, server_default="unknown")
+    # v1.5.336: 주보 AI 추출 라우팅 개편 — 중요도·만료 (자잘한 안내 묻힘 회피)
+    importance = Column(String(10), nullable=False, server_default="normal")  # high|normal|low
+    expires_at = Column(DateTime, nullable=True)  # 만료일. 지나면 목록에서 자동 숨김
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

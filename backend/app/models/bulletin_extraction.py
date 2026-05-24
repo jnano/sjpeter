@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Text, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Date, Text, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
@@ -23,6 +23,11 @@ class BulletinExtraction(Base):
     # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 입력.
     temporal_kind = Column(String(10), nullable=False, server_default="unknown")
     temporal_reason = Column(Text, nullable=True)  # AI 판단 사유 (관리자 검토에 표시)
+
+    # v1.5.336: AI 추출 라우팅 개편 — 자잘한 안내가 공지 묻는 문제 해결.
+    importance = Column(String(10), nullable=False, server_default="normal")  # high|normal|low
+    weekly_bundle = Column(Boolean, nullable=False, server_default="false")   # true → /boards/this-week
+    expires_at = Column(DateTime, nullable=True)  # 만료일. event_date+1일 또는 7일 후 default
 
     fingerprint = Column(String(64), index=True)   # 중복 감지용 해시
 

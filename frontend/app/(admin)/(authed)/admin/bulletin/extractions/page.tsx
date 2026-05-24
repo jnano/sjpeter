@@ -36,6 +36,9 @@ interface Extraction {
   event_type: string | null;
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   temporal_reason: string | null;
+  importance: "high" | "normal" | "low";
+  weekly_bundle: boolean;
+  expires_at: string | null;
   status: "pending" | "approved" | "rejected";
   target_board_id: number | null;
   created_post_id: number | null;
@@ -55,11 +58,14 @@ interface CommunityGroup {
   slug?: string | null;
 }
 
-/** 항목별 검토 입력 (시점/분과/알림) — approve 시 body 에 담아 보냄. */
+/** 항목별 검토 입력 (시점/분과/알림/중요도/묶음/만료) — approve 시 body 에 담아 보냄. */
 interface ReviewState {
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   group_ids: number[];
   notify: boolean;
+  importance: "high" | "normal" | "low";
+  weekly_bundle: boolean;
+  expires_at: string | null;  // YYYY-MM-DD
 }
 
 const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
@@ -140,10 +146,16 @@ export default function ExtractionsPage() {
             if (tk === "future" && e.event_date && e.event_date < today) {
               tk = "past";
             }
+            // v1.5.336: 디폴트 알림 정책 — importance=high 만 디폴트 true.
+            //   normal/low 는 admin 이 명시적으로 켜야 발송 (자잘한 안내가 회원 알림함 묻는 것 회피).
+            const impPrefill = e.importance ?? "normal";
             next[e.id] = {
               temporal_kind: tk,
               group_ids: [],  // 카탈로그 도착 후 후보 매칭 (별도 effect)
-              notify: true,
+              notify: impPrefill === "high",
+              importance: impPrefill,
+              weekly_bundle: !!e.weekly_bundle,
+              expires_at: e.expires_at ? e.expires_at.slice(0, 10) : null,
             };
           }
         }
@@ -192,7 +204,11 @@ export default function ExtractionsPage() {
   function setReview(extId: number, patch: Partial<ReviewState>) {
     setReviewByExt((prev) => ({
       ...prev,
-      [extId]: { temporal_kind: "unknown", group_ids: [], notify: true, ...(prev[extId] ?? {}), ...patch },
+      [extId]: {
+        temporal_kind: "unknown", group_ids: [], notify: true,
+        importance: "normal", weekly_bundle: false, expires_at: null,
+        ...(prev[extId] ?? {}), ...patch,
+      },
     }));
   }
 
@@ -217,6 +233,11 @@ export default function ExtractionsPage() {
         body: JSON.stringify({
           board_id: boardId,
           community_group_ids: review.group_ids,
+          importance: (review as ReviewState).importance,
+          weekly_bundle: (review as ReviewState).weekly_bundle,
+          expires_at: (review as ReviewState).expires_at
+            ? new Date((review as ReviewState).expires_at + "T00:00:00").toISOString()
+            : null,
           temporal_kind: review.temporal_kind,
           notify: notify_flag,
         }),
@@ -956,6 +977,47 @@ function ExtractionCard({
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
             </select>
+          </div>
+          {/* v1.5.336: 중요도·이번주 묶음·만료일 (공지 묻힘 회피) */}
+          <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
+            <span className="font-semibold text-[var(--color-text)] shrink-0">중요도</span>
+            {(["high", "normal", "low"] as const).map((imp) => (
+              <label key={imp} className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name={`imp-${ext.id}`}
+                  checked={(review.importance ?? "normal") === imp}
+                  onChange={() => onReviewChange({ importance: imp })}
+                  className="accent-[var(--color-primary)]"
+                />
+                <span className={imp === "high" ? "text-red-600 font-semibold" : imp === "low" ? "text-gray-400" : ""}>
+                  {imp === "high" ? "★ 중요" : imp === "normal" ? "보통" : "낮음"}
+                </span>
+              </label>
+            ))}
+          </div>
+          {ext.event_type === "공지" && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!review.weekly_bundle}
+                  onChange={(e) => onReviewChange({ weekly_bundle: e.target.checked })}
+                  className="accent-[var(--color-primary)]"
+                />
+                <span>📋 이번 주만 유효 (this-week 게시판으로)</span>
+              </label>
+            </div>
+          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-semibold text-[var(--color-text)] shrink-0">만료일</span>
+            <input
+              type="date"
+              value={review.expires_at ?? ""}
+              onChange={(e) => onReviewChange({ expires_at: e.target.value || null })}
+              className="border border-[var(--color-border)] rounded px-2 py-0.5 text-[11px] bg-white"
+            />
+            <span className="text-[11px] text-[var(--color-text-muted)]">지나면 목록에서 자동 숨김. AI 추정: event_date+1일 또는 발행일+7일</span>
           </div>
           {/* 알림 발송 토글 */}
           <div className="flex items-center justify-between">

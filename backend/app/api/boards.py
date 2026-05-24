@@ -1499,6 +1499,9 @@ def list_posts(
     skip = (max(1, page) - 1) * per_page
 
     base = db.query(Post).filter(Post.board_id == board.id, Post.is_published == True)
+    # v1.5.336: 만료된 글은 목록에서 자동 숨김. NULL(만료일 없음) 또는 미래만 노출.
+    from datetime import datetime as _dt
+    base = base.filter(or_(Post.expires_at.is_(None), Post.expires_at > _dt.utcnow()))
     if category:
         base = base.filter(Post.category == category)
     kw = q.strip()
