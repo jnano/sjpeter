@@ -295,26 +295,15 @@ h1, h2, h3, h4, h5, h6 {
   --color-border: #eee9e0;          /* 옅은 테두리 */
 }
 
-/* ── Tailwind utility 매핑 — 모든 카드/버튼이 스킨 토큰 따르게.
-   기존 컴포넌트 코드(rounded-xl·rounded-lg 사용 중) 무수정으로 즉시 적용.
-   specificity: [data-skin] .X = 0,1,1 > Tailwind 의 .X = 0,1,0 — 자연 override.
-   shadow 는 일부 hover 강조 의도가 있어 자동 매핑 안 함 (컴포넌트별 필요 시 var 직접 사용). */
-[data-skin] .rounded-xl  { border-radius: var(--radius-card); }
-[data-skin] .rounded-2xl { border-radius: calc(var(--radius-card) * 1.4); }
-[data-skin] .rounded-lg  { border-radius: var(--radius-button); }
+/* v1.5.348: utility 자동 매핑 제거.
+   초기 1단계는 `[data-skin] .rounded-xl → var(--radius-card)` 로 모든 곳을
+   한 번에 매핑했지만, 사진을 감싸는 wrapper(.rounded-xl overflow-hidden) 까지
+   영향받아 사진이 잘리는 부작용. wrapper 에는 매핑·미디어 태그에는 미매핑이
+   selector 만으로는 안전하게 구분 불가능.
 
-/* v1.5.347: 미디어 태그(img/picture/video/canvas) 는 위 매핑에서 제외.
-   사진은 스킨과 독립된 사진 본연의 라운드 유지가 자연스러움 (특히 프로필·메인사진).
-   Tailwind default 값으로 복원. */
-[data-skin] img.rounded-xl,
-[data-skin] picture.rounded-xl,
-[data-skin] video.rounded-xl,
-[data-skin] canvas.rounded-xl { border-radius: 0.75rem; }
-[data-skin] img.rounded-2xl,
-[data-skin] picture.rounded-2xl,
-[data-skin] video.rounded-2xl,
-[data-skin] canvas.rounded-2xl { border-radius: 1rem; }
-[data-skin] img.rounded-lg,
-[data-skin] picture.rounded-lg,
-[data-skin] video.rounded-lg,
-[data-skin] canvas.rounded-lg { border-radius: 0.5rem; }
+   대신 명시적 opt-in 만 매핑 — `.skin-card`, `.skin-button` 등 의도된
+   클래스에만 스킨 토큰 적용. 카드 컴포넌트가 점진적으로 이 클래스를
+   추가하면 그곳만 스킨 영향을 받음. */
+[data-skin] .skin-card    { border-radius: var(--radius-card); }
+[data-skin] .skin-button  { border-radius: var(--radius-button); }
+[data-skin] .skin-pill    { border-radius: var(--radius-pill); }
