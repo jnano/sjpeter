@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.287";
-export const LAST_UPDATED = "2026-05-22";
+export const CURRENT_VERSION = "1.5.335";
+export const LAST_UPDATED = "2026-05-24";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,219 @@ export const LAST_UPDATED = "2026-05-22";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  {
+    version: "1.5.335", date: "2026-05-24", tag: "인프라",
+    items: ["백업 사전 작업으로 /admin/docs CHANGELOG v1.5.288~v1.5.334 일괄 동기화"],
+  },
+  {
+    version: "1.5.334", date: "2026-05-24", tag: "수정",
+    items: ["갤러리 게시판에서 '목록' 뷰 토글이 안 먹던 버그 — kind='gallery' default 가 photo 라 list 클릭 시 view 파라미터 생략으로 default 복귀"],
+  },
+  {
+    version: "1.5.333", date: "2026-05-24", tag: "수정",
+    items: ["사이드바 active 매칭이 글 상세 경로에서 풀리던 버그 — pathname === href 정확 일치만 봐서 /boards/liturgy/691 같은 자식 경로에서 부모 메뉴 강조 안 됨. matchesHref 유틸로 prefix 매칭 통일"],
+  },
+  {
+    version: "1.5.332", date: "2026-05-24", tag: "수정",
+    items: ["/boards/[slug] 글쓰기 버튼이 슈퍼관리자에게 안 보이던 회귀 — server-side isOperator 가 session.isAdmin 만 봐서 admin_token cookie 만 가진 슈퍼관리자가 진입 차단"],
+  },
+  {
+    version: "1.5.331", date: "2026-05-24", tag: "디자인",
+    items: ["펼치기/접기 표준 hook useCollapseScroll — 접기 시 페이지 최상단으로 부드럽게 스크롤. 향후 공개 페이지 동일 패턴 일관성"],
+  },
+  {
+    version: "1.5.330", date: "2026-05-24", tag: "디자인",
+    items: ["/word 복음 본문 3줄 요약 + 펼치기 토글 — 새 client component GospelText, 짧으면 토글 숨김"],
+  },
+  {
+    version: "1.5.329", date: "2026-05-24", tag: "기능",
+    items: ["/vision/[id] 사목지표 상세 페이지 신규 — markdown 본문 + 이전/다음 사목지표 네비. /vision 역대 목록 항목 Link 화"],
+  },
+  {
+    version: "1.5.328", date: "2026-05-24", tag: "기능",
+    items: ["카톡 알림 = 전화번호 가드 (A,B,C 일괄 적용)",
+      "  · (A) /me/interests, /onboarding/interests: phone 없으면 카톡 토글 disabled + 안내",
+      "  · (B) fanout select 분리 — 사이트 알림은 phone 무관, 카톡은 phone 있는 회원만. kakao_skipped_no_phone 통계",
+      "  · (C) /register, profile PhoneForm 에 '카톡 받으려면 전화번호 필요' 안내"],
+  },
+  {
+    version: "1.5.327", date: "2026-05-23", tag: "기능",
+    items: ["알림 발송 중복 차단·실수 가드·모니터링 시스템",
+      "  · notification_batches 테이블 신규 — fanout 1회 = 1 row, target_count/site_sent/email_sent/failed_reason",
+      "  · 분과 미선택 + notify=true 면 approve/bulkApprove 클릭 시 confirm 가드",
+      "  · 중복 알림 사전 경고 — GET /api/bulletins/extractions/{id}/notify-preview, 같은 분과·정규화 제목·14일 batch 매칭 시 노란 인라인 경고",
+      "  · /admin/notification-log 모니터링 페이지 + GET /api/admin/notification-batches + /recipients. AdminSidebar 시스템 그룹에 추가"],
+  },
+  {
+    version: "1.5.326", date: "2026-05-23", tag: "디자인",
+    items: ["admin sidebar '공동체' 그룹 분리 — '단체·분과'(사목평의회·단체·분과) + '게시판·회원'(게시판 관리·회원 관리)"],
+  },
+  {
+    version: "1.5.325", date: "2026-05-23", tag: "디자인",
+    items: ["admin sidebar 그룹 재편 — '페이지·사진·배너' → '페이지·배너', 페이지 사진·메인 사진을 레이아웃 그룹으로 이동"],
+  },
+  {
+    version: "1.5.324", date: "2026-05-23", tag: "수정",
+    items: ["SectionLayout 사이드바 스크롤 sticky 복원 — inner div overflow-hidden 이 sticky 컨테이너를 가져가 무력화됐던 것을 wrapper 자체에 sticky 적용"],
+  },
+  {
+    version: "1.5.323", date: "2026-05-23", tag: "기능",
+    items: ["마이페이지 3개 sub 페이지로 분리 + 슬림화",
+      "  · /members/me/profile: 아바타·이름·세례명·전화·영명축일·비밀번호·탈퇴 (모달 → 페이지)",
+      "  · /members/me/posts: 내 글 / 내 댓글 탭",
+      "  · /members/me/interests: 분과·단체 + 카톡 알림 + 콘텐츠 알림",
+      "  · /members/me 메인은 회원 카드 + 빠른 메뉴 4개 카드. 4개 모두 SectionLayout"],
+  },
+  {
+    version: "1.5.322", date: "2026-05-23", tag: "수정",
+    items: ["/members/me·/members/notifications 에 SectionLayout 적용 — admin/menus 에 등록해도 사이드바가 안 붙던 메뉴-사이드바 불변량 위반 해소"],
+  },
+  {
+    version: "1.5.321", date: "2026-05-23", tag: "수정",
+    items: ["메뉴 항목 수정 시 '최상위로 이동'·'비활성화' 가 무력화되던 버그 — saveItem 의 ?? fallback 이 null/false 도 fallback 처리해 명시적 값이 무시. 'in body' 체크로 변경"],
+  },
+  {
+    version: "1.5.320", date: "2026-05-23", tag: "기능",
+    items: ["vision/meditation 알림도 '원글 삭제' 판정 — 주보 PDF 삭제 케이스",
+      "  · notifications.vision_id / meditation_id 컬럼 추가 (FK SET NULL)",
+      "  · fanout 시 target_id 채움, 기존 알림은 created_at 기준 backfill",
+      "  · 프론트 isDeleted 판정 확장"],
+  },
+  {
+    version: "1.5.319", date: "2026-05-23", tag: "기능",
+    items: ["원글 삭제 시 알림 보존 + 삭제됨 표시",
+      "  · notifications.post_id/event_id FK CASCADE → SET NULL 마이그레이션",
+      "  · 알림함 UI 에 '🗑️ 삭제됨' 뱃지 + line-through 제목 + 클릭 비활성"],
+  },
+  {
+    version: "1.5.318", date: "2026-05-23", tag: "수정",
+    items: ["성전건축 단계 사진 업로드 500 — construction.py 3곳에서 phase.title 참조해 AttributeError. phase.name 으로 교체 (모델 컬럼명 일치)"],
+  },
+  {
+    version: "1.5.317", date: "2026-05-23", tag: "수정",
+    items: ["AI 추출 검토 '게시판 등록' 시 글이 비공개로 저장되던 버그 — approve_extraction 강제 board_id 경로 is_published=False 가 잘못 박힘"],
+  },
+  {
+    version: "1.5.316", date: "2026-05-23", tag: "기능",
+    items: ["알림함 항목 클릭 시 해당 글로 이동 + kind별 라우팅",
+      "  · kind=vision/meditation 은 /vision·/meditation, community 는 board_slug 기반",
+      "  · backend GET 응답에 board_slug 추가 (posts JOIN boards)"],
+  },
+  {
+    version: "1.5.315", date: "2026-05-23", tag: "기능",
+    items: ["AI 추출 검토에서도 사목지표·묵상 등록 시 알림 발송 옵션 — approve-as-vision / approve-as-meditation 에 ?notify=true Query param + 카드 노란 체크박스"],
+  },
+  {
+    version: "1.5.314", date: "2026-05-23", tag: "디자인",
+    items: ["마이페이지에서 '관심 콘텐츠 알림' 카드를 '내 관심 분과·단체' 위로 이동"],
+  },
+  {
+    version: "1.5.313", date: "2026-05-23", tag: "기능",
+    items: ["사목지표·주일말씀 알림 수신 동의 + 등록 시 fanout",
+      "  · members.notify_vision/notify_meditation 컬럼 추가",
+      "  · /api/members/me/interests 두 플래그 노출·수정, POST /visions|meditations ?notify=true Query param",
+      "  · app/core/content_notify.py 신규 — site notification + 이메일 발송"],
+  },
+  {
+    version: "1.5.312", date: "2026-05-23", tag: "수정",
+    items: ["일괄 승인이 ext별 사용자 review 정보(분과·시점·알림) 사용"],
+  },
+  {
+    version: "1.5.311", date: "2026-05-23", tag: "수정",
+    items: ["일괄 승인(bulk_approve) 도 분과 자동 매칭·알림 fanout 처리"],
+  },
+  {
+    version: "1.5.310", date: "2026-05-23", tag: "수정",
+    items: ["알림 게이트 단순화 — timeless 무조건 통과, future 만 날짜 검사"],
+  },
+  {
+    version: "1.5.309", date: "2026-05-23", tag: "수정",
+    items: ["approve-as-event 도 분과 태깅·알림 hook 연결"],
+  },
+  {
+    version: "1.5.308", date: "2026-05-23", tag: "기능",
+    items: ["AI 오타 사전에 '제외 prefix' 컨텍스트 예외 추가"],
+  },
+  {
+    version: "1.5.307", date: "2026-05-23", tag: "기능",
+    items: ["추출 검토 대기 목록에서 지표·묵상 상단 고정"],
+  },
+  {
+    version: "1.5.306", date: "2026-05-23", tag: "인프라",
+    items: ["'+ 분과 추가' → '+ 분과 선택' 라벨 변경"],
+  },
+  {
+    version: "1.5.305", date: "2026-05-23", tag: "기능",
+    items: ["묵상도 본당 사목지표와 같은 별도 처리 흐름 — approve-as-meditation endpoint + 검토 UI 인라인 폼"],
+  },
+  {
+    version: "1.5.304", date: "2026-05-23", tag: "수정",
+    items: ["주보 결과 화면이 pending 도 '등록 완료'로 표시하던 오해 해소"],
+  },
+  {
+    version: "1.5.303", date: "2026-05-23", tag: "수정",
+    items: ["split-by-dates 가 범위 표현·한국어 날짜 인식"],
+  },
+  {
+    version: "1.5.302", date: "2026-05-23", tag: "기능",
+    items: ["split-by-dates 시 content 의 비대상 날짜 토큰 제거"],
+  },
+  {
+    version: "1.5.301", date: "2026-05-23", tag: "인프라",
+    items: ["'사목지표' → '본당 사목지표' 전반 일괄 교체"],
+  },
+  {
+    version: "1.5.300", date: "2026-05-23", tag: "기능",
+    items: ["'사목지표' → '본당 사목지표' 라벨 + 시드 폐기"],
+  },
+  {
+    version: "1.5.299", date: "2026-05-23", tag: "기능",
+    items: ["AI 오타 사전 admin UI — 하드코딩에서 DB 로 이전. /admin/bulletin/ai-typos 신규"],
+  },
+  {
+    version: "1.5.298", date: "2026-05-23", tag: "인프라",
+    items: ["AI 추출 프롬프트 압축으로 응답 시간 회복 (perf)"],
+  },
+  {
+    version: "1.5.297", date: "2026-05-22", tag: "수정",
+    items: ["AI 추출 오타·오역 1차 교정 (프롬프트 보강 + 후처리 사전)"],
+  },
+  {
+    version: "1.5.296", date: "2026-05-22", tag: "수정",
+    items: ["추출 검토의 분과 카탈로그 endpoint 잘못된 경로 수정"],
+  },
+  {
+    version: "1.5.295", date: "2026-05-22", tag: "수정",
+    items: ["옛 주보 추출 시 AI 의 future 분류를 오늘 기준으로 past 보정"],
+  },
+  {
+    version: "1.5.294", date: "2026-05-22", tag: "기능",
+    items: ["분과 태깅·사이트 알림 P4 — 태그 클라우드 + 분과 글 모아보기"],
+  },
+  {
+    version: "1.5.293", date: "2026-05-22", tag: "디자인",
+    items: ["분과 페이지 사진을 잘림 없이 표시"],
+  },
+  {
+    version: "1.5.292", date: "2026-05-22", tag: "기능",
+    items: ["분과 태깅·사이트 알림 P3 — 회원 알림함 UI (/members/notifications)"],
+  },
+  {
+    version: "1.5.291", date: "2026-05-22", tag: "기능",
+    items: ["분과 태깅·사이트 알림 P2 — 검토 UI + 승인 hook (분과 chip·temporal_kind·notify 토글)"],
+  },
+  {
+    version: "1.5.290", date: "2026-05-22", tag: "기능",
+    items: ["분과 태깅·사이트 알림 P1 — 모델·마이그레이션·AI 프롬프트 (post_community_targets, event_community_targets, notifications 테이블)"],
+  },
+  {
+    version: "1.5.289", date: "2026-05-22", tag: "기능",
+    items: ["홈 블록 빌더 확장 + 사이드바 그룹 합산 배지"],
+  },
+  {
+    version: "1.5.288", date: "2026-05-22", tag: "기능",
+    items: ["홈 블록 빌더에 2열 컨테이너(two_column) 블록 추가"],
+  },
   {
     version: "1.5.287", date: "2026-05-22", tag: "기능",
     items: [
