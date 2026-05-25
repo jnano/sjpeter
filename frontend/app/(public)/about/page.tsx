@@ -4,6 +4,7 @@ import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import BannerSlider from "@/components/BannerSlider";
+import AboutMiniMap from "./AboutMiniMap";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ interface ParishOut {
   name: string;
   diocese: string | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   phone: string | null;
   fax: string | null;
   cafe_url: string | null;
@@ -52,6 +55,18 @@ async function getParish(): Promise<ParishOut | null> {
   }
 }
 
+// KAKAO_MAP_KEY 는 site_settings DB 단일 source (info 페이지와 동일 패턴).
+async function getMapKey(): Promise<string> {
+  try {
+    const res = await fetch(`${API}/api/public/site-config`);
+    if (!res.ok) return "";
+    const cfg = await res.json();
+    return cfg.KAKAO_MAP_KEY ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function getCommunityCount(): Promise<number | null> {
   try {
     const res = await fetch(`${API}/api/content/community`);
@@ -64,7 +79,17 @@ async function getCommunityCount(): Promise<number | null> {
 }
 
 export default async function AboutPage() {
-  const [parish, communityCount] = await Promise.all([getParish(), getCommunityCount()]);
+  const [parish, communityCount, appKey] = await Promise.all([
+    getParish(),
+    getCommunityCount(),
+    getMapKey(),
+  ]);
+
+  // 키·좌표가 모두 있으면 실제 미니맵, 아니면 기존 격자 placeholder 로 폴백
+  const mapLat = parish?.lat ?? null;
+  const mapLng = parish?.lng ?? null;
+  const mapReady =
+    !!appKey && appKey !== "여기에_JavaScript_키_입력" && mapLat !== null && mapLng !== null;
 
   const entries = parish?.mass_schedule?.entries ?? [];
   const byDay = (day: string) =>
@@ -191,14 +216,18 @@ export default async function AboutPage() {
               <Link href="/info" className="full-link">오시는 길 자세히 →</Link>
             </div>
             <div className="ab-visit-grid">
-              <Link href="/info" className="ab-map" aria-label="오시는 길">
-                <div className="map-ph">
-                  <div className="pin">
-                    <span className="pin-dot" />
-                    <span className="pin-label">{parish?.name ?? "본당"}</span>
+              {mapReady ? (
+                <AboutMiniMap name={parish?.name ?? "본당"} appKey={appKey} lat={mapLat!} lng={mapLng!} />
+              ) : (
+                <Link href="/info" className="ab-map" aria-label="오시는 길">
+                  <div className="map-ph">
+                    <div className="pin">
+                      <span className="pin-dot" />
+                      <span className="pin-label">{parish?.name ?? "본당"}</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              )}
               <div className="ab-visit-info">
                 {parish?.address && (
                   <div className="ab-visit-item">
