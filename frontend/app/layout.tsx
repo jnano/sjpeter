@@ -64,10 +64,12 @@ export default async function RootLayout({
       className={`${notoSansKR.variable} ${notoSerifKR.variable} ${playfairDisplay.variable}`}
     >
       <head>
-        {/* Pretendard — editorial/dashboard/construction 스킨용 (v1.5.350) */}
+        {/* Pretendard Variable — 시안 원본 폰트 그대로. dynamic-subset 이라
+            사용 글리프(unicode-range)만 on-demand 로드 → 용량 최소 (v1.5.365).
+            CSS 의 font-family 는 'Pretendard Variable' 를 1순위로 둠 → 이 폰트로 해석. */}
         <link
           rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
         />
       </head>
       <body className="bg-[var(--color-background)]">
