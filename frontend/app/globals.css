@@ -478,7 +478,7 @@ h1, h2, h3, h4, h5, h6 {
 .skin-dashboard .cal-month { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
 .skin-dashboard .cal-nav { display: flex; gap: 4px; }
 .skin-dashboard .cal-nav button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
-.skin-dashboard .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; font-size: 12px; text-align: center; }
+.skin-dashboard .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; font-size: 12px; text-align: center; border: none; background: transparent; border-radius: 0; }
 .skin-dashboard .cal-grid .dow { padding: 4px 0; color: var(--ink-3); font-weight: 600; font-size: 11px; }
 .skin-dashboard .cal-grid .dow.sun { color: var(--primary); }
 .skin-dashboard .cal-grid .day { padding: 8px 0; border-radius: var(--r-sm); position: relative; font-variant-numeric: tabular-nums; }
