@@ -55,3 +55,20 @@ class CatechumenPhoto(Base):
     sort_order = Column(Integer, nullable=False, server_default="0")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CatechumenApplication(Base):
+    """입교신청 (회원 전용). 신청 시 모집중(apply_open) 차수에 자동 연결.
+    status: 접수 → 연락완료 → 등록완료 (또는 취소). 등록완료 시 admin 이 차수 참여자로 전환."""
+    __tablename__ = "catechumen_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, nullable=False, index=True)  # → members(id) ON DELETE CASCADE
+    class_id = Column(Integer, index=True)                   # → catechumen_classes(id) ON DELETE SET NULL (nullable)
+    name = Column(String(100))                               # 실명 (회원정보 prefill)
+    phone = Column(String(30))                               # 연락처
+    baptismal_name_wish = Column(String(100))                # 세례명 희망
+    message = Column(Text)                                   # 신청 동기·문의
+    status = Column(String(20), nullable=False, server_default="접수")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

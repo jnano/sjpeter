@@ -1638,6 +1638,24 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_catechumen_photos_class ON catechumen_photos(class_id)"
         ))
+        # v1.5.393: 입교신청 (회원 전용)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS catechumen_applications (
+                id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                class_id INTEGER REFERENCES catechumen_classes(id) ON DELETE SET NULL,
+                name VARCHAR(100),
+                phone VARCHAR(30),
+                baptismal_name_wish VARCHAR(100),
+                message TEXT,
+                status VARCHAR(20) NOT NULL DEFAULT '접수',
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_catechumen_apps_member ON catechumen_applications(member_id)"
+        ))
 
         # 여기서 한 번 commit — ALTER 와 backfill 을 분리해 backfill 의 SQL 오류가 ALTER 를 막지 않게.
         conn.commit()

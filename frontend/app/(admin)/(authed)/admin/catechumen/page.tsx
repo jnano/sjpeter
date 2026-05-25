@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import ClassDetail from "./ClassDetail";
+import ApplicationsSection from "./ApplicationsSection";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -257,6 +258,8 @@ export default function AdminCatechumenPage() {
           );
         })}
       </div>
+
+      <ApplicationsSection onChanged={load} />
     </div>
   );
 }

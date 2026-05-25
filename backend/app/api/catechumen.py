@@ -13,7 +13,7 @@ from datetime import date, datetime
 import os, uuid
 from app.core.database import get_db
 from app.core.admin_log import get_admin_identifier, log_action
-from app.core.auth import get_current_admin
+from app.core.auth import get_current_admin, get_current_member
 from app.core.config import settings
 
 router = APIRouter(prefix="/catechumen", tags=["catechumen"])
@@ -316,3 +316,146 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db), admin=Depends(get
     db.commit()
     log_action(db, get_admin_identifier(admin), "delete_catechumen_photo",
                "catechumen_photo", photo_id, existing.category)
+
+
+# ══════════════════════════════════════════════════════════
+# 입교신청 (catechumen_applications) — 회원 전용
+# ══════════════════════════════════════════════════════════
+
+ACTIVE_STATUSES = ("접수", "연락완료")
+ALL_STATUSES = ("접수", "연락완료", "등록완료", "취소")
+
+
+class ApplicationIn(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    baptismal_name_wish: Optional[str] = None
+    message: Optional[str] = None
+
+
+class ApplicationOut(BaseModel):
+    id: int
+    member_id: int
+    class_id: Optional[int]
+    name: Optional[str]
+    phone: Optional[str]
+    baptismal_name_wish: Optional[str]
+    message: Optional[str]
+    status: str
+    created_at: datetime
+    member_nickname: Optional[str] = None
+    member_email: Optional[str] = None
+    class_round_no: Optional[int] = None
+
+
+class StatusIn(BaseModel):
+    status: str
+
+
+def _app_row(r) -> dict:
+    return {
+        "id": r.id, "member_id": r.member_id, "class_id": r.class_id,
+        "name": r.name, "phone": r.phone, "baptismal_name_wish": r.baptismal_name_wish,
+        "message": r.message, "status": r.status, "created_at": r.created_at,
+        "member_nickname": getattr(r, "member_nickname", None),
+        "member_email": getattr(r, "member_email", None),
+        "class_round_no": getattr(r, "class_round_no", None),
+    }
+
+
+@router.post("/applications", response_model=ApplicationOut, status_code=201)
+def create_application(body: ApplicationIn, db: Session = Depends(get_db), member=Depends(get_current_member)):
+    # 중복 방지: 접수·연락완료 상태의 진행 중 신청이 있으면 거부
+    dup = db.execute(text(
+        "SELECT id FROM catechumen_applications WHERE member_id=:mid AND status IN ('접수','연락완료')"
+    ), {"mid": member.id}).fetchone()
+    if dup:
+        raise HTTPException(status_code=409, detail="이미 접수된 입교신청이 있습니다.")
+    # 모집중(apply_open) 차수에 자동 연결 (없으면 미연결 — 대기)
+    cls = db.execute(text(
+        "SELECT id FROM catechumen_classes WHERE apply_open=TRUE ORDER BY sort_order DESC, round_no DESC NULLS LAST LIMIT 1"
+    )).fetchone()
+    class_id = cls.id if cls else None
+    row = db.execute(text(
+        "INSERT INTO catechumen_applications (member_id, class_id, name, phone, baptismal_name_wish, message, status) "
+        "VALUES (:mid, :cid, :name, :phone, :bn, :msg, '접수') RETURNING *"
+    ), {"mid": member.id, "cid": class_id, "name": body.name, "phone": body.phone,
+        "bn": body.baptismal_name_wish, "msg": body.message}).fetchone()
+    db.commit()
+    return _app_row(row)
+
+
+@router.get("/applications/me", response_model=list[ApplicationOut])
+def my_applications(db: Session = Depends(get_db), member=Depends(get_current_member)):
+    rows = db.execute(text(
+        "SELECT a.*, c.round_no AS class_round_no FROM catechumen_applications a "
+        "LEFT JOIN catechumen_classes c ON c.id = a.class_id "
+        "WHERE a.member_id=:mid ORDER BY a.created_at DESC"
+    ), {"mid": member.id}).fetchall()
+    return [_app_row(r) for r in rows]
+
+
+@router.get("/applications", response_model=list[ApplicationOut])
+def list_applications(status: Optional[str] = None, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    base = (
+        "SELECT a.*, mb.nickname AS member_nickname, mb.email AS member_email, c.round_no AS class_round_no "
+        "FROM catechumen_applications a "
+        "LEFT JOIN members mb ON mb.id = a.member_id "
+        "LEFT JOIN catechumen_classes c ON c.id = a.class_id "
+    )
+    if status:
+        rows = db.execute(text(base + "WHERE a.status=:st ORDER BY a.created_at DESC"), {"st": status}).fetchall()
+    else:
+        rows = db.execute(text(base + "ORDER BY a.created_at DESC")).fetchall()
+    return [_app_row(r) for r in rows]
+
+
+@router.put("/applications/{app_id}/status", response_model=ApplicationOut)
+def update_application_status(app_id: int, body: StatusIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    if body.status not in ALL_STATUSES:
+        raise HTTPException(status_code=400, detail="잘못된 상태값입니다.")
+    row = db.execute(text(
+        "UPDATE catechumen_applications SET status=:st, updated_at=NOW() WHERE id=:id RETURNING *"
+    ), {"st": body.status, "id": app_id}).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="신청을 찾을 수 없습니다.")
+    db.commit()
+    log_action(db, get_admin_identifier(admin), "update_catechumen_application", "catechumen_application", app_id, body.status)
+    return _app_row(row)
+
+
+@router.post("/applications/{app_id}/to-member")
+def application_to_member(app_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """신청을 해당 차수의 참여자(catechumen_members)로 전환하고 status='등록완료' 처리."""
+    a = db.execute(text("SELECT * FROM catechumen_applications WHERE id=:id"), {"id": app_id}).fetchone()
+    if not a:
+        raise HTTPException(status_code=404, detail="신청을 찾을 수 없습니다.")
+    if not a.class_id:
+        raise HTTPException(status_code=400, detail="연결된 차수가 없습니다. 먼저 신청에 차수를 지정하세요.")
+    # 이미 같은 차수에 같은 회원이 등록돼 있으면 중복 생성 안 함
+    exist = db.execute(text(
+        "SELECT id FROM catechumen_members WHERE class_id=:cid AND member_id=:mid"
+    ), {"cid": a.class_id, "mid": a.member_id}).fetchone()
+    if not exist:
+        max_ord = db.execute(text(
+            "SELECT COALESCE(MAX(sort_order), -1) AS m FROM catechumen_members WHERE class_id=:cid"
+        ), {"cid": a.class_id}).fetchone()
+        db.execute(text(
+            "INSERT INTO catechumen_members (class_id, member_id, name, baptismal_name, sort_order) "
+            "VALUES (:cid, :mid, :name, :bn, :ord)"
+        ), {"cid": a.class_id, "mid": a.member_id, "name": a.name,
+            "bn": a.baptismal_name_wish, "ord": (max_ord.m if max_ord else -1) + 1})
+    db.execute(text("UPDATE catechumen_applications SET status='등록완료', updated_at=NOW() WHERE id=:id"), {"id": app_id})
+    db.commit()
+    log_action(db, get_admin_identifier(admin), "catechumen_application_to_member", "catechumen_application", app_id, a.name or "")
+    return {"ok": True, "class_id": a.class_id}
+
+
+@router.delete("/applications/{app_id}", status_code=204)
+def delete_application(app_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    existing = db.execute(text("SELECT name FROM catechumen_applications WHERE id=:id"), {"id": app_id}).fetchone()
+    if not existing:
+        raise HTTPException(status_code=404, detail="신청을 찾을 수 없습니다.")
+    db.execute(text("DELETE FROM catechumen_applications WHERE id=:id"), {"id": app_id})
+    db.commit()
+    log_action(db, get_admin_identifier(admin), "delete_catechumen_application", "catechumen_application", app_id, existing.name or "")
