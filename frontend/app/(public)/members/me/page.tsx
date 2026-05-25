@@ -36,6 +36,7 @@ interface MyComment {
 interface PrayerItem { id: number; title: string; category: string; scripture: string | null; }
 interface MedBookmark { id: number; title: string; scripture: string | null; author: string | null; published_date: string; bookmarked_at: string; }
 interface EventItem { id: number; title: string; event_date: string; end_date: string | null; start_time: string | null; location: string | null; event_kind: string | null; }
+interface CatechumenRecord { class_id: number; round_no: number | null; baptized_at: string | null; baptismal_name: string | null; photo_count: number; baptism_photo_count: number; }
 
 type SavedItem = { kind: "기도" | "묵상"; id: number; title: string; ref: string; href: string };
 type TabKey = "dash" | "edit" | "notify" | "inbox" | "posts";
@@ -54,6 +55,10 @@ const IcCal = () => <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" s
 const IcChevron = () => <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="4 2 6.5 5 4 8" /></svg>;
 
 function MonthShort(d: Date) { return `${d.getMonth() + 1}월`; }
+function fmtBaptizedDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
 function fmtAgo(iso: string): string {
   const t = new Date(iso).getTime();
   const diff = Date.now() - t;
@@ -81,6 +86,7 @@ export default function MypagePage() {
   const [savedIds, setSavedIds] = useState<number[]>([]);
   const [medBookmarks, setMedBookmarks] = useState<MedBookmark[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [catechumenRecords, setCatechumenRecords] = useState<CatechumenRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,7 +117,8 @@ export default function MypagePage() {
       fetch(`${API}/api/content/meditations/bookmarked`, { headers }).then(sj).catch(() => null),
       fetch(`${API}/api/events/?year=${m1.split("-")[0]}&month=${m1.split("-")[1]}`).then(sj).catch(() => null),
       fetch(`${API}/api/events/?year=${m2.split("-")[0]}&month=${m2.split("-")[1]}`).then(sj).catch(() => null),
-    ]).then(([m, ps, cs, ints, unread, prs, medbm, ev1, ev2]) => {
+      fetch(`${API}/api/catechumen/my-record`, { headers }).then(sj).catch(() => null),
+    ]).then(([m, ps, cs, ints, unread, prs, medbm, ev1, ev2, cate]) => {
       if (m?.id) setMember(m);
       setPosts(Array.isArray(ps) ? ps : []);
       setComments(Array.isArray(cs) ? cs : []);
@@ -127,6 +134,7 @@ export default function MypagePage() {
         for (const e of arr) if (!seen.has(e.id)) { seen.add(e.id); merged.push(e); }
       }
       setEvents(merged);
+      setCatechumenRecords(Array.isArray(cate) ? cate : []);
       setLoading(false);
     });
   }, [session?.accessToken, status]);
@@ -402,6 +410,31 @@ export default function MypagePage() {
 
               {/* 우 */}
               <div className="mp-dash-stack">
+                {catechumenRecords.length > 0 && (
+                  <article className="mp-card">
+                    <div className="mp-sect-h"><h2>입교 기록</h2></div>
+                    {catechumenRecords.map((r) => (
+                      <div key={r.class_id} style={{ marginBottom: 10 }}>
+                        <p style={{ fontSize: 14, lineHeight: 1.75, color: "var(--color-text)" }}>
+                          <strong style={{ color: "var(--color-primary)" }}>제{r.round_no ?? "?"}차 예비자교리</strong>에 참여하시고
+                          {r.baptized_at
+                            ? ` ${fmtBaptizedDate(r.baptized_at)}에 본당에서 세례성사를 받아 입교하셨습니다.`
+                            : " 교리에 참여하셨습니다."}
+                          {r.baptismal_name ? ` 세례명은 ${r.baptismal_name}입니다.` : ""}
+                        </p>
+                        {r.photo_count > 0 && (
+                          <Link
+                            href={`/catechumen/${r.class_id}/photos${r.baptism_photo_count > 0 ? "#세례성사" : ""}`}
+                            className="all"
+                            style={{ marginTop: 6, display: "inline-block" }}
+                          >
+                            제{r.round_no}차 세례성사 사진 보기 →
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                  </article>
+                )}
                 <article className="mp-card">
                   <div className="mp-sect-h">
                     <h2>다가오는 행사</h2>

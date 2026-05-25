@@ -14,6 +14,9 @@ export interface CatechumenClass {
   photo_count: number;
 }
 
+// 사진 종류 (순서 = 예비신자 여정). admin 에서 직접 입력으로 추가 가능.
+export const PHOTO_CATEGORIES = ["입교", "교육", "미사참여", "회식", "졸업", "세례성사", "견진성사"];
+
 const DAY = 86400000;
 
 /** 차수 목록에서 현재 상태별 차수를 골라냄.

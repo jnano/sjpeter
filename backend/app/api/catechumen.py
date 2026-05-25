@@ -459,3 +459,59 @@ def delete_application(app_id: int, db: Session = Depends(get_db), admin=Depends
     db.execute(text("DELETE FROM catechumen_applications WHERE id=:id"), {"id": app_id})
     db.commit()
     log_action(db, get_admin_identifier(admin), "delete_catechumen_application", "catechumen_application", app_id, existing.name or "")
+
+
+# ══════════════════════════════════════════════════════════
+# 회원 마이페이지 — 입교 기록 · 세례성사 앨범 (회원 전용)
+# ══════════════════════════════════════════════════════════
+
+class MyRecordOut(BaseModel):
+    class_id: int
+    round_no: Optional[int]
+    baptized_at: Optional[date]       # 개인 세례일(없으면 차수 세례성사일)
+    baptismal_name: Optional[str]
+    photo_count: int                  # 차수 전체 사진 수
+    baptism_photo_count: int          # 세례성사 사진 수
+
+
+@router.get("/my-record", response_model=list[MyRecordOut])
+def my_record(db: Session = Depends(get_db), member=Depends(get_current_member)):
+    """본인이 참여자로 등록된 차수의 입교 기록 (마이페이지용)."""
+    rows = db.execute(text(
+        "SELECT cm.class_id, c.round_no, "
+        "COALESCE(cm.baptized_at, c.baptism_at::date) AS baptized_at, "
+        "cm.baptismal_name, "
+        "(SELECT COUNT(*) FROM catechumen_photos p WHERE p.class_id=cm.class_id) AS photo_count, "
+        "(SELECT COUNT(*) FROM catechumen_photos p WHERE p.class_id=cm.class_id AND p.category='세례성사') AS baptism_photo_count "
+        "FROM catechumen_members cm "
+        "JOIN catechumen_classes c ON c.id = cm.class_id "
+        "WHERE cm.member_id=:mid "
+        "ORDER BY c.round_no DESC NULLS LAST, c.id DESC"
+    ), {"mid": member.id}).fetchall()
+    return [{
+        "class_id": r.class_id, "round_no": r.round_no, "baptized_at": r.baptized_at,
+        "baptismal_name": r.baptismal_name, "photo_count": r.photo_count or 0,
+        "baptism_photo_count": r.baptism_photo_count or 0,
+    } for r in rows]
+
+
+class AlbumOut(BaseModel):
+    class_id: int
+    round_no: Optional[int]
+    baptism_at: Optional[datetime]
+    photos: list[PhotoOut]
+
+
+@router.get("/classes/{class_id}/album", response_model=AlbumOut)
+def class_album(class_id: int, db: Session = Depends(get_db), member=Depends(get_current_member)):
+    """차수 전체 사진 앨범 (회원 전용 — 입교자 사진 프라이버시)."""
+    cls = db.execute(text("SELECT id, round_no, baptism_at FROM catechumen_classes WHERE id=:id"), {"id": class_id}).fetchone()
+    if not cls:
+        raise HTTPException(status_code=404, detail="차수를 찾을 수 없습니다.")
+    rows = db.execute(text(
+        "SELECT * FROM catechumen_photos WHERE class_id=:cid ORDER BY category, sort_order ASC, id ASC"
+    ), {"cid": class_id}).fetchall()
+    return {
+        "class_id": cls.id, "round_no": cls.round_no, "baptism_at": cls.baptism_at,
+        "photos": [_photo_row(r) for r in rows],
+    }

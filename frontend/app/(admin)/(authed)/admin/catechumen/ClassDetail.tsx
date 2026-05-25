@@ -1,11 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { PHOTO_CATEGORIES } from "@/lib/catechumen";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-// 기본 제공 사진 종류 (순서 = 예비신자 여정). admin 에서 직접 입력으로 추가 가능.
-const PHOTO_CATEGORIES = ["입교", "교육", "미사참여", "회식", "졸업", "세례성사", "견진성사"];
 
 interface MemberRow {
   id: number;
