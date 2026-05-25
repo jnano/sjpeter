@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.368";
+export const CURRENT_VERSION = "1.5.369";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.369", date: "2026-05-25", tag: "수정", items: ["접힘 펼치기 '›' 원형 버튼을 펼침 '‹ 메뉴 접기' pill과 같은 자리(콘텐츠 행 좌상단·sticky top-44)로 통일 — 접기/펼치기 전환 시 토글이 제자리 유지"] },
   { version: "1.5.368", date: "2026-05-25", tag: "수정", items: ["스크롤 시 '메뉴 접기' 토글도 사진·메뉴와 함께 따라오도록 — 토글을 sticky 영역 안으로 이동 (섹션 페이지·캘린더). 캘린더는 깨져 있던 사이드바 sticky도 함께 정상화"] },
   { version: "1.5.367", date: "2026-05-25", tag: "수정", items: ["사이드바 sticky 상단 가림 해소 — 스크롤 시 헤더에 브레드크럼 띠가 생겨 높이가 ~158px로 커지는데 오프셋이 112px(top-28)이라 사진 상단이 가려지던 문제. top-44(176px)로 올려 헤더+띠 아래로 여백 확보"] },
   { version: "1.5.366", date: "2026-05-25", tag: "디자인", items: ["시안 스킨일 때 전 페이지 본문을 묵상 기준으로 통일 — body 전역 Pretendard(var(--font-body)) + 한글 장평(palt) + 자간 -0.01em", "본문(.prose·.med-body) 양쪽맞춤(justify) 적용 — 게시판·공지·주보·vision·묵상"] },
