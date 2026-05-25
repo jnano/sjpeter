@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.373";
+export const CURRENT_VERSION = "1.5.374";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.374", date: "2026-05-25", tag: "디자인", items: ["기도문 목록을 시안(prayer.html)으로 재현 — 오늘 추천 기도(today-highlight) 배너·카테고리 칩(점+카운트)·검색·카테고리 그룹 카드(좌측 컬러 보더·성서 출처·저장(localStorage)·공유). 기존 8 카테고리에 시안 색 매핑"] },
   { version: "1.5.373", date: "2026-05-25", tag: "기능", items: ["묵상 반응·공유 바 신설 (시안 .art-foot) — 은혜로워요·되새겨요 반응(회원 로그인 기반, meditation_reactions 테이블)·저장(북마크)·공유·링크복사. 시안 아이콘·배치 그대로, 실천 섹션 다음 배치"] },
   { version: "1.5.372", date: "2026-05-25", tag: "수정", items: ["게시판 목록 500 에러 해소 — 서버 컴포넌트 BoardList 에서 아바타 <img onError>(클라이언트 전용 핸들러)를 직접 렌더해 작성자 사진이 있는 글에서 터지던 문제. onError 부분을 AvatarImg 클라이언트 컴포넌트로 분리"] },
   { version: "1.5.371", date: "2026-05-25", tag: "기능", items: ["글자 크기·인쇄 도구를 정적 소개 페이지(소개·연혁·신부님·수녀님·사목지표·사목협의회·역대 사제 등)에도 적용 — SectionLayout tools 옵션. 본문은 .reading-zoom(zoom)으로 ad-hoc 마크업도 글자 크기 반영"] },
