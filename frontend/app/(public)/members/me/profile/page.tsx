@@ -269,7 +269,7 @@ function PasswordForm({ hasPassword, token }: { hasPassword: boolean; token: str
   );
 }
 
-export default function ProfileEditPage() {
+export default function ProfileEditPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const [member, setMember] = useState<MemberInfo | null>(null);
@@ -351,14 +351,13 @@ export default function ProfileEditPage() {
   }
   if (!member) return null;
 
-  return (
-    <>
-      <PageHeader group="회원" title="프로필 편집" subtitle="이름·세례명·전화번호·비밀번호 등 회원 정보를 관리합니다." />
-      <SectionLayout>
-        <div className="max-w-3xl mx-auto space-y-4">
+  const body = (
+        <div className={embedded ? "space-y-4" : "max-w-3xl mx-auto space-y-4"}>
+          {!embedded && (
           <div className="mb-2">
             <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">← 마이페이지</Link>
           </div>
+          )}
 
           {/* 아바타 */}
           <div className="bg-white border border-[var(--color-border)] rounded-xl p-6">
@@ -442,7 +441,12 @@ export default function ProfileEditPage() {
             </p>
           </div>
         </div>
-      </SectionLayout>
+  );
+  if (embedded) return body;
+  return (
+    <>
+      <PageHeader group="회원" title="프로필 편집" subtitle="이름·세례명·전화번호·비밀번호 등 회원 정보를 관리합니다." />
+      <SectionLayout>{body}</SectionLayout>
     </>
   );
 }

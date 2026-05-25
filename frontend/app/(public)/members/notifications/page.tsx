@@ -34,7 +34,7 @@ function targetHref(n: NotificationItem): string | null {
   return null;
 }
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -91,15 +91,14 @@ export default function NotificationsPage() {
 
   const unreadCount = items.filter((n) => !n.read_at).length;
 
-  return (
-    <>
-      <PageHeader group="회원" title="알림함" subtitle={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}건` : "새 알림이 없습니다"} />
-      <SectionLayout>
-      <div className="max-w-3xl mx-auto">
+  const body = (
+      <div className={embedded ? "" : "max-w-3xl mx-auto"}>
         <div className="flex items-center justify-between mb-4">
-          <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">
-            ← 마이페이지
-          </Link>
+          {!embedded ? (
+            <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">
+              ← 마이페이지
+            </Link>
+          ) : <span />}
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
@@ -212,7 +211,12 @@ export default function NotificationsPage() {
           </ul>
         )}
       </div>
-      </SectionLayout>
+  );
+  if (embedded) return body;
+  return (
+    <>
+      <PageHeader group="회원" title="알림함" subtitle={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}건` : "새 알림이 없습니다"} />
+      <SectionLayout>{body}</SectionLayout>
     </>
   );
 }

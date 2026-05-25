@@ -18,7 +18,7 @@ interface MyComment {
   post_id: number; post_title: string; board_slug: string;
 }
 
-export default function MyPostsPage() {
+export default function MyPostsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [posts, setPosts] = useState<MyPost[]>([]);
@@ -51,14 +51,13 @@ export default function MyPostsPage() {
     return <div className="min-h-[70vh] flex items-center justify-center"><p className="text-[var(--color-text-muted)]">불러오는 중...</p></div>;
   }
 
-  return (
-    <>
-      <PageHeader group="회원" title="내가 쓴 글" subtitle={`작성한 글 ${posts.length}건 · 작성한 댓글 ${comments.length}건`} />
-      <SectionLayout>
-        <div className="max-w-3xl mx-auto">
+  const body = (
+        <div className={embedded ? "" : "max-w-3xl mx-auto"}>
+          {!embedded && (
           <div className="mb-4">
             <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">← 마이페이지</Link>
           </div>
+          )}
 
           <div className="flex gap-2 mb-6">
             {(["posts", "comments"] as const).map((t) => (
@@ -104,7 +103,12 @@ export default function MyPostsPage() {
             </div>
           )}
         </div>
-      </SectionLayout>
+  );
+  if (embedded) return body;
+  return (
+    <>
+      <PageHeader group="회원" title="내가 쓴 글" subtitle={`작성한 글 ${posts.length}건 · 작성한 댓글 ${comments.length}건`} />
+      <SectionLayout>{body}</SectionLayout>
     </>
   );
 }

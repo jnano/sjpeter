@@ -17,7 +17,7 @@ interface CommunityGroup {
   slug?: string | null;
 }
 
-export default function MyInterestsPage() {
+export default function MyInterestsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [groups, setGroups] = useState<CommunityGroup[]>([]);
@@ -127,14 +127,13 @@ export default function MyInterestsPage() {
     );
   }
 
-  return (
-    <>
-      <PageHeader group="회원" title="관심 분과·콘텐츠 알림" subtitle="관심 있는 분과·단체와 받고 싶은 콘텐츠 알림을 선택합니다." />
-      <SectionLayout>
-        <div className="max-w-3xl mx-auto space-y-6">
+  const body = (
+        <div className={embedded ? "space-y-6" : "max-w-3xl mx-auto space-y-6"}>
+          {!embedded && (
           <div>
             <Link href="/members/me" className="text-sm text-[var(--color-primary)] hover:underline">← 마이페이지</Link>
           </div>
+          )}
 
           {/* 관심 콘텐츠 알림 (사목지표·주일말씀) */}
           <div className="bg-white border border-[var(--color-border)] rounded-xl p-5">
@@ -229,7 +228,12 @@ export default function MyInterestsPage() {
             {savedMsg && <span className="text-xs text-green-600">{savedMsg}</span>}
           </div>
         </div>
-      </SectionLayout>
+  );
+  if (embedded) return body;
+  return (
+    <>
+      <PageHeader group="회원" title="관심 분과·콘텐츠 알림" subtitle="관심 있는 분과·단체와 받고 싶은 콘텐츠 알림을 선택합니다." />
+      <SectionLayout>{body}</SectionLayout>
     </>
   );
 }
