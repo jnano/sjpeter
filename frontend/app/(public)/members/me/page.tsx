@@ -365,7 +365,7 @@ export default function MypagePage() {
                 <article className="mp-card">
                   <div className="mp-sect-h">
                     <h2>다가오는 행사</h2>
-                    <Link href="/calendar" className="all">행사 일정 →</Link>
+                    <Link href="/calendar" className="all">본당 일정 →</Link>
                   </div>
                   {upcoming.length === 0 ? (
                     <p className="text-sm text-[var(--color-text-muted)] py-6 text-center">예정된 행사가 없습니다.</p>

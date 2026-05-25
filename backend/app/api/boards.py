@@ -1174,12 +1174,12 @@ def publish_draft_multi(
         )
         db.add(copy)
 
-    # 행사일정에 등록 — event_date NOT NULL 이므로 날짜 필수
+    # 본당 일정에 등록 — event_date NOT NULL 이므로 날짜 필수
     if body.add_calendar:
         if not body.event_date:
             raise HTTPException(
                 status_code=400,
-                detail="행사일정에 등록하려면 날짜를 지정해 주세요.",
+                detail="본당 일정에 등록하려면 날짜를 지정해 주세요.",
             )
         kind = body.event_kind if body.event_kind in ("행사", "모임") else "행사"
         category = "community" if kind == "모임" else "general"

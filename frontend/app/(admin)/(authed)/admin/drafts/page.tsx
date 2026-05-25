@@ -102,7 +102,7 @@ export default function DraftsPage() {
 
     // 캘린더 등록 체크했는데 날짜가 비었으면 서버 호출 전에 막음
     if (calendar && !date) {
-      alert("행사일정에 등록하려면 날짜를 입력해 주세요.");
+      alert("본당 일정에 등록하려면 날짜를 입력해 주세요.");
       return;
     }
 
@@ -605,7 +605,7 @@ export default function DraftsPage() {
                           </label>
                         ))}
 
-                        {/* 행사일정 */}
+                        {/* 본당 일정 */}
                         <label className="flex items-center gap-2.5 cursor-pointer">
                           <input
                             type="checkbox"
@@ -613,10 +613,10 @@ export default function DraftsPage() {
                             onChange={(e) => setAddCalendar((prev) => ({ ...prev, [draft.id]: e.target.checked }))}
                             className="w-4 h-4 rounded accent-[var(--color-primary)]"
                           />
-                          <span className="text-sm">📅 행사일정</span>
+                          <span className="text-sm">📅 본당 일정</span>
                         </label>
 
-                        {/* 행사일정 체크 시: 날짜·구분·장소 입력 (날짜 필수) */}
+                        {/* 본당 일정 체크 시: 날짜·구분·장소 입력 (날짜 필수) */}
                         {(addCalendar[draft.id] ?? false) && (
                           <div className="pl-7 pr-1 py-2 -mt-1 space-y-2 border-l-2 border-[var(--color-primary)]/30">
                             <div className="grid grid-cols-[80px_1fr] gap-2 items-center">

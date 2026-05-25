@@ -1774,7 +1774,7 @@ h1, h2, h3, h4, h5, h6 {
   .med-prev-next { grid-template-columns: 1fr; }
 }
 
-/* ════════════ 행사 일정 캘린더 — events.html / events-mobile.html 시안 ════════════
+/* ════════════ 본당 일정 캘린더 — events.html / events-mobile.html 시안 ════════════
    테마색은 프로젝트 --color-* (스킨·전례시기 자동 적용), 카테고리색은 --cat-*,
    글꼴은 --font-display (시안=Pretendard). data-cat 으로 --c(전경)·--c-bg(배경) 주입. */
 [data-cat="event"]   { --c: var(--cat-event);   --c-bg: var(--cat-event-bg); }

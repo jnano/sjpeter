@@ -137,7 +137,7 @@ export default function EventMappingPage() {
                 className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] disabled:opacity-50 bg-white"
               >
                 <option value="">미지정 (임시저장 보류)</option>
-                <option value="calendar">📅 행사일정</option>
+                <option value="calendar">📅 본당 일정</option>
                 {boards.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}

@@ -828,7 +828,7 @@ export default function CalendarPage() {
     <>
       <PageHeader
         group="알림과 게시판"
-        title="행사 일정"
+        title="본당 일정"
         subtitle="본당의 행사 · 모임 · 봉사 · 순례 일정을 한 곳에서 확인하세요."
         action={
           <div className="hidden md:flex items-center relative" ref={pickerRef}>

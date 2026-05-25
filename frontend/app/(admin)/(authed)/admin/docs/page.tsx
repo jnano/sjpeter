@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.383";
+export const CURRENT_VERSION = "1.5.384";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.384", date: "2026-05-25", tag: "기능", items: ["'행사 일정' → '본당 일정' 명칭 일괄 변경: menu_items(DB)·정적페이지 시드·/calendar PageHeader/탭제목·마이페이지 링크·모바일 하단탭(행사→일정)·AI 추출 라우팅 라벨(event-mapping·drafts·boards 에러문구). 필터 칩의 '행사'(카테고리)는 의미가 달라 유지"] },
   { version: "1.5.383", date: "2026-05-25", tag: "수정", items: ["홈 대시보드 캘린더(5월 행사) 날짜 그리드 외곽선 제거 — 전역 .cal-grid(테두리) 규칙이 .skin-dashboard .cal-grid 로 새어 들어온 누수가 원인. skin 스코프에서 border/배경 명시적으로 리셋"] },
   { version: "1.5.382", date: "2026-05-25", tag: "디자인", items: ["행사 일정(/calendar) 모바일 미니 캘린더(.cal-mini)의 그리드 박스 외곽 테두리 제거. 배경·패딩·날짜·이벤트 점은 유지"] },
   { version: "1.5.381", date: "2026-05-25", tag: "디자인", items: ["대시보드 스킨 홈 캘린더 위젯(5월 행사)의 카드 외곽 테두리 제거 — 데스크탑(.calendar-mini)·모바일(.cal-c) 모두. 배경·패딩·날짜 그리드는 유지"] },
