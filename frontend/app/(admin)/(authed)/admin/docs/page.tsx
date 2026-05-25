@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.371";
+export const CURRENT_VERSION = "1.5.372";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.372", date: "2026-05-25", tag: "수정", items: ["게시판 목록 500 에러 해소 — 서버 컴포넌트 BoardList 에서 아바타 <img onError>(클라이언트 전용 핸들러)를 직접 렌더해 작성자 사진이 있는 글에서 터지던 문제. onError 부분을 AvatarImg 클라이언트 컴포넌트로 분리"] },
   { version: "1.5.371", date: "2026-05-25", tag: "기능", items: ["글자 크기·인쇄 도구를 정적 소개 페이지(소개·연혁·신부님·수녀님·사목지표·사목협의회·역대 사제 등)에도 적용 — SectionLayout tools 옵션. 본문은 .reading-zoom(zoom)으로 ad-hoc 마크업도 글자 크기 반영"] },
   { version: "1.5.370", date: "2026-05-25", tag: "기능", items: ["글자 크기(Aa)·인쇄 도구 신설 — 시안 meditation 의 원형 버튼 모양·위치 그대로. 글자 크기는 3단계(100/112/125%) 순환(localStorage 유지), 인쇄는 부속 숨김 후 본문만 출력", "묵상(메타 행)·게시판 글·공지 상세에 적용 — 본문(.med-body·.prose) 글자 크기·인쇄 동작"] },
   { version: "1.5.369", date: "2026-05-25", tag: "수정", items: ["접힘 펼치기 '›' 원형 버튼을 펼침 '‹ 메뉴 접기' pill과 같은 자리(콘텐츠 행 좌상단·sticky top-44)로 통일 — 접기/펼치기 전환 시 토글이 제자리 유지"] },
