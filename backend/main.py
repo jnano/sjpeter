@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks
+from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks, catechumen
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -79,6 +79,7 @@ app.include_router(saints.router, prefix="/api")
 app.include_router(setup.router)
 app.include_router(onboarding.router)
 app.include_router(home_blocks.router, prefix="/api")
+app.include_router(catechumen.router, prefix="/api")
 app.include_router(util.router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -1586,6 +1587,57 @@ def _migrate_add_columns():
             ))
         except Exception:
             pass
+
+        # v1.5.391: 예비자교리 관리 — 차수·참여자·사진 3테이블
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS catechumen_classes (
+                id SERIAL PRIMARY KEY,
+                round_no INTEGER,
+                start_date DATE,
+                baptism_at TIMESTAMP,
+                apply_open BOOLEAN NOT NULL DEFAULT FALSE,
+                apply_start_date DATE,
+                apply_note TEXT,
+                note TEXT,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS catechumen_members (
+                id SERIAL PRIMARY KEY,
+                class_id INTEGER NOT NULL REFERENCES catechumen_classes(id) ON DELETE CASCADE,
+                member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+                name VARCHAR(100),
+                baptismal_name VARCHAR(100),
+                baptized_at DATE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_catechumen_members_class ON catechumen_members(class_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_catechumen_members_member ON catechumen_members(member_id)"
+        ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS catechumen_photos (
+                id SERIAL PRIMARY KEY,
+                class_id INTEGER NOT NULL REFERENCES catechumen_classes(id) ON DELETE CASCADE,
+                category VARCHAR(50) NOT NULL,
+                file_url VARCHAR(500) NOT NULL,
+                alt VARCHAR(200),
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_catechumen_photos_class ON catechumen_photos(class_id)"
+        ))
 
         # 여기서 한 번 commit — ALTER 와 backfill 을 분리해 backfill 의 SQL 오류가 ALTER 를 막지 않게.
         conn.commit()
