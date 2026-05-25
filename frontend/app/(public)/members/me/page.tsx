@@ -113,7 +113,8 @@ export default function MypagePage() {
       setComments(Array.isArray(cs) ? cs : []);
       setInterestCount(Array.isArray(ints?.groups) ? ints.groups.length : 0);
       setUnreadCount(typeof unread?.count === "number" ? unread.count : 0);
-      setPrayers(Array.isArray(prs) ? prs : []);
+      // /api/content/prayers 는 {items:[...]} 페이지네이션 객체를 반환
+      setPrayers(Array.isArray(prs?.items) ? prs.items : Array.isArray(prs) ? prs : []);
       const merged: EventItem[] = [];
       const seen = new Set<number>();
       for (const arr of [ev1, ev2]) {
