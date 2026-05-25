@@ -206,7 +206,9 @@ html {
 body {
   background: var(--color-background);
   color: var(--color-text);
-  font-family: var(--font-sans);
+  /* --font-body 기본=Noto Sans, 시안 스킨(editorial/dashboard/construction)에선
+     Pretendard Variable 로 오버라이드됨 → 시안 스킨일 때 전 페이지 본문이 Pretendard. */
+  font-family: var(--font-body);
   line-height: 1.6; /* 본문 행간 — 조밀하지만 답답하지 않게 */
   letter-spacing: -0.005em;
   word-break: keep-all;
@@ -1309,6 +1311,27 @@ h1, h2, h3, h4, h5, h6 {
 [data-skin="editorial"] .font-serif,
 [data-skin="dashboard"] .font-serif,
 [data-skin="construction"] .font-serif { font-family: var(--font-display); letter-spacing: -0.02em; }
+
+/* ── 시안 스킨: body 전역 타이포를 시안(tokens.css)과 일치 ──
+   font-family 는 위 body 룰의 var(--font-body)(=Pretendard) 가 담당.
+   여기선 한글 장평(palt)·시안 본문 자간(-0.01em)만 추가 → meditation 과 동일한 글꼴 느낌을 전 페이지로. */
+[data-skin="editorial"] body,
+[data-skin="dashboard"] body,
+[data-skin="construction"] body {
+  font-feature-settings: 'palt';
+  letter-spacing: -0.01em;
+}
+
+/* ── 본문(긴 글) 양쪽맞춤 — 시안 스킨 한정.
+   .prose = MarkdownContent(게시판·공지·주보·vision 등), .med-body = 묵상 본문. */
+[data-skin="editorial"] .prose p,
+[data-skin="dashboard"] .prose p,
+[data-skin="construction"] .prose p,
+[data-skin="editorial"] .med-body p,
+[data-skin="dashboard"] .med-body p,
+[data-skin="construction"] .med-body p {
+  text-align: justify;
+}
 
 /* 게시판 고정(핀) 뱃지 — 시안 스킨에선 amber 대신 와인 톤으로 통일 */
 [data-skin="editorial"] .pin-amber,

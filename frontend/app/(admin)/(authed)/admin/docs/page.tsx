@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.365";
+export const CURRENT_VERSION = "1.5.366";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.366", date: "2026-05-25", tag: "디자인", items: ["시안 스킨일 때 전 페이지 본문을 묵상 기준으로 통일 — body 전역 Pretendard(var(--font-body)) + 한글 장평(palt) + 자간 -0.01em", "본문(.prose·.med-body) 양쪽맞춤(justify) 적용 — 게시판·공지·주보·vision·묵상"] },
   { version: "1.5.365", date: "2026-05-25", tag: "디자인", items: ["시안 원본 폰트 'Pretendard Variable' 로드 (정적→가변, dynamic-subset 으로 사용 글리프만 on-demand) — 시안과 굵기·장평 픽셀 단위로 일치"] },
   { version: "1.5.364", date: "2026-05-25", tag: "디자인", items: ["묵상 본문 글꼴 장평을 시안과 일치 — .med-article 에 font-feature-settings:'palt' 적용(한글·문장부호 비례폭으로 조밀하게)"] },
   { version: "1.5.363", date: "2026-05-25", tag: "디자인", items: ["행사 일정(/calendar)을 시안과 정밀 재현 — date-nav pill·다크 뷰스위치(월주일목록)·카테고리 칩(점+카운트)·월그리드 소프트 이벤트칩·목록/일/주뷰·다가오는 일정 카드 + 모바일 미니캘린더·선택일 상세", "행사 카테고리 7종(행사·모임·봉사·순례·피정·강의·기타) 색 토큰 신설 + admin 구분 드롭다운 확장"] },
