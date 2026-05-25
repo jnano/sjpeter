@@ -209,7 +209,7 @@ export default async function SearchPage({
   ]);
   const totalPages = Math.ceil(data.total / LIMIT);
   const massRows = parishMass?.mass_schedule?.entries
-    ? buildMassRows(parishMass.mass_schedule.entries)
+    ? buildMassRows(parishMass.mass_schedule.entries, { groupSameTime: false })
     : [];
 
   return (

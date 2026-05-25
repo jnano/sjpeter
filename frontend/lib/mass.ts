@@ -33,8 +33,14 @@ export function formatTimesRow(times: string[]): string {
   return [...am, ...pm].join(", ");
 }
 
-// [{day, time, note}] 항목들을 "주일 / 평일(혹은 요일별) / 토요일" 행 배열로
-export function buildMassRows(entries: MassEntry[]): { label: string; value: string }[] {
+// [{day, time, note}] 항목들을 "주일 / 평일(혹은 요일별) / 토요일" 행 배열로.
+// groupSameTime=true(기본): 같은 시간을 가진 평일끼리 한 행으로 묶음(예: "화·목" → 19시 30분).
+// groupSameTime=false: 평일을 요일별 개별 행으로 표시(주일/검색 결과 등 묶기 제외 페이지용).
+export function buildMassRows(
+  entries: MassEntry[],
+  options: { groupSameTime?: boolean } = {},
+): { label: string; value: string }[] {
+  const { groupSameTime = true } = options;
   const rows: { label: string; value: string }[] = [];
 
   const sunday = entries.filter((e) => e.day === "주일").map((e) => e.time);
@@ -52,9 +58,22 @@ export function buildMassRows(entries: MassEntry[]): { label: string; value: str
     const allSame = wdKeys.every((d) => JSON.stringify(wdMap[d]) === first);
     if (allSame) {
       rows.push({ label: "평일", value: formatTimesRow(wdMap[wdKeys[0]]) });
-    } else {
+    } else if (!groupSameTime) {
       for (const day of wdKeys) {
         rows.push({ label: SHORT[day], value: formatTimesRow(wdMap[day]) });
+      }
+    } else {
+      // 같은 시간 패턴을 가진 평일끼리 묶어 한 행으로 (첫 등장 요일 순서 유지)
+      const seen = new Set<string>();
+      for (const day of wdKeys) {
+        const key = JSON.stringify(wdMap[day]);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const sameDays = wdKeys.filter((d) => JSON.stringify(wdMap[d]) === key);
+        rows.push({
+          label: sameDays.map((d) => SHORT[d]).join("·"),
+          value: formatTimesRow(wdMap[day]),
+        });
       }
     }
   }

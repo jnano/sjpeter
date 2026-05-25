@@ -76,8 +76,17 @@ function buildMassRows(entries: MassEntry[]): { label: string; value: string }[]
     if (allSame) {
       rows.push({ label: "평일", value: formatTimesRow(wdMap[wdKeys[0]]) });
     } else {
+      // 같은 시간 패턴을 가진 평일끼리 묶어 한 행으로 (예: "화·목" → 오후 7시 30분)
+      const seen = new Set<string>();
       for (const day of wdKeys) {
-        rows.push({ label: SHORT[day], value: formatTimesRow(wdMap[day]) });
+        const key = JSON.stringify(wdMap[day]);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const sameDays = wdKeys.filter((d) => JSON.stringify(wdMap[d]) === key);
+        rows.push({
+          label: sameDays.map((d) => SHORT[d]).join("·"),
+          value: formatTimesRow(wdMap[day]),
+        });
       }
     }
   }
