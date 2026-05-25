@@ -276,37 +276,21 @@ export default async function BoardPage({
           </div>
         )}
 
-        {/* 게시판 자체 검색 + 정렬 */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* 게시판 검색 + 정렬 + 보기 토글 (시안 board.html toolbar) */}
+        <div className="bd-toolbar">
           {board.show_search_form && (
-            <form action={`/boards/${slug}`} method="get" role="search" className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <form action={`/boards/${slug}`} method="get" role="search" className="flex gap-2 flex-1 min-w-[220px]">
               {currentView !== kindDefault && <input type="hidden" name="view" value={currentView} />}
               {sort !== "latest" && <input type="hidden" name="sort" value={sort} />}
               {category && <input type="hidden" name="category" value={category} />}
-              <input
-                type="search"
-                name="q"
-                defaultValue={q}
-                placeholder="제목·본문 검색"
-                className="flex-1 min-w-0 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[var(--color-primary)]"
-              />
-              {q && (
-                <Link
-                  href={`/boards/${slug}${currentView !== kindDefault ? `?view=${currentView}` : ""}`}
-                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
-                >
-                  지우기
-                </Link>
-              )}
-              <button
-                type="submit"
-                className="text-xs bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
-              >
-                검색
-              </button>
+              <span className="bd-search">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="5" /><line x1="11" y1="11" x2="14" y2="14" strokeLinecap="round" /></svg>
+                <input type="search" name="q" defaultValue={q} placeholder="제목·본문 검색" />
+              </span>
+              <button type="submit" className="bd-search-go">검색</button>
             </form>
           )}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="bd-segor" role="group" aria-label="정렬">
             {SORT_OPTIONS.map((o) => {
               const qp = new URLSearchParams();
               if (q) qp.set("q", q);
@@ -314,61 +298,31 @@ export default async function BoardPage({
               if (category) qp.set("category", category);
               if (o.value !== "latest") qp.set("sort", o.value);
               const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
-              const active = sort === o.value;
-              return (
-                <Link
-                  key={o.value}
-                  href={href}
-                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-                    active
-                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                      : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
-                  }`}
-                >
-                  {o.label}
-                </Link>
-              );
+              return <Link key={o.value} href={href} className={sort === o.value ? "on" : ""}>{o.label}</Link>;
             })}
           </div>
-          {/* 뷰 형식 토글 — admin이 켠 뷰가 2개 이상일 때만 표시.
-              1개 이하면 선택지가 없으므로 토글 자체를 숨김 (UI 노이즈 제거). */}
           {activeViews.length >= 2 && (
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="bd-segview" role="group" aria-label="보기 형식">
               {activeViews.map((o) => {
                 const qp = new URLSearchParams();
                 if (q) qp.set("q", q);
                 if (sort !== "latest") qp.set("sort", sort);
                 if (category) qp.set("category", category);
-                // 게시판 kind 의 default 뷰가 아닐 때만 view 파라미터 명시.
-                // v1.5.334: kind='gallery' 의 default 는 'photo' 라, '목록' 클릭 시
-                //   view 파라미터를 빼면 default(photo) 로 돌아가 목록 진입 불가했음.
                 if (o.value !== kindDefault) qp.set("view", o.value);
                 const href = `/boards/${slug}${qp.toString() ? `?${qp}` : ""}`;
-                const active = currentView === o.value;
-                return (
-                  <Link
-                    key={o.value}
-                    href={href}
-                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-                      active
-                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                        : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
-                    }`}
-                  >
-                    {o.label}
-                  </Link>
-                );
+                return <Link key={o.value} href={href} className={currentView === o.value ? "on" : ""}>{o.label}</Link>;
               })}
             </div>
           )}
         </div>
 
         {/* 검색 결과 카운트 */}
-        {q && (
-          <p className="text-xs text-[var(--color-text-muted)] mb-3">
-            <span className="text-[var(--color-primary)] font-medium">&ldquo;{q}&rdquo;</span> 검색 결과 {postList.total}건
-          </p>
-        )}
+        <div className="bd-meta">
+          <span className="count">
+            {q && <span className="text-[var(--color-primary)] font-medium">&ldquo;{q}&rdquo; </span>}
+            {q ? "검색 결과 " : "전체 "}<b>{postList.total}</b>건
+          </span>
+        </div>
 
         <BoardList
           posts={postList.posts}

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.376";
+export const CURRENT_VERSION = "1.5.377";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.377", date: "2026-05-25", tag: "디자인", items: ["게시판 목록을 시안(board.html)으로 재현 — 검색 pill·분절 정렬/보기 토글·전체 N건 메타·목록(테두리 테이블)·카드·사진 그리드 3뷰·페이지네이션. 기능(정렬·뷰·페이지·고정·AI·동영상·작성자·조회) 유지"] },
   { version: "1.5.376", date: "2026-05-25", tag: "디자인", items: ["사목 지표(/vision)를 시안(pastoral.html)으로 재현 — statement-hero(와인 카드·연도·모토·주임신부 pill)·번호 카드(본문 ## ~ #### 섹션 자동 파싱)·맺음 성구(> 인용)·역대 아카이브"] },
   { version: "1.5.375", date: "2026-05-25", tag: "디자인", items: ["기도문 상세를 시안(prayer-detail.html)으로 재현 — 카테고리 pill·대형 제목·기반 성서·대형 본문(빈 줄 단위 단 번호·아멘 분리)·관련 기도·이전다음. 액션바: 저장(localStorage)·글자크기·음성 듣기(TTS)·인쇄·공유"] },
   { version: "1.5.374", date: "2026-05-25", tag: "디자인", items: ["기도문 목록을 시안(prayer.html)으로 재현 — 오늘 추천 기도(today-highlight) 배너·카테고리 칩(점+카운트)·검색·카테고리 그룹 카드(좌측 컬러 보더·성서 출처·저장(localStorage)·공유). 기존 8 카테고리에 시안 색 매핑"] },

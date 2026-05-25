@@ -164,60 +164,26 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
 }
 
 function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
-  // kind='default' 게시판의 표준 글 목록 — 한 줄 텍스트 리스트.
-  // 사진 그리드가 필요하면 board.kind='gallery' 로 두고 /gallery/{slug} 사용.
+  // 시안 board.html list-table — 테두리 카드 + grid 행.
   return (
-    <div className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+    <div className="bd-table">
       {posts.map((post, i) => (
-        <Link
-          key={post.id}
-          href={hrefFor(post.id)}
-          className="flex items-baseline justify-between gap-3 py-3.5 group hover:text-[var(--color-primary)] transition-colors"
-        >
-          <span className="flex items-baseline gap-1.5 flex-1 min-w-0">
-            {cols.list_show_number && (
-              <span className="text-xs text-[var(--color-text-muted)] tabular-nums shrink-0">
-                {posts.length - i}
-              </span>
-            )}
-            {post.is_pinned && (
-              <span className="text-[10px] px-1.5 py-0.5 pin-amber bg-amber-100 text-amber-700 border border-amber-300 rounded shrink-0 font-semibold" title="상단 고정">
-                📌 고정
-              </span>
-            )}
+        <Link key={post.id} href={hrefFor(post.id)} className="bd-row">
+          <span className={`no ${post.is_pinned ? "pin" : ""}`}>
+            {post.is_pinned ? "고정" : cols.list_show_number ? posts.length - i : ""}
+          </span>
+          <span className="title-cell">
             {!post.member && <AiBadge />}
-            <span className={`font-medium text-[var(--color-text)] truncate group-hover:underline ${post.is_pinned ? "font-semibold" : ""}`}>
-              {post.title}
-            </span>
-            {cols.list_show_comments && post.comment_count > 0 && (
-              <span className="text-xs text-[var(--color-primary)] shrink-0">
-                [{post.comment_count}]
-              </span>
-            )}
-            {post.thumbnail_url && (
-              <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
-            )}
+            <span className="ttl">{post.title}</span>
+            {cols.list_show_comments && post.comment_count > 0 && <span className="cmt">{post.comment_count}</span>}
+            {post.thumbnail_url && <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>}
             {post.has_video && <VideoBadge inline />}
           </span>
-          <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
-            {cols.list_show_date && (
-              <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
-            )}
-            {cols.list_show_views && (
-              <span className="hidden sm:inline">조회 {post.view_count}</span>
-            )}
-            {cols.list_show_likes && (
-              <span className="hidden sm:inline" title="좋아요">♡ {post.like_count ?? 0}</span>
-            )}
-            {cols.list_show_shares && cols.share_enabled && (
-              <span className="hidden sm:inline" title="공유">🔗 {post.share_count ?? 0}</span>
-            )}
-            {cols.list_show_author && (
-              <span className="hidden sm:inline-flex">
-                <AuthorChip author={post.member} nameFirst />
-              </span>
-            )}
-          </div>
+          {cols.list_show_author ? <span className="author"><AuthorChip author={post.member} nameFirst /></span> : <span />}
+          {cols.list_show_views ? <span className="views">조회 {post.view_count}</span> : <span />}
+          {cols.list_show_date ? (
+            <span className="date">{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
+          ) : <span />}
         </Link>
       ))}
     </div>
@@ -227,125 +193,71 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
 // 카드 뷰 — admin 글 관리 패널의 행 디자인 차용. 체크박스·관리 액션 제거.
 // 좌측 썸네일, 가운데 제목+메타(날짜·댓글·조회·좋아요), 우측 작성자(아바타+닉네임).
 function CardView({ posts, slug: _slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
+  // 시안 board.html card-row — 썸네일 + 제목/메타 + 우측 통계.
   return (
-    <ul className="space-y-1.5">
+    <div className="bd-cards">
       {posts.map((post) => {
-        const dateLabel = new Date(post.created_at).toLocaleDateString("ko-KR");
         const metaParts: string[] = [];
-        if (cols.list_show_date) metaParts.push(dateLabel);
+        if (cols.list_show_date) metaParts.push(new Date(post.created_at).toLocaleDateString("ko-KR"));
         if (cols.list_show_comments && post.comment_count > 0) metaParts.push(`댓글 ${post.comment_count}`);
         if (cols.list_show_views) metaParts.push(`조회 ${post.view_count}`);
-        if (cols.list_show_likes) metaParts.push(`♡ ${post.like_count ?? 0}`);
-        if (cols.list_show_shares && cols.share_enabled) metaParts.push(`🔗 ${post.share_count ?? 0}`);
-        const metaText = metaParts.join(" · ");
         return (
-          <li
-            key={post.id}
-            className="bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 hover:border-[var(--color-primary)] transition-colors"
-          >
-            <Link href={hrefFor(post.id)} className="flex items-center gap-3 hover:text-[var(--color-primary)]">
+          <Link key={post.id} href={hrefFor(post.id)} className="bd-card">
+            <span className="thumb">
               {post.thumbnail_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={`${API}${post.thumbnail_url}`} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
-              ) : (
-                <span className="w-10 h-10 flex items-center justify-center bg-[var(--color-surface-warm)] rounded shrink-0 text-base">
-                  {post.has_video ? "🎬" : "📄"}
-                </span>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium flex items-center gap-1.5 min-w-0">
-                  {post.is_pinned && (
-                    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 pin-amber bg-amber-100 text-amber-700 border border-amber-300 rounded font-semibold shrink-0">
-                      📌 고정
-                    </span>
-                  )}
-                  {!post.member && <AiBadge />}
-                  <span className="truncate">{post.title}</span>
-                  {cols.list_show_comments && post.comment_count > 0 && (
-                    <span className="text-[var(--color-primary)] text-xs shrink-0">[{post.comment_count}]</span>
-                  )}
-                  {post.thumbnail_url && (
-                    <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
-                  )}
-                  {post.has_video && <VideoBadge inline />}
-                </div>
-                {metaText && (
-                  <div className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
-                    {metaText}
-                  </div>
-                )}
+                <img src={`${API}${post.thumbnail_url}`} alt="" />
+              ) : (post.has_video ? "🎬" : "📄")}
+            </span>
+            <div className="body">
+              <h3>
+                {post.is_pinned && <span className="bg-[var(--color-primary)] text-white text-[10px] px-1.5 py-0.5 rounded shrink-0 font-bold">고정</span>}
+                {!post.member && <AiBadge />}
+                <span className="ttl">{post.title}</span>
+                {cols.list_show_comments && post.comment_count > 0 && <span className="cmt">{post.comment_count}</span>}
+                {post.has_video && <VideoBadge inline />}
+              </h3>
+              <div className="meta">
+                {cols.list_show_author && <AuthorChip author={post.member} nameFirst />}
+                {cols.list_show_author && metaParts.length > 0 && <span className="text-[var(--color-border-dark)]">·</span>}
+                {metaParts.join(" · ")}
               </div>
-              {cols.list_show_author && (
-                <div className="text-xs text-[var(--color-text-muted)] shrink-0">
-                  <AuthorChip author={post.member} size="md" nameFirst />
-                </div>
-              )}
-            </Link>
-          </li>
+            </div>
+            <div className="right-side">
+              {cols.list_show_likes && <span title="좋아요">♡ {post.like_count ?? 0}</span>}
+              {cols.list_show_shares && cols.share_enabled && <span title="공유">🔗 {post.share_count ?? 0}</span>}
+            </div>
+          </Link>
         );
       })}
-    </ul>
+    </div>
   );
 }
 
 function PhotoView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
+  // 시안 board.html photo grid — 4열(모바일 2열) 사진 카드.
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <div className="bd-photo">
       {posts.map((post) => (
-        <Link
-          key={post.id}
-          href={hrefFor(post.id)}
-          className="group rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all"
-        >
-          {post.thumbnail_url ? (
-            <div className="relative w-full aspect-square">
-              <Image
-                src={`${API}${post.thumbnail_url}`}
-                alt={post.title}
-                fill
-                className="object-cover group-hover:opacity-90 transition-opacity"
-                sizes="(max-width: 640px) 50vw, 33vw"
-              />
-              {post.has_video && (
-                <span
-                  className="absolute top-2 right-2 inline-flex items-center gap-0.5 bg-rose-500/95 text-white text-xs px-2 py-0.5 rounded-full shadow-md animate-pulse"
-                  title="동영상 포함"
-                >
-                  <span className="text-[10px]">✨</span>
-                  <span>🎬</span>
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="w-full aspect-square bg-gray-100 flex items-center justify-center relative">
-              {post.has_video ? (
-                <span className="text-3xl animate-pulse" title="동영상 포함">🎬</span>
-              ) : (
-                <span className="text-3xl text-gray-300">📄</span>
-              )}
-            </div>
-          )}
-          <div className="px-3 py-2.5">
-            <p className="text-sm font-medium truncate group-hover:text-[var(--color-primary)]">
-              {post.is_pinned && (
-                <span className="mr-1 text-amber-600" title="상단 고정">📌</span>
-              )}
-              {post.title}
-              {cols.list_show_comments && post.comment_count > 0 && (
-                <span className="ml-1 text-xs text-[var(--color-primary)]">
-                  [{post.comment_count}]
-                </span>
-              )}
-            </p>
-            {(cols.list_show_author || cols.list_show_date) && (
-              <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] mt-1">
-                {cols.list_show_author && <AuthorChip author={post.member} />}
-                {cols.list_show_author && cols.list_show_date && <span>·</span>}
-                {cols.list_show_date && (
-                  <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
-                )}
-              </div>
+        <Link key={post.id} href={hrefFor(post.id)} className="bd-pcard">
+          <div className="thumb">
+            {post.thumbnail_url ? (
+              <Image src={`${API}${post.thumbnail_url}`} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+            ) : (post.has_video ? "🎬" : "📄")}
+            {post.has_video && post.thumbnail_url && (
+              <span className="absolute top-2 right-2 inline-flex items-center gap-0.5 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full" title="동영상 포함">🎬</span>
             )}
+          </div>
+          <div className="info">
+            <h3>
+              {post.is_pinned && <span className="mr-1 text-[var(--color-primary)]" title="상단 고정">📌</span>}
+              {post.title}
+              {cols.list_show_comments && post.comment_count > 0 && <span className="cmt ml-1 text-[var(--color-primary)] text-xs">[{post.comment_count}]</span>}
+            </h3>
+            <div className="pmeta">
+              {cols.list_show_author ? <span><AuthorChip author={post.member} /></span> : <span />}
+              {cols.list_show_date && <span>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>}
+            </div>
           </div>
         </Link>
       ))}
@@ -373,46 +285,22 @@ function Pagination({
   const pages = getPaginationRange(currentPage, totalPages);
 
   return (
-    <div className="flex items-center justify-center gap-1 mt-8">
-      <Link
-        href={pageUrl(slug, Math.max(1, currentPage - 1), view, q, sort, category)}
-        aria-disabled={currentPage === 1}
-        className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
-          currentPage === 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
-        }`}
-      >
-        ‹
-      </Link>
-
+    <div className="bd-page">
+      {currentPage > 1 && (
+        <Link href={pageUrl(slug, currentPage - 1, view, q, sort, category)} aria-label="이전">‹</Link>
+      )}
       {pages.map((p, i) =>
         p === "…" ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-sm text-[var(--color-text-muted)]">
-            …
-          </span>
+          <span key={`ellipsis-${i}`} className="gap text-[var(--color-text-muted)]">…</span>
+        ) : p === currentPage ? (
+          <span key={p} className="cur" aria-current="page">{p}</span>
         ) : (
-          <Link
-            key={p}
-            href={pageUrl(slug, p, view, q, sort, category)}
-            className={`w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors ${
-              p === currentPage
-                ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                : "border-[var(--color-border)] hover:bg-gray-50"
-            }`}
-          >
-            {p}
-          </Link>
+          <Link key={p} href={pageUrl(slug, p, view, q, sort, category)}>{p}</Link>
         )
       )}
-
-      <Link
-        href={pageUrl(slug, Math.min(totalPages, currentPage + 1), view, q, sort, category)}
-        aria-disabled={currentPage === totalPages}
-        className={`px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border)] transition-colors ${
-          currentPage === totalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-50"
-        }`}
-      >
-        ›
-      </Link>
+      {currentPage < totalPages && (
+        <Link href={pageUrl(slug, currentPage + 1, view, q, sort, category)} aria-label="다음">›</Link>
+      )}
     </div>
   );
 }
