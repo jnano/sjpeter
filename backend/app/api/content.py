@@ -8,9 +8,13 @@ from typing import Optional
 from datetime import date, datetime
 from app.core.admin_log import get_admin_identifier, log_action
 from app.core.database import get_db
-from app.core.auth import get_current_admin
+from app.core.auth import get_current_admin, get_current_member, get_optional_member
 from app.core.config import settings
-from app.models.content import HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember, Prayer
+from app.models.content import (
+    HistoryItem, Vision, CommunityGroup, StaticPage, Meditation, CouncilMember, Prayer,
+    MeditationReaction, MeditationBookmark,
+)
+from sqlalchemy import func
 from app.models.menu import MenuItem
 from app.models.admin import Admin
 
@@ -934,6 +938,103 @@ def delete_meditation(item_id: int, db: Session = Depends(get_db), admin: Admin 
     db.delete(item)
     db.commit()
     log_action(db, get_admin_identifier(admin), "delete_meditation", "meditation", item_id, snapshot)
+
+
+# ─── Meditation 반응(은혜로워요/되새겨요) · 저장(북마크) ──────────
+_REACTION_KINDS = {"grace", "reflect"}  # grace=은혜로워요, reflect=되새겨요
+
+
+class MeditationReactionsOut(BaseModel):
+    grace: int
+    reflect: int
+    my_grace: bool
+    my_reflect: bool
+    bookmarked: bool
+
+
+def _reaction_state(db: Session, meditation_id: int, member_id: Optional[int]) -> MeditationReactionsOut:
+    counts = dict(
+        db.query(MeditationReaction.kind, func.count(MeditationReaction.id))
+        .filter(MeditationReaction.meditation_id == meditation_id)
+        .group_by(MeditationReaction.kind)
+        .all()
+    )
+    mine: set[str] = set()
+    bookmarked = False
+    if member_id is not None:
+        mine = {
+            r[0] for r in db.query(MeditationReaction.kind).filter(
+                MeditationReaction.meditation_id == meditation_id,
+                MeditationReaction.member_id == member_id,
+            ).all()
+        }
+        bookmarked = db.query(MeditationBookmark.id).filter(
+            MeditationBookmark.meditation_id == meditation_id,
+            MeditationBookmark.member_id == member_id,
+        ).first() is not None
+    return MeditationReactionsOut(
+        grace=int(counts.get("grace", 0)),
+        reflect=int(counts.get("reflect", 0)),
+        my_grace="grace" in mine,
+        my_reflect="reflect" in mine,
+        bookmarked=bookmarked,
+    )
+
+
+@router.get("/meditations/{item_id}/reactions", response_model=MeditationReactionsOut)
+def get_meditation_reactions(
+    item_id: int,
+    db: Session = Depends(get_db),
+    member=Depends(get_optional_member),
+):
+    """반응 카운트 + (로그인 시) 내 반응·저장 상태. 비회원도 카운트는 조회 가능."""
+    return _reaction_state(db, item_id, getattr(member, "id", None))
+
+
+@router.post("/meditations/{item_id}/reactions/{kind}", response_model=MeditationReactionsOut)
+def toggle_meditation_reaction(
+    item_id: int,
+    kind: str,
+    db: Session = Depends(get_db),
+    member=Depends(get_current_member),
+):
+    """반응 토글 — 회원만. 같은 종류 재요청 시 취소(UNIQUE 제약)."""
+    if kind not in _REACTION_KINDS:
+        raise HTTPException(status_code=400, detail="알 수 없는 반응 종류입니다.")
+    if not db.query(Meditation.id).filter(Meditation.id == item_id).first():
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    existing = db.query(MeditationReaction).filter(
+        MeditationReaction.meditation_id == item_id,
+        MeditationReaction.member_id == member.id,
+        MeditationReaction.kind == kind,
+    ).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(MeditationReaction(meditation_id=item_id, member_id=member.id, kind=kind))
+    db.commit()
+    return _reaction_state(db, item_id, member.id)
+
+
+@router.post("/meditations/{item_id}/bookmark", response_model=MeditationReactionsOut)
+def toggle_meditation_bookmark(
+    item_id: int,
+    db: Session = Depends(get_db),
+    member=Depends(get_current_member),
+):
+    """저장(북마크) 토글 — 회원만."""
+    if not db.query(Meditation.id).filter(Meditation.id == item_id).first():
+        raise HTTPException(status_code=404, detail="묵상을 찾을 수 없습니다.")
+    existing = db.query(MeditationBookmark).filter(
+        MeditationBookmark.meditation_id == item_id,
+        MeditationBookmark.member_id == member.id,
+    ).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(MeditationBookmark(meditation_id=item_id, member_id=member.id))
+    db.commit()
+    return _reaction_state(db, item_id, member.id)
 
 
 # ─── Prayer ─────────────────────────────────────────────────

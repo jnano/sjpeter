@@ -136,3 +136,24 @@ class Meditation(Base):
     source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MeditationReaction(Base):
+    """묵상 반응 — kind: 'grace'(은혜로워요) | 'reflect'(되새겨요). 회원당 종류별 1회."""
+    __tablename__ = "meditation_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    meditation_id = Column(Integer, ForeignKey("meditations.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("members.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(16), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MeditationBookmark(Base):
+    """묵상 저장(북마크) — 회원당 묵상별 1회."""
+    __tablename__ = "meditation_bookmarks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    meditation_id = Column(Integer, ForeignKey("meditations.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("members.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

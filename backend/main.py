@@ -341,6 +341,34 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_member_community_interests_member ON member_community_interests(member_id)"
         ))
+
+        # 묵상 반응(은혜로워요/되새겨요) — kind: 'grace' | 'reflect', 회원당 종류별 1회 (v1.5.373)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS meditation_reactions (
+                id SERIAL PRIMARY KEY,
+                meditation_id INTEGER NOT NULL REFERENCES meditations(id) ON DELETE CASCADE,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                kind VARCHAR(16) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                UNIQUE (meditation_id, member_id, kind)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_meditation_reactions_med ON meditation_reactions(meditation_id)"
+        ))
+        # 묵상 저장(북마크) — 회원당 묵상별 1회
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS meditation_bookmarks (
+                id SERIAL PRIMARY KEY,
+                meditation_id INTEGER NOT NULL REFERENCES meditations(id) ON DELETE CASCADE,
+                member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+                UNIQUE (meditation_id, member_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_meditation_bookmarks_med ON meditation_bookmarks(meditation_id)"
+        ))
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_member_community_interests_group ON member_community_interests(community_group_id)"
         ))

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArticleTools from "@/components/ArticleTools";
+import MeditationReactions from "./MeditationReactions";
 
 export interface MeditationData {
   id: number;
@@ -111,6 +112,8 @@ export default function MeditationArticle({
           </div>
         </section>
       )}
+
+      <MeditationReactions meditationId={meditation.id} title={meditation.title} />
 
       {(prev || next) && (
         <nav className="med-prev-next">
