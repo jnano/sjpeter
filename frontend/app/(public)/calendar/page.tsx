@@ -897,8 +897,10 @@ export default function CalendarPage() {
               style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
               aria-hidden={collapsed ? true : undefined}
             >
-              <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
-              <div className="md:overflow-hidden">
+              {/* 토글을 sticky 안에 두어 스크롤 시 사진·메뉴와 함께 따라오게 함 (v1.5.368).
+                  overflow-hidden 이 SectionSidebar 자체 sticky 를 깨므로 이 wrapper 에 sticky 적용. */}
+              <div className="md:overflow-hidden md:sticky md:self-start md:top-44">
+                <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
                 <SectionSidebar
                   groupTitle={currentGroup.label}
                   imageSrc={currentGroup.sidebar_image_url ?? undefined}
