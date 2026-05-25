@@ -486,6 +486,8 @@ h1, h2, h3, h4, h5, h6 {
 .skin-dashboard .cal-grid .day.sun { color: var(--primary); font-weight: 600; }
 .skin-dashboard .cal-grid .day.today { background: var(--ink); color: #FFF; font-weight: 700; }
 .skin-dashboard .cal-grid .day.has::after { content:''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+/* 캘린더 위젯 테두리 제거 (요청) — 카드 배경/패딩은 유지 */
+.skin-dashboard .card.calendar-mini { border: none; }
 
 /* offering card */
 .skin-dashboard .offering { background: var(--ink); color: #FFF; border-color: var(--ink); }
@@ -1151,6 +1153,7 @@ h1, h2, h3, h4, h5, h6 {
 .skin-m-dashboard .offering-c .amt sub { font-size: 14px; font-weight: 600; opacity: 0.7; vertical-align: baseline; }
 .skin-m-dashboard .offering-c .amt-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 16px; }
 .skin-m-dashboard .offering-c .cta { display: block; text-align: center; padding: 12px; background: var(--accent); color: var(--ink); border-radius: 10px; font-size: 13px; font-weight: 600; }
+.skin-m-dashboard .card.cal-c { border: none; }
 .skin-m-dashboard .cal-c .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .skin-m-dashboard .cal-c .cal-month { font-size: 14px; font-weight: 700; }
 .skin-m-dashboard .cal-c .nav-mini { display: flex; gap: 4px; }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.380";
+export const CURRENT_VERSION = "1.5.381";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.381", date: "2026-05-25", tag: "디자인", items: ["대시보드 스킨 홈 캘린더 위젯(5월 행사)의 카드 외곽 테두리 제거 — 데스크탑(.calendar-mini)·모바일(.cal-c) 모두. 배경·패딩·날짜 그리드는 유지"] },
   { version: "1.5.380", date: "2026-05-25", tag: "디자인", items: ["마이페이지를 시안(mypage.html)으로 탭형 통합 — profile-hero(아바타·세례명 pill·관리자/로그아웃 액션)+5탭(대시보드·프로필편집·알림설정·알림함·내가쓴글). 대시보드: KPI 4종(글·댓글·관심분과·안읽은알림 다크카드)·최근활동 피드·저장한 기도(localStorage)·다가오는 행사·올해 활동 차트·계정 카드, 모두 실데이터. 편집/알림/알림함/내글 탭은 기존 페이지를 embedded prop 으로 재사용(단독 라우트 유지)"] },
   { version: "1.5.379", date: "2026-05-25", tag: "디자인", items: ["글쓰기 폼을 시안(board-write.html)으로 — '게시판 글 작성/글쓰기' 헤더·form 카드·라벨 필드(제목·카테고리·내용)·채워진 인풋·점선 업로드 영역·둥근 취소/등록 버튼. MarkdownEditor·파일 업로드 기능 보존"] },
   { version: "1.5.378", date: "2026-05-25", tag: "디자인", items: ["게시글 보기(PostDetail)를 시안(board-view.html)으로 — 제목·작성자·조회·도구 헤더 카드 + 본문/첨부 카드(art-head·art-body 연결). 추천·공유·목록·이전다음·댓글·관리자 액션 기능 보존"] },
