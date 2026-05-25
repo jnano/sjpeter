@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.363";
+export const CURRENT_VERSION = "1.5.364";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.364", date: "2026-05-25", tag: "디자인", items: ["묵상 본문 글꼴 장평을 시안과 일치 — .med-article 에 font-feature-settings:'palt' 적용(한글·문장부호 비례폭으로 조밀하게)"] },
   { version: "1.5.363", date: "2026-05-25", tag: "디자인", items: ["행사 일정(/calendar)을 시안과 정밀 재현 — date-nav pill·다크 뷰스위치(월주일목록)·카테고리 칩(점+카운트)·월그리드 소프트 이벤트칩·목록/일/주뷰·다가오는 일정 카드 + 모바일 미니캘린더·선택일 상세", "행사 카테고리 7종(행사·모임·봉사·순례·피정·강의·기타) 색 토큰 신설 + admin 구분 드롭다운 확장"] },
   { version: "1.5.362", date: "2026-05-25", tag: "수정", items: ["사이드바 '메뉴 접기' 펼침 토글을 시안 pill 모양으로"] },
   { version: "1.5.361", date: "2026-05-25", tag: "수정", items: ["묵상 본문·인용·실천 글꼴을 시안 Pretendard 로 통일 (Noto Sans 폴백 방지)"] },

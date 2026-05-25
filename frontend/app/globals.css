@@ -1332,7 +1332,7 @@ h1, h2, h3, h4, h5, h6 {
 .med-ph-sub { margin-top: 12px; font-size: 15px; color: var(--color-text-muted); }
 
 .med-layout { display: grid; grid-template-columns: 1fr 280px; gap: 56px; align-items: start; font-family: var(--font-display); }
-.med-article { max-width: 720px; }
+.med-article { max-width: 720px; font-feature-settings: 'palt'; }
 /* 본문·인용·실천 등 .med-* 전체를 시안 폰트(Pretendard)로 — 미지정 시 Noto Sans 로 떨어져 굵기·자간이 시안과 달라짐 */
 .med-body, .med-pull p, .med-pull cite, .med-practice, .med-verse, .med-art-meta, .med-recent { font-family: var(--font-display); }
 
