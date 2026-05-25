@@ -507,30 +507,27 @@ export default function PostDetail({
 
   return (
     <>
-      {/* 제목 + 메타 */}
-      <div className="mt-4 border-b border-[var(--color-border)] pb-6 mb-6 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-[var(--color-text)] mb-3">{post.title}</h1>
-          <div className="flex items-center text-sm text-[var(--color-text-muted)]">
-            <span className="flex items-center gap-1.5">
-              <Avatar author={post.member} size={20} />
-              {post.member?.nickname ?? "성당"} ·{" "}
-              {new Date(post.created_at).toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}{" "}
-              · 조회 {post.view_count}
+      {/* 제목 + 본문 — 시안 board-view art-head/art-body 연결 카드 */}
+      <div className="bv-arthead mt-4">
+        <h1>{post.title}</h1>
+        <div className="bv-metarow">
+          <span className="bv-author">
+            <Avatar author={post.member} size={36} />
+            <span className="who">
+              <b>{post.member?.nickname ?? "성당"}</b>
+              <span>{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</span>
             </span>
-          </div>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="bv-stats"><span>조회 {post.view_count}</span></span>
+            <ArticleTools />
+          </span>
         </div>
-        <ArticleTools className="mt-0.5" />
       </div>
 
       {/* 본문 */}
-      <div className="mb-8">
+      <div className="bv-artbody mb-6">
         <MarkdownContent content={post.content} size="base" />
-      </div>
 
       {/* 첨부파일 */}
       {post.attachments && post.attachments.length > 0 && (() => {
@@ -576,6 +573,7 @@ export default function PostDetail({
           </div>
         );
       })()}
+      </div>
 
       {/* 액션 바 — 권한별 노출:
           이동·복사: admin/운영자만

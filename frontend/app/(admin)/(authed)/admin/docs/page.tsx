@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.377";
+export const CURRENT_VERSION = "1.5.378";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.378", date: "2026-05-25", tag: "디자인", items: ["게시글 보기(PostDetail)를 시안(board-view.html)으로 — 제목·작성자·조회·도구 헤더 카드 + 본문/첨부 카드(art-head·art-body 연결). 추천·공유·목록·이전다음·댓글·관리자 액션 기능 보존"] },
   { version: "1.5.377", date: "2026-05-25", tag: "디자인", items: ["게시판 목록을 시안(board.html)으로 재현 — 검색 pill·분절 정렬/보기 토글·전체 N건 메타·목록(테두리 테이블)·카드·사진 그리드 3뷰·페이지네이션. 기능(정렬·뷰·페이지·고정·AI·동영상·작성자·조회) 유지"] },
   { version: "1.5.376", date: "2026-05-25", tag: "디자인", items: ["사목 지표(/vision)를 시안(pastoral.html)으로 재현 — statement-hero(와인 카드·연도·모토·주임신부 pill)·번호 카드(본문 ## ~ #### 섹션 자동 파싱)·맺음 성구(> 인용)·역대 아카이브"] },
   { version: "1.5.375", date: "2026-05-25", tag: "디자인", items: ["기도문 상세를 시안(prayer-detail.html)으로 재현 — 카테고리 pill·대형 제목·기반 성서·대형 본문(빈 줄 단위 단 번호·아멘 분리)·관련 기도·이전다음. 액션바: 저장(localStorage)·글자크기·음성 듣기(TTS)·인쇄·공유"] },
