@@ -755,6 +755,45 @@ def list_meditations_admin(page: int = 1, limit: int = 20, db: Session = Depends
     return {"items": items, "total": total}
 
 
+class MeditationBookmarkItemOut(BaseModel):
+    id: int
+    title: str
+    scripture: Optional[str] = None
+    author: Optional[str] = None
+    published_date: date
+    bookmarked_at: datetime
+
+
+@router.get("/meditations/bookmarked", response_model=list[MeditationBookmarkItemOut])
+def list_my_bookmarked_meditations(
+    db: Session = Depends(get_db),
+    member=Depends(get_current_member),
+):
+    """로그인 회원이 저장(북마크)한 묵상 목록 — 최근 저장순.
+
+    이 라우트는 /meditations/{item_id} 보다 먼저 등록되어야 한다: item_id 가 int 라
+    "bookmarked" 문자열 요청은 그 라우트에서 422 가 되고 다음 라우트로 폴백하지 않음.
+    """
+    rows = (
+        db.query(Meditation, MeditationBookmark.created_at)
+        .join(MeditationBookmark, MeditationBookmark.meditation_id == Meditation.id)
+        .filter(MeditationBookmark.member_id == member.id)
+        .order_by(desc(MeditationBookmark.created_at))
+        .all()
+    )
+    return [
+        MeditationBookmarkItemOut(
+            id=m.id,
+            title=m.title,
+            scripture=m.scripture,
+            author=m.author,
+            published_date=m.published_date,
+            bookmarked_at=created,
+        )
+        for m, created in rows
+    ]
+
+
 @router.get("/meditations/{item_id}", response_model=MeditationOut)
 def get_meditation(item_id: int, db: Session = Depends(get_db)):
     """공개 단일 묵상 조회 (아카이브 상세용).

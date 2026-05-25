@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.385";
+export const CURRENT_VERSION = "1.5.386";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.386", date: "2026-05-25", tag: "기능", items: ["마이페이지 '저장한 기도·묵상' 카드에 묵상 북마크 통합. 백엔드: GET /api/content/meditations/bookmarked(회원의 북마크 묵상 목록, 최근순) 추가. 프론트: localStorage 기도 + 서버 묵상을 합쳐 표시(묵상 먼저), 행마다 '기도'(골드)/'묵상'(전례색) 태그·좌측 컬러바, × 클릭 시 기도는 localStorage·묵상은 서버 토글로 해제"] },
   { version: "1.5.385", date: "2026-05-25", tag: "수정", items: ["마이페이지 대시보드 '저장한 기도·묵상'이 항상 비어 보이던 버그 수정 — /api/content/prayers 는 {items:[...]} 페이지네이션 객체를 반환하는데 배열로 처리해 0건이 됨. items 추출하도록 보정 (localStorage prayer-saved ↔ 기도문 매칭 정상화)"] },
   { version: "1.5.384", date: "2026-05-25", tag: "기능", items: ["'행사 일정' → '본당 일정' 명칭 일괄 변경: menu_items(DB)·정적페이지 시드·/calendar PageHeader/탭제목·마이페이지 링크·모바일 하단탭(행사→일정)·AI 추출 라우팅 라벨(event-mapping·drafts·boards 에러문구). 필터 칩의 '행사'(카테고리)는 의미가 달라 유지"] },
   { version: "1.5.383", date: "2026-05-25", tag: "수정", items: ["홈 대시보드 캘린더(5월 행사) 날짜 그리드 외곽선 제거 — 전역 .cal-grid(테두리) 규칙이 .skin-dashboard .cal-grid 로 새어 들어온 누수가 원인. skin 스코프에서 border/배경 명시적으로 리셋"] },

@@ -34,8 +34,10 @@ interface MyComment {
   post_id: number; post_title: string; board_slug: string;
 }
 interface PrayerItem { id: number; title: string; category: string; scripture: string | null; }
+interface MedBookmark { id: number; title: string; scripture: string | null; author: string | null; published_date: string; bookmarked_at: string; }
 interface EventItem { id: number; title: string; event_date: string; end_date: string | null; start_time: string | null; location: string | null; event_kind: string | null; }
 
+type SavedItem = { kind: "기도" | "묵상"; id: number; title: string; ref: string; href: string };
 type TabKey = "dash" | "edit" | "notify" | "inbox" | "posts";
 const TAB_LABELS: Record<TabKey, string> = {
   dash: "대시보드", edit: "프로필 편집", notify: "관심 분과·콘텐츠 알림", inbox: "알림함", posts: "내가 쓴 글",
@@ -77,6 +79,7 @@ export default function MypagePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [prayers, setPrayers] = useState<PrayerItem[]>([]);
   const [savedIds, setSavedIds] = useState<number[]>([]);
+  const [medBookmarks, setMedBookmarks] = useState<MedBookmark[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -105,9 +108,10 @@ export default function MypagePage() {
       fetch(`${API}/api/members/me/interests`, { headers }).then(sj).catch(() => null),
       fetch(`${API}/api/members/me/notifications/unread-count`, { headers }).then(sj).catch(() => null),
       fetch(`${API}/api/content/prayers?limit=500`).then(sj).catch(() => null),
+      fetch(`${API}/api/content/meditations/bookmarked`, { headers }).then(sj).catch(() => null),
       fetch(`${API}/api/events/?year=${m1.split("-")[0]}&month=${m1.split("-")[1]}`).then(sj).catch(() => null),
       fetch(`${API}/api/events/?year=${m2.split("-")[0]}&month=${m2.split("-")[1]}`).then(sj).catch(() => null),
-    ]).then(([m, ps, cs, ints, unread, prs, ev1, ev2]) => {
+    ]).then(([m, ps, cs, ints, unread, prs, medbm, ev1, ev2]) => {
       if (m?.id) setMember(m);
       setPosts(Array.isArray(ps) ? ps : []);
       setComments(Array.isArray(cs) ? cs : []);
@@ -115,6 +119,7 @@ export default function MypagePage() {
       setUnreadCount(typeof unread?.count === "number" ? unread.count : 0);
       // /api/content/prayers 는 {items:[...]} 페이지네이션 객체를 반환
       setPrayers(Array.isArray(prs?.items) ? prs.items : Array.isArray(prs) ? prs : []);
+      setMedBookmarks(Array.isArray(medbm) ? medbm : []);
       const merged: EventItem[] = [];
       const seen = new Set<number>();
       for (const arr of [ev1, ev2]) {
@@ -153,10 +158,26 @@ export default function MypagePage() {
     return counts.map((c) => ({ c, h: Math.round((c / max) * 100) }));
   }, [posts]);
 
-  const savedPrayers = useMemo(
-    () => prayers.filter((p) => savedIds.includes(p.id)).slice(0, 5),
-    [prayers, savedIds],
-  );
+  // 저장한 기도(localStorage) + 묵상 북마크(서버) 통합 — 묵상(최근 저장순) 먼저, 기도 다음
+  const savedItems = useMemo(() => {
+    const meds: SavedItem[] = medBookmarks.map((m) => ({
+      kind: "묵상",
+      id: m.id,
+      title: m.title,
+      ref: m.author || m.published_date,
+      href: `/meditation/archive/${m.id}`,
+    }));
+    const prs: SavedItem[] = prayers
+      .filter((p) => savedIds.includes(p.id))
+      .map((p) => ({
+        kind: "기도",
+        id: p.id,
+        title: p.title,
+        ref: `${PRAYER_CATEGORY_LABELS[p.category as PrayerCategory] ?? p.category}${p.scripture ? ` · ${p.scripture}` : ""}`,
+        href: `/prayer/${p.id}`,
+      }));
+    return [...meds, ...prs].slice(0, 6);
+  }, [prayers, savedIds, medBookmarks]);
 
   const upcoming = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -170,6 +191,24 @@ export default function MypagePage() {
     const next = savedIds.filter((x) => x !== id);
     setSavedIds(next);
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(next)); } catch { /* 무시 */ }
+  }
+
+  // 묵상 북마크 해제 — 서버 토글 후 목록에서 제거
+  async function removeBookmarkMed(id: number) {
+    const token = session?.accessToken;
+    if (!token) return;
+    setMedBookmarks((prev) => prev.filter((m) => m.id !== id));
+    try {
+      await fetch(`${API}/api/content/meditations/${id}/bookmark`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch { /* 무시 — 다음 로드 시 정합성 회복 */ }
+  }
+
+  function removeSavedItem(it: SavedItem) {
+    if (it.kind === "기도") removeSaved(it.id);
+    else removeBookmarkMed(it.id);
   }
 
   function handleLogout() {
@@ -346,16 +385,16 @@ export default function MypagePage() {
                     <h2>저장한 기도·묵상</h2>
                     <Link href="/prayer" className="all">기도문 전체 →</Link>
                   </div>
-                  {savedPrayers.length === 0 ? (
-                    <p className="text-sm text-[var(--color-text-muted)] py-6 text-center">저장한 기도문이 없습니다. <Link href="/prayer" className="text-[var(--color-primary)] hover:underline">기도문 둘러보기</Link></p>
-                  ) : savedPrayers.map((pr) => (
-                    <div key={pr.id} className="mp-saved">
-                      <span className="bar" />
+                  {savedItems.length === 0 ? (
+                    <p className="text-sm text-[var(--color-text-muted)] py-6 text-center">저장한 기도·묵상이 없습니다. <Link href="/prayer" className="text-[var(--color-primary)] hover:underline">기도문</Link> · <Link href="/meditation" className="text-[var(--color-primary)] hover:underline">묵상</Link> 둘러보기</p>
+                  ) : savedItems.map((it) => (
+                    <div key={`${it.kind}-${it.id}`} className="mp-saved">
+                      <span className={`bar${it.kind === "묵상" ? " med" : ""}`} />
                       <div>
-                        <Link href={`/prayer/${pr.id}`} className="ttl block hover:underline">{pr.title}</Link>
-                        <div className="ref">{PRAYER_CATEGORY_LABELS[pr.category as PrayerCategory] ?? pr.category}{pr.scripture ? ` · ${pr.scripture}` : ""}</div>
+                        <Link href={it.href} className="ttl block hover:underline">{it.title}</Link>
+                        <div className="ref"><span className={`tag${it.kind === "묵상" ? " med" : ""}`}>{it.kind}</span>{it.ref ? ` ${it.ref}` : ""}</div>
                       </div>
-                      <button className="x" onClick={() => removeSaved(pr.id)} title="저장 해제">×</button>
+                      <button className="x" onClick={() => removeSavedItem(it)} title="저장 해제">×</button>
                     </div>
                   ))}
                 </article>

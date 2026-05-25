@@ -2050,8 +2050,11 @@ h1, h2, h3, h4, h5, h6 {
 .mp-saved { display: grid; grid-template-columns: 4px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .mp-saved:last-child { border-bottom: none; padding-bottom: 0; }
 .mp-saved .bar { background: var(--accent); align-self: stretch; border-radius: 4px; }
+.mp-saved .bar.med { background: var(--primary); }
 .mp-saved .ttl { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
 .mp-saved .ref { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.mp-saved .ref .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 100px; letter-spacing: 0.02em; margin-right: 4px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.mp-saved .ref .tag.med { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); }
 .mp-saved .x { color: var(--ink-3); font-size: 14px; background: none; border: none; cursor: pointer; }
 
 /* contribution chart */
