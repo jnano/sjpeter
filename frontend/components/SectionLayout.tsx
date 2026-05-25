@@ -138,6 +138,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
         {/* 사이드바 영역 — collapsed 시 width 0 + opacity 0 로 transition.
             접힘 시 펼치기 토글은 본문(아래 md:relative 컬럼)에서 sticky 로 렌더된다. */}
         <div
+          data-print-hide
           className={`shrink-0 md:relative md:transition-[width,opacity] md:duration-300 md:ease-out ${
             collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
           }`}

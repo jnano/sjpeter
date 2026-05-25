@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SectionLayout from "@/components/SectionLayout";
 import MarkdownContent from "@/components/MarkdownContent";
+import ArticleTools from "@/components/ArticleTools";
 import NoticeAdminActions from "./NoticeAdminActions";
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -66,36 +67,39 @@ export default async function NoticeDetailPage({
       <NoticeAdminActions noticeId={notice.id} />
 
       {/* 제목 영역 */}
-      <div className="border-b-2 border-[var(--color-primary)] pb-4 mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          {notice.is_pinned && (
-            <span className="text-xs px-2 py-0.5 bg-[var(--color-primary)] text-white rounded">
-              고정
+      <div className="border-b-2 border-[var(--color-primary)] pb-4 mb-6 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            {notice.is_pinned && (
+              <span className="text-xs px-2 py-0.5 bg-[var(--color-primary)] text-white rounded">
+                고정
+              </span>
+            )}
+            <span className="text-xs text-[var(--color-text-muted)]">공지·알림</span>
+          </div>
+          <h1 className="text-xl font-bold text-[var(--color-primary)] leading-snug">
+            {notice.title}
+          </h1>
+          <p className="text-xs text-[var(--color-text-muted)] mt-2 flex items-center gap-1.5">
+            <span>
+              {new Date(notice.created_at).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                weekday: "short",
+              })}
             </span>
-          )}
-          <span className="text-xs text-[var(--color-text-muted)]">공지·알림</span>
+            {notice.is_ai_generated && (
+              <span
+                className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 text-[10px] font-medium"
+                title="주보 PDF에서 AI가 추출한 공지입니다"
+              >
+                AI
+              </span>
+            )}
+          </p>
         </div>
-        <h1 className="text-xl font-bold text-[var(--color-primary)] leading-snug">
-          {notice.title}
-        </h1>
-        <p className="text-xs text-[var(--color-text-muted)] mt-2 flex items-center gap-1.5">
-          <span>
-            {new Date(notice.created_at).toLocaleDateString("ko-KR", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              weekday: "short",
-            })}
-          </span>
-          {notice.is_ai_generated && (
-            <span
-              className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-200 text-[10px] font-medium"
-              title="주보 PDF에서 AI가 추출한 공지입니다"
-            >
-              AI
-            </span>
-          )}
-        </p>
+        <ArticleTools className="mt-0.5" />
       </div>
 
       {/* 본문 — 마크다운 + 신뢰 콘텐츠 raw HTML 허용 (AI 출처 표기에 <span><small> 사용) */}

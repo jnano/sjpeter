@@ -891,6 +891,7 @@ export default function CalendarPage() {
         <div className="flex flex-col md:flex-row md:gap-10">
           {currentGroup && currentGroup.items.length > 0 && (
             <div
+              data-print-hide
               className={`shrink-0 md:relative md:transition-[width,opacity] md:duration-300 md:ease-out ${
                 collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
               }`}

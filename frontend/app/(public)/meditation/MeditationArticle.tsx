@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ArticleTools from "@/components/ArticleTools";
 
 export interface MeditationData {
   id: number;
@@ -58,6 +59,7 @@ export default function MeditationArticle({
           <b>{fmtDate(meditation.published_date)}</b>
           <span>Reading · {readingMin(meditation.body)} min</span>
         </div>
+        <ArticleTools divider />
       </div>
 
       {meditation.scripture && (() => {

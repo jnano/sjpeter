@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MarkdownContent from "@/components/MarkdownContent";
+import ArticleTools from "@/components/ArticleTools";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -507,20 +508,23 @@ export default function PostDetail({
   return (
     <>
       {/* 제목 + 메타 */}
-      <div className="mt-4 border-b border-[var(--color-border)] pb-6 mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)] mb-3">{post.title}</h1>
-        <div className="flex items-center text-sm text-[var(--color-text-muted)]">
-          <span className="flex items-center gap-1.5">
-            <Avatar author={post.member} size={20} />
-            {post.member?.nickname ?? "성당"} ·{" "}
-            {new Date(post.created_at).toLocaleDateString("ko-KR", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}{" "}
-            · 조회 {post.view_count}
-          </span>
+      <div className="mt-4 border-b border-[var(--color-border)] pb-6 mb-6 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] mb-3">{post.title}</h1>
+          <div className="flex items-center text-sm text-[var(--color-text-muted)]">
+            <span className="flex items-center gap-1.5">
+              <Avatar author={post.member} size={20} />
+              {post.member?.nickname ?? "성당"} ·{" "}
+              {new Date(post.created_at).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}{" "}
+              · 조회 {post.view_count}
+            </span>
+          </div>
         </div>
+        <ArticleTools className="mt-0.5" />
       </div>
 
       {/* 본문 */}
