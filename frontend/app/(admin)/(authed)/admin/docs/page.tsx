@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.366";
+export const CURRENT_VERSION = "1.5.367";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.367", date: "2026-05-25", tag: "수정", items: ["사이드바 sticky 상단 가림 해소 — 스크롤 시 헤더에 브레드크럼 띠가 생겨 높이가 ~158px로 커지는데 오프셋이 112px(top-28)이라 사진 상단이 가려지던 문제. top-44(176px)로 올려 헤더+띠 아래로 여백 확보"] },
   { version: "1.5.366", date: "2026-05-25", tag: "디자인", items: ["시안 스킨일 때 전 페이지 본문을 묵상 기준으로 통일 — body 전역 Pretendard(var(--font-body)) + 한글 장평(palt) + 자간 -0.01em", "본문(.prose·.med-body) 양쪽맞춤(justify) 적용 — 게시판·공지·주보·vision·묵상"] },
   { version: "1.5.365", date: "2026-05-25", tag: "디자인", items: ["시안 원본 폰트 'Pretendard Variable' 로드 (정적→가변, dynamic-subset 으로 사용 글리프만 on-demand) — 시안과 굵기·장평 픽셀 단위로 일치"] },
   { version: "1.5.364", date: "2026-05-25", tag: "디자인", items: ["묵상 본문 글꼴 장평을 시안과 일치 — .med-article 에 font-feature-settings:'palt' 적용(한글·문장부호 비례폭으로 조밀하게)"] },

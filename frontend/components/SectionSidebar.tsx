@@ -50,8 +50,9 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   const pathname = usePathname();
   const archiveCounts = useArchiveCounts();
 
-  // 사이드바는 스크롤을 따라 움직임 — 헤더(h-16=64px) 아래로 일정 여백을 두고 sticky.
-  // PopularCard(/search) 와 동일한 top-28(112px) 사용.
+  // 사이드바는 스크롤을 따라 움직임 — sticky 오프셋 top-44(176px).
+  // 스크롤 시 헤더에 브레드크럼 띠가 추가돼 sticky 헤더 높이가 ~155px(topbar+shell+띠)까지
+  // 커지므로, 그 아래로 ~20px 여백을 두어 사이드바 상단(사진)이 가려지지 않게 함.
   const asideRef = React.useRef<HTMLElement>(null);
   const filterArchive = (its: MenuItem[]): MenuItem[] =>
     its
@@ -219,7 +220,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
       // md+ 에서는 max-width 가 아니라 명시적 width 로 폭을 고정 — w-full + shrink-0 + max-w 조합이
       // flex item 직속/wrapper 끼움 두 환경에서 다르게 그려지는 문제(/calendar 자체 구현 vs SectionLayout)를
       // 회피한다. 모바일은 w-full 유지 (column 레이아웃에서 자연스러운 풀폭).
-      className="w-full shrink-0 md:w-[var(--sidebar-w)] md:sticky md:self-start md:top-28"
+      className="w-full shrink-0 md:w-[var(--sidebar-w)] md:sticky md:self-start md:top-44"
       style={{
         ["--sidebar-w" as string]: `${widthPx}px`,
         // overflow를 잡지 않음 — 자식 popup(absolute left-full)이 사이드바 박스를
