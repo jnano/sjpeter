@@ -1478,10 +1478,74 @@ h1, h2, h3, h4, h5, h6 {
   .pr-search .go { width: 100%; }
 }
 
+/* ── 기도문 상세 (시안 prayer-detail.html) ── */
+.pr-back { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text-muted); font-weight: 500; margin-bottom: 24px; }
+.pr-back:hover { color: var(--color-text); }
+.pr-back svg { width: 12px; height: 12px; }
+.pr-hero { display: flex; flex-direction: column; padding-bottom: 28px; border-bottom: 1px solid var(--color-text); margin-bottom: 48px; }
+.pr-catpill { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 18px; background: color-mix(in srgb, var(--pc, var(--color-primary)) 10%, transparent); color: var(--pc, var(--color-primary)); }
+.pr-catpill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pr-title { font-size: 44px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.15; text-wrap: balance; }
+.pr-metarow { margin-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.pr-scref { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.pr-scref .label { color: var(--color-text-muted); letter-spacing: 0.05em; text-transform: uppercase; font-size: 11px; font-weight: 600; }
+.pr-scref .ref { background: color-mix(in srgb, var(--color-primary) 6%, transparent); color: var(--color-primary); padding: 4px 10px; border-radius: 4px; font-weight: 700; letter-spacing: 0.02em; }
+.pr-actbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.pr-actbar button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 100px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pr-actbar button:hover { border-color: var(--color-text-muted); color: var(--color-text); }
+.pr-actbar button svg { width: 13px; height: 13px; }
+.pr-actbar button.heart.on { background: color-mix(in srgb, var(--color-primary) 6%, transparent); color: var(--color-primary); border-color: color-mix(in srgb, var(--color-primary) 20%, transparent); }
+.pr-actbar .icon-only { width: 36px; padding: 0; justify-content: center; }
+.pr-fontsize { display: inline-flex; align-items: center; border-radius: 100px; border: 1px solid var(--color-border); background: var(--color-surface); overflow: hidden; }
+.pr-fontsize button { border: 0; background: transparent; width: 32px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); padding: 0; }
+.pr-fontsize button:hover { color: var(--color-text); background: var(--color-background); }
+.pr-fontsize .sep { width: 1px; height: 18px; background: var(--color-border); }
+.pr-fontsize .s { font-size: 12px; font-weight: 700; }
+.pr-fontsize .l { font-size: 15px; font-weight: 700; }
+.pr-body { font-size: calc(22px * var(--reading-scale, 1)); line-height: 1.95; color: var(--color-text); letter-spacing: -0.012em; font-weight: 500; text-wrap: pretty; }
+.pr-body .stanza { padding: 18px 0; border-bottom: 1px dashed var(--color-border); display: grid; grid-template-columns: 32px 1fr; gap: 24px; align-items: start; }
+.pr-body .stanza:last-of-type { border-bottom: none; }
+.pr-body .stanza .n { font-size: 12px; font-weight: 700; color: var(--color-accent); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; padding-top: 10px; }
+.pr-body .stanza .lines p { margin-bottom: 6px; }
+.pr-body .stanza .lines p:last-child { margin-bottom: 0; }
+.pr-body .plain p { margin-bottom: 1.2em; }
+.pr-body .amen { text-align: right; font-size: calc(18px * var(--reading-scale, 1)); letter-spacing: 0.04em; color: var(--color-primary); font-weight: 700; padding-top: 24px; }
+.pr-body .amen::before { content: '✠'; display: inline-block; margin-right: 8px; color: var(--color-accent); font-weight: 400; }
+.pr-related { margin-top: 56px; }
+.pr-related .head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 16px; border-bottom: 1px solid var(--color-text); margin-bottom: 4px; }
+.pr-related .head h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.025em; }
+.pr-related .head h3 small { display: block; font-size: 11px; color: var(--color-text-muted); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+.pr-related .head .more { font-size: 13px; color: var(--color-text-muted); font-weight: 500; }
+.pr-related .item { display: grid; grid-template-columns: 24px 1fr auto; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--color-border); align-items: center; }
+.pr-related .item:last-child { border-bottom: none; }
+.pr-related .item .n { font-size: 12px; color: var(--color-text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pr-related .item .title { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; color: var(--color-text); }
+.pr-related .item .title:hover { color: var(--color-primary); }
+.pr-related .item .title.current { color: var(--pc, var(--color-primary)); font-weight: 700; }
+.pr-related .item .ref-small { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; }
+.pr-pn { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pr-pn .card { display: flex; gap: 16px; padding: 22px 24px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 14px; color: var(--color-text); transition: border-color .15s, transform .15s; }
+.pr-pn .card:hover { border-color: var(--color-text-muted); transform: translateY(-1px); }
+.pr-pn .card.next { text-align: right; flex-direction: row-reverse; }
+.pr-pn .arrow { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--color-surface-warm); display: flex; align-items: center; justify-content: center; color: var(--color-primary); align-self: center; }
+.pr-pn .arrow svg { width: 16px; height: 16px; }
+.pr-pn .info { flex: 1; min-width: 0; }
+.pr-pn .lbl { font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+.pr-pn h5 { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.4; }
+
+@media (max-width: 768px) {
+  .pr-title { font-size: 30px; }
+  .pr-metarow { flex-direction: column; align-items: flex-start; }
+  .pr-body { font-size: calc(18px * var(--reading-scale, 1)); }
+  .pr-body .stanza { grid-template-columns: 24px 1fr; gap: 14px; }
+  .pr-pn { grid-template-columns: 1fr; }
+}
+
 /* ── 인쇄: 부속(헤더·사이드바·푸터·탭바·도구·배너 등) 숨기고 본문만 ── */
 @media print {
   .site-header-root, .app-header, .site-foot, .foot-m, .tabbar, .home-indicator,
-  .art-tools, .art-foot, .med-rail, .med-prev-next, [data-print-hide] { display: none !important; }
+  .art-tools, .art-foot, .med-rail, .med-prev-next,
+  .pr-back, .pr-actbar, .pr-related, .pr-pn, [data-print-hide] { display: none !important; }
   body { background: #fff !important; }
   .med-layout { display: block !important; }
   .med-article { max-width: none !important; }
