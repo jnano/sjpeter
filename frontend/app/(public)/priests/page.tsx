@@ -44,7 +44,7 @@ export default async function PriestsPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="본당 출신 사제" subtitle={`${p.name}에서 성소의 씨앗이 자라난 분들`} />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
         {priests.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4"><CrossIcon /></div>

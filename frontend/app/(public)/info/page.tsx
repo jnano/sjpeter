@@ -88,7 +88,7 @@ export default async function InfoPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="찾아오시는 길" subtitle={`${name}을 찾아오시는 방법`} />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
 
       <div className="mb-6">
         {mapReady ? (

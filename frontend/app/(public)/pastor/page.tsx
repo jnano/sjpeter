@@ -51,7 +51,7 @@ export default async function PastorPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="주임신부님" subtitle="본당의 영성을 이끄시는 사목자" />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
         {all.length === 0 ? (
           <div className="text-center py-16 border border-[var(--color-border)] rounded-xl text-[var(--color-text-muted)]">
             <p className="text-3xl mb-2"><CrossIcon /></p>

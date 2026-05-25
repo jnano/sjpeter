@@ -37,7 +37,7 @@ export default async function HistoryPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="본당 연혁" subtitle={`현재부터 창립까지 — ${p.name}의 역사`} />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
 
       <div className="relative">
         <div className="absolute left-[5.5rem] top-0 bottom-0 w-0.5 bg-[var(--color-border)]" />

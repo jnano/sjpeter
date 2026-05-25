@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import SectionSidebar from "./SectionSidebar";
 import AutoPageHero from "./AutoPageHero";
+import ArticleTools from "./ArticleTools";
 import { useNavigation } from "./useNavigation";
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
   /** true면 좌측 사이드바 대신 본문 위 가로 칩 메뉴만 노출(풀폭 본문).
    *  /calendar·/gallery 처럼 본문 폭이 중요한 페이지용. */
   chipsOnly?: boolean;
+  /** true면 본문 우상단에 글자 크기·인쇄 도구(ArticleTools) 표시 + 본문을 .reading-zoom 으로 감싸
+   *  글자 크기 토글이 임의 마크업에도 적용되게 함. 긴 글 읽는 정적 페이지(소개·연혁 등)용. */
+  tools?: boolean;
 }
 
 /** 데스크탑 사이드바 접힘 상태 — 전역 (localStorage). 같은 키를 다른 탭/페이지가 공유. */
@@ -103,16 +107,21 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
  * 숨기고 본문을 확장할 수 있다. 상태는 localStorage 전역.
  * 모바일은 사이드바가 본문 위에 column 으로 오므로 토글 영향 받지 않음.
  */
-export default function SectionLayout({ children, autoHero = true, chipsOnly = false }: Props) {
+export default function SectionLayout({ children, autoHero = true, chipsOnly = false, tools = false }: Props) {
   const { currentGroup } = useNavigation();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
+
+  // tools=true: 본문 우상단 글자크기·인쇄 도구 + children 을 .reading-zoom 으로 감쌈
+  const toolbar = tools ? <div className="flex justify-end mb-3"><ArticleTools /></div> : null;
+  const bodyChildren = tools ? <div className="reading-zoom">{children}</div> : children;
 
   // 매칭된 그룹이 없거나 항목이 없으면 사이드바·칩·토글 모두 생략
   if (!currentGroup || currentGroup.items.length === 0) {
     return (
       <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
+        {toolbar}
         {autoHero && <AutoPageHero />}
-        {children}
+        {bodyChildren}
       </div>
     );
   }
@@ -164,8 +173,9 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
         <div className="flex-1 min-w-0 mt-6 md:mt-0 md:relative">
           {/* 데스크탑 collapsed 시: 본문 영역 좌상단에 펼치기 토글 (사이드바 자리가 없으므로) */}
           {collapsed && <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />}
+          {toolbar}
           {autoHero && <AutoPageHero />}
-          {children}
+          {bodyChildren}
         </div>
       </div>
     </div>

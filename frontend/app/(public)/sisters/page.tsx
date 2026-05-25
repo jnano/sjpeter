@@ -49,7 +49,7 @@ export default async function SistersPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="역대 수녀님" subtitle={`${p.name}을 거쳐 가신 수녀님들`} />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
         {sisters.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4"><CrossIcon /></div>

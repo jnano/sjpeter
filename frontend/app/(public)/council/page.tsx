@@ -175,7 +175,7 @@ export default async function CouncilPage() {
   return (
     <>
       <PageHeader group="본당 공동체" title="사목평의회" subtitle="본당 공동체의 사목 방향을 함께 의논하는 기구" />
-      <SectionLayout group="community">
+      <SectionLayout group="community" tools>
 
         {isEmpty ? (
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 text-center py-20">

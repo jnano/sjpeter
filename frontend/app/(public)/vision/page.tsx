@@ -52,7 +52,7 @@ export default async function VisionPage() {
   return (
     <>
       <PageHeader group="본당 공동체" title="올해의 사목 방향" subtitle="매년 신부님이 제시하는 한 해의 씨앗" />
-      <SectionLayout group="community">
+      <SectionLayout group="community" tools>
 
       {current && (
         <div className="bg-[var(--color-primary)] text-white rounded-xl p-8 mb-8 text-center">

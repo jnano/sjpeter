@@ -1381,6 +1381,12 @@ h1, h2, h3, h4, h5, h6 {
 /* 글자 크기 토글 — 읽는 본문(.prose=MarkdownContent)도 --reading-scale 따라 커짐 (.med-body 는 자체 calc) */
 .prose { font-size: calc(1rem * var(--reading-scale, 1)); }
 
+/* 정적 소개 페이지처럼 본문이 고정 크기(text-sm 등)로 흩어진 경우엔 zoom 으로 본문 전체를 스케일.
+   (font-size 상속이 안 통하는 ad-hoc 마크업 대응) — SectionLayout tools 옵션이 이 래퍼를 씌움. */
+.reading-zoom { zoom: var(--reading-scale, 1); }
+/* zoom 안에 .prose 가 있으면 calc 와 이중 적용되므로 calc 무력화 (zoom 이 단일 스케일러) */
+.reading-zoom .prose { font-size: 1rem; }
+
 /* ── 인쇄: 부속(헤더·사이드바·푸터·탭바·도구·배너 등) 숨기고 본문만 ── */
 @media print {
   .site-header-root, .app-header, .site-foot, .foot-m, .tabbar, .home-indicator,

@@ -47,7 +47,7 @@ export default async function PastorsPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="역대 신부님" subtitle={`${p.name}을 이끌어 오신 신부님들`} />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
         {pastors.length === 0 ? (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
             <div className="text-5xl mb-4"><CrossIcon /></div>

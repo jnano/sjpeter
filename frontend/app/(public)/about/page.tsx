@@ -100,7 +100,7 @@ export default async function AboutPage() {
   return (
     <>
       <PageHeader group="성당 소개" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
-      <SectionLayout group="about">
+      <SectionLayout group="about" tools>
 
       <BannerSlider placement="about_top" className="mb-6" />
 
