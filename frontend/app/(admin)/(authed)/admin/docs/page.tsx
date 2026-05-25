@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.387";
+export const CURRENT_VERSION = "1.5.388";
 export const LAST_UPDATED = "2026-05-25";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.388", date: "2026-05-25", tag: "디자인", items: ["마이페이지 모바일 레이아웃을 시안(mypage-mobile.html)에 맞춰 보강 — 프로필 액션 전폭 2버튼 그리드, 탭바 아이콘 숨김+조밀(스크롤 유지), KPI 솔기 없는 2×2 보더 그리드, 대시보드 단일 컬럼 스택+카드 내부 사이즈 축소, 브레드크럼 숨김. 마크업 변경 없이 @media 만 보강(단일 반응형 컴포넌트 유지)"] },
   { version: "1.5.387", date: "2026-05-25", tag: "디자인", items: ["성당 안내(/about)를 시안(about.html·about-mobile.html)으로 재현 — hero 사진(badge)·환영 인사·Quick facts(교적·분과수·주일미사·설립)·About(소개+통계)·미사 7열 그리드(토요일 다크 특전·일요일 강조)·찾아오시는 길(지도 핀+주소/연락/온라인)·문의 CTA. parish·미사 데이터 보존, 분과 수 집계, SectionLayout 사이드바 유지, 모바일은 facts·mass 2열로 반응형"] },
   { version: "1.5.386", date: "2026-05-25", tag: "기능", items: ["마이페이지 '저장한 기도·묵상' 카드에 묵상 북마크 통합. 백엔드: GET /api/content/meditations/bookmarked(회원의 북마크 묵상 목록, 최근순) 추가. 프론트: localStorage 기도 + 서버 묵상을 합쳐 표시(묵상 먼저), 행마다 '기도'(골드)/'묵상'(전례색) 태그·좌측 컬러바, × 클릭 시 기도는 localStorage·묵상은 서버 토글로 해제"] },
   { version: "1.5.385", date: "2026-05-25", tag: "수정", items: ["마이페이지 대시보드 '저장한 기도·묵상'이 항상 비어 보이던 버그 수정 — /api/content/prayers 는 {items:[...]} 페이지네이션 객체를 반환하는데 배열로 처리해 0건이 됨. items 추출하도록 보정 (localStorage prayer-saved ↔ 기도문 매칭 정상화)"] },

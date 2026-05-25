@@ -2072,18 +2072,41 @@ h1, h2, h3, h4, h5, h6 {
 /* embedded panel wrapper — 기존 Tailwind 컴포넌트를 카드 톤에 맞춰 감쌈 */
 .mp-embed { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px 32px; }
 
-/* responsive */
+/* responsive — 시안 mypage-mobile.html 정렬 */
 @media (max-width: 43.2rem) {
   .mp-hero { padding: 24px 20px 0; }
-  .mp-main { padding: 24px 20px 60px; }
-  .mp-prow { grid-template-columns: auto 1fr; gap: 16px; }
-  .mp-actions { grid-column: 1 / -1; }
+  .mp-main { padding: 20px 20px 60px; }
+  .mp-crumb { display: none; }
+  /* 프로필: 아바타 + 정보 2열, 액션은 전폭 2버튼 그리드 (시안 profile-cta) */
+  .mp-prow { grid-template-columns: auto 1fr; gap: 16px; margin-bottom: 16px; }
   .mp-av-lg { width: 64px; height: 64px; font-size: 24px; }
-  .mp-info h1 { font-size: 22px; }
-  .mp-tabnav button { padding: 12px 14px 14px; font-size: 13px; }
-  .mp-dash-grid { grid-template-columns: repeat(2, 1fr); }
-  .mp-dash-cols { grid-template-columns: 1fr; }
-  .mp-embed { padding: 20px 18px; }
+  .mp-info h1 { font-size: 22px; gap: 10px; }
+  .mp-info h1 .baptismal { font-size: 11px; padding: 3px 9px; }
+  .mp-info .meta { font-size: 12px; gap: 8px; }
+  .mp-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 18px; }
+  .mp-actions button { justify-content: center; padding: 10px; font-size: 12px; }
+  .mp-actions button:only-child { grid-column: 1 / -1; }
+  /* 탭바: 아이콘 숨기고 조밀하게, 스크롤 유지 */
+  .mp-tabnav { padding: 0; }
+  .mp-tabnav button { padding: 11px 12px 13px; font-size: 12px; gap: 6px; }
+  .mp-tabnav button svg { display: none; }
+  .mp-tabnav button.on::after { left: 12px; right: 12px; height: 2px; }
+  /* KPI: 솔기 없는 2x2 보더 그리드 */
+  .mp-dash-grid { grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+  .mp-kpi { border: none; border-radius: 0; padding: 16px 14px; }
+  .mp-kpi .num { font-size: 22px; }
+  .mp-kpi .lbl { font-size: 10px; }
+  /* 대시보드 본문: 단일 컬럼 + 카드 내부 축소 */
+  .mp-dash-cols { grid-template-columns: 1fr; gap: 12px; }
+  .mp-dash-stack { gap: 12px; }
+  .mp-card { padding: 18px; }
+  .mp-sect-h h2 { font-size: 16px; }
+  .mp-feed-item { grid-template-columns: 28px 1fr auto; gap: 12px; padding: 12px 0; }
+  .mp-feed-item .ic { width: 28px; height: 28px; }
+  .mp-feed-item .ic svg { width: 12px; height: 12px; }
+  .mp-feed-item .text { font-size: 13px; }
+  .mp-evt-row { grid-template-columns: 50px 1fr auto; gap: 12px; }
+  .mp-embed { padding: 20px 16px; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
