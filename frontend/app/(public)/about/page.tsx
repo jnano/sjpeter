@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import BannerSlider from "@/components/BannerSlider";
@@ -13,19 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
-const GOLD = "#B8933C";
-
-interface MassEntry {
-  day: string;
-  time: string;
-  note: string;
-}
-
-interface MassSchedule {
-  entries: MassEntry[];
-  note: string;
-}
-
+interface MassEntry { day: string; time: string; note: string; }
+interface MassSchedule { entries: MassEntry[]; note: string; }
 interface ParishOut {
   name: string;
   diocese: string | null;
@@ -41,16 +31,16 @@ interface ParishOut {
   mass_schedule: MassSchedule | null;
 }
 
-const DAY_ORDER: Record<string, number> = {
-  "주일": 0, "월요일": 1, "화요일": 2, "수요일": 3,
-  "목요일": 4, "금요일": 5, "토요일": 6, "공휴일": 7,
-};
-
-const DAY_EN: Record<string, string> = {
-  "주일": "Sunday", "월요일": "Monday", "화요일": "Tuesday",
-  "수요일": "Wednesday", "목요일": "Thursday", "금요일": "Friday",
-  "토요일": "Saturday", "공휴일": "Holiday",
-};
+// 미사 요일 → 시안 라벨 (일 SUN …). 토요일은 특전(다크) 카드.
+const DAYS: { key: string; label: string; mod?: "sun" | "special" }[] = [
+  { key: "주일", label: "일 SUN", mod: "sun" },
+  { key: "월요일", label: "월 MON" },
+  { key: "화요일", label: "화 TUE" },
+  { key: "수요일", label: "수 WED" },
+  { key: "목요일", label: "목 THU" },
+  { key: "금요일", label: "금 FRI" },
+  { key: "토요일", label: "토 SAT", mod: "special" },
+];
 
 async function getParish(): Promise<ParishOut | null> {
   try {
@@ -62,238 +52,217 @@ async function getParish(): Promise<ParishOut | null> {
   }
 }
 
+async function getCommunityCount(): Promise<number | null> {
+  try {
+    const res = await fetch(`${API}/api/content/community`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data) ? data.length : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function AboutPage() {
-  const parish = await getParish();
+  const [parish, communityCount] = await Promise.all([getParish(), getCommunityCount()]);
 
   const entries = parish?.mass_schedule?.entries ?? [];
-  const sortedEntries = [...entries].sort((a, b) => {
-    const dayDiff = (DAY_ORDER[a.day] ?? 99) - (DAY_ORDER[b.day] ?? 99);
-    return dayDiff !== 0 ? dayDiff : a.time.localeCompare(b.time);
-  });
+  const byDay = (day: string) =>
+    entries.filter((e) => e.day === day).sort((a, b) => a.time.localeCompare(b.time));
+  const sundayTimes = byDay("주일").map((e) => e.time);
+  const foundedYear = parish?.founded_at ? new Date(parish.founded_at).getFullYear() : null;
 
-  const allDayOrder = ["주일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "공휴일"];
-  const groupedDays = allDayOrder.filter((d) => sortedEntries.some((e) => e.day === d));
-  const sundayEntries = sortedEntries.filter((e) => e.day === "주일");
-  const weekdayDays = groupedDays.filter((d) => d !== "주일");
-
-  const foundedYear = parish?.founded_at
-    ? new Date(parish.founded_at).getFullYear() + "년"
+  const heroSrc = parish?.about_photo_url
+    ? parish.about_photo_url.startsWith("http")
+      ? parish.about_photo_url
+      : `${API}${parish.about_photo_url}`
     : null;
-
-  const infoRows = [
-    { label: "설립일", value: foundedYear },
-    { label: "소속 교구", value: parish?.diocese ? `천주교 ${parish.diocese}` : null },
-    { label: "주소", value: parish?.address },
-    {
-      label: "전화",
-      value: parish?.phone
-        ? parish.fax
-          ? `${parish.phone} | (fax) ${parish.fax}`
-          : parish.phone
-        : null,
-    },
-    { label: "신자 수", value: parish?.member_count ? `약 ${parish.member_count.toLocaleString()}명` : null },
-    { label: "카페", value: parish?.cafe_url ?? null, href: parish?.cafe_url ?? undefined },
-    { label: "밴드", value: parish?.band_url ?? null, href: parish?.band_url ?? undefined },
-  ].filter((r) => r.value);
 
   return (
     <>
-      <PageHeader group="성당 소개" title="성당 소개" subtitle="세종시 첫 본당, 교회 공동체의 이야기" />
+      <PageHeader group="성당 소개" title="성당 안내" subtitle="세종시 첫 본당, 함께 짓고 함께 머무는 공동체입니다." />
       <SectionLayout group="about" tools>
+        <div className="ab-page">
+          <BannerSlider placement="about_top" className="mb-6" />
 
-      <BannerSlider placement="about_top" className="mb-6" />
+          {/* HERO */}
+          <div className="ab-hero">
+            {heroSrc ? (
+              <Image src={heroSrc} alt={parish?.name ?? "본당"} fill sizes="(max-width: 768px) 100vw, 920px" style={{ objectFit: "cover" }} priority />
+            ) : (
+              <div className="ph">성당 사진</div>
+            )}
+            <div className="overlay">
+              <span className="badge"><span className="dot" />{parish?.name ?? "본당"}</span>
+            </div>
+          </div>
 
-      {/* 상단 2단: 좌 40% 사진 / 우 60% 안내 */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 items-stretch">
-        {/* 사진 — 좌측 40% */}
-        <div className="md:col-span-2 relative w-full aspect-[4/3] md:aspect-auto md:min-h-[280px] rounded-xl overflow-hidden">
-          <Image
-            src={parish?.about_photo_url ? `${API}${parish.about_photo_url}` : "/yakhoun.jpg"}
-            alt={parish?.name ?? "본당 홈페이지"}
-            fill
-            className="object-cover"
-            style={{ objectPosition: "center 30%" }}
-            sizes="(max-width: 768px) 100vw, 40vw"
-            priority
-          />
-        </div>
+          {/* Welcome */}
+          <section className="ab-welcome">
+            <div className="eyebrow">환영합니다 · Welcome</div>
+            <h2>모든 분께,<br /><em>주님의 평화가 함께하시기를.</em></h2>
+            <p>처음 오신 분도, 오래 함께해 주신 분도, 이 공동체에서 주님의 따뜻한 손길을 느끼시기를 기도합니다. 우리 성당의 문은 언제나 열려 있습니다.</p>
+            <div className="signature"><b>{parish?.name ?? "본당"}</b> 사목회 일동</div>
+          </section>
 
-        {/* 안내 — 우측 60% */}
-        <div className="md:col-span-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6 sm:p-8">
-          {infoRows.length > 0 ? (
-            <>
-              <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-4 flex items-center gap-2">
-                <svg
-                  viewBox="0 0 14 14"
-                  role="img"
-                  focusable="false"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="#FFD0A1"
-                  className="w-10 h-10"
-                >
-                  <g id="SVGRepo_bgCarrier" strokeWidth={0} />
-                  <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
-                  <g id="SVGRepo_iconCarrier">
-                    <path d="m 12.00625,2.6364725 -2.9125,0 c -1.0020833,0 -1.8729167,0.69375 -2.0916667,1.67291 C 6.78125,3.3302225 5.9125,2.6364725 4.9104167,2.6364725 L 2,2.6364725 c -0.5520833,0 -1,0.44791 -1,1 l 0,5.12083 c 0,0.55208 0.4479167,1 1,1 l 1.86875,0 c 2.1291667,0 2.7645833,0.5083305 3.06875,1.5625005 0.014583,0.0583 0.1083333,0.0583 0.125,0 0.30625,-1.05417 0.9416667,-1.5625005 3.06875,-1.5625005 l 1.86875,0 c 0.552083,0 1,-0.44792 1,-1 l 0,-5.11875 c 0,-0.55 -0.44375,-0.99792 -0.99375,-1.00208 z m -5.9645833,5.52916 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.072917,0.0729 l -3.3395833,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.3416666,0 c 0.039583,0 0.072917,0.0312 0.072917,0.0729 l 0,0.47708 z m 5.4020833,2.53542 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.47708 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.47708 z m 0,-1.26875 c 0,0.0396 -0.03125,0.0729 -0.07292,0.0729 l -3.339583,0 c -0.039583,0 -0.072917,-0.0312 -0.072917,-0.0729 l 0,-0.475 c 0,-0.0396 0.03125,-0.0729 0.072917,-0.0729 l 3.341667,0 c 0.03958,0 0.07292,0.0312 0.07292,0.0729 l 0,0.475 z" />
-                  </g>
-                </svg>
-                안내
-              </h2>
-              <table className="w-full text-sm">
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {infoRows.map((row) => (
-                    <tr key={row.label}>
-                      <td className="py-3 pr-6 text-[var(--color-text-muted)] w-28">{row.label}</td>
-                      <td className="py-3 font-medium">
-                        {"href" in row && row.href ? (
-                          <a
-                            href={row.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--color-primary)] hover:underline break-all"
-                          >
-                            {row.value}
-                          </a>
-                        ) : (
-                          row.value
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          ) : (
-            <p className="text-sm text-[var(--color-text-muted)]">안내 정보가 없습니다.</p>
-          )}
-        </div>
-      </div>
+          {/* Quick facts */}
+          <div className="ab-facts">
+            <div className="fact">
+              <div className="lbl">교적</div>
+              <div className="val">{parish?.member_count ? `약 ${parish.member_count.toLocaleString("ko-KR")}` : "—"}{parish?.member_count ? <sub>명</sub> : null}</div>
+              <div className="help">현재 기준</div>
+            </div>
+            <div className="fact">
+              <div className="lbl">분과 · 단체</div>
+              <div className="val">{communityCount != null ? communityCount : "—"}{communityCount != null ? <sub>개</sub> : null}</div>
+              <div className="help">본당 활동 공동체</div>
+            </div>
+            <div className="fact">
+              <div className="lbl">주일 미사</div>
+              <div className="val">{sundayTimes.length || "—"}{sundayTimes.length ? <sub>대</sub> : null}</div>
+              <div className="help">{sundayTimes.length ? sundayTimes.join(" · ") : "미사 시간 미등록"}</div>
+            </div>
+            <div className="fact">
+              <div className="lbl">본당 설립</div>
+              <div className="val">{foundedYear ?? "—"}{foundedYear ? <sub>년</sub> : null}</div>
+              <div className="help">{parish?.diocese ? `천주교 ${parish.diocese}` : "대전교구"}</div>
+            </div>
+          </div>
 
-      {/* 본당 소개 (별도 카드) */}
-      {parish?.description && (
-        <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 mb-12">
-          <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-3">본당 소개</h2>
-          <p className="leading-relaxed text-[var(--color-text)] whitespace-pre-line">
-            {parish.description}
-          </p>
-        </section>
-      )}
+          {/* About */}
+          <section className="ab-about">
+            <div className="section-eyebrow">About · 우리 성당</div>
+            <h2>{parish?.name ?? "우리 성당"}, 함께 짓고 함께 머무는 공동체입니다.</h2>
+            {parish?.description ? (
+              <p style={{ whiteSpace: "pre-line" }}>{parish.description}</p>
+            ) : (
+              <>
+                <p>세종시에 새로 자라나는 본당으로, 매주 미사와 기도, 분과 활동과 봉사를 통해 그리스도의 제자로 살아가는 공동체입니다.</p>
+                <p>수호성인의 이름 아래, 한 반석 위에 세워지는 공동체. 우리는 한 해 한 해를 함께 짓고 있습니다.</p>
+              </>
+            )}
+            <div className="stats">
+              <div className="s"><b>{foundedYear ?? "—"}</b><span>본당 설립</span></div>
+              <div className="s"><b>{parish?.diocese ?? "대전"}</b><span>교구 소속</span></div>
+              <div className="s"><b>{parish?.member_count ? `${Math.round(parish.member_count / 1000)}천+` : (communityCount ?? "—")}</b><span>{parish?.member_count ? "교적 신자" : "분과 · 단체"}</span></div>
+            </div>
+          </section>
 
-      {/* 미사 시간표 */}
-      <section>
-        {/* 섹션 헤더 */}
-        <p className="text-[10px] tracking-[0.3em] mb-1.5" style={{ color: GOLD }}>MASS SCHEDULE</p>
-        <h2 className="font-serif text-xl font-bold text-[var(--color-primary)] mb-2 flex items-center gap-2">
-          <svg
-            viewBox="0 0 57.674 57.674"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlSpace="preserve"
-            fill="#000000"
-            aria-hidden
-            className="w-10 h-10"
-          >
-            <g id="SVGRepo_bgCarrier" strokeWidth={0} />
-            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
-            <g id="SVGRepo_iconCarrier">
-              <path style={{ fill: "#FFD0A1" }} d="M33.317,39.442l-4.222,2.422l-2.436-4.292L22.337,40l2.436,4.292l-4.272,2.425l2.425,4.272 l4.272-2.425l4.774,8.41c0.377,0.664,1.221,0.897,1.885,0.52l1.901-1.079c0.666-0.378,0.898-1.226,0.517-1.89l-4.805-8.385 l4.272-2.425L33.317,39.442z" />
-              <circle style={{ fill: "#FFD0A1" }} cx="24.337" cy="3" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="33.337" cy="4" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="42.337" cy="6" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="47.337" cy="13" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="44.337" cy="21" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="37.337" cy="27" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="30.337" cy="33" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="16.337" cy="6" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="11.337" cy="13" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="10.337" cy="22" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="12.337" cy="31" r="3" />
-              <circle style={{ fill: "#FFD0A1" }} cx="16.337" cy="39" r="3" />
-            </g>
-          </svg>
-          미사 시간표
-        </h2>
-        <div className="w-8 h-0.5 mb-6" style={{ backgroundColor: GOLD }} />
+          {/* Mass times */}
+          <section className="ab-mass">
+            <div className="section-eyebrow">Mass Schedule · 미사 시간</div>
+            <h2>매주 함께 모이는 시간.</h2>
+            <div className="ab-mass-grid">
+              {DAYS.map((d) => {
+                const list = byDay(d.key);
+                return (
+                  <div key={d.key} className={`ab-mass-day${d.mod ? ` ${d.mod}` : ""}`}>
+                    <div className="day">{d.label}</div>
+                    <div className="times">
+                      {list.length === 0 ? (
+                        <span className="none">—</span>
+                      ) : list.map((e, i) => (
+                        <div key={i}>
+                          <div className="t">{e.time}</div>
+                          {e.note && <div className="tlbl">{e.note}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="ab-mass-note">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="5" /><line x1="7" y1="4" x2="7" y2="7.5" /><circle cx="7" cy="10" r="0.7" fill="currentColor" /></svg>
+              <span>
+                {parish?.mass_schedule?.note ? `${parish.mass_schedule.note} ` : "대축일·특별 전례 일정은 별도 공지를 따라 주세요. "}
+                <Link href="/calendar">본당 일정 →</Link>
+              </span>
+            </div>
+          </section>
 
-        {sortedEntries.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">미사 시간 정보가 없습니다.</p>
-        ) : (
-          <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-
-            {/* 평일 그리드 */}
-            {weekdayDays.length > 0 && (
-              <div className="overflow-x-auto">
-              <div
-                className="grid divide-x divide-[var(--color-border)]"
-                style={{ gridTemplateColumns: `repeat(${weekdayDays.length}, minmax(110px, 1fr))` }}
-              >
-                {weekdayDays.map((day) => {
-                  const dayEntries = sortedEntries.filter((e) => e.day === day);
-                  return (
-                    <div key={day} className="bg-white p-4">
-                      <p className="font-serif italic text-sm mb-1" style={{ color: GOLD }}>
-                        {day}
-                        <span className="font-light text-xs"> · {DAY_EN[day]}</span>
-                      </p>
-                      <div className="border-b border-[var(--color-border)] mb-3" />
-                      <div className="space-y-2.5">
-                        {dayEntries.map((e, i) => (
-                          <div key={i} className="flex flex-col gap-0.5">
-                            <span className="text-base font-light text-[var(--color-text)] tabular-nums">
-                              {e.time}
-                            </span>
-                            {e.note && (
-                              <span className="text-[11px] text-[var(--color-text-muted)]">
-                                {e.note}
-                              </span>
-                            )}
-                          </div>
-                        ))}
+          {/* Visit */}
+          <section className="ab-visit">
+            <div className="head">
+              <div>
+                <div className="section-eyebrow">Visit · 찾아오시는 길</div>
+                <h2>찾아오시는 길</h2>
+              </div>
+              <Link href="/info" className="full-link">오시는 길 자세히 →</Link>
+            </div>
+            <div className="ab-visit-grid">
+              <Link href="/info" className="ab-map" aria-label="오시는 길">
+                <div className="map-ph">
+                  <div className="pin">
+                    <span className="pin-dot" />
+                    <span className="pin-label">{parish?.name ?? "본당"}</span>
+                  </div>
+                </div>
+              </Link>
+              <div className="ab-visit-info">
+                {parish?.address && (
+                  <div className="ab-visit-item">
+                    <span className="ico">
+                      <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M9 1c-3.5 0-6 2.5-6 6 0 4 6 10 6 10s6-6 6-10c0-3.5-2.5-6-6-6z" /><circle cx="9" cy="7.5" r="2.5" /></svg>
+                    </span>
+                    <div>
+                      <div className="lbl">주소</div>
+                      <div className="val">{parish.address}</div>
+                    </div>
+                  </div>
+                )}
+                {parish?.phone && (
+                  <div className="ab-visit-item">
+                    <span className="ico">
+                      <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 3h3l1.5 4-2 1.5a9 9 0 0 0 4 4l1.5-2 4 1.5v3a1 1 0 0 1-1 1A13 13 0 0 1 3 4a1 1 0 0 1 1-1z" /></svg>
+                    </span>
+                    <div>
+                      <div className="lbl">연락</div>
+                      <div className="val">
+                        <a href={`tel:${parish.phone.replace(/[^0-9+]/g, "")}`}>{parish.phone}</a>
+                        {parish.fax && <small>fax {parish.fax}</small>}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-              </div>
-            )}
-
-            {/* 주일 행 */}
-            {sundayEntries.length > 0 && (
-              <div
-                className="p-4"
-                style={{ backgroundColor: "var(--color-surface-warm)" }}
-              >
-                <p className="font-serif italic text-sm mb-1" style={{ color: GOLD }}>
-                  주일
-                  <span className="font-light text-xs"> · Sunday</span>
-                </p>
-                <div className="border-b border-[var(--color-border)] mb-3" />
-                <div className="flex flex-wrap gap-x-8 gap-y-2.5">
-                  {sundayEntries.map((e, i) => (
-                    <div key={i} className="flex flex-col gap-0.5">
-                      <span className="text-base font-light text-[var(--color-text)] tabular-nums">
-                        {e.time}
-                      </span>
-                      {e.note && (
-                        <span className="text-[11px] text-[var(--color-text-muted)]">{e.note}</span>
-                      )}
+                  </div>
+                )}
+                {(parish?.cafe_url || parish?.band_url) && (
+                  <div className="ab-visit-item">
+                    <span className="ico">
+                      <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="9" cy="9" r="7" /><path d="M2 9h14M9 2c2 2.5 2 11.5 0 14M9 2c-2 2.5-2 11.5 0 14" /></svg>
+                    </span>
+                    <div>
+                      <div className="lbl">온라인</div>
+                      <div className="val" style={{ fontSize: 14 }}>
+                        {parish.cafe_url && <a href={parish.cafe_url} target="_blank" rel="noopener noreferrer">카페</a>}
+                        {parish.cafe_url && parish.band_url && " · "}
+                        {parish.band_url && <a href={parish.band_url} target="_blank" rel="noopener noreferrer">밴드</a>}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </section>
+
+          {/* CTA */}
+          <div className="ab-cta">
+            <div>
+              <div className="lead">함께하기</div>
+              <h2>처음 오셨나요?<br /><em>편하게 문의해 주세요.</em></h2>
+            </div>
+            <div className="actions">
+              {parish?.phone && (
+                <a href={`tel:${parish.phone.replace(/[^0-9+]/g, "")}`} className="btn-pri">
+                  전화 문의
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="2" y1="7" x2="12" y2="7" /><polyline points="8 3 12 7 8 11" /></svg>
+                </a>
+              )}
+              <Link href="/info" className="btn-sec">오시는 길</Link>
+            </div>
           </div>
-        )}
 
-        {parish?.mass_schedule?.note && (
-          <p className="mt-4 text-xs text-[var(--color-text-muted)]">
-            ※ {parish.mass_schedule.note}
-          </p>
-        )}
-      </section>
-
-      <BannerSlider placement="about_bottom" className="mt-8" />
+          <BannerSlider placement="about_bottom" className="mt-8" />
+        </div>
       </SectionLayout>
     </>
   );

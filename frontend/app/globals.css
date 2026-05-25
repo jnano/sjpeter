@@ -2085,3 +2085,137 @@ h1, h2, h3, h4, h5, h6 {
   .mp-dash-cols { grid-template-columns: 1fr; }
   .mp-embed { padding: 20px 18px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   성당 안내 /about (시안 about.html / about-mobile.html) — 에디토리얼 소개
+   시안 변수(--ink/--bg/--line/--primary 등)를 .ab-page 에 로컬 매핑해 1:1 이식.
+   사이트 셸(topbar·header·footer)과 좌측 사이드바는 앱(Header/Footer/SectionLayout)
+   이 제공하므로 시안의 side-nav·gallery 는 생략. 본문 섹션만 포팅.
+   ════════════════════════════════════════════════════════════════════════ */
+.ab-page {
+  --ink: var(--color-text);
+  --ink-2: var(--color-text-muted);
+  --ink-3: color-mix(in srgb, var(--color-text-muted) 62%, transparent);
+  --bg-2: var(--color-surface-warm);
+  --surface: var(--color-surface);
+  --line: var(--color-border);
+  --line-2: var(--color-border-dark);
+  --primary: var(--color-primary);
+  --accent: var(--color-accent);
+  font-family: 'Pretendard Variable', Pretendard, var(--font-sans);
+  color: var(--ink); letter-spacing: -0.01em;
+}
+.ab-page .section-eyebrow {
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--primary); font-weight: 700;
+  display: inline-flex; align-items: center; gap: 14px; margin-bottom: 18px;
+}
+.ab-page .section-eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--primary); }
+
+/* hero photo */
+.ab-hero { position: relative; overflow: hidden; border-radius: 20px; aspect-ratio: 16/9; background: var(--bg-2); margin-bottom: 40px; border: 1px solid var(--line); }
+.ab-hero img { width: 100%; height: 100%; object-fit: cover; }
+.ab-hero .ph { width: 100%; height: 100%; background: repeating-linear-gradient(135deg, rgba(44,38,32,0.04) 0, rgba(44,38,32,0.04) 1px, transparent 1px, transparent 10px), var(--bg-2); display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 13px; }
+.ab-hero .overlay { position: absolute; left: 36px; bottom: 32px; right: 36px; display: flex; justify-content: space-between; align-items: end; pointer-events: none; }
+.ab-hero .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(44,38,32,0.85); backdrop-filter: blur(8px); color: #FFF; padding: 8px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.ab-hero .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* welcome */
+.ab-welcome { margin-bottom: 56px; text-align: center; }
+.ab-welcome .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--primary); font-weight: 700; display: inline-flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.ab-welcome .eyebrow::before, .ab-welcome .eyebrow::after { content: ''; width: 28px; height: 1px; background: var(--primary); }
+.ab-welcome h2 { font-size: 36px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.3; text-wrap: balance; max-width: 680px; margin: 0 auto 24px; }
+.ab-welcome h2 em { color: var(--primary); font-style: normal; }
+.ab-welcome p { font-size: 16px; line-height: 1.85; color: var(--ink-2); max-width: 580px; margin: 0 auto; letter-spacing: -0.005em; }
+.ab-welcome .signature { margin-top: 28px; font-size: 13px; color: var(--ink-3); letter-spacing: 0.05em; }
+.ab-welcome .signature b { color: var(--ink-2); font-weight: 700; }
+
+/* quick facts */
+.ab-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 56px; }
+.ab-facts .fact { background: var(--surface); padding: 24px 22px; }
+.ab-facts .lbl { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 8px; }
+.ab-facts .val { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ab-facts .val sub { font-size: 13px; font-weight: 600; opacity: 0.6; margin-left: 3px; vertical-align: baseline; }
+.ab-facts .help { margin-top: 6px; font-size: 12px; color: var(--ink-3); }
+
+/* about (단일 컬럼 — 실데이터 사진 1장은 hero 에 사용) */
+.ab-about { margin-bottom: 64px; max-width: 760px; }
+.ab-about h2 { font-size: 32px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.25; margin-bottom: 24px; text-wrap: balance; }
+.ab-about p { font-size: 15px; line-height: 1.85; color: var(--ink-2); margin-bottom: 16px; letter-spacing: -0.005em; }
+.ab-about .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--line); }
+.ab-about .stats .s b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: var(--primary); line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.ab-about .stats .s span { font-size: 12px; color: var(--ink-3); letter-spacing: 0.05em; }
+
+/* mass times */
+.ab-mass { margin-bottom: 64px; }
+.ab-mass h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 24px; }
+.ab-mass-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.ab-mass-day { padding: 22px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.ab-mass-day .day { font-size: 11px; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; margin-bottom: 12px; text-transform: uppercase; }
+.ab-mass-day.sun .day { color: var(--primary); }
+.ab-mass-day .times { display: flex; flex-direction: column; gap: 8px; }
+.ab-mass-day .t { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.01em; }
+.ab-mass-day.sun .t { color: var(--primary); }
+.ab-mass-day .tlbl { font-size: 10px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+.ab-mass-day .none { font-size: 12px; color: var(--ink-3); }
+.ab-mass-day.special { background: var(--ink); color: #FFF; border-color: var(--ink); }
+.ab-mass-day.special .day { color: var(--accent); }
+.ab-mass-day.special .t { color: #FFF; }
+.ab-mass-day.special .tlbl { color: rgba(255,255,255,0.5); }
+.ab-mass-note { margin-top: 16px; padding: 14px 18px; background: var(--bg-2); border-radius: 10px; font-size: 13px; color: var(--ink-2); display: flex; gap: 10px; align-items: start; }
+.ab-mass-note svg { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+.ab-mass-note a { color: var(--primary); font-weight: 600; }
+
+/* visit */
+.ab-visit { margin-bottom: 56px; }
+.ab-visit .head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 24px; }
+.ab-visit .head h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; }
+.ab-visit .head .full-link { font-size: 13px; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
+.ab-visit-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+.ab-map { background: var(--bg-2); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 4/3; position: relative; display: block; }
+.ab-map .map-ph { width: 100%; height: 100%; background: linear-gradient(color-mix(in srgb, var(--primary) 4%, transparent), color-mix(in srgb, var(--accent) 4%, transparent)), repeating-linear-gradient(0deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent 32px), var(--bg-2); position: relative; }
+.ab-map .pin { position: absolute; top: 40%; left: 50%; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
+.ab-map .pin-dot { width: 18px; height: 18px; background: var(--primary); border: 3px solid #FFF; border-radius: 50%; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 40%, transparent); margin-bottom: 4px; }
+.ab-map .pin-label { background: var(--ink); color: #FFF; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
+.ab-visit-info { display: flex; flex-direction: column; gap: 14px; }
+.ab-visit-item { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.ab-visit-item .ico { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
+.ab-visit-item .ico svg { width: 16px; height: 16px; }
+.ab-visit-item .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+.ab-visit-item .val { font-size: 15px; color: var(--ink); font-weight: 600; line-height: 1.5; letter-spacing: -0.01em; }
+.ab-visit-item .val small { display: block; font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 4px; }
+.ab-visit-item .val a { color: var(--primary); font-weight: 600; }
+
+/* CTA */
+.ab-cta { background: var(--ink); color: #FFF; border-radius: 20px; padding: 48px 56px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; position: relative; overflow: hidden; }
+.ab-cta::before { content: '✠'; position: absolute; right: 220px; top: -40px; font-size: 220px; color: color-mix(in srgb, var(--accent) 8%, transparent); line-height: 1; pointer-events: none; }
+.ab-cta .lead { font-size: 11px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; font-weight: 700; margin-bottom: 14px; }
+.ab-cta h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.3; max-width: 540px; text-wrap: balance; }
+.ab-cta h2 em { color: var(--accent); font-style: normal; }
+.ab-cta .actions { display: flex; gap: 12px; }
+.ab-cta .btn-pri { padding: 14px 26px; background: var(--accent); color: var(--ink); border-radius: 100px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ab-cta .btn-sec { padding: 14px 26px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #FFF; border-radius: 100px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.ab-cta svg { width: 14px; height: 14px; }
+
+/* mobile (about-mobile.html) */
+@media (max-width: 43.2rem) {
+  .ab-hero { aspect-ratio: 4/3; margin-bottom: 28px; }
+  .ab-hero .overlay { left: 16px; right: 16px; bottom: 16px; }
+  .ab-welcome { margin-bottom: 40px; }
+  .ab-welcome h2 { font-size: 24px; line-height: 1.35; }
+  .ab-welcome p { font-size: 15px; }
+  .ab-facts { grid-template-columns: 1fr 1fr; margin-bottom: 40px; }
+  .ab-facts .fact { padding: 18px 16px; }
+  .ab-facts .val { font-size: 22px; }
+  .ab-about { margin-bottom: 48px; }
+  .ab-about h2 { font-size: 24px; }
+  .ab-mass { margin-bottom: 48px; }
+  .ab-mass h2, .ab-visit .head h2 { font-size: 22px; }
+  .ab-mass-grid { grid-template-columns: 1fr 1fr; }
+  .ab-visit-grid { grid-template-columns: 1fr; }
+  .ab-cta { grid-template-columns: 1fr; padding: 32px 24px; gap: 18px; }
+  .ab-cta::before { right: 20px; font-size: 140px; }
+  .ab-cta h2 { font-size: 22px; }
+  .ab-cta .actions { flex-direction: column; }
+  .ab-cta .btn-pri, .ab-cta .btn-sec { justify-content: center; }
+}
