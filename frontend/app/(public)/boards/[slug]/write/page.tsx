@@ -144,45 +144,58 @@ export default function WritePage() {
         ← 목록으로
       </Link>
 
-      <h1 className="text-2xl font-bold text-[var(--color-primary)] mt-4 mb-8">글쓰기</h1>
+      <div className="bw-head mt-4">
+        <h1><small>게시판 글 작성</small>글쓰기</h1>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="bw-form">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
             {error}
           </div>
         )}
 
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="제목을 입력하세요"
-          maxLength={200}
-          required
-          className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-lg"
-        />
+        <div className="bw-field">
+          <label className="bw-label" htmlFor="bw-title">제목<span className="req">*</span></label>
+          <input
+            id="bw-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="제목을 입력하세요"
+            maxLength={200}
+            required
+            className="bw-input"
+          />
+        </div>
 
         {/* 카테고리 (선택) — 기존 카테고리 자동완성 */}
-        <input
-          type="text"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          list="board-categories"
-          placeholder="카테고리 (선택)"
-          maxLength={50}
-          className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
-        />
-        <datalist id="board-categories">
-          {knownCategories.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
+        <div className="bw-field">
+          <label className="bw-label" htmlFor="bw-cat">카테고리 <small>선택</small></label>
+          <input
+            id="bw-cat"
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list="board-categories"
+            placeholder="예: 자유 · 평등 · 평화"
+            maxLength={50}
+            className="bw-input"
+          />
+          <datalist id="board-categories">
+            {knownCategories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </div>
 
-        <MarkdownEditor value={content} onChange={setContent} height={350} />
+        <div className="bw-field">
+          <label className="bw-label">내용<span className="req">*</span></label>
+          <MarkdownEditor value={content} onChange={setContent} height={350} />
+        </div>
 
         {/* 파일 첨부 영역 */}
-        <div className="border border-dashed border-[var(--color-border)] rounded-lg p-4 space-y-3">
+        <div className="bw-uploads space-y-3 mt-1 mb-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--color-text-muted)]">
               파일 첨부 <span className="text-xs font-normal">(이미지·PDF·문서 · 최대 10MB)</span>
@@ -258,29 +271,20 @@ export default function WritePage() {
 
         {/* 공유 허용 — 게시판이 공유 기능을 켠 경우에만 노출 */}
         {boardShareEnabled && (
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none py-3.5">
             <input
               type="checkbox"
               checked={shareAllowed}
               onChange={(e) => setShareAllowed(e.target.checked)}
-              className="rounded"
+              className="w-4 h-4 accent-[var(--color-primary)]"
             />
             <span>이 글의 공유를 허용합니다 <span className="text-xs text-[var(--color-text-muted)]">(다른 사람이 공유 버튼으로 외부에 링크 전달 가능)</span></span>
           </label>
         )}
 
-        <div className="flex gap-3 justify-end">
-          <Link
-            href={`/boards/${slug}`}
-            className="px-6 py-2.5 border border-[var(--color-border)] rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
-            취소
-          </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors disabled:opacity-50"
-          >
+        <div className="bw-foot">
+          <Link href={`/boards/${slug}`} className="bw-btn bw-btn-ghost">취소</Link>
+          <button type="submit" disabled={loading} className="bw-btn bw-btn-pri">
             {loading ? "등록 중..." : "등록"}
           </button>
         </div>
