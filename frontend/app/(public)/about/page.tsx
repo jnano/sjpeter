@@ -6,6 +6,10 @@ import SectionLayout from "@/components/SectionLayout";
 import BannerSlider from "@/components/BannerSlider";
 import AboutMiniMap from "./AboutMiniMap";
 import { fetchParishMin } from "@/lib/parish";
+import {
+  pickActive, weeksSince, daysUntil, formatBaptism, formatStartDate,
+  type CatechumenClass,
+} from "@/lib/catechumen";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -67,6 +71,16 @@ async function getMapKey(): Promise<string> {
   }
 }
 
+async function getCatechumenClasses(): Promise<CatechumenClass[]> {
+  try {
+    const res = await fetch(`${API}/api/catechumen/classes`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
 async function getCommunityCount(): Promise<number | null> {
   try {
     const res = await fetch(`${API}/api/content/community`);
@@ -79,11 +93,15 @@ async function getCommunityCount(): Promise<number | null> {
 }
 
 export default async function AboutPage() {
-  const [parish, communityCount, appKey] = await Promise.all([
+  const [parish, communityCount, appKey, catechumenClasses] = await Promise.all([
     getParish(),
     getCommunityCount(),
     getMapKey(),
+    getCatechumenClasses(),
   ]);
+
+  // 예비자교리 카드 상태 (교육중 / 접수중)
+  const { educating, recruiting, latest } = pickActive(catechumenClasses);
 
   // 키·좌표가 모두 있으면 실제 미니맵, 아니면 기존 격자 placeholder 로 폴백
   const mapLat = parish?.lat ?? null;
@@ -94,7 +112,6 @@ export default async function AboutPage() {
   const entries = parish?.mass_schedule?.entries ?? [];
   const byDay = (day: string) =>
     entries.filter((e) => e.day === day).sort((a, b) => a.time.localeCompare(b.time));
-  const sundayTimes = byDay("주일").map((e) => e.time);
   const foundedYear = parish?.founded_at ? new Date(parish.founded_at).getFullYear() : null;
 
   const heroSrc = parish?.about_photo_url
@@ -130,23 +147,54 @@ export default async function AboutPage() {
             <div className="signature"><b>{parish?.name ?? "본당"}</b> 사목회 일동</div>
           </section>
 
-          {/* Quick facts */}
+          {/* Quick facts — 예비자교리 상태 · 입교신청 · 분과/단체 · 본당설립 */}
           <div className="ab-facts">
+            {/* 예비자교리 상태 (교육중 / 없음) */}
             <div className="fact">
-              <div className="lbl">교적</div>
-              <div className="val">{parish?.member_count ? `약 ${parish.member_count.toLocaleString("ko-KR")}` : "—"}{parish?.member_count ? <sub>명</sub> : null}</div>
-              <div className="help">현재 기준</div>
+              {educating ? (
+                <>
+                  <div className="lbl">제{educating.round_no ?? "?"}차 예비자교리 교육중</div>
+                  <div className="val">{weeksSince(educating.start_date!)}주<sub>차</sub></div>
+                  <div className="help">
+                    {educating.baptism_at
+                      ? `세례성사까지 ${daysUntil(educating.baptism_at)}일 · ${formatBaptism(educating.baptism_at)}`
+                      : "교육 진행 중"}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="lbl">예비자교리</div>
+                  <div className="val">
+                    {(recruiting ?? latest)?.round_no != null ? `제${(recruiting ?? latest)!.round_no}회` : "—"}
+                  </div>
+                  <div className="help">{recruiting?.apply_note || latest?.apply_note || "입교신청 기간입니다."}</div>
+                </>
+              )}
             </div>
+
+            {/* 입교신청 */}
+            <div className="fact">
+              <div className="lbl">{recruiting ? "예비자교리 접수중" : "예비자교리"}</div>
+              <div className="val">
+                <Link href="/catechumen/apply" style={{ color: "var(--primary)" }} className="hover:underline">
+                  입교신청
+                </Link>
+              </div>
+              <div className="help">
+                {recruiting?.apply_start_date
+                  ? `${formatStartDate(recruiting.apply_start_date)} 시작합니다.`
+                  : recruiting?.apply_note || "회원가입 후 신청할 수 있습니다."}
+              </div>
+            </div>
+
+            {/* 분과 · 단체 */}
             <div className="fact">
               <div className="lbl">분과 · 단체</div>
               <div className="val">{communityCount != null ? communityCount : "—"}{communityCount != null ? <sub>개</sub> : null}</div>
               <div className="help">본당 활동 공동체</div>
             </div>
-            <div className="fact">
-              <div className="lbl">주일 미사</div>
-              <div className="val">{sundayTimes.length || "—"}{sundayTimes.length ? <sub>대</sub> : null}</div>
-              <div className="help">{sundayTimes.length ? sundayTimes.join(" · ") : "미사 시간 미등록"}</div>
-            </div>
+
+            {/* 본당 설립 */}
             <div className="fact">
               <div className="lbl">본당 설립</div>
               <div className="val">{foundedYear ?? "—"}{foundedYear ? <sub>년</sub> : null}</div>
