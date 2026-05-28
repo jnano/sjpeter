@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.395";
+export const CURRENT_VERSION = "1.5.396";
 export const LAST_UPDATED = "2026-05-28";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-28";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.396", date: "2026-05-28", tag: "디자인", items: ["오늘의 복음(/word)을 시안(gospel.html)으로 재현 — today-head(날짜·전례 시기·색 제의 추정 태그), 다크 복음 카드(✠ + 골드 reference pill), tool-bar(브라우저 TTS '들으며 묵상하기' + 저장(localStorage)/인쇄/공유(Web Share API)), refl-link(주일 묵상 와인 그라디언트 카드), 우측 rail(이번 주 미사 말씀 7일 placeholder + 전례력 미니 캘린더). DateNav(이전/오늘/다음 + date-picker)는 PageHeader action 으로. 1독서·화답송·복음환호송 본문은 굿뉴스 단축 카드로 대체(2단계에서 백엔드 파서 확장 예정). 좌측 사이드 메뉴는 시스템 SectionLayout 그대로 사용해 중복 회피"] },
   { version: "1.5.395", date: "2026-05-28", tag: "기능", items: ["잉크 컬러 시스템 신설 — /admin/skin 에 '잉크 컬러' 섹션 추가. 시안 프리셋 5종(현재 다크 브라운·딥 틸·딥 네이비·딥 포레스트·잉크 인디고) + color picker/hex 직접 입력. 휘도 0.35 초과 시 흰글씨 가독성 경고. globals.css 의 6개 스킨 스코프(.skin-dashboard/editorial/construction + 모바일)의 --ink 를 :root 의 --site-ink CSS 변수로 위임 → site_settings.INK_COLOR 한 키로 사이트 전체 일괄 반영(layout.tsx 에서 server-side <style> 주입). 와인·골드·크림은 변경 안 됨"] },
   { version: "1.5.394", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 4단계 — 마이페이지 입교기록 + 세례성사 사진"] },
   { version: "1.5.393", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 3단계 — 입교신청 폼(회원 전용) + 신청자 관리"] },
