@@ -73,37 +73,49 @@ export default async function ConstructionPage() {
       <SectionLayout autoHero>
         <article className="space-y-10">
 
-          {/* 전체 진행률 요약 */}
-          <section className="bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)] mb-0.5">전체 공정</p>
-                <p className="font-serif text-xl sm:text-2xl font-bold text-[var(--color-primary)]">
-                  {overall}% 진행
-                </p>
+          {/* 시안 .progress-hero — 다크 잉크 배경 + 골드 큰 PCT */}
+          <section className="relative overflow-hidden bg-[var(--color-text)] text-white rounded-3xl p-7 sm:p-12">
+            <div
+              aria-hidden
+              className="absolute -right-24 -top-24 w-[380px] h-[380px] rounded-full"
+              style={{ background: "rgba(201,169,97,0.06)" }}
+            />
+            <div className="relative">
+              <span className="inline-flex items-center gap-3 text-[11px] tracking-[0.2em] uppercase font-bold mb-4" style={{ color: "var(--color-accent, #C9A961)" }}>
+                <span className="w-6 h-px" style={{ background: "var(--color-accent, #C9A961)" }} />
+                함께 짓는 성전 · Live Progress
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug text-balance">
+                한 단계씩, <em className="not-italic" style={{ color: "var(--color-accent, #C9A961)" }}>함께 짓는</em> 성전.
+              </h2>
+
+              <div className="mt-7 pt-6 border-t border-white/10 flex items-end justify-between gap-6 flex-wrap">
+                <div className="flex items-end gap-1 leading-none" style={{ color: "var(--color-accent, #C9A961)" }}>
+                  <span className="text-6xl sm:text-[84px] font-bold tracking-tighter tabular-nums">
+                    {overall}
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-bold opacity-80 mb-2">%</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] tracking-[0.18em] uppercase font-bold text-white/50 mb-1.5">완료 단계</p>
+                  <p className="text-xl font-bold tabular-nums">
+                    {completedCount} <span className="text-white/40 font-semibold">/ {phases.length}</span>
+                  </p>
+                  {currentPhase && (
+                    <p className="text-[11px] text-white/50 mt-1.5">
+                      현재 · <span className="text-white font-semibold">{currentPhase.name}</span>
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-[var(--color-text-muted)]">완료 / 전체 단계</p>
-                <p className="text-sm font-medium">
-                  <span className="text-[var(--color-primary)] font-bold">{completedCount}</span>
-                  <span className="text-[var(--color-text-muted)]"> / </span>
-                  <span className="text-[var(--color-text)]">{phases.length}</span>
-                </p>
+
+              <div className="mt-5 h-1 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${overall}%`, background: "linear-gradient(90deg, var(--color-accent, #C9A961), #B5934A)" }}
+                />
               </div>
             </div>
-            <div className="h-2.5 rounded-full bg-white border border-[var(--color-border)] overflow-hidden">
-              <div
-                className="h-full bg-[var(--color-primary)] transition-all"
-                style={{ width: `${overall}%` }}
-              />
-            </div>
-            {currentPhase && (
-              <p className="mt-3 text-sm text-[var(--color-text)]">
-                <span className="text-xs text-[var(--color-text-muted)]">현재 단계: </span>
-                <strong className="text-[var(--color-primary)]">{currentPhase.name}</strong>
-                <span className="text-xs text-[var(--color-text-muted)]"> ({currentPhase.progress_percent}%)</span>
-              </p>
-            )}
           </section>
 
           {/* 단계별 타임라인 */}

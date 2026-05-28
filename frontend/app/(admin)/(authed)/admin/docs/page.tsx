@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.400";
+export const CURRENT_VERSION = "1.5.401";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.401", date: "2026-05-29", tag: "디자인", items: ["시안 일괄 적용 4단계(부분) — /construction·/pastor 시안 톤 재현. /construction: 전체 진행률 박스를 시안 .progress-hero 다크 잉크 배경 + 골드 큰 PCT 숫자(6xl~84px tabular) + bar(accent 그라디언트) + 'Live Progress' eyebrow + 절제된 골드 도넛 배경. /pastor: StoryRow 본문 시안 priest 톤(eyebrow에 와인 선 + 큰 제목 + 약력 골드 불릿 + 인용문 골드 좌측 보더 strip)"] },
   { version: "1.5.400", date: "2026-05-29", tag: "디자인", items: ["시안 일괄 적용 3단계 — /groups·/groups/[slug]·/council 시안 톤 재현. /groups: cat-filter(parent group anchor chips, sticky) + 그룹별 섹션(parent name 다크 border + count chip) + dept-card 좌측 카테고리 보더(사목/신심/봉사/연령 4종 색 매핑) + 활동시간/자세히 액션 foot. /groups/[slug]: 헤더 eyebrow 'Community' + 큰 제목/게시판 pill, 주요활동 .act-grid 2-col act-card 톤(번호 아이콘 박스 + 콜론 자동 분리), 소속단체 칩, join-card 와인+골드 CTA. /council: 카드 rounded-2xl + eyebrow uppercase + 'Organization' 부제 + 카테고리 헤더 surface-warm 배경"] },
   { version: "1.5.399", date: "2026-05-29", tag: "인프라", items: ["시안 일괄 적용 2단계 — 모바일 보강 점검 완료. meditation/prayer/prayer-detail/pastoral 모바일 시안은 데스크탑과 같은 클래스명을 폭에 맞춰 stack한 것이고, 모바일 셸(app-header·검색바·하단 탭바)은 v1.5.356에 이미 적용됨. 본문은 페이지의 sm:/md: 반응형 클래스가 시안 모바일 의도를 충족. 별도 commit 없이 마무리"] },
   { version: "1.5.398", date: "2026-05-29", tag: "디자인", items: ["시안 일괄 적용 1단계 — /bulletin·/history·/info를 시안 톤으로 재현. /bulletin: latest hero(PDF 표지 카드+ribbon '최신호'+지금읽기/PDF다운로드/카톡공유 액션) + toolbar(검색/연도/표지·목록 view) + 분기별 그룹 카드 그리드(2분기는 부활특집 자동 강조). /history: history-hero(통계 stats — 함께한 시간·기록된 자취) + EraFilter 10년 단위 칩(sticky) + 그라디언트 timeline + 이벤트 카드(highlight·current·future 변형). /info: 풀폭 map-hero(KakaoMap + 좌하단 map-tip + 우하단 카카오/네이버 길찾기 액션) + 기본정보/미사시간/교통안내 카드 시안 톤(eyebrow uppercase + Visit & Contact 등 영문 부제)"] },

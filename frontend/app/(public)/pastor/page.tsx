@@ -122,42 +122,49 @@ function StoryRow({
           </div>
         </div>
 
-        {/* 본문 */}
+        {/* 본문 — 시안 priest 톤 (eyebrow + 큰 제목 + 인용 골드 strip) */}
         <div className="flex-1 min-w-0 w-full">
-          <p className="text-[11px] tracking-[0.15em] text-[var(--color-text-muted)] uppercase mb-1">
+          <span className="inline-flex items-center gap-2.5 text-[11px] tracking-[0.18em] text-[var(--color-primary)] uppercase font-bold mb-3">
+            <span className="w-5 h-px bg-[var(--color-primary)]" />
             {staff.role}
-          </p>
-          <h2 className="font-serif text-xl md:text-2xl font-bold text-[var(--color-primary)]">
+          </span>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-[var(--color-text)]">
             {staff.name}
             {staff.title && (
-              <span className="font-normal text-sm md:text-base text-[var(--color-text-muted)] ml-2">
+              <span className="font-medium text-[14px] md:text-base text-[var(--color-text-muted)] ml-2">
                 {staff.title}
               </span>
             )}
           </h2>
           {staff.feast_day && (
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">· 축일 {staff.feast_day}</p>
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 tracking-wide">· 축일 {staff.feast_day}</p>
           )}
 
           {staff.introduction && (
-            <p className="mt-4 text-sm leading-relaxed text-[var(--color-text)] whitespace-pre-line">
+            <p className="mt-5 text-[14px] md:text-[15px] leading-[1.8] text-[var(--color-text)] whitespace-pre-line tracking-tight">
               {staff.introduction}
             </p>
           )}
 
           {careerLines.length > 0 && (
-            <ul className="mt-4 list-disc pl-5 space-y-1 text-[13px] text-[var(--color-text-muted)]">
+            <ul className="mt-5 space-y-1.5 text-[13px] text-[var(--color-text-muted)]">
               {careerLines.map((line, i) => (
-                <li key={i}>{line}</li>
+                <li key={i} className="flex gap-2.5">
+                  <span className="shrink-0" style={{ color: "var(--color-accent, #C9A961)" }}>•</span>
+                  <span>{line}</span>
+                </li>
               ))}
             </ul>
           )}
 
           {(staff.scripture_quote || staff.scripture_reference) && (
-            <blockquote className="mt-5 pl-4 border-l-2 border-[var(--color-primary)]/40 italic text-sm text-[var(--color-text)]">
+            <blockquote
+              className="mt-6 pl-5 py-2 italic text-[14px] leading-relaxed text-[var(--color-text)]"
+              style={{ borderLeft: "3px solid var(--color-accent, #C9A961)" }}
+            >
               {staff.scripture_quote && <p>{`"${staff.scripture_quote}"`}</p>}
               {staff.scripture_reference && (
-                <p className="text-xs text-[var(--color-text-muted)] mt-1 not-italic">
+                <p className="text-[11px] text-[var(--color-text-muted)] mt-2 not-italic font-bold tracking-wider uppercase">
                   — {staff.scripture_reference}
                 </p>
               )}
