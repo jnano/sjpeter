@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.397";
+export const CURRENT_VERSION = "1.5.398";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.398", date: "2026-05-29", tag: "디자인", items: ["시안 일괄 적용 1단계 — /bulletin·/history·/info를 시안 톤으로 재현. /bulletin: latest hero(PDF 표지 카드+ribbon '최신호'+지금읽기/PDF다운로드/카톡공유 액션) + toolbar(검색/연도/표지·목록 view) + 분기별 그룹 카드 그리드(2분기는 부활특집 자동 강조). /history: history-hero(통계 stats — 함께한 시간·기록된 자취) + EraFilter 10년 단위 칩(sticky) + 그라디언트 timeline + 이벤트 카드(highlight·current·future 변형). /info: 풀폭 map-hero(KakaoMap + 좌하단 map-tip + 우하단 카카오/네이버 길찾기 액션) + 기본정보/미사시간/교통안내 카드 시안 톤(eyebrow uppercase + Visit & Contact 등 영문 부제)"] },
   { version: "1.5.397", date: "2026-05-29", tag: "기능", items: ["오늘의 복음 2단계 — 굿뉴스 missa.asp 파서 확장으로 1독서·2독서·화답송·복음환호송 본문까지 모두 추출. 백엔드 /api/gospel/today·/api/gospel?date= 응답에 readings{first,second,psalm,alleluia,gospel} 객체 + vestment_color 추가(기존 gospel_reference/gospel_text 호환 유지). 식별: ▥+말씀입니다=독서(순서대로 1·2), ✠=복음, ◎○ 블록은 순서로 화답송→복음환호송(시편 외 다니엘·이사야·탈출기 노래도 인식). 신규 /api/gospel/week?from= 7일 reference 일괄 조회 + 일별 캐시. 프론트: /word 페이지에 ReadTabs(sticky 4~5탭, IntersectionObserver 활성 추적), 1독서·2독서·화답송(refrain+verses)·복음환호송 카드 추가, WeekReadings 우측 rail 실데이터 채움(클릭→점프), 색 제의 태그 백엔드 vestment_color 기반"] },
   { version: "1.5.396", date: "2026-05-28", tag: "디자인", items: ["오늘의 복음(/word)을 시안(gospel.html)으로 재현 — today-head(날짜·전례 시기·색 제의 추정 태그), 다크 복음 카드(✠ + 골드 reference pill), tool-bar(브라우저 TTS '들으며 묵상하기' + 저장(localStorage)/인쇄/공유(Web Share API)), refl-link(주일 묵상 와인 그라디언트 카드), 우측 rail(이번 주 미사 말씀 7일 placeholder + 전례력 미니 캘린더). DateNav(이전/오늘/다음 + date-picker)는 PageHeader action 으로. 1독서·화답송·복음환호송 본문은 굿뉴스 단축 카드로 대체(2단계에서 백엔드 파서 확장 예정). 좌측 사이드 메뉴는 시스템 SectionLayout 그대로 사용해 중복 회피"] },
   { version: "1.5.395", date: "2026-05-28", tag: "기능", items: ["잉크 컬러 시스템 신설 — /admin/skin 에 '잉크 컬러' 섹션 추가. 시안 프리셋 5종(현재 다크 브라운·딥 틸·딥 네이비·딥 포레스트·잉크 인디고) + color picker/hex 직접 입력. 휘도 0.35 초과 시 흰글씨 가독성 경고. globals.css 의 6개 스킨 스코프(.skin-dashboard/editorial/construction + 모바일)의 --ink 를 :root 의 --site-ink CSS 변수로 위임 → site_settings.INK_COLOR 한 키로 사이트 전체 일괄 반영(layout.tsx 에서 server-side <style> 주입). 와인·골드·크림은 변경 안 됨"] },
