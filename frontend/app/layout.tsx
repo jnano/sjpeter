@@ -10,6 +10,7 @@ import { fetchServerMenus } from "@/components/fetchServerMenus";
 import { fetchParishMin } from "@/lib/parish";
 import { fetchCurrentSeason } from "@/lib/season";
 import { fetchCurrentSkin } from "@/lib/skin";
+import { fetchCurrentInkColor, DEFAULT_INK } from "@/lib/ink-color";
 
 const notoSansKR = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
@@ -51,11 +52,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [initialMenus, season, skin] = await Promise.all([
+  const [initialMenus, season, skin, ink] = await Promise.all([
     fetchServerMenus(),
     fetchCurrentSeason(),
     fetchCurrentSkin(),
+    fetchCurrentInkColor(),
   ]);
+  // globals.css 의 모든 --ink 정의는 var(--site-ink, #2C2620) 를 통하므로
+  // :root 에 --site-ink 한 줄만 주입하면 6개 스킨 스코프에 일괄 반영된다.
+  const inkStyle = ink && ink !== DEFAULT_INK ? `:root{--site-ink:${ink}}` : "";
   return (
     <html
       lang="ko"
@@ -71,6 +76,7 @@ export default async function RootLayout({
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
         />
+        {inkStyle && <style dangerouslySetInnerHTML={{ __html: inkStyle }} />}
       </head>
       <body className="bg-[var(--color-background)]">
         <SessionProvider>

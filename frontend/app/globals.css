@@ -375,7 +375,7 @@ h1, h2, h3, h4, h5, h6 {
   --bg: #FAF4F1; --bg-2: #F2EAE3; --surface: #FFFFFF;
   --primary: #7A1F2B; --primary-2: #5C1820;
   --accent: #C9A961; --accent-2: #B5934A;
-  --ink: #2C2620; --ink-2: #6B6660; --ink-3: #9E9892;
+  --ink: var(--site-ink, #2C2620); --ink-2: #6B6660; --ink-3: #9E9892;
   --line: #E8DFD6; --line-2: #D6CCBE;
   --r-sm: 6px; --r-md: 12px; --r-lg: 20px;
   font-family: 'Pretendard Variable', Pretendard, var(--font-sans);
@@ -631,7 +631,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── SkinEditorial (v1: 에디토리얼 미니멀) ── */
 .skin-editorial {
   --bg:#FAF4F1; --bg-2:#F2EAE3; --surface:#FFF; --primary:#7A1F2B; --primary-2:#5C1820;
-  --accent:#C9A961; --accent-2:#B5934A; --ink:#2C2620; --ink-2:#6B6660; --ink-3:#9E9892;
+  --accent:#C9A961; --accent-2:#B5934A; --ink:var(--site-ink, #2C2620); --ink-2:#6B6660; --ink-3:#9E9892;
   --line:#E8DFD6; --line-2:#D6CCBE;
   font-family:'Pretendard Variable',Pretendard,var(--font-sans); color:var(--ink); background:var(--bg); letter-spacing:-0.01em;
 }
@@ -760,7 +760,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── SkinConstruction (v3: 함께 짓는 성전) ── */
 .skin-construction {
   --bg:#FAF4F1; --bg-2:#F2EAE3; --surface:#FFF; --primary:#7A1F2B; --primary-2:#5C1820;
-  --accent:#C9A961; --accent-2:#B5934A; --ink:#2C2620; --ink-2:#6B6660; --ink-3:#9E9892;
+  --accent:#C9A961; --accent-2:#B5934A; --ink:var(--site-ink, #2C2620); --ink-2:#6B6660; --ink-3:#9E9892;
   --line:#E8DFD6; --line-2:#D6CCBE;
   font-family:'Pretendard Variable',Pretendard,var(--font-sans); color:var(--ink); background:var(--bg); letter-spacing:-0.01em;
 }
@@ -985,7 +985,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── 모바일 본문 — SkinEditorial (v1) ── */
 .skin-m-editorial {
   --bg:#FAF4F1; --bg-2:#F2EAE3; --surface:#FFF; --primary:#7A1F2B; --primary-2:#5C1820;
-  --accent:#C9A961; --accent-2:#B5934A; --ink:#2C2620; --ink-2:#6B6660; --ink-3:#9E9892;
+  --accent:#C9A961; --accent-2:#B5934A; --ink:var(--site-ink, #2C2620); --ink-2:#6B6660; --ink-3:#9E9892;
   --line:#E8DFD6; --line-2:#D6CCBE;
   font-family:'Pretendard Variable',Pretendard,var(--font-sans); color:var(--ink); background:var(--bg); letter-spacing:-0.01em;
 }
@@ -1080,7 +1080,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── 모바일 본문 — SkinDashboard (v2) ── */
 .skin-m-dashboard {
   --bg:#FAF4F1; --bg-2:#F2EAE3; --surface:#FFF; --primary:#7A1F2B; --primary-2:#5C1820;
-  --accent:#C9A961; --accent-2:#B5934A; --ink:#2C2620; --ink-2:#6B6660; --ink-3:#9E9892;
+  --accent:#C9A961; --accent-2:#B5934A; --ink:var(--site-ink, #2C2620); --ink-2:#6B6660; --ink-3:#9E9892;
   --line:#E8DFD6; --line-2:#D6CCBE;
   font-family:'Pretendard Variable',Pretendard,var(--font-sans); color:var(--ink); background:var(--bg); letter-spacing:-0.01em;
 }
@@ -1183,7 +1183,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── 모바일 본문 — SkinConstruction (v3) ── */
 .skin-m-construction {
   --bg:#FAF4F1; --bg-2:#F2EAE3; --surface:#FFF; --primary:#7A1F2B; --primary-2:#5C1820;
-  --accent:#C9A961; --accent-2:#B5934A; --ink:#2C2620; --ink-2:#6B6660; --ink-3:#9E9892;
+  --accent:#C9A961; --accent-2:#B5934A; --ink:var(--site-ink, #2C2620); --ink-2:#6B6660; --ink-3:#9E9892;
   --line:#E8DFD6; --line-2:#D6CCBE;
   font-family:'Pretendard Variable',Pretendard,var(--font-sans); color:var(--ink); background:var(--bg); letter-spacing:-0.01em;
 }

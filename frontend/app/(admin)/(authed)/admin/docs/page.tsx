@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.388";
-export const LAST_UPDATED = "2026-05-25";
+export const CURRENT_VERSION = "1.5.395";
+export const LAST_UPDATED = "2026-05-28";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,13 @@ export const LAST_UPDATED = "2026-05-25";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.395", date: "2026-05-28", tag: "기능", items: ["잉크 컬러 시스템 신설 — /admin/skin 에 '잉크 컬러' 섹션 추가. 시안 프리셋 5종(현재 다크 브라운·딥 틸·딥 네이비·딥 포레스트·잉크 인디고) + color picker/hex 직접 입력. 휘도 0.35 초과 시 흰글씨 가독성 경고. globals.css 의 6개 스킨 스코프(.skin-dashboard/editorial/construction + 모바일)의 --ink 를 :root 의 --site-ink CSS 변수로 위임 → site_settings.INK_COLOR 한 키로 사이트 전체 일괄 반영(layout.tsx 에서 server-side <style> 주입). 와인·골드·크림은 변경 안 됨"] },
+  { version: "1.5.394", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 4단계 — 마이페이지 입교기록 + 세례성사 사진"] },
+  { version: "1.5.393", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 3단계 — 입교신청 폼(회원 전용) + 신청자 관리"] },
+  { version: "1.5.392", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 2단계 — /about 공개 카드 2칸"] },
+  { version: "1.5.391", date: "2026-05-25", tag: "기능", items: ["예비자교리 관리 1단계 — 데이터 모델 + admin 관리 페이지"] },
+  { version: "1.5.390", date: "2026-05-25", tag: "기능", items: ["성당 안내(/about) '찾아오시는 길'에 카카오 정적 미니맵 추가"] },
+  { version: "1.5.389", date: "2026-05-25", tag: "디자인", items: ["미사 시간에서 같은 시간대 평일을 한 행으로 묶어 표시"] },
   { version: "1.5.388", date: "2026-05-25", tag: "디자인", items: ["마이페이지 모바일 레이아웃을 시안(mypage-mobile.html)에 맞춰 보강 — 프로필 액션 전폭 2버튼 그리드, 탭바 아이콘 숨김+조밀(스크롤 유지), KPI 솔기 없는 2×2 보더 그리드, 대시보드 단일 컬럼 스택+카드 내부 사이즈 축소, 브레드크럼 숨김. 마크업 변경 없이 @media 만 보강(단일 반응형 컴포넌트 유지)"] },
   { version: "1.5.387", date: "2026-05-25", tag: "디자인", items: ["성당 안내(/about)를 시안(about.html·about-mobile.html)으로 재현 — hero 사진(badge)·환영 인사·Quick facts(교적·분과수·주일미사·설립)·About(소개+통계)·미사 7열 그리드(토요일 다크 특전·일요일 강조)·찾아오시는 길(지도 핀+주소/연락/온라인)·문의 CTA. parish·미사 데이터 보존, 분과 수 집계, SectionLayout 사이드바 유지, 모바일은 facts·mass 2열로 반응형"] },
   { version: "1.5.386", date: "2026-05-25", tag: "기능", items: ["마이페이지 '저장한 기도·묵상' 카드에 묵상 북마크 통합. 백엔드: GET /api/content/meditations/bookmarked(회원의 북마크 묵상 목록, 최근순) 추가. 프론트: localStorage 기도 + 서버 묵상을 합쳐 표시(묵상 먼저), 행마다 '기도'(골드)/'묵상'(전례색) 태그·좌측 컬러바, × 클릭 시 기도는 localStorage·묵상은 서버 토글로 해제"] },
