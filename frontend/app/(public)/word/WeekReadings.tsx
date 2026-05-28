@@ -1,20 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
 
 /**
- * 시안 .week-list 재현 — 이번 주 7일 분 미사 말씀 placeholder.
- * 굿뉴스에서 본문을 미리 가져오려면 7번 fetch 필요 → 2단계로 미룸.
- * 1단계에서는 7일 날짜 카드 + 클릭 시 그 날짜로 /word?date= 점프.
- * 오늘 행은 와인 배경으로 강조 (시안 .today).
+ * 시안 .week-list 재현 — 현재 표시 날짜가 속한 주의 월~일 7일.
+ * server-side fetch 된 데이터(week prop)를 props 로 받음 — 클라이언트 컴포넌트는
+ * 표시·라우팅만 담당. 데이터 미설정 시 placeholder("보기 →")로 폴백.
  */
-export default function WeekReadings({ currentIso }: { currentIso: string }) {
+export interface WeekDay {
+  date: string;          // YYYY-MM-DD
+  dayLabel: string;      // "월"·"화" ...
+  firstRef: string | null;
+  gospelRef: string | null;
+}
+
+export default function WeekReadings({
+  currentIso,
+  week,
+}: {
+  currentIso: string;
+  week: WeekDay[];
+}) {
   const router = useRouter();
   const todayIso = new Date().toISOString().slice(0, 10);
-
-  // 시안과 동일: 월요일~일요일 한 줄씩 7개 행.
-  const week = useMemo(() => buildWeek(currentIso), [currentIso]);
 
   function jump(iso: string) {
     router.push(iso === todayIso ? "/word" : `/word?date=${iso}`);
@@ -23,13 +31,13 @@ export default function WeekReadings({ currentIso }: { currentIso: string }) {
   return (
     <ul>
       {week.map((d) => {
-        const isToday = d.iso === todayIso;
-        const isCurrent = d.iso === currentIso;
+        const isToday = d.date === todayIso;
+        const isCurrent = d.date === currentIso;
         const highlight = isToday || isCurrent;
         return (
           <li
-            key={d.iso}
-            className={`py-2.5 border-b border-dashed border-[var(--color-border)] last:border-b-0 grid grid-cols-[42px_1fr] gap-2 text-[13px] ${
+            key={d.date}
+            className={`py-2.5 border-b border-dashed border-[var(--color-border)] last:border-b-0 grid grid-cols-[28px_1fr] gap-2.5 text-[13px] ${
               highlight ? "bg-[var(--color-primary)]/5 px-2.5 -mx-2.5 rounded" : ""
             }`}
           >
@@ -38,36 +46,33 @@ export default function WeekReadings({ currentIso }: { currentIso: string }) {
             </span>
             <button
               type="button"
-              onClick={() => jump(d.iso)}
-              className="text-left text-[var(--color-text-muted)] hover:text-[var(--color-primary)] truncate"
-              title="이 날의 말씀 보기"
+              onClick={() => jump(d.date)}
+              className="text-left text-[var(--color-text-muted)] hover:text-[var(--color-primary)] min-w-0"
+              title={`${d.date} 말씀 보기`}
             >
-              {d.iso.slice(5).replace("-", ".")}
-              <small className="block text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                {isCurrent ? "표시 중" : isToday ? "오늘" : "보기 →"}
-              </small>
+              {d.firstRef || d.gospelRef ? (
+                <>
+                  <span className={`block truncate ${highlight ? "text-[var(--color-text)] font-semibold" : ""}`}>
+                    {d.firstRef ?? "—"}
+                  </span>
+                  {d.gospelRef && (
+                    <small className={`block text-[11px] truncate mt-0.5 ${highlight ? "font-semibold" : ""}`}>
+                      {d.gospelRef}
+                    </small>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="block">{d.date.slice(5).replace("-", ".")}</span>
+                  <small className="block text-[11px] mt-0.5">
+                    {isCurrent ? "표시 중" : isToday ? "오늘" : "보기 →"}
+                  </small>
+                </>
+              )}
             </button>
           </li>
         );
       })}
     </ul>
   );
-}
-
-function buildWeek(currentIso: string): { iso: string; dayLabel: string }[] {
-  const labels = ["월", "화", "수", "목", "금", "토", "일"];
-  const cur = new Date(currentIso + "T00:00:00");
-  // ISO week 의 월요일 시작
-  const day = cur.getDay(); // 0(Sun)..6(Sat)
-  const offsetToMon = day === 0 ? -6 : 1 - day;
-  const monday = new Date(cur);
-  monday.setDate(cur.getDate() + offsetToMon);
-  return labels.map((dayLabel, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return { iso: `${y}-${m}-${dd}`, dayLabel };
-  });
 }
