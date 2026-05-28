@@ -72,9 +72,10 @@ function OrgChart({ members }: { members: CouncilMember[] }) {
   const hasChairs = chairs.length > 0 || viceChairs.length > 0;
 
   return (
-    <div className="mb-8 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--color-border)]">
-        <h2 className="font-serif font-bold text-[var(--color-primary)] text-lg">조직도</h2>
+    <div className="mb-8 bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
+      <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-baseline justify-between">
+        <h2 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)]">조직도</h2>
+        <span className="text-[11px] text-[var(--color-text-muted)]">Organization</span>
       </div>
       <div className="px-6 py-6 overflow-x-auto">
         <div className="min-w-[480px]">
@@ -178,7 +179,7 @@ export default async function CouncilPage() {
       <SectionLayout group="community" tools>
 
         {isEmpty ? (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 text-center py-20">
+          <div className="bg-white border border-[var(--color-border)] rounded-2xl p-8 text-center py-20">
             <div className="text-5xl mb-4"><CrossIcon /></div>
             <p className="font-serif text-lg text-[var(--color-primary)] mb-2">준비 중입니다</p>
             <p className="text-sm text-[var(--color-text-muted)]">관리자 페이지에서 구성원을 등록해 주세요.</p>
@@ -189,11 +190,11 @@ export default async function CouncilPage() {
 
             <div className="space-y-8">
               {grouped.map(({ category, label, members: cats }) => (
-                <section key={category} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center gap-3">
+                <section key={category} className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-3">
                     <span className="inline-block w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-                    <h2 className="font-serif font-bold text-[var(--color-primary)] text-base">{label}</h2>
-                    <span className="text-xs text-[var(--color-text-muted)] ml-auto">{cats.length}명</span>
+                    <h2 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)]">{label}</h2>
+                    <span className="text-[11px] tabular-nums text-[var(--color-text-muted)] ml-auto font-bold">{cats.length}명</span>
                   </div>
                   <div className={`p-6 grid gap-6 ${
                     cats.length <= 4
