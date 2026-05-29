@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.416";
+export const CURRENT_VERSION = "1.5.417";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.417", date: "2026-05-29", tag: "수정", items: ["dashboard 홈 Notice·Calendar·Offering 3단 비율(4.5:3.5:2)이 노트북·태블릿(1024px 이하)에서 1단 stack 으로 보이던 문제 해소 — globals.css 의 .grid12 분기점이 1024px 라 좁은 화면에서 stack 됐는데 v1.5.416 에 추가한 .three-card-row 의 모바일 폴백(900px)도 함께 작동해 더 좁아짐. 폴백 분기점을 900px → 480px 로 늦춤. 노트북·태블릿에서도 3단 비율 유지"] },
   { version: "1.5.416", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈 Notice·Calendar·Offering 한 행 비율 변경 — 기존 col-6:col-3:col-3(2:1:1)에서 4.5:3.5:2로 조정. .grid12 가 정수 col-N 만 지원해 col-12 wrapper 안에 자체 .three-card-row(grid-template-columns: 4.5fr 3.5fr 2fr) 적용. 900px 이하에서는 단일 컬럼 stack 으로 미디어쿼리 분기. 공지·캘린더 카드는 폭 조금 늘고, 한 줄 봉헌 카드는 조금 줄어듦"] },
   { version: "1.5.415", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈 NoticeEventsTabs 두 탭 모두 5건으로 통일 — 공지사항 6→5건, 행사·모임 8→5건. 카드 높이 일관성·정보 밀집도 절제"] },
   { version: "1.5.414", date: "2026-05-29", tag: "기능", items: ["주보 카드 표지에 PDF 첫 페이지 썸네일 배경 — bulletins 테이블에 thumbnail_url VARCHAR(500) 컬럼 추가(startup migration). backend/app/core/pdf_thumbnail.py 신규: PyMuPDF(fitz)+Pillow 로 PDF 1쪽 → 긴 변 1024px JPG(quality 78, progressive) 추출. 주보 업로드 엔드포인트 동기 자동 호출(실패 시 fallback 만 잃음). POST /api/bulletins/backfill-thumbnails(admin) 신설로 기존 주보 일괄 생성. 프론트 BulletinClient: CoverFrame 컴포넌트 신설로 latest hero·card 표지 영역 통합 — thumbnail_url 있으면 풀 배경 이미지 + 하단 어두운 그라디언트(rgba 0.05→0.7) + 흰 텍스트(본당명·호수·날짜) + 최신호/특집 ribbon, 없으면 기존 ✠ placeholder"] },

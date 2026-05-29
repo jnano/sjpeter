@@ -493,9 +493,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* v1.5.416 — Notice + Calendar + Offering 한 행 비율 4.5 : 3.5 : 2
    .grid12 는 정수 col-N 만 지원 → col-12 wrapper 안에 자체 3-col 그리드.
-   모바일(900px 이하)에서 단일 컬럼 stack. */
+   v1.5.417 — 좁은 화면(노트북·태블릿 1024px 이하)에서도 3단 비율 유지. 매우 좁은
+   화면(480px 이하)에서만 단일 컬럼 stack 으로 폴백. */
 .skin-dashboard .three-card-row { display: grid; grid-template-columns: 4.5fr 3.5fr 2fr; gap: 20px; }
-@media (max-width: 900px) { .skin-dashboard .three-card-row { grid-template-columns: 1fr; gap: 16px; } }
+@media (max-width: 480px) { .skin-dashboard .three-card-row { grid-template-columns: 1fr; gap: 16px; } }
 
 /* ── v1.5.409 다가오는 일정 — 공지사항 카드의 '행사·모임' 탭에서 사용. ── */
 .skin-dashboard .upcoming-list { display: flex; flex-direction: column; min-width: 0; }
