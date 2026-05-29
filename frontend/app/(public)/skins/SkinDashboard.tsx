@@ -122,9 +122,11 @@ export default function SkinDashboard({
           환영합니다, 오늘 공동체의 하루입니다.
         </h1>
         <div className="head-meta">
-          <div className="kpi"><b>제 {latestIssue ?? "—"} 호</b><span>이번 주 주보</span></div>
-          <div className="kpi"><b>{overallPct}%</b><span>성전 진행</span></div>
-          <div className="kpi"><b>{events.length} 건</b><span>다가오는 일정</span></div>
+          {/* v1.5.410 — 각 KPI 를 클릭 가능 링크로 매핑.
+                주보 → /bulletin, 진행률 → /construction, 일정 → /calendar/upcoming(신규). */}
+          <Link href="/bulletin" className="kpi"><b>제 {latestIssue ?? "—"} 호</b><span>이번 주 주보</span></Link>
+          <Link href="/construction" className="kpi"><b>{overallPct}%</b><span>성전 진행</span></Link>
+          <Link href="/calendar/upcoming" className="kpi"><b>{events.length} 건</b><span>다가오는 일정</span></Link>
         </div>
       </div>
 
