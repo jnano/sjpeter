@@ -249,8 +249,12 @@ export default function SkinDashboard({
             ))}
           </div>
 
-          {/* Notice + 행사·모임 탭 (col-6) — 옵션 B: 같은 카드 안 탭으로 전환 (v1.5.409) */}
-          <article className="card col-6">
+          {/* Notice + Calendar + Offering 한 행 — 비율 4.5:3.5:2 (v1.5.416).
+              .grid12 는 정수 col-N 만 지원하므로 col-12 wrapper 안에 자체 grid 적용 (.three-card-row).
+              모바일에서는 globals.css 미디어쿼리로 1fr stack. */}
+          <div className="col-12 three-card-row">
+          {/* Notice + 행사·모임 탭 — 같은 카드 안 탭으로 전환 (v1.5.409) */}
+          <article className="card">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Notice · Events</span>
@@ -261,8 +265,8 @@ export default function SkinDashboard({
             <NoticeEventsTabs notices={notices} events={upcomingEvents} />
           </article>
 
-          {/* Calendar (col-3) — 미니 캘린더만 (옵션 B 적용으로 원복 v1.5.409) */}
-          <article className="card col-3 calendar-mini">
+          {/* Calendar — 미니 캘린더 */}
+          <article className="card calendar-mini">
             <div className="card-head" style={{ marginBottom: 14 }}>
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Calendar</span>
@@ -295,8 +299,8 @@ export default function SkinDashboard({
             </div>
           </article>
 
-          {/* Offering (col-3) — 원래 폭으로 원복 (v1.5.409) */}
-          <article className="card offering col-3">
+          {/* Offering — 한 줄 봉헌 */}
+          <article className="card offering">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>성전 건축</span>
@@ -307,6 +311,7 @@ export default function SkinDashboard({
             <div className="offering-sub">함께 모은 봉헌의 마음</div>
             <Link href="/offering" className="offering-cta">한 줄 남기기 ✍︎</Link>
           </article>
+          </div>{/* /3-card row */}
 
           {/* Reflection (col-12) */}
           {reflection && (
