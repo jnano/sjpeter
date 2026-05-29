@@ -21,37 +21,70 @@ export type InkPreset = {
   description: string;
 };
 
-/** color-compare.html 시안 큐레이션 — 현재 + 4종 */
+/** color-compare 시안 큐레이션 — 다크 1 + 딥 4종(차분) + 비비드 5종(밝고 화려). */
 export const INK_PRESETS: InkPreset[] = [
+  // ── 다크 (default) ──
   {
     key: "current",
     hex: "#2C2620",
-    label: "현재 · 다크 브라운",
+    label: "다크 브라운",
     description: "묵직한 흙빛. 본당 전통 톤.",
   },
+  // ── 딥 톤 (차분) ──
   {
     key: "teal",
     hex: "#1F4E5F",
-    label: "A. 딥 틸",
+    label: "딥 틸",
     description: "차분한 청록. 골드와 가장 잘 어울림.",
   },
   {
     key: "navy",
     hex: "#1B3A5F",
-    label: "B. 딥 네이비",
+    label: "딥 네이비",
     description: "안정적인 청남. 정중한 분위기.",
   },
   {
     key: "forest",
     hex: "#1F3D2B",
-    label: "C. 딥 포레스트",
+    label: "딥 포레스트",
     description: "깊은 숲. 자연·생명의 인상.",
   },
   {
     key: "indigo",
     hex: "#1D2D5F",
-    label: "D. 잉크 인디고",
+    label: "잉크 인디고",
     description: "어두운 남보라. 인쇄 잉크 톤.",
+  },
+  // ── 비비드 (밝고 화려) ── v1.5.427 color-compare(1).html 시안 추가
+  {
+    key: "azure",
+    hex: "#1668C2",
+    label: "애저 블루",
+    description: "선명한 청. 신뢰감과 시원함.",
+  },
+  {
+    key: "vivid-teal",
+    hex: "#0E8C8C",
+    label: "비비드 틸",
+    description: "밝은 청록. 골드와 가장 강한 대비.",
+  },
+  {
+    key: "emerald",
+    hex: "#1A8F5C",
+    label: "에메랄드",
+    description: "선명한 녹. 생명·성장의 인상.",
+  },
+  {
+    key: "cobalt",
+    hex: "#2D4ECC",
+    label: "코발트",
+    description: "강렬한 진청. 가장 인상적인 톤.",
+  },
+  {
+    key: "plum",
+    hex: "#7A3B9E",
+    label: "플럼 바이올렛",
+    description: "따뜻한 보라. 전례·신비의 색.",
   },
 ];
 
