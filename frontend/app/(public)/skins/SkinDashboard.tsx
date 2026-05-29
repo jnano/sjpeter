@@ -82,6 +82,13 @@ export default function SkinDashboard({
       .filter((e) => { const d = new Date(e.event_date); return d.getFullYear() === calY && d.getMonth() === calM; })
       .map((e) => new Date(e.event_date).getDate()),
   );
+
+  // 다가오는 일정 8건 — 오늘 이후, 날짜 오름차순. v1.5.408 caled 카드 우측 목록용.
+  const todayStart = new Date(calY, calM, todayDate, 0, 0, 0).getTime();
+  const upcomingEvents = events
+    .filter((e) => new Date(e.event_date).getTime() >= todayStart)
+    .sort((a, b) => a.event_date.localeCompare(b.event_date))
+    .slice(0, 8);
   type Cell = { day: number; muted: boolean; today: boolean; has: boolean; dow: number };
   const cells: Cell[] = [];
   for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevMonthDays - i, muted: true, today: false, has: false, dow: 0 });
@@ -239,8 +246,8 @@ export default function SkinDashboard({
             ))}
           </div>
 
-          {/* Notice (col-6) */}
-          <article className="card col-6">
+          {/* Notice (col-12) — 다가오는 일정 카드와 한 행 폭 양보 후 한 행 풀폭 (v1.5.408) */}
+          <article className="card col-12">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Notice · Events</span>
@@ -267,42 +274,76 @@ export default function SkinDashboard({
             </ul>
           </article>
 
-          {/* Calendar (col-3) */}
-          <article className="card col-3 calendar-mini">
+          {/* Calendar (col-6) — 좌 mini cal + 우 다가오는 일정 8건 목록 (v1.5.408) */}
+          <article className="card col-6 calendar-mini">
             <div className="card-head" style={{ marginBottom: 14 }}>
               <div>
-                <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Calendar</span>
-                <h3>{calM + 1}월 행사</h3>
+                <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Calendar · Upcoming</span>
+                <h3>{calM + 1}월 행사 · 다가오는 일정</h3>
               </div>
+              <Link href="/calendar" className="card-link">전체 보기 →</Link>
             </div>
-            <div className="cal-head">
-              <span className="cal-month">{calY} · {calM + 1}월</span>
-              <div className="cal-nav">
-                <Link href="/calendar" aria-label="달력" className="" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="6 2 3 5 6 8" /></svg>
-                </Link>
-                <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="4 2 7 5 4 8" /></svg>
-                </Link>
+
+            {/* 좌·우 분할: mini cal + 다가오는 일정 목록 */}
+            <div className="cal-split">
+              {/* 좌: 미니 캘린더 */}
+              <div className="cal-left">
+                <div className="cal-head">
+                  <span className="cal-month">{calY} · {calM + 1}월</span>
+                  <div className="cal-nav">
+                    <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="6 2 3 5 6 8" /></svg>
+                    </Link>
+                    <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="4 2 7 5 4 8" /></svg>
+                    </Link>
+                  </div>
+                </div>
+                <div className="cal-grid">
+                  {["일", "월", "화", "수", "목", "금", "토"].map((d, i) => (
+                    <span key={d} className={`dow${i === 0 ? " sun" : ""}`}>{d}</span>
+                  ))}
+                  {cells.map((c, i) => (
+                    <span
+                      key={i}
+                      className={`day${c.muted ? " muted" : ""}${!c.muted && c.dow === 0 ? " sun" : ""}${c.today ? " today" : ""}${c.has ? " has" : ""}`}
+                    >
+                      {c.day}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="cal-grid">
-              {["일", "월", "화", "수", "목", "금", "토"].map((d, i) => (
-                <span key={d} className={`dow${i === 0 ? " sun" : ""}`}>{d}</span>
-              ))}
-              {cells.map((c, i) => (
-                <span
-                  key={i}
-                  className={`day${c.muted ? " muted" : ""}${!c.muted && c.dow === 0 ? " sun" : ""}${c.today ? " today" : ""}${c.has ? " has" : ""}`}
-                >
-                  {c.day}
-                </span>
-              ))}
+
+              {/* 우: 다가오는 일정 8건 목록 */}
+              <ul className="upcoming-list">
+                {upcomingEvents.length === 0 ? (
+                  <li className="up-empty">예정된 일정이 없습니다</li>
+                ) : (
+                  upcomingEvents.map((e) => {
+                    const d = new Date(e.event_date);
+                    const m = d.getMonth() + 1;
+                    const day = d.getDate();
+                    const dow = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+                    const isToday = d.toDateString() === now.toDateString();
+                    const kindCls = e.event_kind === "행사" ? "kind-event" : e.event_kind === "모임" ? "kind-meeting" : "kind-none";
+                    return (
+                      <li key={e.id} className={isToday ? "is-today" : ""}>
+                        <span className="up-date">
+                          <b>{m}/{day}</b>
+                          <small>({dow})</small>
+                        </span>
+                        <Link href={`/calendar?focus=${e.id}`} className="up-title">{e.title}</Link>
+                        {e.event_kind && <span className={`up-kind ${kindCls}`}>{e.event_kind}</span>}
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
             </div>
           </article>
 
-          {/* Offering (col-3) */}
-          <article className="card offering col-3">
+          {/* Offering (col-6) — 캘린더와 균형 (v1.5.408) */}
+          <article className="card offering col-6">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>성전 건축</span>
