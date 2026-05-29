@@ -35,7 +35,7 @@ export default function EraFilter({ eras, total }: { eras: Era[]; total: number 
         onClick={() => jump("all")}
         className={`px-4 py-2 rounded-full border text-[13px] font-semibold transition-colors ${
           active === "all"
-            ? "bg-[var(--color-text)] text-white border-[var(--color-text)]"
+            ? "bg-[var(--ink)] text-white border-[var(--ink)]"
             : "bg-white text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text)]"
         }`}
       >
@@ -55,7 +55,7 @@ export default function EraFilter({ eras, total }: { eras: Era[]; total: number 
             onClick={() => jump(e.id)}
             className={`px-4 py-2 rounded-full border text-[13px] font-semibold transition-colors ${
               on
-                ? "bg-[var(--color-text)] text-white border-[var(--color-text)]"
+                ? "bg-[var(--ink)] text-white border-[var(--ink)]"
                 : "bg-white text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text)]"
             }`}
           >

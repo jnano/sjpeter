@@ -88,7 +88,7 @@ export default function PrayerActionBar({ prayerId, title, bodyText }: { prayerI
       <button type="button" className="icon-only" aria-label="공유" onClick={share}>
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="3.5" cy="7" r="1.5" /><circle cx="10.5" cy="3.5" r="1.5" /><circle cx="10.5" cy="10.5" r="1.5" /><line x1="4.8" y1="6.3" x2="9.2" y2="4.2" /><line x1="4.8" y1="7.7" x2="9.2" y2="9.8" /></svg>
       </button>
-      {toast && <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-[var(--color-text)] text-white text-sm px-4 py-2 rounded-full shadow-lg pointer-events-none">{toast}</div>}
+      {toast && <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-[var(--ink)] text-white text-sm px-4 py-2 rounded-full shadow-lg pointer-events-none">{toast}</div>}
     </div>
   );
 }

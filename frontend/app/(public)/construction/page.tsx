@@ -74,7 +74,7 @@ export default async function ConstructionPage() {
         <article className="space-y-10">
 
           {/* 시안 .progress-hero — 다크 잉크 배경 + 골드 큰 PCT */}
-          <section className="relative overflow-hidden bg-[var(--color-text)] text-white rounded-3xl p-7 sm:p-12">
+          <section className="relative overflow-hidden bg-[var(--ink)] text-white rounded-3xl p-7 sm:p-12">
             <div
               aria-hidden
               className="absolute -right-24 -top-24 w-[380px] h-[380px] rounded-full"

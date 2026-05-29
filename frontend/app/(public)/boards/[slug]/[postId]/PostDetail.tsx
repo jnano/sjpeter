@@ -654,7 +654,7 @@ export default function PostDetail({
         {shareToast && (
           <span
             role="status"
-            className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-xs bg-[var(--color-text)] text-white px-3 py-1.5 rounded-full whitespace-nowrap shadow"
+            className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-xs bg-[var(--ink)] text-white px-3 py-1.5 rounded-full whitespace-nowrap shadow"
           >
             {shareToast}
           </span>

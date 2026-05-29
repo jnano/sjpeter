@@ -360,7 +360,7 @@ function ListView({
   let lastDate = "";
   return (
     <div>
-      <div className="text-[11px] tracking-[0.16em] uppercase text-[var(--cal-ink3)] font-bold pb-3 border-b border-[var(--color-text)] mb-1">
+      <div className="text-[11px] tracking-[0.16em] uppercase text-[var(--cal-ink3)] font-bold pb-3 border-b border-[var(--ink)] mb-1">
         {monthLabel} · 전체 {sorted.length}건
       </div>
       {sorted.length === 0 ? (

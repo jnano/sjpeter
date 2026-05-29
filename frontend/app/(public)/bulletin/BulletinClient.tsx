@@ -158,7 +158,7 @@ export default function BulletinClient({
                 type="button"
                 onClick={() => viewPdf(latest)}
                 disabled={!latest.pdf_url}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-[var(--color-text)] text-white rounded-full text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-[var(--ink)] text-white rounded-full text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <rect x="2" y="2" width="10" height="10" rx="1" />
@@ -219,7 +219,7 @@ export default function BulletinClient({
                 type="button"
                 onClick={() => setYear(y)}
                 className={`px-3 sm:px-3.5 py-1.5 rounded-full text-[12px] font-bold tabular-nums transition-colors ${
-                  year === y ? "bg-[var(--color-text)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  year === y ? "bg-[var(--ink)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >
                 {y}
@@ -229,7 +229,7 @@ export default function BulletinClient({
               type="button"
               onClick={() => setYear("all")}
               className={`px-3 sm:px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
-                year === "all" ? "bg-[var(--color-text)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                year === "all" ? "bg-[var(--ink)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
               전체
@@ -283,7 +283,7 @@ export default function BulletinClient({
       ) : (
         groups.map((g) => (
           <section key={`${g.year}-${g.quarter}`} className="mb-9">
-            <div className="flex items-center gap-3 pb-2.5 border-b border-[var(--color-text)] mb-5">
+            <div className="flex items-center gap-3 pb-2.5 border-b border-[var(--ink)] mb-5">
               <h3 className="text-lg font-bold tracking-tight">
                 {g.year} · {g.label}
               </h3>

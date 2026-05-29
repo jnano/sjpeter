@@ -64,7 +64,7 @@ export default async function GroupsPage() {
             <div className="flex gap-1.5 flex-wrap mb-7 sticky top-14 md:top-32 z-10 bg-[var(--color-background)]/95 backdrop-blur py-2 -mx-1 px-1">
               <a
                 href="#all"
-                className="px-4 py-2 rounded-full bg-[var(--color-text)] text-white text-[13px] font-bold border border-[var(--color-text)]"
+                className="px-4 py-2 rounded-full bg-[var(--ink)] text-white text-[13px] font-bold border border-[var(--ink)]"
               >
                 전체
                 <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white/15">
@@ -97,7 +97,7 @@ export default async function GroupsPage() {
               const cat = categoryOf(p.name);
               return (
                 <section key={p.id} id={`cat-${p.id}`} className="scroll-mt-32 md:scroll-mt-44 mb-10">
-                  <div className="flex items-center gap-3 pb-2.5 border-b border-[var(--color-text)] mb-5">
+                  <div className="flex items-center gap-3 pb-2.5 border-b border-[var(--ink)] mb-5">
                     <h3 className="text-lg font-bold tracking-tight">{p.name}</h3>
                     <span className="text-[11px] px-2.5 py-1 bg-[var(--color-surface-warm)] text-[var(--color-text-muted)] rounded-full font-bold tabular-nums">
                       {kids.length}개

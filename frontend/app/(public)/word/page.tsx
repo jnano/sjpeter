@@ -252,7 +252,7 @@ export default async function WordPage({ searchParams }: PageProps) {
 
                 {/* 다크 복음 카드 */}
                 {gospel.readings.gospel && (
-                  <article id="gospel" className="scroll-mt-28 md:scroll-mt-32 bg-[var(--color-text)] text-white rounded-2xl p-7 sm:p-10 mb-5">
+                  <article id="gospel" className="scroll-mt-28 md:scroll-mt-32 bg-[var(--ink)] text-white rounded-2xl p-7 sm:p-10 mb-5">
                     <div className="flex justify-between items-baseline gap-3 pb-4 mb-6 border-b border-white/15">
                       <h3 className="text-[13px] tracking-[0.12em] uppercase font-bold" style={{ color: "var(--color-accent, #C9A961)" }}>
                         ✠ 오늘의 복음
@@ -344,7 +344,7 @@ function ReadingCard({
       id={id}
       className="scroll-mt-28 md:scroll-mt-32 bg-white border border-[var(--color-border)] rounded-2xl p-7 sm:p-10 mb-5"
     >
-      <div className="flex justify-between items-baseline gap-3 pb-4 mb-6 border-b border-[var(--color-text)]">
+      <div className="flex justify-between items-baseline gap-3 pb-4 mb-6 border-b border-[var(--ink)]">
         <h3 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)]">
           {eyebrow}
         </h3>

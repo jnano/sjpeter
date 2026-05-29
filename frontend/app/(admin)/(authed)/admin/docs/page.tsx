@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.425";
+export const CURRENT_VERSION = "1.5.426";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.426", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 확대 2차 — Tailwind 인라인 bg-[var(--color-text)] / border-[var(--color-text)] 로 다크 톤을 직접 박아둔 공개 페이지 14 파일을 ink 로 일괄 전환. 대상: /construction progress-hero, /word 오늘 복음 다크 카드 + 섹션 디바이더, /word ReadTabs/GospelToolbar 다크 칩, /offering status-hero, /bulletin 'PDF 다운로드' CTA + 연도 필터 활성 + 섹션 디바이더, /history EraFilter 10년 칩 활성, /groups 사목/신심/봉사/연령 필터 활성, /meditation·/prayer toast, /boards 상세 toast 등. info/page.tsx 의 bg-[var(--color-text)]/[0.02] (subtle 2% 틴트)는 그대로 유지. 다크 블록 = ink 일관 적용"] },
   { version: "1.5.425", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 적용 위치 교정 — v1.5.422 의 푸터 ink 다크 전환은 사용자 의도와 달랐음. 푸터를 원복(.site-foot 다시 surface-warm + color-text)하고, 대신 사이트 전반에 흩어진 '다크 활성 상태' UI 8 군데를 ink 변수로 일괄 전환. (1) /about CTA(.ab-cta — 이미 ink 사용 중) 그대로. (2) 헤더 CTA 버튼 .site-cta. (3) 기도 페이지 오늘 카드 .pr-today + 활성 칩 .pr-chip.on. (4) 게시판 세그먼트 활성 .bd-segor a.on + 페이지네이션 현재 .bd-page span.cur. (5) 캘린더 월/주/일 토글 .cal-viewswitch button.on + 전체 N건 칩 .cal-chip.on + 미니캘 선택일 .cal-mini-d.selected. 모두 background:var(--color-text)→var(--ink), border-color도 동일. :root 의 --ink 정의는 v1.5.422 그대로 유지(살아있음). 이제 admin/skin 잉크 컬러를 바꾸면 홈·about·캘린더·기도·게시판·헤더 CTA 의 다크 UI 가 즉시 일괄 반영"] },
   { version: "1.5.424", date: "2026-05-30", tag: "기능", items: ["/about About 섹션 본문도 /admin/parish/info 에서 편집 가능 — 기존 parishes.description 컬럼을 그대로 재사용(신규 DB 작업 없음). admin 폼의 About 서브블록에 본문 textarea 추가, 빈 줄로 단락 구분 안내. 공개 /about 은 이미 parish.description 을 whiteSpace:pre-line 으로 렌더 중이라 폴백 동작 그대로 유지(빈 값이면 기존 2단락 정적 문구). v1.5.423 의 잘못된 안내 문구도 정정"] },
   { version: "1.5.423", date: "2026-05-30", tag: "기능", items: ["/about Welcome·About 섹션 텍스트를 /admin/parish/info 에서 편집 가능. parishes 테이블에 7개 컬럼 추가(startup migration) — about_welcome_eyebrow/h1/h2/body/signature, about_intro_eyebrow/heading. backend ParishUpdate·ParishOut·_parish_to_out 에 7 필드 노출. admin 폼에 '성당 안내 페이지(/about) 텍스트' 섹션 신설 — Welcome 5필드(eyebrow/h1/h2/body/signature) + About 2필드(eyebrow/heading). 서명은 본당명 뒤에 붙는 라벨만 입력하면 됨(미리보기 표시). 공개 /about 페이지는 각 필드를 우선 사용하고 빈 값이면 기존 정적 문구로 폴백 — 환영 인사·서명·소개 헤딩까지 본당별 톤 자유 변경. 본문(우리 성당 소개)은 기존 description 그대로 사용"] },

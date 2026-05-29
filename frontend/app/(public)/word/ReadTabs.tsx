@@ -110,7 +110,7 @@ export default function ReadTabs({ tabs }: { tabs: Tab[] }) {
             onClick={() => jump(t.id)}
             title={`${t.label} — ${t.reference}`}
             className={`flex-1 min-w-0 px-2 py-2 rounded-full font-semibold transition-colors flex flex-col items-center leading-tight ${
-              on ? "bg-[var(--color-text)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              on ? "bg-[var(--ink)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
             <span className={`text-[9px] sm:text-[10px] opacity-70 ${on ? "opacity-100" : ""}`} style={on ? { color: "var(--color-accent, #C9A961)" } : undefined}>
