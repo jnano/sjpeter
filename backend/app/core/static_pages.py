@@ -14,6 +14,7 @@ STATIC_PAGES: list[dict] = [
     {"slug": "/sisters",  "label": "역대 수녀님",         "category": "성당 소개"},
     {"slug": "/priests",  "label": "본당 출신 사제",      "category": "성당 소개"},
     {"slug": "/info",     "label": "찾아오시는 길",       "category": "성당 소개"},
+    {"slug": "/catechumen", "label": "예비신자 안내",     "category": "성당 소개"},
     # 본당 공동체
     {"slug": "/council",  "label": "사목평의회",          "category": "본당 공동체"},
     {"slug": "/groups",   "label": "분과와 단체",         "category": "본당 공동체"},
