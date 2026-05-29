@@ -13,6 +13,59 @@ interface Tab {
   reference: string;   // "1코린"
 }
 
+/**
+ * 긴 reference 를 탭에 맞게 축약. 풀 reference 는 title 속성으로 노출.
+ *   "사도 바오로의 코린토 1서 12,3ㄷ-7.12-13" → "1코린 12,3"
+ *   "마카베오기 하권 6,18.21.24-31" → "2마카 6,18"
+ *   "시편 104(103),1ㄱㄴ과 24..."   → "시편 104"
+ *   "다니 3,52ㄱ.52ㄷ.53.54.55.56"  → "다니 3,52"
+ */
+function shortenRef(ref: string): string {
+  if (!ref) return "";
+  let r = ref;
+  // "사도 바오로의 X" 형태 책명 약어
+  const apostleMap: [RegExp, string][] = [
+    [/^사도\s*바오로의?\s*코린토\s*1서/, "1코린"],
+    [/^사도\s*바오로의?\s*코린토\s*2서/, "2코린"],
+    [/^사도\s*바오로의?\s*테살로니카\s*1서/, "1테살"],
+    [/^사도\s*바오로의?\s*테살로니카\s*2서/, "2테살"],
+    [/^사도\s*바오로의?\s*티모테오\s*1서/, "1티모"],
+    [/^사도\s*바오로의?\s*티모테오\s*2서/, "2티모"],
+    [/^사도\s*바오로의?\s*로마(서)?/, "로마"],
+    [/^사도\s*바오로의?\s*갈라티아(서)?/, "갈라"],
+    [/^사도\s*바오로의?\s*에페소(서)?/, "에페"],
+    [/^사도\s*바오로의?\s*필리피(서)?/, "필리"],
+    [/^사도\s*바오로의?\s*콜로새(서)?/, "콜로"],
+    [/^사도\s*바오로의?\s*티토(서)?/, "티토"],
+    [/^사도\s*바오로의?\s*필레몬(서)?/, "필레"],
+    [/^사도\s*바오로의?\s*히브리(서)?/, "히브"],
+    [/^사도행전/, "사도"],
+    [/^마카베오기\s*상권/, "1마카"],
+    [/^마카베오기\s*하권/, "2마카"],
+    [/^베드로\s*1서/, "1베드"],
+    [/^베드로\s*2서/, "2베드"],
+    [/^요한\s*1서/, "1요한"],
+    [/^요한\s*2서/, "2요한"],
+    [/^요한\s*3서/, "3요한"],
+  ];
+  for (const [re, short] of apostleMap) {
+    if (re.test(r)) { r = r.replace(re, short); break; }
+  }
+  // 첫 콤마+첫 절 번호까지만 유지 (절 끝의 ㄱㄴㄷ·다중 절 표기 제거)
+  // "1코린 12,3ㄷ-7.12-13" → "1코린 12,3"
+  // "시편 104(103),1ㄱㄴ과 24..." → "시편 104,1" → 후처리에서 "시편 104"
+  const m = r.match(/^([^,]+),\s*([\d]+)/);
+  if (m) r = `${m[1]},${m[2]}`;
+  else {
+    // 콤마가 없으면 책명+장 까지만
+    const m2 = r.match(/^([가-힣A-Za-z0-9]+\s*\d+)/);
+    if (m2) r = m2[1];
+  }
+  // 괄호 안 보조 표기 제거 (예: "시편 104(103)")
+  r = r.replace(/\s*\(\s*[^)]*\)\s*/g, "").trim();
+  return r;
+}
+
 export default function ReadTabs({ tabs }: { tabs: Tab[] }) {
   const [active, setActive] = useState<string>(tabs[0]?.id ?? "");
 
@@ -49,19 +102,23 @@ export default function ReadTabs({ tabs }: { tabs: Tab[] }) {
     <div className="flex gap-1 p-1 bg-white border border-[var(--color-border)] rounded-full mb-6 sticky top-14 md:top-32 z-10">
       {tabs.map((t) => {
         const on = active === t.id;
+        const short = shortenRef(t.reference);
         return (
           <button
             key={t.id}
             type="button"
             onClick={() => jump(t.id)}
-            className={`flex-1 px-2 py-2.5 rounded-full text-[12px] sm:text-[13px] font-semibold transition-colors flex flex-col items-center leading-tight ${
+            title={`${t.label} — ${t.reference}`}
+            className={`flex-1 min-w-0 px-2 py-2 rounded-full font-semibold transition-colors flex flex-col items-center leading-tight ${
               on ? "bg-[var(--color-text)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
-            <span className={`text-[9px] sm:text-[10px] opacity-70 mb-0.5 ${on ? "opacity-100" : ""}`} style={on ? { color: "var(--color-accent, #C9A961)" } : undefined}>
+            <span className={`text-[9px] sm:text-[10px] opacity-70 ${on ? "opacity-100" : ""}`} style={on ? { color: "var(--color-accent, #C9A961)" } : undefined}>
               {t.label}
             </span>
-            <span className="truncate w-full text-center">{t.reference}</span>
+            <span className="block w-full truncate text-center text-[10px] sm:text-[12px] tracking-tight">
+              {short}
+            </span>
           </button>
         );
       })}

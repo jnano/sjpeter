@@ -109,12 +109,15 @@ async function fetchWeek(currentIso: string): Promise<WeekDay[]> {
 }
 
 // ── 색 제의 표시 ──────────────────────────────────
-const VESTMENT: Record<string, { label: string; hex: string; ink: string }> = {
-  red: { label: "빨강색 제의", hex: "#A93232", ink: "#FFF" },
-  green: { label: "초록색 제의", hex: "#2E6B43", ink: "#FFF" },
-  purple: { label: "보라색 제의", hex: "#6B4E8C", ink: "#FFF" },
-  gold: { label: "금색 제의", hex: "#C9A961", ink: "var(--color-text)" },
-  white: { label: "흰색 제의", hex: "#E8DFD6", ink: "var(--color-text)" },
+// "제의(祭衣)"는 미사에서 사제가 입는 옷. 전례 시기·축일마다 색이 정해져 있어
+// 그날의 분위기를 드러낸다. 신자가 아닌 방문자도 의미를 알 수 있도록 title 에
+// 설명을 함께 제공.
+const VESTMENT: Record<string, { label: string; hex: string; ink: string; tip: string }> = {
+  red:    { label: "빨강색 제의", hex: "#A93232", ink: "#FFF",                 tip: "성령강림·수난주일·성지주일·순교자 기념일 — 성령의 불꽃과 순교자의 피를 뜻합니다" },
+  green:  { label: "초록색 제의", hex: "#2E6B43", ink: "#FFF",                 tip: "연중 시기 — 희망과 일상의 신앙을 뜻합니다" },
+  purple: { label: "보라색 제의", hex: "#6B4E8C", ink: "#FFF",                 tip: "사순·대림 — 참회와 준비의 시기를 뜻합니다" },
+  gold:   { label: "금색 제의",   hex: "#C9A961", ink: "var(--color-text)",    tip: "특별한 대축일 — 가장 큰 영광을 표현합니다" },
+  white:  { label: "흰색 제의",   hex: "#E8DFD6", ink: "var(--color-text)",    tip: "부활·성탄·대축일·기념일 — 기쁨과 순결을 뜻합니다" },
 };
 
 function formatKoreanDate(iso: string) {
@@ -192,8 +195,9 @@ export default async function WordPage({ searchParams }: PageProps) {
                     </h2>
                   </div>
                   <span
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wider"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wider cursor-help"
                     style={{ background: vestment.hex, color: vestment.ink }}
+                    title={vestment.tip}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: vestment.ink }} />
                     {vestment.label}
