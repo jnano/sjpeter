@@ -117,7 +117,7 @@ export default async function UpcomingPage() {
               Upcoming · 다가오는 일정
             </span>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight leading-snug">
-              앞으로 <em className="not-italic text-[var(--color-primary)]">{total}건</em>의 일정이 본당을 기다리고 있습니다
+              본당 일정 <em className="not-italic text-[var(--color-primary)]">{total}건</em>이 기다리고 있습니다.
             </h2>
           </div>
           <Link

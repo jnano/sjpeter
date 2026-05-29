@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.410";
+export const CURRENT_VERSION = "1.5.411";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.411", date: "2026-05-29", tag: "디자인", items: ["/calendar/upcoming 헤딩 문구 변경 — '앞으로 N건의 일정이 본당을 기다리고 있습니다' → '본당 일정 N건이 기다리고 있습니다.'. N건은 와인 강조 유지"] },
   { version: "1.5.410", date: "2026-05-29", tag: "기능", items: ["dashboard 페이지 헤더 KPI 3개 클릭 가능 — 제N호 이번 주 주보→/bulletin, NN% 성전 진행→/construction, N건 다가오는 일정→/calendar/upcoming(신규). KPI 영역의 <div>→<Link> 교체 + hover 시 큰 숫자 와인색·부제 잉크색 전환. 신규 /calendar/upcoming 페이지: 시안 events.html .upcoming-strip 패턴 재현 — Upcoming hero(총 N건 + 월간 캘린더 보기 액션) + 3컬럼 카드 그리드(ribbon[오늘·내일·D-N + 행사/모임 칩] + 큰 제목 + 시간·장소 + countdown + 자세히). 오늘 항목은 와인 보더 강조, AI 생성 일정은 우상단 violet AI 뱃지. 데이터: events API year+month 쿼리로 3개월치 fetch + 오늘 이후 + 날짜순"] },
   { version: "1.5.409", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈 '다가오는 일정 8건' 표시 방식 변경 — 옵션 A(캘린더 카드 확장 col-3→col-6)에서 옵션 B(공지사항 카드 탭 활성화)로 전환. 그리드 원복: Notice col-12→col-6, Calendar col-6→col-3, Offering col-6→col-3. NoticeEventsTabs 클라이언트 컴포넌트 신설 — 같은 카드 안에서 '공지사항'/'행사·모임' 탭 전환(useState), 공지사항은 기존 6건, 행사·모임 탭은 upcoming 8건(날짜·제목·행사/모임 칩, 오늘 항목 와인 하이라이트). globals.css .notice-tabs .tab 룰에 button reset 추가, dead .cal-split 룰 제거"] },
   { version: "1.5.408", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈에 '다가오는 일정 8건' 목록 추가 — 기존 캘린더 카드는 KPI 숫자만 보이고 실제 목록은 미표시. 그리드 재배치: Notice col-6→col-12(한 행 풀폭), Calendar col-3→col-6(좌 mini cal + 우 8건 목록 .cal-split 분할), Offering col-3→col-6(시각적 균형). 목록 형식: 5/28 (수) · 제목(truncate) · [행사/모임 칩]. 오늘 항목은 와인 5% 배경 하이라이트. 정렬: 오늘 이후 날짜 오름차순 상위 8건. CSS .cal-split·.upcoming-list 신설(900px 이하 단일 컬럼 분기)"] },
