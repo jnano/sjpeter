@@ -22,3 +22,10 @@ class Parish(Base):
     fax = Column(String(20))
     cafe_url = Column(String(500))
     band_url = Column(String(500))
+    # 본당 수호 성인 (/patron 페이지) — patron.html 시안 데이터 (v1.5.406)
+    patron_name = Column(String(200))            # 예: "성 베드로 사도"
+    patron_feast_day = Column(String(100))       # 예: "6월 29일"
+    patron_intro = Column(Text)                  # 생애·소개 (줄 단위)
+    patron_quote = Column(Text)                  # 메인 인용문
+    patron_quote_ref = Column(String(200))       # 인용 출처 (예: "마태 16,18")
+    patron_image_url = Column(String(500))       # 성인 사진/일러스트

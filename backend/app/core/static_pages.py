@@ -8,7 +8,7 @@ STATIC_PAGES: list[dict] = [
     # 성당 소개
     {"slug": "/about",    "label": "성당 안내",          "category": "성당 소개"},
     {"slug": "/pastor",   "label": "주임신부님",          "category": "성당 소개"},
-    {"slug": "/saint",    "label": "수호성인 성 베드로",  "category": "성당 소개"},
+    {"slug": "/patron",   "label": "수호 성인",            "category": "성당 소개"},
     {"slug": "/history",  "label": "본당 연혁",           "category": "성당 소개"},
     {"slug": "/pastors",  "label": "역대 신부님",         "category": "성당 소개"},
     {"slug": "/sisters",  "label": "역대 수녀님",         "category": "성당 소개"},

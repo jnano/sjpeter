@@ -635,11 +635,29 @@ def _migrate_add_columns():
         for col, col_type in [
             ("member_count", "INTEGER"),
             ("about_photo_url", "VARCHAR(500)"),
+            ("patron_name", "VARCHAR(200)"),         # v1.5.406 수호 성인
+            ("patron_feast_day", "VARCHAR(100)"),
+            ("patron_intro", "TEXT"),
+            ("patron_quote", "TEXT"),
+            ("patron_quote_ref", "VARCHAR(200)"),
+            ("patron_image_url", "VARCHAR(500)"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE parishes ADD COLUMN IF NOT EXISTS {col} {col_type}"))
             except Exception:
                 pass
+
+        # v1.5.406 메뉴 마이그레이션 — 기존 /saint·/p/saint 메뉴를 새 /patron 으로
+        # 옮김. 라벨도 '수호성인 성 베드로' (본당 종속) → '수호 성인' (일반화).
+        # 한 번 실행되고 그 후엔 일치 행 0개로 no-op.
+        try:
+            conn.execute(text(
+                "UPDATE menu_items "
+                "SET label = '수호 성인', static_page_slug = '/patron' "
+                "WHERE static_page_slug IN ('/saint', '/p/saint')"
+            ))
+        except Exception:
+            pass
 
         # 정적 콘텐츠 테이블 생성
         conn.execute(text("""

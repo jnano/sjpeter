@@ -44,6 +44,13 @@ class ParishUpdate(BaseModel):
     member_count: Optional[int] = None
     founded_at: Optional[date] = None
     mass_schedule: Optional[MassSchedule] = None
+    # 수호 성인 (v1.5.406)
+    patron_name: Optional[str] = None
+    patron_feast_day: Optional[str] = None
+    patron_intro: Optional[str] = None
+    patron_quote: Optional[str] = None
+    patron_quote_ref: Optional[str] = None
+    patron_image_url: Optional[str] = None
 
 
 class ParishOut(BaseModel):
@@ -63,6 +70,13 @@ class ParishOut(BaseModel):
     founded_at: Optional[date]
     about_photo_url: Optional[str]
     mass_schedule: Optional[MassSchedule]
+    # 수호 성인 (v1.5.406)
+    patron_name: Optional[str] = None
+    patron_feast_day: Optional[str] = None
+    patron_intro: Optional[str] = None
+    patron_quote: Optional[str] = None
+    patron_quote_ref: Optional[str] = None
+    patron_image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -99,6 +113,12 @@ def _parish_to_out(parish: Parish) -> ParishOut:
         about_photo_url=parish.about_photo_url,
         logo_url=parish.logo_url,
         mass_schedule=schedule,
+        patron_name=parish.patron_name,
+        patron_feast_day=parish.patron_feast_day,
+        patron_intro=parish.patron_intro,
+        patron_quote=parish.patron_quote,
+        patron_quote_ref=parish.patron_quote_ref,
+        patron_image_url=parish.patron_image_url,
     )
 
 
@@ -206,6 +226,68 @@ def delete_about_photo(
     db.commit()
     db.refresh(parish)
     log_action(db, get_admin_identifier(admin), "delete_about_photo", "parish", parish.id, None)
+    return _parish_to_out(parish)
+
+
+# ──────────────────────────── 수호 성인 사진 (/patron) ────────────────────────────
+# v1.5.406 — patron 페이지 신설. about-photo 와 같은 패턴.
+
+@router.post("/patron-photo/upload", response_model=ParishOut)
+async def upload_patron_photo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in PHOTO_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드할 수 있습니다.")
+
+    data = await file.read()
+    if len(data) > PHOTO_MAX_SIZE:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB 이하여야 합니다.")
+
+    photo_dir = os.path.join(settings.UPLOAD_DIR, "patron_photos")
+    os.makedirs(photo_dir, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}{ext}"
+    with open(os.path.join(photo_dir, filename), "wb") as f:
+        f.write(data)
+
+    parish = _get_parish(db)
+    if parish.patron_image_url and parish.patron_image_url.startswith("/uploads/patron_photos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.patron_image_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    parish.patron_image_url = f"/uploads/patron_photos/{filename}"
+    db.commit()
+    db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "upload_patron_photo", "parish", parish.id, filename)
+
+    return _parish_to_out(parish)
+
+
+@router.delete("/patron-photo", response_model=ParishOut)
+def delete_patron_photo(
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    parish = _get_parish(db)
+    if parish.patron_image_url and parish.patron_image_url.startswith("/uploads/patron_photos/"):
+        old_path = os.path.join(settings.UPLOAD_DIR, parish.patron_image_url.removeprefix("/uploads/"))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    parish.patron_image_url = None
+    db.commit()
+    db.refresh(parish)
+    log_action(db, get_admin_identifier(admin), "delete_patron_photo", "parish", parish.id, None)
 
     return _parish_to_out(parish)
 
