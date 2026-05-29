@@ -16,7 +16,7 @@ interface Staff {
   id: number;
   role: string;
   name: string;
-  title: string | null;
+  title: string | null;          // 본명/세례명
   feast_day: string | null;
   photo_url: string | null;
   introduction: string | null;
@@ -28,13 +28,9 @@ interface Staff {
 async function getStaff(): Promise<Staff[]> {
   try {
     const res = await fetch(`${API}/api/parish-staff/`, { cache: "no-store" });
-    if (!res.ok) {
-      console.error("[pastor] staff fetch failed:", res.status);
-      return [];
-    }
+    if (!res.ok) return [];
     return res.json();
-  } catch (e) {
-    console.error("[pastor] staff fetch error:", e);
+  } catch {
     return [];
   }
 }
@@ -43,6 +39,17 @@ function resolvePhoto(url: string | null): string | null {
   if (!url) return null;
   if (url.startsWith("http")) return url;
   return `${API}${url}`;
+}
+
+// career_items 한 줄을 "year(연도/기간) + desc(설명)" 로 가르려 시도.
+// 매칭 실패하면 전체를 desc 로 두고 year 칸 비움. — 시안 timeline-list 톤 호환.
+function parseCareerLine(line: string): { year: string; desc: string } {
+  // 1) "2024.03 — 설명" / "2024.03 - 설명" / "2024.03 설명"
+  const m1 = line.match(/^\s*(\d{4}(?:[.\-/]\d{1,2})?(?:\s*[–—-]\s*\d{4}(?:[.\-/]\d{1,2})?)?)\s*[–—:·\-]?\s*(.*)$/);
+  if (m1 && m1[1] && m1[2]) {
+    return { year: m1[1].trim(), desc: m1[2].trim() };
+  }
+  return { year: "", desc: line };
 }
 
 export default async function PastorPage() {
@@ -59,15 +66,9 @@ export default async function PastorPage() {
             <p className="text-xs mt-1">관리자 페이지에서 등록할 수 있습니다.</p>
           </div>
         ) : (
-          <div className="relative">
-            {all.map((staff, idx) => (
-              <StoryRow
-                key={staff.id}
-                staff={staff}
-                reversed={idx % 2 === 1}
-                isLast={idx === all.length - 1}
-                isPriest={staff.role === "주임신부" || staff.role === "보좌신부"}
-              />
+          <div className="space-y-14">
+            {all.map((staff) => (
+              <PriestBlock key={staff.id} staff={staff} />
             ))}
           </div>
         )}
@@ -76,111 +77,160 @@ export default async function PastorPage() {
   );
 }
 
-function StoryRow({
-  staff,
-  reversed,
-  isLast,
-  isPriest,
-}: {
-  staff: Staff;
-  reversed: boolean;
-  isLast: boolean;
-  isPriest: boolean;
-}) {
+/* ───────── 시안 priest.html — hero + timeline ───────── */
+function PriestBlock({ staff }: { staff: Staff }) {
   const photo = resolvePhoto(staff.photo_url);
   const careerLines = (staff.career_items ?? "")
     .split("\n")
     .map((l) => l.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(parseCareerLine);
+
+  const isPriest = staff.role.includes("신부");
 
   return (
-    <section className="relative">
-      <div
-        className={`flex flex-col gap-5 md:gap-10 items-start ${
-          reversed ? "md:flex-row-reverse" : "md:flex-row"
-        }`}
+    <article className="ps-priest">
+      {/* HERO — 320 portrait + info, bg-2 surface, ✠ decoration */}
+      <section
+        className="relative overflow-hidden rounded-3xl bg-[var(--color-surface-warm)] p-6 md:p-9 mb-10 grid grid-cols-1 md:grid-cols-[clamp(220px,30%,320px)_1fr] gap-6 md:gap-10 items-center"
       >
-        {/* 사진 */}
-        <div className="w-full md:w-auto md:shrink-0 flex justify-center md:block">
-          <div
-            className={`relative bg-[var(--color-surface-warm)] rounded-lg overflow-hidden ${
-              isPriest ? "w-44 h-56 md:w-56 md:h-72" : "w-36 h-44 md:w-44 md:h-56"
-            }`}
-          >
-            {photo ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={photo}
-                alt={staff.name}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-5xl text-[var(--color-border-dark)]">
-                <CrossIcon />
-              </div>
-            )}
-          </div>
+        <div
+          aria-hidden
+          className="hidden sm:block absolute right-8 -top-8 text-[120px] md:text-[160px] leading-none pointer-events-none select-none font-serif"
+          style={{ color: "rgba(122,31,43,0.06)" }}
+        >
+          ✠
         </div>
 
-        {/* 본문 — 시안 priest 톤 (eyebrow + 큰 제목 + 인용 골드 strip) */}
-        <div className="flex-1 min-w-0 w-full">
-          <span className="inline-flex items-center gap-2.5 text-[11px] tracking-[0.18em] text-[var(--color-primary)] uppercase font-bold mb-3">
-            <span className="w-5 h-px bg-[var(--color-primary)]" />
+        {/* Portrait */}
+        <div className="w-full max-w-[320px] mx-auto md:mx-0 aspect-[4/5] rounded-2xl bg-white border border-[var(--color-border)] overflow-hidden relative">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt={staff.name} className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-5xl text-[var(--color-border-dark)]">
+              <CrossIcon />
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="relative">
+          {/* Role pill */}
+          <span
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-[0.06em] mb-4"
+            style={{ background: "var(--color-primary)", color: "#FFF" }}
+          >
+            {isPriest && <span aria-hidden>✠</span>}
             {staff.role}
           </span>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-[var(--color-text)]">
+
+          {/* Name + baptismal */}
+          <h2 className="text-[28px] md:text-[40px] font-bold tracking-[-0.03em] leading-[1.1] mb-3 text-[var(--color-text)]">
             {staff.name}
             {staff.title && (
-              <span className="font-medium text-[14px] md:text-base text-[var(--color-text-muted)] ml-2">
+              <span
+                className="text-[13px] md:text-base px-3 py-1.5 rounded-full font-bold ml-2 align-middle inline-block tracking-wide"
+                style={{ background: "rgba(122,31,43,0.06)", color: "var(--color-primary)" }}
+              >
                 {staff.title}
               </span>
             )}
           </h2>
+
+          {/* Meta row */}
           {staff.feast_day && (
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 tracking-wide">· 축일 {staff.feast_day}</p>
+            <div className="flex flex-wrap gap-4 items-center text-[13px] text-[var(--color-text-muted)] py-3 border-y border-[var(--color-border)] mb-5">
+              <span>
+                축일 <b className="text-[var(--color-text)] font-bold">{staff.feast_day}</b>
+              </span>
+            </div>
           )}
 
-          {staff.introduction && (
-            <p className="mt-5 text-[14px] md:text-[15px] leading-[1.8] text-[var(--color-text)] whitespace-pre-line tracking-tight">
-              {staff.introduction}
+          {/* Quote */}
+          {staff.scripture_quote && (
+            <p className="text-[14px] md:text-base leading-[1.7] text-[var(--color-text)] font-medium max-w-[520px] tracking-tight">
+              <em
+                className="not-italic font-bold"
+                style={{ color: "var(--color-primary)" }}
+              >
+                {"“"}
+              </em>
+              {staff.scripture_quote}
+              <em
+                className="not-italic font-bold"
+                style={{ color: "var(--color-primary)" }}
+              >
+                {"”"}
+              </em>
             </p>
           )}
-
-          {careerLines.length > 0 && (
-            <ul className="mt-5 space-y-1.5 text-[13px] text-[var(--color-text-muted)]">
-              {careerLines.map((line, i) => (
-                <li key={i} className="flex gap-2.5">
-                  <span className="shrink-0" style={{ color: "var(--color-accent, #C9A961)" }}>•</span>
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
+          {staff.scripture_reference && (
+            <p className="mt-2 text-[11px] font-bold tracking-wider uppercase text-[var(--color-text-muted)]">
+              — {staff.scripture_reference}
+            </p>
           )}
+        </div>
+      </section>
 
-          {(staff.scripture_quote || staff.scripture_reference) && (
-            <blockquote
-              className="mt-6 pl-5 py-2 italic text-[14px] leading-relaxed text-[var(--color-text)]"
-              style={{ borderLeft: "3px solid var(--color-accent, #C9A961)" }}
+      {/* Greeting / Introduction body — letter-body 톤 (drop-cap) */}
+      {staff.introduction && (
+        <section className="mb-14">
+          <div className="mb-6">
+            <div
+              className="text-[11px] tracking-[0.18em] uppercase font-bold inline-flex items-center gap-3 mb-3"
+              style={{ color: "var(--color-primary)" }}
             >
-              {staff.scripture_quote && <p>{`"${staff.scripture_quote}"`}</p>}
-              {staff.scripture_reference && (
-                <p className="text-[11px] text-[var(--color-text-muted)] mt-2 not-italic font-bold tracking-wider uppercase">
-                  — {staff.scripture_reference}
-                </p>
-              )}
-            </blockquote>
-          )}
-        </div>
-      </div>
-
-      {/* 행 사이 구분 장식 (마지막 행은 생략) */}
-      {!isLast && (
-        <div className="flex justify-center my-10 md:my-14" aria-hidden="true">
-          <span className="text-[var(--color-border-dark)] text-base tracking-[0.6em]">
-            ✦ ✦ ✦
-          </span>
-        </div>
+              <span className="w-6 h-px" style={{ background: "var(--color-primary)" }} />
+              인사말 · Greeting
+            </div>
+            <h3 className="text-[22px] md:text-[28px] font-bold tracking-[-0.025em] text-[var(--color-text)]">
+              여러분께 드리는 글
+            </h3>
+          </div>
+          <div
+            className="text-[14px] md:text-base leading-[1.85] text-[var(--color-text)] tracking-tight whitespace-pre-line ps-letter-body"
+          >
+            {staff.introduction}
+          </div>
+        </section>
       )}
-    </section>
+
+      {/* Timeline — 이력 */}
+      {careerLines.length > 0 && (
+        <section className="mb-6">
+          <div className="mb-6">
+            <div
+              className="text-[11px] tracking-[0.18em] uppercase font-bold inline-flex items-center gap-3 mb-3"
+              style={{ color: "var(--color-primary)" }}
+            >
+              <span className="w-6 h-px" style={{ background: "var(--color-primary)" }} />
+              이력 · Ministry
+            </div>
+            <h3 className="text-[22px] md:text-[28px] font-bold tracking-[-0.025em] text-[var(--color-text)]">
+              걸어오신 길
+            </h3>
+          </div>
+          <div className="bg-white border border-[var(--color-border)] rounded-2xl px-5 md:px-8 py-1">
+            {careerLines.map((row, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[88px_1fr] md:grid-cols-[100px_1fr] gap-4 md:gap-8 py-4 md:py-[22px] border-b border-[var(--color-border)] last:border-b-0 items-baseline"
+              >
+                <span
+                  className="text-[15px] md:text-[18px] font-bold tracking-[-0.02em] tabular-nums"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  {row.year || "·"}
+                </span>
+                <span className="text-[13px] md:text-[15px] text-[var(--color-text)] leading-relaxed">
+                  {row.desc}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </article>
   );
 }

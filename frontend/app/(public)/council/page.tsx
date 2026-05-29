@@ -31,153 +31,180 @@ async function getMembers(): Promise<CouncilMember[]> {
 }
 
 const CATEGORY_ORDER = ["회장단", "분과대표", "구역장대표"];
-
 const CATEGORY_LABEL: Record<string, string> = {
-  "회장단": "회장단",
+  "회장단": "임원",
   "분과대표": "분과 대표",
   "구역장대표": "구역장 대표",
 };
 
-function MemberCard({ member }: { member: CouncilMember }) {
-  const initial = member.name.slice(-1);
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[var(--color-border)] bg-[var(--color-surface-warm)] mb-2 shrink-0">
-        {member.photo_url?.trim() ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={member.photo_url.startsWith("http") ? member.photo_url : `${API}${member.photo_url}`}
-            alt={member.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-[var(--color-primary)]/10">
-            <span className="text-2xl font-bold text-[var(--color-primary)]/50">{initial}</span>
-          </div>
-        )}
-      </div>
-      <p className="font-semibold text-[var(--color-text)] text-sm leading-tight">{member.name}</p>
-      <p className="text-xs text-[var(--color-text-muted)] mt-0.5 leading-tight">{member.role}</p>
-    </div>
-  );
+function lastChar(name: string) {
+  return name.slice(-1);
 }
 
-/* ─── 조직도 (정적 트리) ──────────────────────────────── */
+/* ───────── 시안 council.html — Org chart ───────── */
 function OrgChart({ members }: { members: CouncilMember[] }) {
-  const findByRole = (roles: string[]) =>
-    members.filter((m) => roles.some((r) => m.role.includes(r)));
+  const chairs = members.filter((m) => m.role.includes("회장") && !m.role.includes("부회장"));
+  const viceChairs = members.filter((m) => m.role.includes("부회장"));
+  const treasurers = members.filter((m) => m.role.includes("총무") || m.role.includes("재무"));
+  const heads = members.filter(
+    (m) => m.role.includes("분과장") || m.role.includes("청년회장") || m.role.includes("부장"),
+  );
 
-  const chairs = findByRole(["회장"]).filter((m) => !m.role.includes("부회장"));
-  const viceChairs = findByRole(["부회장"]);
-  const hasChairs = chairs.length > 0 || viceChairs.length > 0;
-
-  return (
-    <div className="mb-8 bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-baseline justify-between">
-        <h2 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)]">조직도</h2>
-        <span className="text-[11px] text-[var(--color-text-muted)]">Organization</span>
-      </div>
-      <div className="px-6 py-6 overflow-x-auto">
-        <div className="min-w-[480px]">
-
-          {/* 최상위: 주임신부 */}
-          <div className="flex justify-center mb-2">
-            <OrgNode label="주임신부" primary />
-          </div>
-
-          {/* 연결선 */}
-          <div className="flex justify-center mb-2">
-            <div className="w-px h-6 bg-[var(--color-border-dark)]" />
-          </div>
-
-          {/* 2단계: 보좌신부 / 사목회장 / 수녀원 */}
-          <div className="flex justify-center items-start gap-8 mb-2">
-            <div className="flex flex-col items-center gap-2">
-              <OrgNode label="보좌신부" />
-              <OrgConnectorLine />
-              <OrgNode label="수녀원" small />
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="w-px h-6 bg-[var(--color-border-dark)]" />
-              <OrgNode label={hasChairs && chairs[0] ? `사목회장\n${chairs[0].name}` : "사목회장"} primary />
-            </div>
-          </div>
-
-          {/* 사목회장 아래 연결선 */}
-          {hasChairs && viceChairs.length > 0 && (
-            <>
-              <div className="flex justify-center mb-2">
-                <div className="w-px h-6 bg-[var(--color-border-dark)]" />
-              </div>
-
-              {/* 3단계: 부회장들 */}
-              <div className="flex justify-center gap-4 mb-2">
-                {viceChairs.map((m) => (
-                  <OrgNode key={m.id} label={`${m.role}\n${m.name}`} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* 하단 설명 */}
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
-            {[
-              { label: "분과대표", count: members.filter((m) => m.category === "분과대표").length },
-              { label: "구역장대표", count: members.filter((m) => m.category === "구역장대표").length },
-            ].map(({ label, count }) =>
-              count > 0 ? (
-                <div key={label} className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-full px-3 py-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-border-dark)] inline-block" />
-                  {label} {count}명
-                </div>
-              ) : null
-            )}
-          </div>
+  // org-node 시안 톤
+  const Node = ({
+    member,
+    label,
+    variant = "regular",
+  }: {
+    member?: CouncilMember;
+    label?: string;
+    variant?: "lead" | "deputy" | "regular";
+  }) => {
+    const bg =
+      variant === "lead"
+        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+        : variant === "deputy"
+          ? "bg-[var(--ink)] text-white border-[var(--ink)]"
+          : "bg-white border-[var(--color-border)] text-[var(--color-text)]";
+    const avBg =
+      variant === "regular"
+        ? "bg-[var(--color-accent)] text-[var(--color-text)]"
+        : "bg-[var(--color-accent)] text-[var(--color-text)]";
+    const name = member?.name ?? "";
+    const role = member?.role ?? label ?? "";
+    return (
+      <div className={`rounded-xl border px-4 py-3 text-center min-w-[140px] ${bg}`}>
+        <div className={`w-9 h-9 rounded-full mx-auto mb-2 flex items-center justify-center text-sm font-bold ${avBg}`}>
+          {name ? lastChar(name) : "✠"}
+        </div>
+        <div className="text-[10px] tracking-[0.08em] uppercase font-bold mb-1 opacity-80">{role}</div>
+        <div className="text-[13px] font-bold tracking-tight">
+          {name || "—"}
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  };
 
-function OrgNode({ label, primary, small }: { label: string; primary?: boolean; small?: boolean }) {
-  const lines = label.split("\n");
   return (
-    <div className={`rounded-lg border text-center px-3 py-2 min-w-[80px] ${
-      primary
-        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-        : "bg-white border-[var(--color-border-dark)] text-[var(--color-text)]"
-    } ${small ? "opacity-70" : ""}`}>
-      {lines.map((l, i) => (
-        <p key={i} className={i === 0 ? "text-xs font-semibold leading-tight" : "text-[11px] leading-tight opacity-80"}>
-          {l}
-        </p>
-      ))}
+    <div className="bg-white border border-[var(--color-border)] rounded-2xl p-6 md:p-10 relative">
+      {/* 상단: 의장 (주임신부 가정) */}
+      <div className="flex justify-center mb-3">
+        <Node label="✠ 의장" variant="lead" member={undefined as unknown as CouncilMember | undefined} />
+      </div>
+      <div className="w-px h-7 bg-[var(--color-border)] mx-auto mb-3" />
+
+      {/* 2단: 회장(없으면 부회장) + 총무·재무 */}
+      {(chairs.length > 0 || viceChairs.length > 0) && (
+        <>
+          <div className="grid gap-3 md:gap-4 justify-center mb-3" style={{ gridTemplateColumns: `repeat(${Math.min(2, Math.max(1, chairs.length + viceChairs.length))}, minmax(140px, 1fr))`, maxWidth: 520, margin: "0 auto 12px" }}>
+            {chairs.slice(0, 2).map((m) => (
+              <Node key={m.id} member={m} variant="deputy" />
+            ))}
+            {viceChairs.slice(0, 2).map((m) => (
+              <Node key={m.id} member={m} variant="deputy" />
+            ))}
+          </div>
+          {(heads.length > 0 || treasurers.length > 0) && (
+            <div className="w-px h-7 bg-[var(--color-border)] mx-auto mb-3" />
+          )}
+        </>
+      )}
+
+      {/* 3단: 분과장들 (4열 그리드) */}
+      {heads.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-3">
+          {heads.map((m) => (
+            <Node key={m.id} member={m} variant="regular" />
+          ))}
+        </div>
+      )}
+
+      {/* 임원 (총무/재무) */}
+      {treasurers.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {treasurers.map((m) => (
+            <Node key={m.id} member={m} variant="regular" />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function OrgConnectorLine() {
-  return <div className="w-px h-4 bg-[var(--color-border-dark)]" />;
+/* ───────── 시안 council.html — Members table ───────── */
+function MembersTable({ members }: { members: CouncilMember[] }) {
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
+      {/* Header row */}
+      <div className="grid grid-cols-[40px_1.4fr_1fr_1fr_90px] gap-3 md:gap-4 px-4 md:px-6 py-3 bg-[var(--color-surface-warm)] text-[11px] tracking-[0.08em] uppercase text-[var(--color-text-muted)] font-bold">
+        <span>NO</span>
+        <span>이름</span>
+        <span>직책</span>
+        <span>분과</span>
+        <span className="text-right">임기</span>
+      </div>
+      {members.map((m, i) => {
+        const isLead = m.role.includes("회장") && !m.role.includes("부회장");
+        return (
+          <div
+            key={m.id}
+            className="grid grid-cols-[40px_1.4fr_1fr_1fr_90px] gap-3 md:gap-4 px-4 md:px-6 py-3.5 border-t border-[var(--color-border)] items-center"
+          >
+            <span className="text-center font-bold text-[var(--color-text-muted)] text-[12px] tabular-nums">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 ${
+                  isLead
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-accent)] text-[var(--color-text)]"
+                }`}
+              >
+                {lastChar(m.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[13px] md:text-[14px] font-bold text-[var(--color-text)] truncate">{m.name}</div>
+              </div>
+            </div>
+            <div className={`text-[12px] md:text-[13px] font-bold truncate ${isLead ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"}`}>
+              {m.role}
+            </div>
+            <div className="text-[12px] md:text-[13px] text-[var(--color-text-muted)] truncate">
+              {CATEGORY_LABEL[m.category] ?? m.category}
+            </div>
+            <div className="text-[11px] md:text-[12px] text-[var(--color-text-muted)] tabular-nums text-right">
+              {isLead ? "상임" : "—"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
-/* ─── 메인 페이지 ────────────────────────────────────── */
+/* ───────── Main ───────── */
 export default async function CouncilPage() {
-  const members = await getMembers();
-
-  const grouped = CATEGORY_ORDER.map((cat) => ({
-    category: cat,
-    label: CATEGORY_LABEL[cat] ?? cat,
-    members: members.filter((m) => m.category === cat),
-  })).filter((g) => g.members.length > 0);
-
+  const [members, parish] = await Promise.all([getMembers(), fetchParishMin()]);
   const isEmpty = members.length === 0;
+
+  // Intro 우측 stats — 시안에서 비어 있는 3칸. 현재 데이터에서 유추.
+  const total = members.length;
+  const leadCount = members.filter((m) => m.category === "회장단").length;
+  const headCount = members.filter((m) => m.role.includes("분과장") || m.role.includes("청년회장")).length;
+
+  // 카테고리별 정렬 — 표는 회장단 → 분과대표 → 구역장대표
+  const ordered = [...members].sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a.category);
+    const ib = CATEGORY_ORDER.indexOf(b.category);
+    if (ia !== ib) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.sort_order - b.sort_order;
+  });
 
   return (
     <>
       <PageHeader group="본당 공동체" title="사목평의회" subtitle="본당 공동체의 사목 방향을 함께 의논하는 기구" />
       <SectionLayout group="community" tools>
-
         {isEmpty ? (
           <div className="bg-white border border-[var(--color-border)] rounded-2xl p-8 text-center py-20">
             <div className="text-5xl mb-4"><CrossIcon /></div>
@@ -185,39 +212,90 @@ export default async function CouncilPage() {
             <p className="text-sm text-[var(--color-text-muted)]">관리자 페이지에서 구성원을 등록해 주세요.</p>
           </div>
         ) : (
-          <>
-            <OrgChart members={members} />
+          <div className="space-y-12">
+            {/* Intro — bg-2 surface, eyebrow + h2 + 3 stats */}
+            <section className="bg-[var(--color-surface-warm)] rounded-2xl px-6 md:px-8 py-7 md:py-8 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-7 md:gap-8 items-center">
+              <div>
+                <div
+                  className="text-[11px] tracking-[0.18em] uppercase font-bold inline-flex items-center gap-3 mb-3"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  <span className="w-6 h-px" style={{ background: "var(--color-primary)" }} />
+                  사목평의회 · Parish Council
+                </div>
+                <h2 className="text-[22px] md:text-[24px] font-bold tracking-[-0.025em] mb-2 text-[var(--color-text)]">
+                  함께 의논하고, 함께 결정합니다.
+                </h2>
+                <p className="text-[13px] md:text-[14px] leading-[1.7] text-[var(--color-text-muted)] max-w-[580px]">
+                  사목평의회는 주임신부님을 보좌하여 {parish.name} 의 모든 사목 활동을 자문하고
+                  협력하는 신자 대표 협의체입니다. 정기 회의를 통해 본당의 운영 방향을 함께 살피고 결정합니다.
+                </p>
+              </div>
+              <div className="flex gap-6 md:gap-8 justify-center md:justify-end">
+                {[
+                  { v: total, l: "구성원" },
+                  { v: leadCount, l: "임원" },
+                  { v: headCount, l: "분과장" },
+                ].map((s) => (
+                  <div key={s.l} className="text-center min-w-[68px]">
+                    <b
+                      className="block text-[26px] md:text-[30px] font-bold tabular-nums leading-none"
+                      style={{ color: "var(--color-primary)" }}
+                    >
+                      {s.v}
+                    </b>
+                    <span className="block text-[10px] md:text-[11px] uppercase tracking-[0.05em] font-bold mt-1.5 text-[var(--color-text-muted)]">
+                      {s.l}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-            <div className="space-y-8">
-              {grouped.map(({ category, label, members: cats }) => (
-                <section key={category} className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center gap-3">
-                    <span className="inline-block w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-                    <h2 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)]">{label}</h2>
-                    <span className="text-[11px] tabular-nums text-[var(--color-text-muted)] ml-auto font-bold">{cats.length}명</span>
+            {/* Org chart */}
+            <section>
+              <div className="mb-5">
+                <div
+                  className="text-[11px] tracking-[0.18em] uppercase font-bold inline-flex items-center gap-3 mb-3"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  <span className="w-6 h-px" style={{ background: "var(--color-primary)" }} />
+                  조직도 · Organization
+                </div>
+                <h2 className="text-[22px] md:text-[24px] font-bold tracking-[-0.025em] text-[var(--color-text)]">
+                  사목평의회 구성
+                </h2>
+              </div>
+              <OrgChart members={members} />
+            </section>
+
+            {/* Members table */}
+            <section>
+              <div className="mb-5 flex items-end justify-between gap-3 flex-wrap">
+                <div>
+                  <div
+                    className="text-[11px] tracking-[0.18em] uppercase font-bold inline-flex items-center gap-3 mb-3"
+                    style={{ color: "var(--color-primary)" }}
+                  >
+                    <span className="w-6 h-px" style={{ background: "var(--color-primary)" }} />
+                    위원 명단 · Members
                   </div>
-                  <div className={`p-6 grid gap-6 ${
-                    cats.length <= 4
-                      ? "grid-cols-2 sm:grid-cols-4"
-                      : "grid-cols-3 sm:grid-cols-4 md:grid-cols-5"
-                  }`}>
-                    {cats.map((m) => (
-                      <MemberCard key={m.id} member={m} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </>
+                  <h2 className="text-[22px] md:text-[24px] font-bold tracking-[-0.025em] text-[var(--color-text)]">
+                    {parish.name} 사목평의회 <span className="text-[var(--color-text-muted)] font-bold">({total}명)</span>
+                  </h2>
+                </div>
+              </div>
+              <MembersTable members={ordered} />
+            </section>
+          </div>
         )}
 
         {/* 하단 안내 */}
-        <div className="mt-8 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl px-6 py-4 text-sm text-[var(--color-text-muted)] leading-relaxed">
-          <p className="font-medium text-[var(--color-text)] mb-1">사목평의회 안내</p>
-          <p>사목평의회는 주임신부님을 중심으로 본당 운영의 주요 사항을 협의하고 공동체 발전을 위해 함께 기도하고 실천하는 본당 최고 의결 기구입니다.</p>
+        <div className="mt-10 bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl px-6 py-4 text-[13px] text-[var(--color-text-muted)] leading-relaxed">
+          <p className="font-bold text-[var(--color-text)] mb-1">사목평의회 안내</p>
+          <p>주임신부님을 중심으로 본당 운영의 주요 사항을 협의하고 공동체 발전을 위해 함께 기도하고 실천하는 본당 협의 기구입니다.</p>
           <p className="mt-1">회의: 분기별 정기회의 및 필요시 임시회의</p>
         </div>
-
       </SectionLayout>
     </>
   );
