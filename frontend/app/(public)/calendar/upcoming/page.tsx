@@ -108,8 +108,9 @@ export default async function UpcomingPage() {
         title="다가오는 일정"
         subtitle={`${parish.name} 본당의 행사·모임을 가까운 날짜 순서로 보여드립니다`}
       />
-      {/* admin/menus 등록 시 사이드바 자동 표시 (메뉴 등록 = 사이드바 불변량 v1.5.412) */}
-      <SectionLayout autoHero={false}>
+      {/* admin/menus 에 정확 일치 항목이 등록될 때만 사이드바 표시 (strictMatch v1.5.413).
+          미등록 시 /calendar 의 prefix 매칭으로 부모 그룹 사이드바가 자동 따라붙는 부작용 차단. */}
+      <SectionLayout autoHero={false} strictMatch>
 
         {/* hero 요약 */}
         <section className="bg-[var(--color-surface-warm)] rounded-3xl p-6 sm:p-8 mb-8 flex items-end justify-between gap-5 flex-wrap">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import SectionSidebar from "./SectionSidebar";
 import AutoPageHero from "./AutoPageHero";
 import ArticleTools from "./ArticleTools";
@@ -18,6 +19,10 @@ interface Props {
   /** true면 본문 우상단에 글자 크기·인쇄 도구(ArticleTools) 표시 + 본문을 .reading-zoom 으로 감싸
    *  글자 크기 토글이 임의 마크업에도 적용되게 함. 긴 글 읽는 정적 페이지(소개·연혁 등)용. */
   tools?: boolean;
+  /** true면 useNavigation 의 prefix 매칭(자식 라우트가 부모 그룹 사이드바를 자동 따라가는 동작)을 끔.
+   *  현재 pathname 과 메뉴 항목 href 가 **정확히** 일치할 때만 사이드바 표시. 정확 일치가 없으면 풀폭 렌더.
+   *  ── admin/menus 에 등록되지 않은 페이지에 prefix 부작용으로 사이드바가 자동 붙는 것을 막을 때 사용 (v1.5.413). */
+  strictMatch?: boolean;
 }
 
 /** 데스크탑 사이드바 접힘 상태 — 전역 (localStorage). 같은 키를 다른 탭/페이지가 공유. */
@@ -107,16 +112,22 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
  * 숨기고 본문을 확장할 수 있다. 상태는 localStorage 전역.
  * 모바일은 사이드바가 본문 위에 column 으로 오므로 토글 영향 받지 않음.
  */
-export default function SectionLayout({ children, autoHero = true, chipsOnly = false, tools = false }: Props) {
+export default function SectionLayout({ children, autoHero = true, chipsOnly = false, tools = false, strictMatch = false }: Props) {
+  const pathname = usePathname() ?? "";
   const { currentGroup } = useNavigation();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
+
+  // strictMatch=true: pathname 정확 일치 메뉴 항목이 있을 때만 사이드바.
+  // 메뉴 미등록 페이지가 prefix 부작용으로 부모 그룹 사이드바를 가져가는 것을 막음 (v1.5.413).
+  const exactMatched = currentGroup?.items.some((it) => it.href === pathname) ?? false;
+  const effectiveGroup = strictMatch && !exactMatched ? null : currentGroup;
 
   // tools=true: 본문 우상단 글자크기·인쇄 도구 + children 을 .reading-zoom 으로 감쌈
   const toolbar = tools ? <div className="flex justify-end mb-3"><ArticleTools /></div> : null;
   const bodyChildren = tools ? <div className="reading-zoom">{children}</div> : children;
 
   // 매칭된 그룹이 없거나 항목이 없으면 사이드바·칩·토글 모두 생략
-  if (!currentGroup || currentGroup.items.length === 0) {
+  if (!effectiveGroup || effectiveGroup.items.length === 0) {
     return (
       <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
         {toolbar}
@@ -131,8 +142,8 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
     return (
       <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8">
         <SectionSidebar
-          groupTitle={currentGroup.label}
-          items={currentGroup.items}
+          groupTitle={effectiveGroup.label}
+          items={effectiveGroup.items}
           chipsOnly
         />
         {autoHero && <AutoPageHero />}
@@ -151,7 +162,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           className={`shrink-0 md:relative md:transition-[width,opacity] md:duration-300 md:ease-out ${
             collapsed ? "md:w-0 md:opacity-0" : "md:w-[var(--sidebar-w)] md:opacity-100"
           }`}
-          style={{ ["--sidebar-w" as string]: `${currentGroup.sidebar_width_px}px` } as React.CSSProperties}
+          style={{ ["--sidebar-w" as string]: `${effectiveGroup.sidebar_width_px}px` } as React.CSSProperties}
           aria-hidden={collapsed ? true : undefined}
         >
           {/* overflow-hidden 은 SectionSidebar 의 collapsed 시 width 0 으로 줄어들 때 내용물 잘림 보완.
@@ -161,12 +172,12 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           <div className="md:overflow-hidden md:sticky md:self-start md:top-44">
             <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
             <SectionSidebar
-              groupTitle={currentGroup.label}
-              imageSrc={currentGroup.sidebar_image_url ?? undefined}
-              widthPx={currentGroup.sidebar_width_px}
-              heightPx={currentGroup.sidebar_height_px ?? undefined}
-              imagePosition={currentGroup.sidebar_image_position}
-              items={currentGroup.items}
+              groupTitle={effectiveGroup.label}
+              imageSrc={effectiveGroup.sidebar_image_url ?? undefined}
+              widthPx={effectiveGroup.sidebar_width_px}
+              heightPx={effectiveGroup.sidebar_height_px ?? undefined}
+              imagePosition={effectiveGroup.sidebar_image_position}
+              items={effectiveGroup.items}
             />
           </div>
         </div>

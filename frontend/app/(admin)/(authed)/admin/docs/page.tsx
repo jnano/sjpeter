@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.412";
+export const CURRENT_VERSION = "1.5.413";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.413", date: "2026-05-29", tag: "수정", items: ["/calendar/upcoming 페이지에 사이드바가 잘못 자동 노출되던 문제 해소 — useNavigation 의 매칭 로직(`it.href === pathname || pathname.startsWith(it.href + '/')`)이 prefix 일치도 인정해서 /calendar(라벨 '본당 일정')의 자식 경로인 /calendar/upcoming 이 메뉴 등록 없이도 부모 그룹 사이드바를 자동 따라가던 부작용. SectionLayout 에 strictMatch prop 추가 — 현재 pathname 과 메뉴 항목 href 가 정확히 일치할 때만 사이드바 표시, 일치 없으면 풀폭 렌더(prefix 부작용 차단). /calendar/upcoming 페이지에 strictMatch 적용. 검증: data-print-hide(사이드바 wrapper 마커)가 /calendar/upcoming 에서 사라졌고 /word·/calendar 등 정확 일치 페이지는 그대로 유지됨"] },
   { version: "1.5.412", date: "2026-05-29", tag: "인프라", items: ["/calendar/upcoming 페이지를 admin/menus 등록 가능하게 준비 — (1) backend/app/core/static_pages.py STATIC_PAGES 에 {slug:'/calendar/upcoming', label:'다가오는 일정', category:'알림'} 추가(admin/menus 의 '정적 페이지' picker UI 드롭다운에 노출). (2) frontend/app/(public)/calendar/upcoming/page.tsx <main> 풀폭 wrapper → <SectionLayout autoHero=false> 로 교체. 현재는 메뉴 미등록이라 SectionLayout 의 currentGroup 매칭이 없어 사이드바 없이 풀폭 렌더 → admin이 /admin/menus 에서 항목 추가하는 즉시 좌측 사이드바 자동 활성화(메뉴 등록=사이드바 불변량)"] },
   { version: "1.5.411", date: "2026-05-29", tag: "디자인", items: ["/calendar/upcoming 헤딩 문구 변경 — '앞으로 N건의 일정이 본당을 기다리고 있습니다' → '본당 일정 N건이 기다리고 있습니다.'. N건은 와인 강조 유지"] },
   { version: "1.5.410", date: "2026-05-29", tag: "기능", items: ["dashboard 페이지 헤더 KPI 3개 클릭 가능 — 제N호 이번 주 주보→/bulletin, NN% 성전 진행→/construction, N건 다가오는 일정→/calendar/upcoming(신규). KPI 영역의 <div>→<Link> 교체 + hover 시 큰 숫자 와인색·부제 잉크색 전환. 신규 /calendar/upcoming 페이지: 시안 events.html .upcoming-strip 패턴 재현 — Upcoming hero(총 N건 + 월간 캘린더 보기 액션) + 3컬럼 카드 그리드(ribbon[오늘·내일·D-N + 행사/모임 칩] + 큰 제목 + 시간·장소 + countdown + 자세히). 오늘 항목은 와인 보더 강조, AI 생성 일정은 우상단 violet AI 뱃지. 데이터: events API year+month 쿼리로 3개월치 fetch + 오늘 이후 + 날짜순"] },
