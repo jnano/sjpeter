@@ -28,6 +28,14 @@ interface ParishInfo {
   about_photo_url: string | null;
   logo_url: string | null;
   mass_schedule: MassSchedule | null;
+  // /about Welcome·About 섹션 (v1.5.423)
+  about_welcome_eyebrow: string | null;
+  about_welcome_h1: string | null;
+  about_welcome_h2: string | null;
+  about_welcome_body: string | null;
+  about_welcome_signature: string | null;
+  about_intro_eyebrow: string | null;
+  about_intro_heading: string | null;
 }
 
 function getToken() {
@@ -373,6 +381,107 @@ export default function AdminParishInfoPage() {
             <div>
               <label className="block text-sm font-medium mb-1">밴드 주소</label>
               <input value={info.band_url ?? ""} onChange={(e) => setInfo((p) => p && ({ ...p, band_url: e.target.value }))} className={`w-full ${inputCls}`} placeholder="https://band.us/..." />
+            </div>
+          </div>
+        </section>
+
+        {/* /about 페이지 Welcome · About 섹션 텍스트 (v1.5.423) */}
+        <section className="p-6 bg-white border border-gray-200 rounded-xl space-y-6">
+          <div>
+            <h2 className="text-lg font-bold">성당 안내 페이지(/about) 텍스트</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              비워두면 기본 문구가 표시됩니다. <code>본당 소개 본문</code>은 아래 별도 섹션에서 관리하지 않고 현재 폼의 다른 곳(설명/description)에서 관리합니다.
+            </p>
+          </div>
+
+          {/* Welcome */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/40 space-y-3">
+            <div className="text-sm font-semibold text-gray-700">1. Welcome (환영 인사)</div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">상단 라벨 (eyebrow)</label>
+              <input
+                value={info.about_welcome_eyebrow ?? ""}
+                onChange={(e) => setInfo((p) => p && ({ ...p, about_welcome_eyebrow: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                placeholder="환영합니다 · Welcome"
+                maxLength={200}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">큰 제목 윗줄</label>
+                <input
+                  value={info.about_welcome_h1 ?? ""}
+                  onChange={(e) => setInfo((p) => p && ({ ...p, about_welcome_h1: e.target.value }))}
+                  className={`w-full ${inputCls}`}
+                  placeholder="모든 분께,"
+                  maxLength={200}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">큰 제목 아랫줄 (강조)</label>
+                <input
+                  value={info.about_welcome_h2 ?? ""}
+                  onChange={(e) => setInfo((p) => p && ({ ...p, about_welcome_h2: e.target.value }))}
+                  className={`w-full ${inputCls}`}
+                  placeholder="주님의 평화가 함께하시기를."
+                  maxLength={200}
+                />
+                <p className="text-[11px] text-gray-400 mt-1">기울임체로 표시됩니다.</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">본문</label>
+              <textarea
+                value={info.about_welcome_body ?? ""}
+                onChange={(e) => setInfo((p) => p && ({ ...p, about_welcome_body: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                rows={3}
+                placeholder="처음 오신 분도, 오래 함께해 주신 분도, 이 공동체에서 주님의 따뜻한 손길을 느끼시기를 기도합니다. 우리 성당의 문은 언제나 열려 있습니다."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">서명 (본당명 뒤에 붙는 라벨)</label>
+              <input
+                value={info.about_welcome_signature ?? ""}
+                onChange={(e) => setInfo((p) => p && ({ ...p, about_welcome_signature: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                placeholder="사목회 일동"
+                maxLength={200}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">실제 표시: <b>{info.name || "본당명"}</b> {info.about_welcome_signature || "사목회 일동"}</p>
+            </div>
+          </div>
+
+          {/* About */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/40 space-y-3">
+            <div className="text-sm font-semibold text-gray-700">2. About (우리 성당)</div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">상단 라벨 (eyebrow)</label>
+              <input
+                value={info.about_intro_eyebrow ?? ""}
+                onChange={(e) => setInfo((p) => p && ({ ...p, about_intro_eyebrow: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                placeholder="About · 우리 성당"
+                maxLength={200}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">큰 제목</label>
+              <textarea
+                value={info.about_intro_heading ?? ""}
+                onChange={(e) => setInfo((p) => p && ({ ...p, about_intro_heading: e.target.value }))}
+                className={`w-full ${inputCls}`}
+                rows={2}
+                placeholder={`${info.name || "본당명"}, 함께 짓고 함께 머무는 공동체입니다.`}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">본당명을 포함해 자유롭게 입력하세요. 본문(우리 성당 소개 글)은 별도 영역에서 관리합니다.</p>
             </div>
           </div>
         </section>

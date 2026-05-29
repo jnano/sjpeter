@@ -29,3 +29,12 @@ class Parish(Base):
     patron_quote = Column(Text)                  # 메인 인용문
     patron_quote_ref = Column(String(200))       # 인용 출처 (예: "마태 16,18")
     patron_image_url = Column(String(500))       # 성인 사진/일러스트
+    # /about 페이지 Welcome · About 섹션 텍스트 (v1.5.423) — admin/parish/info 에서 편집.
+    # 빈 값이면 기존 정적 문구로 폴백한다.
+    about_welcome_eyebrow = Column(String(200))     # "환영합니다 · Welcome"
+    about_welcome_h1 = Column(String(200))          # h2 첫 줄 일반 "모든 분께,"
+    about_welcome_h2 = Column(String(200))          # h2 둘째 줄 italic em "주님의 평화가 함께하시기를."
+    about_welcome_body = Column(Text)               # 본문 단락
+    about_welcome_signature = Column(String(200))   # 서명 (본당명 뒤에 붙는 라벨, 예: "사목회 일동")
+    about_intro_eyebrow = Column(String(200))       # "About · 우리 성당"
+    about_intro_heading = Column(Text)              # 전체 헤딩 (본당명 포함 자유 입력)

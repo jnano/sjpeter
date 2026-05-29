@@ -641,6 +641,13 @@ def _migrate_add_columns():
             ("patron_quote", "TEXT"),
             ("patron_quote_ref", "VARCHAR(200)"),
             ("patron_image_url", "VARCHAR(500)"),
+            ("about_welcome_eyebrow", "VARCHAR(200)"),   # v1.5.423 /about Welcome·About 편집 가능
+            ("about_welcome_h1", "VARCHAR(200)"),
+            ("about_welcome_h2", "VARCHAR(200)"),
+            ("about_welcome_body", "TEXT"),
+            ("about_welcome_signature", "VARCHAR(200)"),
+            ("about_intro_eyebrow", "VARCHAR(200)"),
+            ("about_intro_heading", "TEXT"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE parishes ADD COLUMN IF NOT EXISTS {col} {col_type}"))

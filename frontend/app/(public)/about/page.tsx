@@ -36,6 +36,14 @@ interface ParishOut {
   founded_at: string | null;
   about_photo_url: string | null;
   mass_schedule: MassSchedule | null;
+  // Welcome · About 섹션 (v1.5.423)
+  about_welcome_eyebrow: string | null;
+  about_welcome_h1: string | null;
+  about_welcome_h2: string | null;
+  about_welcome_body: string | null;
+  about_welcome_signature: string | null;
+  about_intro_eyebrow: string | null;
+  about_intro_heading: string | null;
 }
 
 // 미사 요일 → 시안 라벨 (일 SUN …). 토요일은 특전(다크) 카드.
@@ -139,12 +147,21 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          {/* Welcome */}
+          {/* Welcome — v1.5.423 admin/parish/info 편집 가능. 빈 값이면 기본 문구. */}
           <section className="ab-welcome">
-            <div className="eyebrow">환영합니다 · Welcome</div>
-            <h2>모든 분께,<br /><em>주님의 평화가 함께하시기를.</em></h2>
-            <p>처음 오신 분도, 오래 함께해 주신 분도, 이 공동체에서 주님의 따뜻한 손길을 느끼시기를 기도합니다. 우리 성당의 문은 언제나 열려 있습니다.</p>
-            <div className="signature"><b>{parish?.name ?? "본당"}</b> 사목회 일동</div>
+            <div className="eyebrow">{parish?.about_welcome_eyebrow?.trim() || "환영합니다 · Welcome"}</div>
+            <h2>
+              {parish?.about_welcome_h1?.trim() || "모든 분께,"}
+              <br />
+              <em>{parish?.about_welcome_h2?.trim() || "주님의 평화가 함께하시기를."}</em>
+            </h2>
+            <p style={{ whiteSpace: "pre-line" }}>
+              {parish?.about_welcome_body?.trim()
+                || "처음 오신 분도, 오래 함께해 주신 분도, 이 공동체에서 주님의 따뜻한 손길을 느끼시기를 기도합니다. 우리 성당의 문은 언제나 열려 있습니다."}
+            </p>
+            <div className="signature">
+              <b>{parish?.name ?? "본당"}</b> {parish?.about_welcome_signature?.trim() || "사목회 일동"}
+            </div>
           </section>
 
           {/* Quick facts — 예비자교리 상태 · 입교신청 · 분과/단체 · 본당설립 */}
@@ -202,10 +219,10 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          {/* About */}
+          {/* About — v1.5.423 admin/parish/info 편집 가능. 빈 값이면 기본 문구. */}
           <section className="ab-about">
-            <div className="section-eyebrow">About · 우리 성당</div>
-            <h2>{parish?.name ?? "우리 성당"}, 함께 짓고 함께 머무는 공동체입니다.</h2>
+            <div className="section-eyebrow">{parish?.about_intro_eyebrow?.trim() || "About · 우리 성당"}</div>
+            <h2>{parish?.about_intro_heading?.trim() || `${parish?.name ?? "우리 성당"}, 함께 짓고 함께 머무는 공동체입니다.`}</h2>
             {parish?.description ? (
               <p style={{ whiteSpace: "pre-line" }}>{parish.description}</p>
             ) : (

@@ -51,6 +51,14 @@ class ParishUpdate(BaseModel):
     patron_quote: Optional[str] = None
     patron_quote_ref: Optional[str] = None
     patron_image_url: Optional[str] = None
+    # /about Welcome·About 섹션 (v1.5.423)
+    about_welcome_eyebrow: Optional[str] = None
+    about_welcome_h1: Optional[str] = None
+    about_welcome_h2: Optional[str] = None
+    about_welcome_body: Optional[str] = None
+    about_welcome_signature: Optional[str] = None
+    about_intro_eyebrow: Optional[str] = None
+    about_intro_heading: Optional[str] = None
 
 
 class ParishOut(BaseModel):
@@ -77,6 +85,14 @@ class ParishOut(BaseModel):
     patron_quote: Optional[str] = None
     patron_quote_ref: Optional[str] = None
     patron_image_url: Optional[str] = None
+    # /about Welcome·About 섹션 (v1.5.423)
+    about_welcome_eyebrow: Optional[str] = None
+    about_welcome_h1: Optional[str] = None
+    about_welcome_h2: Optional[str] = None
+    about_welcome_body: Optional[str] = None
+    about_welcome_signature: Optional[str] = None
+    about_intro_eyebrow: Optional[str] = None
+    about_intro_heading: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -119,6 +135,13 @@ def _parish_to_out(parish: Parish) -> ParishOut:
         patron_quote=parish.patron_quote,
         patron_quote_ref=parish.patron_quote_ref,
         patron_image_url=parish.patron_image_url,
+        about_welcome_eyebrow=parish.about_welcome_eyebrow,
+        about_welcome_h1=parish.about_welcome_h1,
+        about_welcome_h2=parish.about_welcome_h2,
+        about_welcome_body=parish.about_welcome_body,
+        about_welcome_signature=parish.about_welcome_signature,
+        about_intro_eyebrow=parish.about_intro_eyebrow,
+        about_intro_heading=parish.about_intro_heading,
     )
 
 

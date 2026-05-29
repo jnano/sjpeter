@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.422";
+export const CURRENT_VERSION = "1.5.423";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.423", date: "2026-05-30", tag: "기능", items: ["/about Welcome·About 섹션 텍스트를 /admin/parish/info 에서 편집 가능. parishes 테이블에 7개 컬럼 추가(startup migration) — about_welcome_eyebrow/h1/h2/body/signature, about_intro_eyebrow/heading. backend ParishUpdate·ParishOut·_parish_to_out 에 7 필드 노출. admin 폼에 '성당 안내 페이지(/about) 텍스트' 섹션 신설 — Welcome 5필드(eyebrow/h1/h2/body/signature) + About 2필드(eyebrow/heading). 서명은 본당명 뒤에 붙는 라벨만 입력하면 됨(미리보기 표시). 공개 /about 페이지는 각 필드를 우선 사용하고 빈 값이면 기존 정적 문구로 폴백 — 환영 인사·서명·소개 헤딩까지 본당별 톤 자유 변경. 본문(우리 성당 소개)은 기존 description 그대로 사용"] },
   { version: "1.5.422", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 사이트 전반 확대 — v1.5.395 시점에 /admin/skin 잉크 컬러가 홈 페이지 6개 .skin-* 스코프 안에서만 정의돼 푸터·기타 페이지에는 영향이 없던 문제 해소. (1) :root 에 --ink/--ink-2/--ink-3 3종 노출(.skin-* 스코프는 같은 값을 재정의해 카스케이드 호환 유지). (2) .site-foot 계열을 ink 다크 배경 + 흰 글씨로 전환 — h4 #FFF, 본문 rgba(255,255,255,0.72), 미세 메타 0.55, 링크 hover 골드. site-foot-mass dt/dd, site-foot-bottom 보더와 텍스트도 알파 화이트로 통일. /admin/skin 설명문이 약속한 '푸터 = 다크 블록' 과 실제 구현 일치. 잉크 컬러 변경 시 모든 페이지 푸터에 즉시 반영"] },
   { version: "1.5.421", date: "2026-05-29", tag: "수정", items: ["/meditation 본문에서 단일 줄바꿈이 무시되던 문제 해소 — MeditationArticle 본문 처리 로직: body.split(/\\n{2,}/)로 빈 줄 두 번 = 단락 분리 후 각 단락을 <p> 로 감싸지만 단락 안의 단일 \\n은 HTML 공백으로 처리되어 한 줄로 붙음. <p> 에 whiteSpace:'pre-line' 적용으로 단락 안의 \\n 도 시각적 줄바꿈으로 표시"] },
   { version: "1.5.420", date: "2026-05-29", tag: "수정", items: ["빠른 메뉴의 '예비신자 안내' 링크 3군데가 잘못된 /community 로 가던 문제 해소 — 신규 v1.5.419 의 /catechumen 페이지로 연결. SkinDashboard·SkinEditorial·SkinEditorialMobile 의 quickLinks 모두 수정"] },
