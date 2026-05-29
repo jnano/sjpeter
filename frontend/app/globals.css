@@ -196,6 +196,13 @@ input[type="search"]::-webkit-search-results-decoration {
   --stone: #8a7a6a;
   --text-soft: #5a5040;
   --border-gold: rgba(184,151,90,0.15);
+
+  /* 잉크 (다크 블록 배경) — :root 에 노출해 .skin-* 스코프 바깥에서도 사용 가능.
+     layout.tsx 가 :root{--site-ink:#xxx} 한 줄을 주입하면 사이트 전반 ink 일괄 갱신.
+     .skin-* 스코프는 같은 값을 재정의해 카스케이드 호환을 유지한다. */
+  --ink: var(--site-ink, #2C2620);
+  --ink-2: #6B6660;
+  --ink-3: #9E9892;
 }
 
 html {
@@ -620,22 +627,25 @@ h1, h2, h3, h4, h5, h6 {
 .site-nav-dropdown a:hover { background: var(--color-surface-warm); color: var(--color-primary); }
 .site-mobile-toggle { display: none; }
 
-/* footer */
-.site-foot { background: var(--color-surface-warm); padding: 64px 56px 32px; margin-top: 32px; border-top: 1px solid var(--color-border); font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
+/* footer — v1.5.422 ink 다크 블록으로 전환. /admin/skin 의 잉크 컬러가 사이트 전반에 체감되도록.
+   배경: var(--ink). 텍스트는 흰색 기반 + 알파로 강약. hover 강조는 gold 톤. */
+.site-foot { background: var(--ink); color: rgba(255,255,255,0.85); padding: 64px 56px 32px; margin-top: 32px; border-top: 1px solid var(--ink); font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
 .site-foot-inner { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; }
 .site-foot .site-logo { margin-bottom: 20px; }
-.site-foot-brand p { font-size: 13px; color: var(--color-text-muted); line-height: 1.7; }
-.site-foot-brand .phones { margin-top: 14px; font-size: 13px; color: var(--color-text-muted); }
-.site-foot-brand .diocese { margin-top: 12px; font-size: 12px; color: var(--color-text-muted); }
-.site-foot h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; color: var(--color-text); }
-.site-foot ul li { padding: 5px 0; font-size: 13px; color: var(--color-text-muted); }
-.site-foot ul li a:hover { color: var(--color-primary); }
+.site-foot .site-logo-text { color: #FFF; }
+.site-foot .site-logo-en { color: rgba(255,255,255,0.6); }
+.site-foot-brand p { font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.7; }
+.site-foot-brand .phones { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.72); }
+.site-foot-brand .diocese { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.55); }
+.site-foot h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; color: #FFF; }
+.site-foot ul li { padding: 5px 0; font-size: 13px; color: rgba(255,255,255,0.72); }
+.site-foot ul li a:hover { color: var(--gold-light); }
 .site-foot-mass { display: grid; grid-template-columns: 44px 1fr; gap: 6px 14px; font-size: 13px; }
-.site-foot-mass dt { color: var(--color-text-muted); }
-.site-foot-mass dd { color: var(--color-text); }
-.site-foot-bottom { max-width: 1320px; margin: 48px auto 0; padding-top: 20px; border-top: 1px solid var(--color-border-dark); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--color-text-muted); }
+.site-foot-mass dt { color: rgba(255,255,255,0.55); }
+.site-foot-mass dd { color: rgba(255,255,255,0.9); }
+.site-foot-bottom { max-width: 1320px; margin: 48px auto 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.12); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(255,255,255,0.55); }
 .site-foot-bottom-links { display: flex; gap: 20px; }
-.site-foot-bottom-links a:hover { color: var(--color-primary); }
+.site-foot-bottom-links a:hover { color: var(--gold-light); }
 
 /* 모바일 — 시안은 1440 고정이라 좁은 화면은 합리적 축소 + 토글 메뉴 */
 @media (max-width: 1024px) {

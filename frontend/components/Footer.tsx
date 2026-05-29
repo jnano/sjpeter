@@ -169,7 +169,7 @@ export default async function Footer() {
               ))}
             </dl>
           ) : (
-            <p style={{ fontSize: 13, color: "var(--color-text-muted)" }}>미사 시간 정보 없음</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>미사 시간 정보 없음</p>
           )}
         </div>
 

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.421";
-export const LAST_UPDATED = "2026-05-29";
+export const CURRENT_VERSION = "1.5.422";
+export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
 // - 모든 변경은 patch +1로 누적 (기능/수정 무관)
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.422", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 사이트 전반 확대 — v1.5.395 시점에 /admin/skin 잉크 컬러가 홈 페이지 6개 .skin-* 스코프 안에서만 정의돼 푸터·기타 페이지에는 영향이 없던 문제 해소. (1) :root 에 --ink/--ink-2/--ink-3 3종 노출(.skin-* 스코프는 같은 값을 재정의해 카스케이드 호환 유지). (2) .site-foot 계열을 ink 다크 배경 + 흰 글씨로 전환 — h4 #FFF, 본문 rgba(255,255,255,0.72), 미세 메타 0.55, 링크 hover 골드. site-foot-mass dt/dd, site-foot-bottom 보더와 텍스트도 알파 화이트로 통일. /admin/skin 설명문이 약속한 '푸터 = 다크 블록' 과 실제 구현 일치. 잉크 컬러 변경 시 모든 페이지 푸터에 즉시 반영"] },
   { version: "1.5.421", date: "2026-05-29", tag: "수정", items: ["/meditation 본문에서 단일 줄바꿈이 무시되던 문제 해소 — MeditationArticle 본문 처리 로직: body.split(/\\n{2,}/)로 빈 줄 두 번 = 단락 분리 후 각 단락을 <p> 로 감싸지만 단락 안의 단일 \\n은 HTML 공백으로 처리되어 한 줄로 붙음. <p> 에 whiteSpace:'pre-line' 적용으로 단락 안의 \\n 도 시각적 줄바꿈으로 표시"] },
   { version: "1.5.420", date: "2026-05-29", tag: "수정", items: ["빠른 메뉴의 '예비신자 안내' 링크 3군데가 잘못된 /community 로 가던 문제 해소 — 신규 v1.5.419 의 /catechumen 페이지로 연결. SkinDashboard·SkinEditorial·SkinEditorialMobile 의 quickLinks 모두 수정"] },
   { version: "1.5.419", date: "2026-05-29", tag: "기능", items: ["예비신자 안내(/catechumen) 메인 페이지 신설 — 시안 catechumen.html 풀 재현. hero(좌 텍스트 ['한 걸음만 다가오시면, 나머지는 함께 걷겠습니다'] + 우 hero-stats 4칸 그리드) + 4단계 path(번호 + 시기 + 제목 + 설명, 1단계는 와인 강조) + curriculum 3 카드(1·2·3학기 + 5항목, **굵게** 자동 강조) + split 2 카드(일정·신청방법) + FAQ 6 카드 + 와인 그라디언트 CTA 밴드(골드 'Join Us' eyebrow + 골드 액션). parish.name·phone 동적 적용. SectionLayout strictMatch + STATIC_PAGES 시드(category '성당 소개') 추가 — admin 가 /admin/menus 에서 등록하는 즉시 사이드바 자동 활성화. /catechumen/apply(이전 404 의심) 도 정상 200 재확인"] },
