@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.427";
+export const CURRENT_VERSION = "1.5.428";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.428", date: "2026-05-30", tag: "수정", items: ["잉크 컬러에서 본문 폰트 색은 제외 — admin/skin 잉크 컬러가 본문 글씨까지 물들이던 문제 해소(예: 코발트 선택 시 홈 대시보드 텍스트가 파랗게 변함). globals.css :root 에 --ink-text:#2C2620 고정값 신설(잉크 교체 무관). 'color: var(--ink)' 69곳을 'color: var(--ink-text)' 로 일괄 치환. 배경(background:var(--ink))·보더는 그대로 ink 변수 유지 — 사이트 전반 다크 블록·필터 칩·CTA 는 여전히 잉크 따름. --ink-2/--ink-3 는 원래 고정값(#6B6660·#9E9892)이라 영향 없음"] },
   { version: "1.5.427", date: "2026-05-30", tag: "디자인", items: ["/admin/skin 잉크 컬러 프리셋에 비비드 5종 추가(총 10종) — color-compare(1).html 시안 큐레이션. 다크 브라운(기본) + 딥 4종(틸·네이비·포레스트·인디고) + 비비드 5종(애저 블루 #1668C2·비비드 틸 #0E8C8C·에메랄드 #1A8F5C·코발트 #2D4ECC·플럼 바이올렛 #7A3B9E). A/B/C/D 접두어 제거하고 톤 이름만으로 라벨 정리. 모두 휘도 0.35 이하라 흰 글씨 가독성 경고에 걸리지 않음. 와인·골드·크림은 변경 안 됨"] },
   { version: "1.5.426", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 확대 2차 — Tailwind 인라인 bg-[var(--color-text)] / border-[var(--color-text)] 로 다크 톤을 직접 박아둔 공개 페이지 14 파일을 ink 로 일괄 전환. 대상: /construction progress-hero, /word 오늘 복음 다크 카드 + 섹션 디바이더, /word ReadTabs/GospelToolbar 다크 칩, /offering status-hero, /bulletin 'PDF 다운로드' CTA + 연도 필터 활성 + 섹션 디바이더, /history EraFilter 10년 칩 활성, /groups 사목/신심/봉사/연령 필터 활성, /meditation·/prayer toast, /boards 상세 toast 등. info/page.tsx 의 bg-[var(--color-text)]/[0.02] (subtle 2% 틴트)는 그대로 유지. 다크 블록 = ink 일관 적용"] },
   { version: "1.5.425", date: "2026-05-30", tag: "디자인", items: ["잉크 컬러 적용 위치 교정 — v1.5.422 의 푸터 ink 다크 전환은 사용자 의도와 달랐음. 푸터를 원복(.site-foot 다시 surface-warm + color-text)하고, 대신 사이트 전반에 흩어진 '다크 활성 상태' UI 8 군데를 ink 변수로 일괄 전환. (1) /about CTA(.ab-cta — 이미 ink 사용 중) 그대로. (2) 헤더 CTA 버튼 .site-cta. (3) 기도 페이지 오늘 카드 .pr-today + 활성 칩 .pr-chip.on. (4) 게시판 세그먼트 활성 .bd-segor a.on + 페이지네이션 현재 .bd-page span.cur. (5) 캘린더 월/주/일 토글 .cal-viewswitch button.on + 전체 N건 칩 .cal-chip.on + 미니캘 선택일 .cal-mini-d.selected. 모두 background:var(--color-text)→var(--ink), border-color도 동일. :root 의 --ink 정의는 v1.5.422 그대로 유지(살아있음). 이제 admin/skin 잉크 컬러를 바꾸면 홈·about·캘린더·기도·게시판·헤더 CTA 의 다크 UI 가 즉시 일괄 반영"] },
