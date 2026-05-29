@@ -31,7 +31,7 @@ const QUICK_LINKS = [
   { href: "/bulletin", label: "주보 아카이브", en: "Bulletin", icon: <><rect x="3" y="4" width="16" height="14" /><line x1="3" y1="9" x2="19" y2="9" /><line x1="11" y1="9" x2="11" y2="18" /></> },
   { href: "/prayer", label: "기도문", en: "Prayers", icon: <><circle cx="11" cy="8" r="4" /><path d="M7 14l4 6 4-6" /></> },
   { href: "/saints", label: "성인 사전", en: "Saints", icon: <><line x1="11" y1="3" x2="11" y2="19" /><line x1="5" y1="9" x2="17" y2="9" /></> },
-  { href: "/community", label: "예비신자 안내", en: "Catechumen", icon: <><circle cx="11" cy="11" r="8" /><path d="M5 11h12M11 3a14 14 0 0 1 0 16" /></> },
+  { href: "/catechumen", label: "예비신자 안내", en: "Catechumen", icon: <><circle cx="11" cy="11" r="8" /><path d="M5 11h12M11 3a14 14 0 0 1 0 16" /></> },
 ];
 
 function ymd(iso: string): string {

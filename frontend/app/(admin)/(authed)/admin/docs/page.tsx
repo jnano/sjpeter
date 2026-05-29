@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.419";
+export const CURRENT_VERSION = "1.5.420";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.420", date: "2026-05-29", tag: "수정", items: ["빠른 메뉴의 '예비신자 안내' 링크 3군데가 잘못된 /community 로 가던 문제 해소 — 신규 v1.5.419 의 /catechumen 페이지로 연결. SkinDashboard·SkinEditorial·SkinEditorialMobile 의 quickLinks 모두 수정"] },
   { version: "1.5.419", date: "2026-05-29", tag: "기능", items: ["예비신자 안내(/catechumen) 메인 페이지 신설 — 시안 catechumen.html 풀 재현. hero(좌 텍스트 ['한 걸음만 다가오시면, 나머지는 함께 걷겠습니다'] + 우 hero-stats 4칸 그리드) + 4단계 path(번호 + 시기 + 제목 + 설명, 1단계는 와인 강조) + curriculum 3 카드(1·2·3학기 + 5항목, **굵게** 자동 강조) + split 2 카드(일정·신청방법) + FAQ 6 카드 + 와인 그라디언트 CTA 밴드(골드 'Join Us' eyebrow + 골드 액션). parish.name·phone 동적 적용. SectionLayout strictMatch + STATIC_PAGES 시드(category '성당 소개') 추가 — admin 가 /admin/menus 에서 등록하는 즉시 사이드바 자동 활성화. /catechumen/apply(이전 404 의심) 도 정상 200 재확인"] },
   { version: "1.5.418", date: "2026-05-29", tag: "수정", items: ["기도문 링크 6군데가 잘못된 슬러그 /prayers 로 가던 문제 해소 — 실제 라우트는 /prayer (단수). SkinDashboard 빠른 메뉴, SkinDashboardMobile 빠른 메뉴, SkinEditorial 빠른 메뉴 + 푸터 링크, SkinEditorialMobile 빠른 메뉴, MobileTabBar 하단 탭 모두 /prayer 로 통일"] },
   { version: "1.5.417", date: "2026-05-29", tag: "수정", items: ["dashboard 홈 Notice·Calendar·Offering 3단 비율(4.5:3.5:2)이 노트북·태블릿(1024px 이하)에서 1단 stack 으로 보이던 문제 해소 — globals.css 의 .grid12 분기점이 1024px 라 좁은 화면에서 stack 됐는데 v1.5.416 에 추가한 .three-card-row 의 모바일 폴백(900px)도 함께 작동해 더 좁아짐. 폴백 분기점을 900px → 480px 로 늦춤. 노트북·태블릿에서도 3단 비율 유지"] },
