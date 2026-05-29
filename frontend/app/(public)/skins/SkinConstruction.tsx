@@ -91,7 +91,7 @@ export default function SkinConstruction({
                   건축 현황 보기
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="2" y1="7" x2="12" y2="7" /><polyline points="8 3 12 7 8 11" /></svg>
                 </Link>
-                <Link href="/boards/build_offering" className="btn-sec">한 줄 봉헌하기 ✍︎</Link>
+                <Link href="/offering" className="btn-sec">한 줄 봉헌하기 ✍︎</Link>
               </div>
             </div>
 

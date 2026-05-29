@@ -201,7 +201,7 @@ export default function SkinDashboardMobile({
           </div>
           <div className="amt">{offeringCount.toLocaleString("ko-KR")}<sub> 줄</sub></div>
           <div className="amt-sub">함께 모은 봉헌의 마음</div>
-          <Link href="/boards/build_offering" className="cta">한 줄 남기기 ✍︎</Link>
+          <Link href="/offering" className="cta">한 줄 남기기 ✍︎</Link>
         </article>
 
         {/* reflection */}

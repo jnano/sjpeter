@@ -311,7 +311,7 @@ export default function SkinDashboard({
             </div>
             <div className="offering-amt">{offeringCount.toLocaleString("ko-KR")}<span style={{ fontSize: 18, fontWeight: 600, opacity: 0.7 }}> 줄</span></div>
             <div className="offering-sub">함께 모은 봉헌의 마음</div>
-            <Link href="/boards/build_offering" className="offering-cta">한 줄 남기기 ✍︎</Link>
+            <Link href="/offering" className="offering-cta">한 줄 남기기 ✍︎</Link>
           </article>
 
           {/* Reflection (col-12) */}

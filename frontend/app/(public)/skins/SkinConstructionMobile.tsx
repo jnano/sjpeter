@@ -105,7 +105,7 @@ export default function SkinConstructionMobile({
         <Link href="/construction" className="btn btn-ink">건축 현황
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 2 7 5.5 3 9" /></svg>
         </Link>
-        <Link href="/boards/build_offering" className="btn btn-ghost">한 줄 봉헌 ✍︎</Link>
+        <Link href="/offering" className="btn btn-ghost">한 줄 봉헌 ✍︎</Link>
       </div>
 
       {/* KPI 2x2 */}

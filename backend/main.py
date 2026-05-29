@@ -659,6 +659,19 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # v1.5.407 OFFERING_GOAL site_setting 시드 — /offering 페이지의 진행률 목표.
+        # ON CONFLICT DO NOTHING 으로 기존 값 보존(admin 이 이미 수정했을 수 있음).
+        try:
+            conn.execute(text(
+                "INSERT INTO site_settings (key, value, label, description, is_secret, group_name) "
+                "VALUES ('OFFERING_GOAL', '1000', '한 줄 봉헌 목표', "
+                "'/offering 페이지의 누계 진행률 목표(줄 수). 빈 값이면 진행률 바를 숨김.', "
+                "FALSE, '디자인') "
+                "ON CONFLICT (key) DO NOTHING"
+            ))
+        except Exception:
+            pass
+
         # 정적 콘텐츠 테이블 생성
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS history_items (

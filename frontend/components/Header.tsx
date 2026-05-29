@@ -289,7 +289,7 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
                 suppressHydrationWarning
               />
             </form>
-            <Link href="/boards/build_offering" className="site-cta">
+            <Link href="/offering" className="site-cta">
               한 줄 봉헌
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6"><polyline points="4 2 8 6 4 10" /></svg>
             </Link>

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.406";
+export const CURRENT_VERSION = "1.5.407";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.407", date: "2026-05-29", tag: "기능", items: ["한 줄 봉헌 페이지(/offering) 신설 — 시안 offering.html 재현. 기존 boards.kind='line' 시스템(slug='build_offering') 재활용. 백엔드: site_settings.OFFERING_GOAL 시드(기본 1000줄) + _PUBLIC_KEYS 노출. 프론트 /offering: 다크 잉크 status-hero(골드 큰 누계 + 'Live Counter' eyebrow + accent 그라디언트 progress bar + 목표 대비 %) + 안내 카드 + LineBoard 컴포넌트 임베드(기존 작성 폼/카드 wall 재활용). STATIC_PAGES 에 /offering 추가(성전건축 카테고리). 헤더 CTA + 4 스킨(SkinConstruction·SkinConstructionMobile·SkinDashboard·SkinDashboardMobile)의 '/boards/build_offering' 링크를 모두 /offering 으로 일괄 변경"] },
   { version: "1.5.406", date: "2026-05-29", tag: "기능", items: ["수호 성인 페이지(/patron) 신설 — 시안 patron.html 재현. parishes 테이블에 patron_name·patron_feast_day·patron_intro·patron_quote·patron_quote_ref·patron_image_url 6 컬럼 추가(startup migration). admin /admin/parish/patron 입력 페이지 신설(사진 업로드 + 5 텍스트 필드). 공개 /patron: saint-hero(좌측 큰 이미지/십자가 + 우측 eyebrow 'Patron Saint' + 인용 + 본명·축일 quick) + 생애 본문 reading-zoom + 와인색 기념 축일 카드(날짜 분리 표시). 기존 메뉴 /saint·/p/saint 를 /patron 으로 자동 마이그레이션, 라벨도 '수호성인 성 베드로'(본당 종속)→'수호 성인'(일반화)"] },
   { version: "1.5.405", date: "2026-05-29", tag: "수정", items: ["묵상 아카이브 상세(/meditation/archive/[id])가 시안이 적용되기 전의 예전 레이아웃(MeditationCard 컴포넌트)을 그대로 쓰던 문제 해소 — 현재(/meditation)와 동일하게 시안 .med-article 톤(eyebrow + 큰 제목 + .med-art-meta avatar/author/pub + drop-cap 본문 + pull-quote + 이번 주 실천 + 이전/다음 + 최근 묵상 사이드 rail)으로 통일. 자체 PageHead(.med-ph) + SectionLayout group='word' + .med-layout 그리드 적용. legacy components/MeditationCard.tsx 는 사용처 없어 삭제(grep 검증 후)"] },
   { version: "1.5.404", date: "2026-05-29", tag: "수정", items: ["오늘의 복음(/word) 우측 rail '이번 주 미사 말씀'에서 요일 행이 하루씩 밀려 보이던 버그(예: 토요일 클릭 시 금요일 복음 표시) 해소 — 원인은 Date.prototype.toISOString().slice(0,10) 패턴. toISOString 은 UTC 기준이라 KST 자정 → UTC 전날 15:00 → slice(0,10) 가 전날 ISO 반환. server-side fetchWeek 의 monday/d ISO, currentIso default, client-side todayIso 비교, DateNav shift 후 ISO 등 8군데 모두 해당. dateUtils.ts(toLocalIso, todayIso) 신설로 getFullYear/Month/Date 기반 로컬 TZ 변환에 통일. LiturgicalMiniCal 자체 toIso 도 제거하고 공통 helper 로 일원화"] },
