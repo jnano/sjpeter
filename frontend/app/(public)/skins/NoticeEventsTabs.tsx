@@ -64,7 +64,7 @@ export default function NoticeEventsTabs({
           {notices.length === 0 ? (
             <li><span className="title" style={{ gridColumn: "1/3" }}>등록된 공지가 없습니다</span><span /></li>
           ) : (
-            notices.slice(0, 6).map((n) => (
+            notices.slice(0, 5).map((n) => (
               <li key={n.id}>
                 {n.is_pinned ? <span className="pin">고정</span> : <span />}
                 <Link
@@ -84,7 +84,7 @@ export default function NoticeEventsTabs({
           {events.length === 0 ? (
             <li className="up-empty">예정된 일정이 없습니다</li>
           ) : (
-            events.slice(0, 8).map((e) => {
+            events.slice(0, 5).map((e) => {
               const d = new Date(e.event_date);
               const m = d.getMonth() + 1;
               const day = d.getDate();

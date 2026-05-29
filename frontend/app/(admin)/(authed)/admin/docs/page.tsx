@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.414";
+export const CURRENT_VERSION = "1.5.415";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.415", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈 NoticeEventsTabs 두 탭 모두 5건으로 통일 — 공지사항 6→5건, 행사·모임 8→5건. 카드 높이 일관성·정보 밀집도 절제"] },
   { version: "1.5.414", date: "2026-05-29", tag: "기능", items: ["주보 카드 표지에 PDF 첫 페이지 썸네일 배경 — bulletins 테이블에 thumbnail_url VARCHAR(500) 컬럼 추가(startup migration). backend/app/core/pdf_thumbnail.py 신규: PyMuPDF(fitz)+Pillow 로 PDF 1쪽 → 긴 변 1024px JPG(quality 78, progressive) 추출. 주보 업로드 엔드포인트 동기 자동 호출(실패 시 fallback 만 잃음). POST /api/bulletins/backfill-thumbnails(admin) 신설로 기존 주보 일괄 생성. 프론트 BulletinClient: CoverFrame 컴포넌트 신설로 latest hero·card 표지 영역 통합 — thumbnail_url 있으면 풀 배경 이미지 + 하단 어두운 그라디언트(rgba 0.05→0.7) + 흰 텍스트(본당명·호수·날짜) + 최신호/특집 ribbon, 없으면 기존 ✠ placeholder"] },
   { version: "1.5.413", date: "2026-05-29", tag: "수정", items: ["/calendar/upcoming 페이지에 사이드바가 잘못 자동 노출되던 문제 해소 — useNavigation 의 매칭 로직(`it.href === pathname || pathname.startsWith(it.href + '/')`)이 prefix 일치도 인정해서 /calendar(라벨 '본당 일정')의 자식 경로인 /calendar/upcoming 이 메뉴 등록 없이도 부모 그룹 사이드바를 자동 따라가던 부작용. SectionLayout 에 strictMatch prop 추가 — 현재 pathname 과 메뉴 항목 href 가 정확히 일치할 때만 사이드바 표시, 일치 없으면 풀폭 렌더(prefix 부작용 차단). /calendar/upcoming 페이지에 strictMatch 적용. 검증: data-print-hide(사이드바 wrapper 마커)가 /calendar/upcoming 에서 사라졌고 /word·/calendar 등 정확 일치 페이지는 그대로 유지됨"] },
   { version: "1.5.412", date: "2026-05-29", tag: "인프라", items: ["/calendar/upcoming 페이지를 admin/menus 등록 가능하게 준비 — (1) backend/app/core/static_pages.py STATIC_PAGES 에 {slug:'/calendar/upcoming', label:'다가오는 일정', category:'알림'} 추가(admin/menus 의 '정적 페이지' picker UI 드롭다운에 노출). (2) frontend/app/(public)/calendar/upcoming/page.tsx <main> 풀폭 wrapper → <SectionLayout autoHero=false> 로 교체. 현재는 메뉴 미등록이라 SectionLayout 의 currentGroup 매칭이 없어 사이드바 없이 풀폭 렌더 → admin이 /admin/menus 에서 항목 추가하는 즉시 좌측 사이드바 자동 활성화(메뉴 등록=사이드바 불변량)"] },
