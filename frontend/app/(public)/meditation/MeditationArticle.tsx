@@ -80,7 +80,9 @@ export default function MeditationArticle({
       })()}
 
       <div className="med-body">
-        {paras.length === 0 ? <p>본문이 곧 게재됩니다.</p> : paras.map((p, i) => <p key={i}>{p}</p>)}
+        {/* whitespace-pre-line: 단락 안의 단일 \n 도 줄바꿈으로 표시 (v1.5.421).
+            split(/\n{2,}/) 로 빈 줄 두번 = 단락 분리, 그 안의 단일 \n 은 줄바꿈 유지. */}
+        {paras.length === 0 ? <p>본문이 곧 게재됩니다.</p> : paras.map((p, i) => <p key={i} style={{ whiteSpace: "pre-line" }}>{p}</p>)}
       </div>
 
       {pq && pq.quote.length > 0 && (
