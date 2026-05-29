@@ -23,12 +23,13 @@ export default function EraFilter({ eras, total }: { eras: Era[]; total: number 
     }
     const el = document.getElementById(`era-${id}`);
     if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - 140;
+    const offset = window.innerWidth < 768 ? 110 : 140;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top, behavior: "smooth" });
   }
 
   return (
-    <div className="flex gap-1.5 flex-wrap mb-8 sticky top-32 z-10 bg-[var(--color-background)]/95 backdrop-blur py-2 -mx-1 px-1">
+    <div className="flex gap-1.5 flex-wrap mb-8 sticky top-14 md:top-32 z-10 bg-[var(--color-background)]/95 backdrop-blur py-2 -mx-1 px-1">
       <button
         type="button"
         onClick={() => jump("all")}

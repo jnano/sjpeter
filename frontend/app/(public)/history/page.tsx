@@ -106,7 +106,7 @@ export default async function HistoryPage() {
           <div className="absolute left-4 sm:left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-border)]" />
 
           {eras.map((era) => (
-            <section key={era.id} id={`era-${era.id}`} className="scroll-mt-32">
+            <section key={era.id} id={`era-${era.id}`} className="scroll-mt-28 md:scroll-mt-32">
               {/* era-divider */}
               <div className="relative -ml-14 sm:-ml-16 pl-14 sm:pl-16 mt-8 mb-6 first:mt-0">
                 <span

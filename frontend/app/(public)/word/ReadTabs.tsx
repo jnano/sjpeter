@@ -38,13 +38,15 @@ export default function ReadTabs({ tabs }: { tabs: Tab[] }) {
   function jump(id: string) {
     const el = document.getElementById(id);
     if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - 140; // 헤더 + 여백 보정
+    // 헤더 + sticky tab 만큼 보정. 모바일은 app-header(50px)+tab(약 50px), 데스크탑은 헤더+브레드크럼+tab.
+    const offset = window.innerWidth < 768 ? 110 : 140;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top, behavior: "smooth" });
     setActive(id);
   }
 
   return (
-    <div className="flex gap-1 p-1 bg-white border border-[var(--color-border)] rounded-full mb-6 sticky top-32 z-10">
+    <div className="flex gap-1 p-1 bg-white border border-[var(--color-border)] rounded-full mb-6 sticky top-14 md:top-32 z-10">
       {tabs.map((t) => {
         const on = active === t.id;
         return (
