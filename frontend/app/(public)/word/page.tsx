@@ -6,6 +6,7 @@ import GospelToolbar from "./GospelToolbar";
 import LiturgicalMiniCal from "./LiturgicalMiniCal";
 import ReadTabs from "./ReadTabs";
 import WeekReadings, { type WeekDay } from "./WeekReadings";
+import { toLocalIso, todayIso } from "./dateUtils";
 
 export const metadata: Metadata = {
   title: "오늘의 복음",
@@ -59,7 +60,7 @@ async function fetchGospel(dateIso: string | null): Promise<GospelDay | null> {
         : null,
     };
     return {
-      date: d.date ?? dateIso ?? new Date().toISOString().slice(0, 10),
+      date: d.date ?? dateIso ?? todayIso(),
       liturgical_season: d.liturgical_season ?? null,
       vestment_color: d.vestment_color ?? null,
       gospel_reference: d.gospel_reference ?? null,
@@ -79,7 +80,7 @@ async function fetchWeek(currentIso: string): Promise<WeekDay[]> {
   const offsetToMon = dow === 0 ? -6 : 1 - dow;
   const monday = new Date(cur);
   monday.setDate(cur.getDate() + offsetToMon);
-  const monIso = monday.toISOString().slice(0, 10);
+  const monIso = toLocalIso(monday); // toISOString 은 UTC 라 KST 자정이 전날로 밀림(v1.5.404)
 
   try {
     const res = await fetch(`${API}/api/gospel/week?from=${monIso}`, { next: { revalidate: 21600 } });
@@ -99,7 +100,7 @@ async function fetchWeek(currentIso: string): Promise<WeekDay[]> {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       return {
-        date: d.toISOString().slice(0, 10),
+        date: toLocalIso(d),
         dayLabel,
         firstRef: null,
         gospelRef: null,
@@ -136,7 +137,7 @@ export default async function WordPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const requestedDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null;
   const gospel = await fetchGospel(requestedDate);
-  const currentIso = gospel?.date ?? requestedDate ?? new Date().toISOString().slice(0, 10);
+  const currentIso = gospel?.date ?? requestedDate ?? todayIso();
   const week = await fetchWeek(currentIso);
 
   const vestment = VESTMENT[gospel?.vestment_color ?? "white"] ?? VESTMENT.white;

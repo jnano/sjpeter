@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { todayIso } from "./dateUtils";
 
 /**
  * 시안 .week-list 재현 — 현재 표시 날짜가 속한 주의 월~일 7일.
@@ -22,16 +23,16 @@ export default function WeekReadings({
   week: WeekDay[];
 }) {
   const router = useRouter();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   function jump(iso: string) {
-    router.push(iso === todayIso ? "/word" : `/word?date=${iso}`);
+    router.push(iso === today ? "/word" : `/word?date=${iso}`);
   }
 
   return (
     <ul>
       {week.map((d) => {
-        const isToday = d.date === todayIso;
+        const isToday = d.date === today;
         const isCurrent = d.date === currentIso;
         const highlight = isToday || isCurrent;
         return (

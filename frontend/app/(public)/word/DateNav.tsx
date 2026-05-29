@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toLocalIso, todayIso } from "./dateUtils";
 
 /**
  * 오늘의 복음 페이지 상단 날짜 네비.
@@ -16,20 +17,20 @@ export default function DateNav({ currentIso }: { currentIso: string }) {
   const [picking, setPicking] = useState(false);
 
   const current = new Date(currentIso + "T00:00:00");
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const isToday = currentIso === todayIso;
+  const today = todayIso();
+  const isToday = currentIso === today;
 
   function shift(days: number) {
     const next = new Date(current);
     next.setDate(next.getDate() + days);
-    const iso = next.toISOString().slice(0, 10);
-    router.push(iso === todayIso ? "/word" : `/word?date=${iso}`);
+    const iso = toLocalIso(next); // toISOString 은 UTC 라 KST 자정이 전날로 밀림(v1.5.404)
+    router.push(iso === today ? "/word" : `/word?date=${iso}`);
   }
 
   function jumpTo(iso: string) {
     setPicking(false);
     if (!iso) return;
-    router.push(iso === todayIso ? "/word" : `/word?date=${iso}`);
+    router.push(iso === today ? "/word" : `/word?date=${iso}`);
   }
 
   const label = current.toLocaleDateString("ko-KR", {

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { toLocalIso, todayIso } from "./dateUtils";
 
 /**
  * 시안 .mini-cal 재현 — 작은 월간 캘린더.
@@ -11,7 +12,7 @@ import { useMemo, useState } from "react";
 export default function LiturgicalMiniCal({ currentIso }: { currentIso: string }) {
   const router = useRouter();
   const current = useMemo(() => new Date(currentIso + "T00:00:00"), [currentIso]);
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   const [view, setView] = useState<{ y: number; m: number }>({
     y: current.getFullYear(),
@@ -29,7 +30,7 @@ export default function LiturgicalMiniCal({ currentIso }: { currentIso: string }
   }
 
   function jump(iso: string) {
-    router.push(iso === todayIso ? "/word" : `/word?date=${iso}`);
+    router.push(iso === today ? "/word" : `/word?date=${iso}`);
   }
 
   return (
@@ -67,7 +68,7 @@ export default function LiturgicalMiniCal({ currentIso }: { currentIso: string }
           </span>
         ))}
         {days.map((d) => {
-          const isToday = d.iso === todayIso;
+          const isToday = d.iso === today;
           const isCurrent = d.iso === currentIso;
           const sun = d.dow === 0;
           return (
@@ -115,7 +116,7 @@ function buildMonthGrid(year: number, month: number): Cell[] {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     cells.push({
-      iso: toIso(d),
+      iso: toLocalIso(d),
       day: d.getDate(),
       dow: d.getDay(),
       muted: d.getMonth() !== month,
@@ -124,9 +125,3 @@ function buildMonthGrid(year: number, month: number): Cell[] {
   return cells;
 }
 
-function toIso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}

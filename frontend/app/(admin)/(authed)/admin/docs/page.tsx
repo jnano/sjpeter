@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.403";
+export const CURRENT_VERSION = "1.5.404";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.404", date: "2026-05-29", tag: "수정", items: ["오늘의 복음(/word) 우측 rail '이번 주 미사 말씀'에서 요일 행이 하루씩 밀려 보이던 버그(예: 토요일 클릭 시 금요일 복음 표시) 해소 — 원인은 Date.prototype.toISOString().slice(0,10) 패턴. toISOString 은 UTC 기준이라 KST 자정 → UTC 전날 15:00 → slice(0,10) 가 전날 ISO 반환. server-side fetchWeek 의 monday/d ISO, currentIso default, client-side todayIso 비교, DateNav shift 후 ISO 등 8군데 모두 해당. dateUtils.ts(toLocalIso, todayIso) 신설로 getFullYear/Month/Date 기반 로컬 TZ 변환에 통일. LiturgicalMiniCal 자체 toIso 도 제거하고 공통 helper 로 일원화"] },
   { version: "1.5.403", date: "2026-05-29", tag: "수정", items: ["오늘의 복음(/word) read-tabs reference 가 너무 길어 옆 탭으로 흘러나오던 문제 해소 — flex 자식 min-w-0 누락이 1차 원인, 풀 reference(예: '사도 바오로의 코린토 1서 12,3ㄷ-7.12-13', '시편 104(103),1ㄱㄴ과 24...')가 탭 폭의 4~5배라 truncate 가 작동해도 시각 어색이 2차 원인. shortenRef() 함수 신설로 책명 약어(1코린/2코린/사도/2마카/1테살 등 20종 매핑) + 첫 콤마+절까지 + 괄호 제거로 축약 ('1코린 12,3' / '시편 104,1'). 풀 reference 는 title 속성으로 hover 노출 + 본문 ReadingCard 의 reference 칸에는 그대로 풀 표기. 색 제의 태그에 시기·의미 tooltip 도 함께 추가(빨강=성령강림·순교, 초록=연중, 보라=사순·대림 등)"] },
   { version: "1.5.402", date: "2026-05-29", tag: "수정", items: ["모바일 점검 — sticky/scroll offset 모바일 분기. EraFilter(/history)·cat-filter(/groups)·ReadTabs(/word)의 sticky top-32(128px, 데스크탑 헤더+브레드크럼 기준)가 모바일 app-header(50px) 아래 큰 공백을 만들어 본문 내부에 떠 있는 어색함 해소: top-14 md:top-32 로 분기. anchor scroll offset(jump 함수·scroll-mt)도 동일 분기 — 모바일은 110px·scroll-mt-28, 데스크탑은 140px·scroll-mt-32~44. 다른 점검 항목(대형 폰트 sm: 분기, min-w-[480px] OrgChart 가로 스크롤 의도됨, bulletin ribbon -right-2 안전 등) 모두 통과"] },
   { version: "1.5.401", date: "2026-05-29", tag: "디자인", items: ["시안 일괄 적용 4단계(부분) — /construction·/pastor 시안 톤 재현. /construction: 전체 진행률 박스를 시안 .progress-hero 다크 잉크 배경 + 골드 큰 PCT 숫자(6xl~84px tabular) + bar(accent 그라디언트) + 'Live Progress' eyebrow + 절제된 골드 도넛 배경. /pastor: StoryRow 본문 시안 priest 톤(eyebrow에 와인 선 + 큰 제목 + 약력 골드 불릿 + 인용문 골드 좌측 보더 strip)"] },
