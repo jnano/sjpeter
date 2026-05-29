@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.408";
+export const CURRENT_VERSION = "1.5.409";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-29";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.409", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈 '다가오는 일정 8건' 표시 방식 변경 — 옵션 A(캘린더 카드 확장 col-3→col-6)에서 옵션 B(공지사항 카드 탭 활성화)로 전환. 그리드 원복: Notice col-12→col-6, Calendar col-6→col-3, Offering col-6→col-3. NoticeEventsTabs 클라이언트 컴포넌트 신설 — 같은 카드 안에서 '공지사항'/'행사·모임' 탭 전환(useState), 공지사항은 기존 6건, 행사·모임 탭은 upcoming 8건(날짜·제목·행사/모임 칩, 오늘 항목 와인 하이라이트). globals.css .notice-tabs .tab 룰에 button reset 추가, dead .cal-split 룰 제거"] },
   { version: "1.5.408", date: "2026-05-29", tag: "디자인", items: ["dashboard 홈에 '다가오는 일정 8건' 목록 추가 — 기존 캘린더 카드는 KPI 숫자만 보이고 실제 목록은 미표시. 그리드 재배치: Notice col-6→col-12(한 행 풀폭), Calendar col-3→col-6(좌 mini cal + 우 8건 목록 .cal-split 분할), Offering col-3→col-6(시각적 균형). 목록 형식: 5/28 (수) · 제목(truncate) · [행사/모임 칩]. 오늘 항목은 와인 5% 배경 하이라이트. 정렬: 오늘 이후 날짜 오름차순 상위 8건. CSS .cal-split·.upcoming-list 신설(900px 이하 단일 컬럼 분기)"] },
   { version: "1.5.407", date: "2026-05-29", tag: "기능", items: ["한 줄 봉헌 페이지(/offering) 신설 — 시안 offering.html 재현. 기존 boards.kind='line' 시스템(slug='build_offering') 재활용. 백엔드: site_settings.OFFERING_GOAL 시드(기본 1000줄) + _PUBLIC_KEYS 노출. 프론트 /offering: 다크 잉크 status-hero(골드 큰 누계 + 'Live Counter' eyebrow + accent 그라디언트 progress bar + 목표 대비 %) + 안내 카드 + LineBoard 컴포넌트 임베드(기존 작성 폼/카드 wall 재활용). STATIC_PAGES 에 /offering 추가(성전건축 카테고리). 헤더 CTA + 4 스킨(SkinConstruction·SkinConstructionMobile·SkinDashboard·SkinDashboardMobile)의 '/boards/build_offering' 링크를 모두 /offering 으로 일괄 변경"] },
   { version: "1.5.406", date: "2026-05-29", tag: "기능", items: ["수호 성인 페이지(/patron) 신설 — 시안 patron.html 재현. parishes 테이블에 patron_name·patron_feast_day·patron_intro·patron_quote·patron_quote_ref·patron_image_url 6 컬럼 추가(startup migration). admin /admin/parish/patron 입력 페이지 신설(사진 업로드 + 5 텍스트 필드). 공개 /patron: saint-hero(좌측 큰 이미지/십자가 + 우측 eyebrow 'Patron Saint' + 인용 + 본명·축일 quick) + 생애 본문 reading-zoom + 와인색 기념 축일 카드(날짜 분리 표시). 기존 메뉴 /saint·/p/saint 를 /patron 으로 자동 마이그레이션, 라벨도 '수호성인 성 베드로'(본당 종속)→'수호 성인'(일반화)"] },

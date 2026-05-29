@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
+import NoticeEventsTabs from "./NoticeEventsTabs";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -246,8 +247,8 @@ export default function SkinDashboard({
             ))}
           </div>
 
-          {/* Notice (col-12) — 다가오는 일정 카드와 한 행 폭 양보 후 한 행 풀폭 (v1.5.408) */}
-          <article className="card col-12">
+          {/* Notice + 행사·모임 탭 (col-6) — 옵션 B: 같은 카드 안 탭으로 전환 (v1.5.409) */}
+          <article className="card col-6">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Notice · Events</span>
@@ -255,95 +256,45 @@ export default function SkinDashboard({
               </div>
               <Link href="/boards/notice" className="card-link">전체 보기 →</Link>
             </div>
-            <div className="notice-tabs">
-              <span className="tab on">공지사항</span>
-              <Link href="/calendar" className="tab">행사·모임</Link>
-            </div>
-            <ul className="notice-list-card" style={{ marginTop: 14 }}>
-              {notices.length === 0 ? (
-                <li><span className="title" style={{ gridColumn: "1/3" }}>등록된 공지가 없습니다</span><span /></li>
-              ) : (
-                notices.slice(0, 6).map((n) => (
-                  <li key={n.id}>
-                    {n.is_pinned ? <span className="pin">고정</span> : <span />}
-                    <Link href={`/boards/notice/${n.id}`} className="title" style={!n.is_pinned ? { gridColumn: "1/3" } : undefined}>{n.title}</Link>
-                    <span className="date">{mmdd(n.created_at)}</span>
-                  </li>
-                ))
-              )}
-            </ul>
+            <NoticeEventsTabs notices={notices} events={upcomingEvents} />
           </article>
 
-          {/* Calendar (col-6) — 좌 mini cal + 우 다가오는 일정 8건 목록 (v1.5.408) */}
-          <article className="card col-6 calendar-mini">
+          {/* Calendar (col-3) — 미니 캘린더만 (옵션 B 적용으로 원복 v1.5.409) */}
+          <article className="card col-3 calendar-mini">
             <div className="card-head" style={{ marginBottom: 14 }}>
               <div>
-                <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Calendar · Upcoming</span>
-                <h3>{calM + 1}월 행사 · 다가오는 일정</h3>
+                <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>Calendar</span>
+                <h3>{calM + 1}월 행사</h3>
               </div>
-              <Link href="/calendar" className="card-link">전체 보기 →</Link>
             </div>
-
-            {/* 좌·우 분할: mini cal + 다가오는 일정 목록 */}
-            <div className="cal-split">
-              {/* 좌: 미니 캘린더 */}
-              <div className="cal-left">
-                <div className="cal-head">
-                  <span className="cal-month">{calY} · {calM + 1}월</span>
-                  <div className="cal-nav">
-                    <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="6 2 3 5 6 8" /></svg>
-                    </Link>
-                    <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="4 2 7 5 4 8" /></svg>
-                    </Link>
-                  </div>
-                </div>
-                <div className="cal-grid">
-                  {["일", "월", "화", "수", "목", "금", "토"].map((d, i) => (
-                    <span key={d} className={`dow${i === 0 ? " sun" : ""}`}>{d}</span>
-                  ))}
-                  {cells.map((c, i) => (
-                    <span
-                      key={i}
-                      className={`day${c.muted ? " muted" : ""}${!c.muted && c.dow === 0 ? " sun" : ""}${c.today ? " today" : ""}${c.has ? " has" : ""}`}
-                    >
-                      {c.day}
-                    </span>
-                  ))}
-                </div>
+            <div className="cal-head">
+              <span className="cal-month">{calY} · {calM + 1}월</span>
+              <div className="cal-nav">
+                <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="6 2 3 5 6 8" /></svg>
+                </Link>
+                <Link href="/calendar" aria-label="달력" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4"><polyline points="4 2 7 5 4 8" /></svg>
+                </Link>
               </div>
-
-              {/* 우: 다가오는 일정 8건 목록 */}
-              <ul className="upcoming-list">
-                {upcomingEvents.length === 0 ? (
-                  <li className="up-empty">예정된 일정이 없습니다</li>
-                ) : (
-                  upcomingEvents.map((e) => {
-                    const d = new Date(e.event_date);
-                    const m = d.getMonth() + 1;
-                    const day = d.getDate();
-                    const dow = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-                    const isToday = d.toDateString() === now.toDateString();
-                    const kindCls = e.event_kind === "행사" ? "kind-event" : e.event_kind === "모임" ? "kind-meeting" : "kind-none";
-                    return (
-                      <li key={e.id} className={isToday ? "is-today" : ""}>
-                        <span className="up-date">
-                          <b>{m}/{day}</b>
-                          <small>({dow})</small>
-                        </span>
-                        <Link href={`/calendar?focus=${e.id}`} className="up-title">{e.title}</Link>
-                        {e.event_kind && <span className={`up-kind ${kindCls}`}>{e.event_kind}</span>}
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
+            </div>
+            <div className="cal-grid">
+              {["일", "월", "화", "수", "목", "금", "토"].map((d, i) => (
+                <span key={d} className={`dow${i === 0 ? " sun" : ""}`}>{d}</span>
+              ))}
+              {cells.map((c, i) => (
+                <span
+                  key={i}
+                  className={`day${c.muted ? " muted" : ""}${!c.muted && c.dow === 0 ? " sun" : ""}${c.today ? " today" : ""}${c.has ? " has" : ""}`}
+                >
+                  {c.day}
+                </span>
+              ))}
             </div>
           </article>
 
-          {/* Offering (col-6) — 캘린더와 균형 (v1.5.408) */}
-          <article className="card offering col-6">
+          {/* Offering (col-3) — 원래 폭으로 원복 (v1.5.409) */}
+          <article className="card offering col-3">
             <div className="card-head">
               <div>
                 <span className="card-eyebrow" style={{ display: "block", marginBottom: 4 }}>성전 건축</span>

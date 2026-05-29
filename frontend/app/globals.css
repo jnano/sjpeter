@@ -464,7 +464,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* notice card */
 .skin-dashboard .notice-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
-.skin-dashboard .notice-tabs .tab { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.skin-dashboard .notice-tabs .tab { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; color: var(--ink-3); border: 0; background: transparent; cursor: pointer; font-family: inherit; }
 .skin-dashboard .notice-tabs .tab.on { background: var(--ink); color: #FFF; }
 .skin-dashboard .notice-list-card li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14px; align-items: center; }
 .skin-dashboard .notice-list-card li:last-child { border-bottom: none; }
@@ -489,10 +489,7 @@ h1, h2, h3, h4, h5, h6 {
 /* 캘린더 위젯 테두리 제거 (요청) — 카드 배경/패딩은 유지 */
 .skin-dashboard .card.calendar-mini { border: none; }
 
-/* ── v1.5.408 다가오는 일정 — 캘린더 카드 col-6 확장 (좌 mini + 우 8건 목록) ── */
-.skin-dashboard .cal-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; align-items: start; }
-@media (max-width: 900px) { .skin-dashboard .cal-split { grid-template-columns: 1fr; gap: 20px; } }
-.skin-dashboard .cal-left { min-width: 0; }
+/* ── v1.5.409 다가오는 일정 — 공지사항 카드의 '행사·모임' 탭에서 사용. ── */
 .skin-dashboard .upcoming-list { display: flex; flex-direction: column; min-width: 0; }
 .skin-dashboard .upcoming-list li {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px;
