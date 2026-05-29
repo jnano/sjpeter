@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import SectionLayout from "@/components/SectionLayout";
 import { fetchParishMin } from "@/lib/parish";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +108,8 @@ export default async function UpcomingPage() {
         title="다가오는 일정"
         subtitle={`${parish.name} 본당의 행사·모임을 가까운 날짜 순서로 보여드립니다`}
       />
-      <main className="max-w-[1320px] mx-auto px-5 sm:px-8 lg:px-14 py-8 sm:py-10">
+      {/* admin/menus 등록 시 사이드바 자동 표시 (메뉴 등록 = 사이드바 불변량 v1.5.412) */}
+      <SectionLayout autoHero={false}>
 
         {/* hero 요약 */}
         <section className="bg-[var(--color-surface-warm)] rounded-3xl p-6 sm:p-8 mb-8 flex items-end justify-between gap-5 flex-wrap">
@@ -212,7 +214,7 @@ export default async function UpcomingPage() {
             })}
           </div>
         )}
-      </main>
+      </SectionLayout>
     </>
   );
 }

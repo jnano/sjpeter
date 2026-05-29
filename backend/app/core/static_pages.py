@@ -24,9 +24,10 @@ STATIC_PAGES: list[dict] = [
     {"slug": "/meditation", "label": "묵상 글",           "category": "말씀과 기도"},
     {"slug": "/prayer",     "label": "기도문",            "category": "말씀과 기도"},
     # 알림·게시판
-    {"slug": "/calendar",   "label": "본당 일정",         "category": "알림"},
+    {"slug": "/calendar",          "label": "본당 일정",       "category": "알림"},
+    {"slug": "/calendar/upcoming", "label": "다가오는 일정",   "category": "알림"},
     # 성전 건축
-    {"slug": "/offering",   "label": "한 줄 봉헌",         "category": "성전건축"},
+    {"slug": "/offering",          "label": "한 줄 봉헌",       "category": "성전건축"},
     # 사진 갤러리
     {"slug": "/gallery/liturgy", "label": "전례 사진",    "category": "사진"},
     {"slug": "/gallery/events",  "label": "행사 사진",    "category": "사진"},
