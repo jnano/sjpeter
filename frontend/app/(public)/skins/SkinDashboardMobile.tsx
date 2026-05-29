@@ -58,7 +58,7 @@ export default function SkinDashboardMobile({
   const quicks = [
     { href: "/about", label: "성당 안내", en: "About", icon: <><path d="M3 19V8l8-5 8 5v11" /><rect x="9" y="13" width="4" height="6" /></> },
     { href: "/bulletin", label: "주보", en: "Bulletin", icon: <><rect x="3" y="4" width="16" height="14" /><line x1="3" y1="9" x2="19" y2="9" /></> },
-    { href: "/prayers", label: "기도문", en: "Prayers", icon: <><circle cx="11" cy="8" r="4" /><path d="M7 14l4 6 4-6" /></> },
+    { href: "/prayer", label: "기도문", en: "Prayers", icon: <><circle cx="11" cy="8" r="4" /><path d="M7 14l4 6 4-6" /></> },
     { href: "/saints", label: "성인 사전", en: "Saints", icon: <><line x1="11" y1="3" x2="11" y2="19" /><line x1="5" y1="9" x2="17" y2="9" /></> },
   ];
 
