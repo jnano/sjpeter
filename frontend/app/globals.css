@@ -619,7 +619,7 @@ h1, h2, h3, h4, h5, h6 {
 .site-search-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 .site-search-btn input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 13px; color: var(--color-text); }
 .site-search-btn input::placeholder { color: var(--color-text-muted); }
-.site-cta { padding: 10px 18px; background: var(--color-text); color: #FFF; border-radius: 100px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; transition: background 0.15s; }
+.site-cta { padding: 10px 18px; background: var(--ink); color: #FFF; border-radius: 100px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; transition: background 0.15s; }
 .site-cta:hover { background: var(--color-primary); }
 /* nav 드롭다운 (동적 메뉴 하위) — 시안엔 없지만 기능 유지, 시안 톤으로 */
 .site-nav-dropdown { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card, 12px); box-shadow: var(--shadow-lg, 0 12px 40px rgba(44,38,32,0.08)); min-width: 200px; padding: 8px; z-index: 60; }
@@ -627,25 +627,22 @@ h1, h2, h3, h4, h5, h6 {
 .site-nav-dropdown a:hover { background: var(--color-surface-warm); color: var(--color-primary); }
 .site-mobile-toggle { display: none; }
 
-/* footer — v1.5.422 ink 다크 블록으로 전환. /admin/skin 의 잉크 컬러가 사이트 전반에 체감되도록.
-   배경: var(--ink). 텍스트는 흰색 기반 + 알파로 강약. hover 강조는 gold 톤. */
-.site-foot { background: var(--ink); color: rgba(255,255,255,0.85); padding: 64px 56px 32px; margin-top: 32px; border-top: 1px solid var(--ink); font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
+/* footer */
+.site-foot { background: var(--color-surface-warm); padding: 64px 56px 32px; margin-top: 32px; border-top: 1px solid var(--color-border); font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
 .site-foot-inner { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; }
 .site-foot .site-logo { margin-bottom: 20px; }
-.site-foot .site-logo-text { color: #FFF; }
-.site-foot .site-logo-en { color: rgba(255,255,255,0.6); }
-.site-foot-brand p { font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.7; }
-.site-foot-brand .phones { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.72); }
-.site-foot-brand .diocese { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.55); }
-.site-foot h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; color: #FFF; }
-.site-foot ul li { padding: 5px 0; font-size: 13px; color: rgba(255,255,255,0.72); }
-.site-foot ul li a:hover { color: var(--gold-light); }
+.site-foot-brand p { font-size: 13px; color: var(--color-text-muted); line-height: 1.7; }
+.site-foot-brand .phones { margin-top: 14px; font-size: 13px; color: var(--color-text-muted); }
+.site-foot-brand .diocese { margin-top: 12px; font-size: 12px; color: var(--color-text-muted); }
+.site-foot h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; color: var(--color-text); }
+.site-foot ul li { padding: 5px 0; font-size: 13px; color: var(--color-text-muted); }
+.site-foot ul li a:hover { color: var(--color-primary); }
 .site-foot-mass { display: grid; grid-template-columns: 44px 1fr; gap: 6px 14px; font-size: 13px; }
-.site-foot-mass dt { color: rgba(255,255,255,0.55); }
-.site-foot-mass dd { color: rgba(255,255,255,0.9); }
-.site-foot-bottom { max-width: 1320px; margin: 48px auto 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.12); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(255,255,255,0.55); }
+.site-foot-mass dt { color: var(--color-text-muted); }
+.site-foot-mass dd { color: var(--color-text); }
+.site-foot-bottom { max-width: 1320px; margin: 48px auto 0; padding-top: 20px; border-top: 1px solid var(--color-border-dark); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--color-text-muted); }
 .site-foot-bottom-links { display: flex; gap: 20px; }
-.site-foot-bottom-links a:hover { color: var(--gold-light); }
+.site-foot-bottom-links a:hover { color: var(--color-primary); }
 
 /* 모바일 — 시안은 1440 고정이라 좁은 화면은 합리적 축소 + 토글 메뉴 */
 @media (max-width: 1024px) {
@@ -1461,7 +1458,7 @@ h1, h2, h3, h4, h5, h6 {
 .pr-root { font-family: var(--font-display); }
 
 /* today highlight 배너 */
-.pr-today { position: relative; overflow: hidden; margin-bottom: 36px; background: var(--color-text); color: #fff; border-radius: 20px; padding: 32px 36px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.pr-today { position: relative; overflow: hidden; margin-bottom: 36px; background: var(--ink); color: #fff; border-radius: 20px; padding: 32px 36px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
 .pr-today::before { content: '✠'; position: absolute; right: -10px; top: -20px; font-size: 180px; color: color-mix(in srgb, var(--color-accent) 12%, transparent); line-height: 1; pointer-events: none; }
 .pr-today .meta { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-accent); font-weight: 700; display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px; position: relative; }
 .pr-today .meta::before { content: ''; width: 24px; height: 1px; background: var(--color-accent); }
@@ -1475,7 +1472,7 @@ h1, h2, h3, h4, h5, h6 {
 .pr-chip:hover { border-color: var(--color-text-muted); color: var(--color-text); }
 .pr-chip .count { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 100px; background: var(--color-surface-warm); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .pr-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pc, var(--color-text-muted)); }
-.pr-chip.on { background: var(--color-text); color: #fff; border-color: var(--color-text); }
+.pr-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .pr-chip.on .count { background: rgba(255,255,255,0.15); color: #fff; }
 
 /* search row */
@@ -1641,7 +1638,7 @@ h1, h2, h3, h4, h5, h6 {
 .bd-search-go { padding: 11px 18px; background: var(--color-primary); color: #fff; border-radius: 100px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .bd-segor, .bd-segview { display: flex; gap: 2px; padding: 3px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 100px; }
 .bd-segor a, .bd-segview a { padding: 7px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); display: inline-flex; align-items: center; gap: 5px; }
-.bd-segor a.on { background: var(--color-text); color: #fff; }
+.bd-segor a.on { background: var(--ink); color: #fff; }
 .bd-segview a.on { background: var(--color-primary); color: #fff; }
 .bd-segview a svg { width: 13px; height: 13px; }
 .bd-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 13px; }
@@ -1689,7 +1686,7 @@ h1, h2, h3, h4, h5, h6 {
 .bd-page { margin-top: 36px; display: flex; justify-content: center; align-items: center; gap: 4px; }
 .bd-page a, .bd-page span.cur { min-width: 36px; height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; }
 .bd-page a:hover { color: var(--color-text); border-color: var(--color-text-muted); }
-.bd-page span.cur { background: var(--color-text); color: #fff; border-color: var(--color-text); }
+.bd-page span.cur { background: var(--ink); color: #fff; border-color: var(--ink); }
 .bd-page .gap { border: none; background: none; min-width: auto; }
 
 @media (max-width: 768px) {
@@ -1842,7 +1839,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── view switch ── */
 .cal-viewswitch { display:inline-flex; background:var(--color-surface-warm); border:1px solid var(--color-border); border-radius:100px; padding:3px; }
 .cal-viewswitch button { padding:8px 18px; font-size:13px; font-weight:600; border-radius:100px; color:var(--color-text-muted); letter-spacing:-0.01em; }
-.cal-viewswitch button.on { background:var(--color-text); color:#fff; }
+.cal-viewswitch button.on { background:var(--ink); color:#fff; }
 
 /* ── action buttons ── */
 .cal-btn-today { padding:8px 16px; font-size:13px; font-weight:500; border:1px solid var(--color-border); border-radius:100px; background:var(--color-surface); color:var(--color-text-muted); }
@@ -1854,7 +1851,7 @@ h1, h2, h3, h4, h5, h6 {
 .cal-chip { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; font-size:13px; font-weight:600; border-radius:100px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-muted); letter-spacing:-0.01em; }
 .cal-chip .count { font-size:11px; font-weight:700; padding:1px 6px; border-radius:100px; background:var(--color-surface-warm); color:var(--cal-ink3); font-variant-numeric:tabular-nums; }
 .cal-chip .dot { width:7px; height:7px; border-radius:50%; background:var(--c); }
-.cal-chip.on { background:var(--color-text); color:#fff; border-color:var(--color-text); }
+.cal-chip.on { background:var(--ink); color:#fff; border-color:var(--ink); }
 .cal-chip.on .count { background:rgba(255,255,255,0.16); color:#fff; }
 
 /* ── soft event fill / dot / rail (data-cat 필요) ── */
@@ -1956,7 +1953,7 @@ h1, h2, h3, h4, h5, h6 {
 .cal-mini-d.sun { color:var(--color-primary); }
 .cal-mini-d.sat { color:#1a56db; }
 .cal-mini-d.today { background:var(--color-primary); color:#fff; font-weight:700; }
-.cal-mini-d.selected { background:var(--color-text); color:#fff; font-weight:700; }
+.cal-mini-d.selected { background:var(--ink); color:#fff; font-weight:700; }
 .cal-mini-d .dots { display:flex; gap:2px; justify-content:center; position:absolute; bottom:4px; left:0; right:0; }
 .cal-mini-d .e { width:4px; height:4px; border-radius:50%; background:var(--c); }
 .cal-mini-d.today .e, .cal-mini-d.selected .e { background:rgba(255,255,255,0.7); }
