@@ -659,6 +659,12 @@ def _migrate_add_columns():
         except Exception:
             pass
 
+        # v1.5.414 bulletins 추가 컬럼 — 주보 PDF 첫 페이지 썸네일 URL.
+        try:
+            conn.execute(text("ALTER TABLE bulletins ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(500)"))
+        except Exception:
+            pass
+
         # v1.5.407 OFFERING_GOAL site_setting 시드 — /offering 페이지의 진행률 목표.
         # ON CONFLICT DO NOTHING 으로 기존 값 보존(admin 이 이미 수정했을 수 있음).
         try:

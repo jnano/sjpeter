@@ -39,6 +39,8 @@ class Bulletin(Base):
     liturgical_season = Column(String(100))           # "부활 제5주일"
     gospel_reference = Column(String(200))            # "요한 15,1-8"
     pdf_url = Column(String(500))
+    # PDF 첫 페이지 추출 썸네일 (1024px JPG) — /bulletin 카드 배경용 (v1.5.414)
+    thumbnail_url = Column(String(500))
     ai_summary = Column(Text)                         # Claude Haiku 추출 요약
     is_published = Column(Boolean, default=True)
 

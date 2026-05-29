@@ -121,19 +121,14 @@ export default function BulletinClient({
       {/* ── latest hero ─────────────────────────────────── */}
       {latest && latestDate && (
         <section className="grid lg:grid-cols-[260px_1fr] gap-7 lg:gap-10 bg-[var(--color-surface-warm)] rounded-3xl p-6 sm:p-8 mb-10">
-          <div className="relative aspect-[210/297] bg-white border border-[var(--color-border)] rounded-xl overflow-hidden mx-auto w-full max-w-[260px] flex flex-col items-center justify-between p-6 sm:p-7 text-center"
-               style={{ boxShadow: "0 12px 32px rgba(44,38,32,0.12)" }}>
-            <span className="absolute top-4 -right-2 px-3 py-1 bg-[var(--color-primary)] text-white text-[11px] font-bold tracking-wider">
-              최신호
-            </span>
-            <span className="text-3xl sm:text-4xl" style={{ color: "var(--color-accent, #C9A961)" }}>✠</span>
-            <div className="text-[13px] sm:text-[14px] font-bold text-[var(--color-text)] tracking-tight leading-snug">
-              {parishName}<br />주보
-            </div>
-            <div className="text-[10px] sm:text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">
-              {latest.issue_number ? `제 ${latest.issue_number} 호 · ` : ""}{formatPub(latest.published_date)}
-            </div>
-          </div>
+          <CoverFrame
+            thumbnailUrl={latest.thumbnail_url}
+            parishName={parishName}
+            issueNumber={latest.issue_number}
+            label={`제 ${latest.issue_number ?? "-"} 호 · ${formatPub(latest.published_date)}`}
+            isLatestRibbon
+            large
+          />
 
           <div className="py-2 min-w-0">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--color-primary)] text-white rounded-full text-[11px] font-bold tracking-wider mb-4">
@@ -353,21 +348,13 @@ function BulletinCard({
       disabled={!b.pdf_url}
       className="text-left flex flex-col gap-3 p-4 bg-white border border-[var(--color-border)] rounded-2xl hover:-translate-y-0.5 hover:border-[var(--color-text-muted)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <div
-        className="relative aspect-[210/297] rounded-lg overflow-hidden flex flex-col items-center justify-between text-center p-4"
-        style={{
-          background: isEaster ? "rgba(122,31,43,0.06)" : "var(--color-surface-warm)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <span className="text-xl sm:text-2xl" style={{ color: isEaster ? "var(--color-primary)" : "var(--color-accent, #C9A961)" }}>✠</span>
-        <div className="text-[10px] sm:text-[11px] font-bold leading-snug text-[var(--color-text)]">
-          {parishName}<br />{isEaster ? "부활 특집호" : "주보"}
-        </div>
-        <div className="mt-auto text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] tabular-nums">
-          {b.issue_number ? `${b.issue_number}호 · ${formatShort(b.published_date)}` : formatShort(b.published_date)}
-        </div>
-      </div>
+      <CoverFrame
+        thumbnailUrl={b.thumbnail_url}
+        parishName={parishName}
+        issueNumber={b.issue_number}
+        label={b.issue_number ? `${b.issue_number}호 · ${formatShort(b.published_date)}` : formatShort(b.published_date)}
+        easterSpecial={isEaster}
+      />
 
       <div className="flex flex-col gap-0.5">
         {b.issue_number != null && (
@@ -395,5 +382,108 @@ function BulletinCard({
         )}
       </div>
     </button>
+  );
+}
+
+/* ── 주보 표지 프레임 — v1.5.414
+ *   thumbnail_url 있으면 풀 배경 이미지 + 하단 어두운 그라디언트 + 흰 텍스트.
+ *   없으면 기존 ✠ placeholder (본당명·호수 표기).
+ *   large=true 는 latest hero 전용 — ribbon "최신호" + shadow + 작은 라벨 글자 키움.
+ */
+function CoverFrame({
+  thumbnailUrl,
+  parishName,
+  issueNumber,
+  label,
+  easterSpecial = false,
+  isLatestRibbon = false,
+  large = false,
+}: {
+  thumbnailUrl: string | null;
+  parishName: string;
+  issueNumber: number | null;
+  label: string;
+  easterSpecial?: boolean;
+  isLatestRibbon?: boolean;
+  large?: boolean;
+}) {
+  const fullUrl = thumbnailUrl
+    ? (thumbnailUrl.startsWith("http") ? thumbnailUrl : `${API}${thumbnailUrl}`)
+    : null;
+
+  const wrapperCls = large
+    ? "relative aspect-[210/297] bg-white border border-[var(--color-border)] rounded-xl overflow-hidden mx-auto w-full max-w-[260px]"
+    : "relative aspect-[210/297] rounded-lg overflow-hidden border";
+
+  const wrapperStyle = large
+    ? { boxShadow: "0 12px 32px rgba(44,38,32,0.12)" }
+    : {
+        background: easterSpecial ? "rgba(122,31,43,0.06)" : "var(--color-surface-warm)",
+        borderColor: "var(--color-border)",
+      };
+
+  // 썸네일 있는 경우 — 풀 배경 이미지 + 그라디언트 + 흰 텍스트
+  if (fullUrl) {
+    return (
+      <div className={wrapperCls} style={wrapperStyle}>
+        {/* 배경 이미지 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={fullUrl}
+          alt={`${parishName} 주보${issueNumber ? ` 제${issueNumber}호` : ""} 표지`}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+        />
+        {/* 하단→상단 어두운 그라디언트로 텍스트 가독성 확보 */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.7) 100%)" }}
+        />
+        {/* 최신호 ribbon */}
+        {isLatestRibbon && (
+          <span className="absolute top-4 -right-2 z-[1] px-3 py-1 bg-[var(--color-primary)] text-white text-[11px] font-bold tracking-wider">
+            최신호
+          </span>
+        )}
+        {easterSpecial && (
+          <span className="absolute top-2 left-2 z-[1] px-2 py-0.5 bg-[var(--color-primary)] text-white text-[9px] font-bold tracking-wider rounded">
+            특집
+          </span>
+        )}
+        {/* 하단 라벨 */}
+        <div className={`absolute left-0 right-0 bottom-0 z-[1] text-center text-white tabular-nums ${large ? "p-4" : "p-3"}`}>
+          <div className={`font-bold tracking-tight leading-snug ${large ? "text-[13px] sm:text-[14px]" : "text-[10px] sm:text-[11px]"}`}>
+            {parishName}{large ? " 주보" : ""}
+          </div>
+          <div className={`font-bold opacity-90 mt-0.5 ${large ? "text-[10px] sm:text-[11px]" : "text-[9px] sm:text-[10px]"}`}>
+            {label}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 썸네일 없는 경우 — 기존 ✠ placeholder
+  return (
+    <div className={`${wrapperCls} flex flex-col items-center justify-between text-center ${large ? "p-6 sm:p-7" : "p-4"}`} style={wrapperStyle}>
+      {isLatestRibbon && (
+        <span className="absolute top-4 -right-2 px-3 py-1 bg-[var(--color-primary)] text-white text-[11px] font-bold tracking-wider">
+          최신호
+        </span>
+      )}
+      <span
+        className={large ? "text-3xl sm:text-4xl" : "text-xl sm:text-2xl"}
+        style={{ color: easterSpecial ? "var(--color-primary)" : "var(--color-accent, #C9A961)" }}
+      >
+        ✠
+      </span>
+      <div className={`font-bold text-[var(--color-text)] tracking-tight leading-snug ${large ? "text-[13px] sm:text-[14px]" : "text-[10px] sm:text-[11px]"}`}>
+        {parishName}<br />{easterSpecial ? "부활 특집호" : "주보"}
+      </div>
+      <div className={`font-bold text-[var(--color-text-muted)] tabular-nums ${large ? "text-[10px] sm:text-[11px]" : "mt-auto text-[9px] sm:text-[10px]"}`}>
+        {label}
+      </div>
+    </div>
   );
 }

@@ -74,5 +74,6 @@ export interface Bulletin {
   liturgical_season: string | null;
   gospel_reference: string | null;
   pdf_url: string | null;
+  thumbnail_url: string | null; // PDF 1쪽 추출 썸네일 (v1.5.414)
   ai_summary: string | null;
 }

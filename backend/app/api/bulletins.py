@@ -40,6 +40,7 @@ class BulletinOut(BaseModel):
     liturgical_season: str | None
     gospel_reference: str | None
     pdf_url: str | None
+    thumbnail_url: str | None = None
     ai_summary: str | None
     ai_status: str | None = None
     ai_started_at: datetime | None = None
@@ -115,6 +116,14 @@ async def upload_bulletin(
 
     pdf_url = f"/uploads/bulletins/{filename}"
 
+    # v1.5.414 — PDF 첫 페이지 썸네일 1024px JPG 추출. 동기 처리(추가 외부 IO 없음, ~100ms).
+    # 실패해도 업로드 자체는 막지 않음 — fallback 은 기존 ✠ placeholder.
+    from app.core.pdf_thumbnail import generate_first_page_thumbnail
+    thumb_dir = os.path.join(settings.UPLOAD_DIR, "bulletin_thumbnails")
+    thumb_base = filename.rsplit(".", 1)[0]
+    thumb_abs = generate_first_page_thumbnail(save_path, thumb_dir, base_name=thumb_base)
+    thumbnail_url = f"/uploads/bulletin_thumbnails/{thumb_base}.jpg" if thumb_abs else None
+
     bulletin = Bulletin(
         parish_id=1,
         published_date=date.fromisoformat(published_date),
@@ -122,6 +131,7 @@ async def upload_bulletin(
         liturgical_season=liturgical_season,
         gospel_reference=gospel_reference,
         pdf_url=pdf_url,
+        thumbnail_url=thumbnail_url,
         is_published=True,
         ai_status="processing",  # 업로드 직후 폴링 UI가 곧바로 진행 상태로 보이도록
     )
@@ -154,6 +164,58 @@ async def upload_bulletin(
 
     log_action(db, get_admin_identifier(admin), "upload_bulletin", "bulletin", bulletin.id, f"호={bulletin.issue_number} {bulletin.published_date}")
     return bulletin
+
+
+@router.post("/backfill-thumbnails")
+def backfill_thumbnails(
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    """기존에 업로드된 주보 중 thumbnail_url 이 비어 있는 것들의 썸네일을 일괄 생성.
+    v1.5.414 도입 시 한 번 호출. 이미 생성된 항목은 건너뜀.
+
+    Returns: {created: N, skipped: M, failed: K, total: T}
+    """
+    from app.core.pdf_thumbnail import generate_first_page_thumbnail
+
+    rows = (
+        db.query(Bulletin)
+        .filter(Bulletin.pdf_url.isnot(None))
+        .order_by(desc(Bulletin.published_date))
+        .all()
+    )
+
+    thumb_dir = os.path.join(settings.UPLOAD_DIR, "bulletin_thumbnails")
+    os.makedirs(thumb_dir, exist_ok=True)
+
+    created = skipped = failed = 0
+    for b in rows:
+        if b.thumbnail_url:
+            skipped += 1
+            continue
+        # pdf_url 패턴: '/uploads/bulletins/<filename>'
+        if not b.pdf_url or not b.pdf_url.startswith("/uploads/"):
+            failed += 1
+            continue
+        rel = b.pdf_url.removeprefix("/uploads/")
+        pdf_abs = os.path.join(settings.UPLOAD_DIR, rel)
+        if not os.path.exists(pdf_abs):
+            failed += 1
+            continue
+
+        # 같은 base_name 으로 저장해 PDF↔썸네일 매핑 일관
+        base = os.path.splitext(os.path.basename(pdf_abs))[0]
+        out_abs = generate_first_page_thumbnail(pdf_abs, thumb_dir, base_name=base)
+        if not out_abs:
+            failed += 1
+            continue
+        b.thumbnail_url = f"/uploads/bulletin_thumbnails/{base}.jpg"
+        db.commit()
+        created += 1
+
+    log_action(db, get_admin_identifier(admin), "backfill_bulletin_thumbnails", "bulletin", None,
+               f"created={created} skipped={skipped} failed={failed}")
+    return {"created": created, "skipped": skipped, "failed": failed, "total": len(rows)}
 
 
 @router.post("/{bulletin_id}/reanalyze")

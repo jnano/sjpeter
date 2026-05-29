@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.413";
+export const CURRENT_VERSION = "1.5.414";
 export const LAST_UPDATED = "2026-05-29";
 
 // 버전 규칙:
