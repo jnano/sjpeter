@@ -72,6 +72,7 @@ export default function AdminParishPatronPage() {
         }),
       });
       if (!res.ok) throw new Error(await formatErrorDetail(res, "저장에 실패했습니다."));
+      await fetch("/api/revalidate?tag=parish", { method: "POST" }); // 공개 /patron(ISR) 즉시 갱신
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -98,6 +99,7 @@ export default function AdminParishPatronPage() {
       if (!res.ok) throw new Error(await formatErrorDetail(res, "업로드 실패"));
       const d = await res.json();
       setInfo((prev) => ({ ...prev, patron_image_url: d.patron_image_url }));
+      await fetch("/api/revalidate?tag=parish", { method: "POST" }); // 공개 /patron(ISR) 즉시 갱신
     } catch (e) {
       setError(e instanceof Error ? e.message : "업로드 실패");
     } finally {
@@ -118,6 +120,7 @@ export default function AdminParishPatronPage() {
       });
       if (!res.ok) throw new Error(await formatErrorDetail(res, "삭제 실패"));
       setInfo((prev) => ({ ...prev, patron_image_url: null }));
+      await fetch("/api/revalidate?tag=parish", { method: "POST" }); // 공개 /patron(ISR) 즉시 갱신
     } catch (e) {
       setError(e instanceof Error ? e.message : "삭제 실패");
     } finally {
