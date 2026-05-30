@@ -312,7 +312,7 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
 
         {/* 데스크톱 breadcrumb — 스크롤 시 PageHeader 와 연동 (로고 아래 얇은 띠) */}
         {breadcrumb && (
-          <div className="hidden md:block border-t border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+          <div className="hidden md:block border-t border-[var(--color-border)] bg-[var(--color-background)]">
             <div style={{ maxWidth: 1320, margin: "0 auto", padding: "8px 56px" }} className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
               <span>{breadcrumb.group}</span>
               <span className="text-[var(--color-border-dark)]">›</span>

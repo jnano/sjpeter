@@ -596,7 +596,7 @@ h1, h2, h3, h4, h5, h6 {
 .site-header-root { position: sticky; top: 0; z-index: 50; font-family: 'Pretendard Variable', Pretendard, var(--font-sans); }
 
 /* topbar */
-.site-topbar { background: var(--color-surface-warm); border-bottom: 1px solid var(--color-border); }
+.site-topbar { background: var(--color-background); border-bottom: 1px solid var(--color-border); }
 .site-topbar-inner { max-width: 1320px; margin: 0 auto; padding: 12px 56px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--color-text-muted); }
 .site-topbar .liturgy { display: inline-flex; align-items: center; gap: 10px; }
 .site-topbar .liturgy::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); }

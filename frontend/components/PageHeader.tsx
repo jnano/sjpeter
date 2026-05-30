@@ -64,7 +64,7 @@ export default function PageHeader({ group, title, subtitle, action }: Props) {
   }, [resolvedGroup, resolvedTitle]);
 
   return (
-    <div className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] w-full">
+    <div className="bg-[var(--color-background)] border-b border-[var(--color-border)] w-full">
       <div className="max-w-[1320px] mx-auto px-5 lg:px-14 py-8 sm:py-10">
         <p
           ref={ref}
