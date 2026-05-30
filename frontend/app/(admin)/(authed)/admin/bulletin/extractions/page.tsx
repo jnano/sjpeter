@@ -72,6 +72,7 @@ interface ReviewState {
   importance: "high" | "normal" | "low";
   weekly_bundle: boolean;
   expires_at: string | null;  // YYYY-MM-DD
+  is_pinned: boolean;         // 공지를 게시판 상단 고정으로 등록
 }
 
 const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
@@ -217,6 +218,7 @@ export default function ExtractionsPage() {
               importance: impPrefill,
               weekly_bundle: !!e.weekly_bundle,
               expires_at: e.expires_at ? e.expires_at.slice(0, 10) : null,
+              is_pinned: false,
             };
           }
         }
@@ -267,7 +269,7 @@ export default function ExtractionsPage() {
       ...prev,
       [extId]: {
         temporal_kind: "unknown", group_ids: [], notify: true,
-        importance: "normal", weekly_bundle: false, expires_at: null,
+        importance: "normal", weekly_bundle: false, expires_at: null, is_pinned: false,
         ...(prev[extId] ?? {}), ...patch,
       },
     }));
@@ -301,6 +303,7 @@ export default function ExtractionsPage() {
             : null,
           temporal_kind: review.temporal_kind,
           notify: notify_flag,
+          is_pinned: (review as ReviewState).is_pinned ?? false,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail ?? "승인 실패");
@@ -1059,7 +1062,7 @@ function ExtractionCard({
             />
           </div>
           {ext.event_type === "공지" && (
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1068,6 +1071,15 @@ function ExtractionCard({
                   className="accent-[var(--color-primary)]"
                 />
                 <span>📋 이번 주만 유효 (this-week 게시판으로)</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!review.is_pinned}
+                  onChange={(e) => onReviewChange({ is_pinned: e.target.checked })}
+                  className="accent-[var(--color-primary)]"
+                />
+                <span>📌 상단 고정 (목록 맨 위에 항상 노출)</span>
               </label>
             </div>
           )}

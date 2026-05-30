@@ -1435,6 +1435,8 @@ class ApproveBody(BaseModel):
     importance: Optional[str] = None     # high|normal|low
     weekly_bundle: Optional[bool] = None  # true → this-week 게시판
     expires_at: Optional[datetime] = None
+    # 검토 단계에서 공지를 게시판 상단 고정으로 등록 (posts.is_pinned)
+    is_pinned: bool = False
 
 
 @router.post("/extractions/{extraction_id}/approve", response_model=ExtractionOut)
@@ -1486,6 +1488,7 @@ def approve_extraction(
             title=f"[{issue_label}] {ext.title}" if issue_label else ext.title,
             content=ext.content or "",
             is_published=True,
+            is_pinned=bool(body.is_pinned),
             source_bulletin_id=ext.bulletin_id,
             created_at=published_ts,
             importance=ext.importance or "normal",
@@ -1510,6 +1513,13 @@ def approve_extraction(
 
     # 자동 라우팅
     _apply_extraction_routing(db, ext)
+    # 공지가 posts 로 등록된 경우, 검토에서 고정 지정 시 반영
+    if body and body.is_pinned:
+        post_id = ext.created_notice_id or ext.created_post_id
+        if post_id:
+            pinned_post = db.query(Post).filter(Post.id == post_id).first()
+            if pinned_post:
+                pinned_post.is_pinned = True
     _persist_targets_and_notify(
         db, ext,
         community_group_ids=((body.community_group_ids if body else None) or []),
