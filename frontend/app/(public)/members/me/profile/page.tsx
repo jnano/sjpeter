@@ -429,6 +429,45 @@ export default function ProfileEditPage({ embedded = false }: { embedded?: boole
             <PasswordForm hasPassword={member.has_password} token={session?.accessToken as string} />
           </div>
 
+          {/* 내 정보 다운로드 (KISA 정보주체 권리, v1.5.457) */}
+          <div className="bg-white border border-[var(--color-border)] rounded-xl p-6">
+            <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">내 정보 다운로드</h2>
+            <p className="text-xs text-[var(--color-text-muted)] mb-3 leading-relaxed">
+              개인정보 보호법 제35조 정보주체의 권리에 따라, 본당이 보관 중인 회원님의 모든 데이터
+              (프로필·작성글·댓글·관심분과)를 JSON 파일로 다운로드할 수 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                const tok = (session as { accessToken?: string } | null)?.accessToken;
+                if (!tok) { alert("로그인이 필요합니다."); return; }
+                try {
+                  const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/members/me/export`, {
+                    headers: { Authorization: `Bearer ${tok}` },
+                  });
+                  if (!r.ok) { alert("다운로드 실패: " + r.status); return; }
+                  const blob = await r.blob();
+                  const dispo = r.headers.get("content-disposition") ?? "";
+                  const m = dispo.match(/filename="([^"]+)"/);
+                  const filename = m?.[1] ?? `my-data-${Date.now()}.json`;
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = filename;
+                  document.body.appendChild(a); a.click(); a.remove();
+                  URL.revokeObjectURL(url);
+                } catch (e) {
+                  alert("예외: " + (e instanceof Error ? e.message : String(e)));
+                }
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-primary)]/5 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M7 2v8m-3-3l3 3 3-3M2 12h10" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              내 정보 JSON 다운로드
+            </button>
+          </div>
+
           {/* 위험 영역 */}
           <div className="bg-white border border-red-200 rounded-xl p-6">
             <h2 className="text-sm font-bold text-red-500 mb-3">계정 관리</h2>

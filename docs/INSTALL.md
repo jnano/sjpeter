@@ -31,6 +31,38 @@ cd faithandme
 
 ---
 
+## 방법 A: Docker Compose 한 줄 설치 (v1.5.456+, 권장)
+
+OS 호환성 문제 없이 가장 빠릅니다. Docker 만 설치되어 있으면 됩니다.
+
+```bash
+# 환경 변수 템플릿 복사 후 비밀번호/시크릿 채우기
+cp .env.docker.example .env.docker
+# 에디터로 열어 POSTGRES_PASSWORD, SECRET_KEY, INTERNAL_API_SECRET, AUTH_SECRET 등 채움
+# 32+ 자 시크릿 생성: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+nano .env.docker
+
+# 빌드 + 기동
+docker compose --env-file .env.docker up -d --build
+
+# 첫 부팅 시 backend 가 alembic upgrade + _migrate_add_columns 자동 실행
+# 30초 ~ 1분 후 http://localhost:3000/setup 접속
+```
+
+- DB·backend·frontend 가 같은 네트워크로 묶여 자동 연결
+- `uploads`, `private-uploads`, `backups`, `pgdata` 는 Docker volume 으로 보존
+- 운영 시: nginx + Let's Encrypt 로 HTTPS 처리는 외부에서 따로 (FRONTEND_PORT=3000 노출 + reverse proxy)
+- 로그: `docker compose logs -f backend frontend`
+- 중지: `docker compose down`  (볼륨 삭제는 `docker compose down -v`)
+
+이 방법을 쓰면 §3 ~ §7 (PG/Python/Node 직접 설치) 모두 건너뛰고 §8 (admin 첫 설정) 으로 바로 진행.
+
+---
+
+## 방법 B: 직접 설치 (개발·커스터마이즈용)
+
+OS 에 PG/Python/Node 를 직접 설치해 hot-reload 등 dev 환경을 쓰고 싶다면 아래 절차.
+
 ## 3. PostgreSQL DB 준비
 
 ```bash
