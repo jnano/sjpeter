@@ -253,12 +253,20 @@ export default function AdminNoticesPage() {
     if (res.ok) setNotices(await res.json());
   }
 
+  // 시스템/내부 전용 게시판 — 이동·복사 대상에서 제외 (AI 임시저장·임시자료실)
+  const INTERNAL_BOARDS = ["ai-extract", "temporary_data_room"];
+
   async function fetchBoards() {
     const res = await fetch(`${API}/api/boards`);
     if (res.ok) {
       const data = await res.json();
-      // notice(공지사항) 자신은 이동·복사 대상에서 제외
-      setBoards(data.filter((b: { slug: string }) => b.slug !== "notice").map((b: { slug: string; name: string }) => ({ slug: b.slug, name: b.name })));
+      // notice(공지사항) 자신 + 내부 게시판(exclude_from_search 플래그 또는 명시 slug) 제외
+      setBoards(
+        data
+          .filter((b: { slug: string; exclude_from_search?: boolean }) =>
+            b.slug !== "notice" && !b.exclude_from_search && !INTERNAL_BOARDS.includes(b.slug))
+          .map((b: { slug: string; name: string }) => ({ slug: b.slug, name: b.name }))
+      );
     }
   }
 
