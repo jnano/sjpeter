@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.454";
+export const CURRENT_VERSION = "1.5.455";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.455", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 후속 4건 완료 — (A) response_model 잔여 보강: BatchBulletinCountsResponse·AiAnalysisStatsResponse(중첩 모델 DurationStats·TopError·EventTypeStat·RecentAnalysis 포함)·BulkApproveResponse·BulletinResultCounts 신설, bulletins.py 5개 endpoint 추가 적용. (B) Header 추가 분할: HeaderUserMenu.tsx 추출(104줄) — Header.tsx 378 → 319 줄. signOut/useRouter import·userMenuRef 도 함께 이전. (C) 게시판 list 캐싱 확대: /boards/[slug] 의 board 설정 fetch 만 revalidate=300 + boards/board:{slug} 태그(notice·posts·post-detail 은 시간 민감성으로 유지). (D) Alembic 워크플로 검증: 4b08e018ed60_verify_workflow_noop.py revision 생성 후 alembic upgrade head 적용, DB version_num 0001_baseline → 4b08e018ed60 정상 갱신 확인. SCHEMA_CHANGES.md 가이드 첫 사례"] },
   { version: "1.5.454", date: "2026-05-30", tag: "인프라", items: ["Header.tsx 분할 — 442 줄 단일 컴포넌트의 모바일 드로어(76 줄)를 HeaderMobileMenu.tsx 로 추출. Header.tsx 378 줄로 축소. 모바일 햄버거 메뉴·검색폼·그룹 아코디언이 독립 컴포넌트로 분리되어 데스크탑/모바일 관심사 분리. 데스크탑 user menu·desktop nav 는 추가 분할이 필요하면 후속(v1.5.455+)에서. 동작·prop 일치 확인"] },
   { version: "1.5.453", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 권고 Top 5 + 부수 정리 일괄 처리. (1) Alembic 워크플로 정상화: backend/docs/SCHEMA_CHANGES.md 작성, _migrate_add_columns 함수 상단에 신규 ALTER 금지 경고, CLAUDE.md DB 마이그레이션 절 갱신. (2) 캐싱 전략: /patron·/pastors·/priests·/vision·/about·/info 6 페이지 force-dynamic → revalidate=300 + 태그 기반 무효화. (3) response_model 보강: app/api/_responses.py 공용 모델 추가(OkResponse·MessageResponse·DeletedIdResponse·BulkDeleteResponse·BackfillCountsResponse·BulletinAiStatusResponse 등) + bulletins/members 9 endpoint 적용. (4) next/image 일괄: ThumbnailImage 공용 컴포넌트 신설 + 6 스킨 갤러리 카드 적용. (5) SessionTimeout eslint-disable 2곳을 logoutRef/resetTimersRef 패턴으로 제거. 부수: print → logging(members.py SMTP 2곳), @app.on_event → lifespan(main.py), CLAUDE.md hard delete 정책 명시, loading.tsx 3개 추가((public)·(public)/boards·(admin)/(authed)/admin). Header.tsx 분할은 SessionTimeout 과 분리해 별도 처리(v1.5.454)"] },
   { version: "1.5.451", date: "2026-05-30", tag: "기능", items: ["사이드바 부모 분과 wine 하이라이트 — sub-group 상세 페이지에서 부모 분과의 메뉴 항목(예: /groups/building)이 와인색으로 active 표시. SectionLayout·SectionSidebar 에 extraActiveHref prop 추가, matchesHref·isItemActive·findActiveTopLevel 모두 extraActiveHref 일치도 active 처리. /groups/[slug] 페이지가 sub-group 이면 부모 slug 기반 href 를 SectionLayout 에 전달. DesktopRow childActive·dropdown cActive·모바일 Chip 모두 적용 — 부모 분과 메뉴가 펼쳐진 상태에서 와인 bg 로 강조됨"] },

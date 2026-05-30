@@ -59,3 +59,72 @@ class SmtpTestResponse(BaseModel):
     """SMTP 연결 테스트 결과."""
     ok: bool = True
     message: str
+
+
+# ──────────────────────────────────────────
+# Bulletin 통계·라우팅 응답 (v1.5.455 추가)
+# ──────────────────────────────────────────
+
+class BulletinResultCounts(BaseModel):
+    """한 주보의 결과물(추출/이벤트/말씀/사목지표/공지/이미지) 카운트."""
+    extractions: int = 0
+    events: int = 0
+    meditations: int = 0
+    visions: int = 0
+    posts: int = 0
+    images: int = 0
+
+
+class BatchBulletinCountsResponse(BaseModel):
+    """다건 주보 결과물 카운트 합산 응답 — /routed-counts/batch."""
+    per_bulletin: dict[int, BulletinResultCounts] = {}
+    sum: BulletinResultCounts = BulletinResultCounts()
+    not_found: list[int] = []
+
+
+class DurationStats(BaseModel):
+    count: int = 0
+    avg: int = 0
+    p50: int = 0
+    p95: int = 0
+    max: int = 0
+
+
+class TopError(BaseModel):
+    error: str
+    count: int
+
+
+class EventTypeStat(BaseModel):
+    event_type: str
+    count: int
+
+
+class RecentAnalysis(BaseModel):
+    id: int
+    issue_number: Optional[str] = None
+    published_date: Optional[str] = None
+    ai_status: Optional[str] = None
+    ai_started_at: Optional[str] = None
+    ai_finished_at: Optional[str] = None
+    ai_retry_count: int = 0
+    ai_error: Optional[str] = None
+
+
+class AiAnalysisStatsResponse(BaseModel):
+    """AI 분석 관찰성 지표 — /ai-stats."""
+    total_analyzed: int = 0
+    by_status: dict[str, int] = {}
+    success_rate: float = 0.0
+    duration_seconds: DurationStats = DurationStats()
+    retries: dict[int, int] = {}
+    top_errors: list[TopError] = []
+    by_event_type: list[EventTypeStat] = []
+    recent: list[RecentAnalysis] = []
+
+
+class BulkApproveResponse(BaseModel):
+    """일괄 승인 결과 — /extractions/bulk-approve."""
+    approved: list[int] = []
+    skipped: list[int] = []
+    failed: list[int] = []

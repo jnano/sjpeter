@@ -61,8 +61,9 @@ interface Board {
 
 async function getBoard(slug: string): Promise<Board | null> {
   try {
-    // admin에서 kind/제목 등 변경 시 즉시 반영되도록 캐시 비활성
-    const res = await fetch(`${API}/api/boards/${slug}`, { cache: "no-store" });
+    // v1.5.455 — board 설정(이름·설명·kind·컬럼 토글)은 변화가 드물어 5분 ISR + 태그.
+    // admin 변경 시 /api/revalidate?tag=boards 호출 패턴(미구현 시 5분 후 갱신).
+    const res = await fetch(`${API}/api/boards/${slug}`, { next: { revalidate: 300, tags: ["boards", `board:${slug}`] } });
     if (!res.ok) return null;
     return res.json();
   } catch {

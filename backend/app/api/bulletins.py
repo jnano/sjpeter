@@ -21,6 +21,8 @@ from app.core.email import send_bulletin_notification
 from app.api._responses import (
     OkResponse, DeletedIdResponse, BulkDeleteResponse,
     BackfillCountsResponse, BulletinAiStatusResponse, RoutedResponse,
+    BatchBulletinCountsResponse, AiAnalysisStatsResponse, BulkApproveResponse,
+    BulletinResultCounts,
 )
 from app.models.bulletin import Bulletin, BulletinExtractedImage
 from app.models.bulletin_extraction import BulletinExtraction
@@ -258,7 +260,7 @@ class BatchCountsBody(BaseModel):
     bulletin_ids: list[int]
 
 
-@router.post("/routed-counts/batch")
+@router.post("/routed-counts/batch", response_model=BatchBulletinCountsResponse)
 def bulletin_routed_counts_batch(
     body: BatchCountsBody,
     db: Session = Depends(get_db),
@@ -313,7 +315,7 @@ def bulletin_routed_counts_batch(
     return {"per_bulletin": per_bulletin, "sum": total, "not_found": not_found}
 
 
-@router.get("/ai-stats")
+@router.get("/ai-stats", response_model=AiAnalysisStatsResponse)
 def ai_analysis_stats(
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin),
@@ -402,7 +404,7 @@ def ai_analysis_stats(
     }
 
 
-@router.get("/{bulletin_id}/routed-counts")
+@router.get("/{bulletin_id}/routed-counts", response_model=BulletinResultCounts)
 def bulletin_routed_counts(
     bulletin_id: int,
     db: Session = Depends(get_db),
@@ -1516,7 +1518,7 @@ class BulkApproveBody(BaseModel):
     reviews: dict[int, BulkReviewItem] | None = None
 
 
-@router.post("/extractions/bulk-approve")
+@router.post("/extractions/bulk-approve", response_model=BulkApproveResponse)
 def bulk_approve_extractions(
     body: BulkApproveBody,
     db: Session = Depends(get_db),
