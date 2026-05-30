@@ -18,6 +18,7 @@ interface MassSchedule {
 
 interface ParishInfo {
   name: string;
+  name_en: string | null;   // 영문명 — site_settings.PARISH_NAME_EN (parishes 컬럼 아님)
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -207,6 +208,19 @@ export default function AdminParishInfoPage() {
             />
             <p className="text-xs text-gray-400 mt-1">
               헤더 로고 옆 이름, 푸터, 페이지 제목·메타데이터에 표시됩니다.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">성당 영문명</label>
+            <input
+              value={info.name_en ?? ""}
+              onChange={(e) => setInfo((p) => p && ({ ...p, name_en: e.target.value }))}
+              className={`w-full ${inputCls}`}
+              placeholder="St. Peter's Cathedral"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              헤더 성당명 아래 회색 영문, 홈 대표사진 캡션, 이메일 영문 표기에 사용됩니다. 비워두면 영문 줄이 표시되지 않습니다.
             </p>
           </div>
 

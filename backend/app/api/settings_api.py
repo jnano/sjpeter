@@ -120,11 +120,10 @@ def _to_out(row: SiteSetting) -> SettingOut:
     )
 
 
-# admin/settings UI 에서 가려야 할 키 — parishes 테이블이 single source 라 여기서 중복 관리하면 어긋남 유발.
-# 시드·mirror 는 그대로 두되 admin UI 에는 노출 안 함.
-# PARISH_NAME 은 parishes.name 의 mirror 이므로 숨김(→ admin/parish/info 에서 변경).
-# PARISH_NAME_EN 은 parishes 에 대응 컬럼이 없어 site_settings 가 유일 소스 → 여기서 직접 편집해야 함.
-_HIDDEN_KEYS = {"PARISH_NAME"}
+# admin/settings UI 에서 가려야 할 키 — 본당명은 admin/parish/info 에서 일괄 관리(한글·영문 한 곳).
+# PARISH_NAME    : parishes.name 의 mirror.
+# PARISH_NAME_EN : parishes 컬럼은 없지만 admin/parish/info 폼이 site_settings 로 직접 저장 → 여기선 중복 노출 방지로 숨김.
+_HIDDEN_KEYS = {"PARISH_NAME", "PARISH_NAME_EN"}
 
 
 @router.get("", response_model=list[SettingOut])

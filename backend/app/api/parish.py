@@ -32,6 +32,7 @@ class MassSchedule(BaseModel):
 
 class ParishUpdate(BaseModel):
     name: Optional[str] = None
+    name_en: Optional[str] = None  # parishes 컬럼 아님 → site_settings.PARISH_NAME_EN 으로 라우팅
     diocese: Optional[str] = None
     address: Optional[str] = None
     lat: Optional[float] = None
@@ -64,6 +65,7 @@ class ParishUpdate(BaseModel):
 class ParishOut(BaseModel):
     id: int
     name: str
+    name_en: Optional[str] = None  # site_settings.PARISH_NAME_EN 에서 채움 (parishes 컬럼 아님)
     diocese: Optional[str]
     address: Optional[str]
     lat: Optional[float]
@@ -112,9 +114,11 @@ def _parish_to_out(parish: Parish) -> ParishOut:
             schedule = MassSchedule(**json.loads(parish.mass_schedule))
         except Exception:
             pass
+    from app.core.site_settings import get_parish_name_en
     return ParishOut(
         id=parish.id,
         name=parish.name,
+        name_en=get_parish_name_en() or None,
         diocese=parish.diocese,
         address=parish.address,
         lat=parish.lat,
@@ -160,6 +164,11 @@ def update_parish(
     parish = _get_parish(db)
     data = body.model_dump(exclude_unset=True)
 
+    # 영문명은 parishes 컬럼이 아니라 site_settings.PARISH_NAME_EN 이 single source.
+    # setattr 대상에서 분리해 아래에서 site_settings 로 직접 라우팅한다.
+    name_en_changed = "name_en" in data
+    name_en_value = data.pop("name_en", None)
+
     if "mass_schedule" in data and data["mass_schedule"] is not None:
         parish.mass_schedule = json.dumps(data.pop("mass_schedule"), ensure_ascii=False)
     elif "mass_schedule" in data:
@@ -185,6 +194,18 @@ def update_parish(
         ), {"v": (parish.name or "").strip()})
         db.commit()
         _invalidate("PARISH_NAME")
+
+    # 영문명: parishes 미러가 아니라 site_settings.PARISH_NAME_EN 자체가 source — 직접 갱신.
+    if name_en_changed:
+        from sqlalchemy import text as _text
+        from app.core.site_settings import invalidate as _invalidate
+        db.execute(_text(
+            "INSERT INTO site_settings (key, value, label, description, is_secret, group_name) "
+            "VALUES ('PARISH_NAME_EN', :v, '본당 영문명', '선택. 헤더·이메일·footer 영문 표기에 사용 — admin/parish/info 에서 변경하세요.', FALSE, '사이트') "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+        ), {"v": (name_en_value or "").strip()})
+        db.commit()
+        _invalidate("PARISH_NAME_EN")
 
     log_action(db, get_admin_identifier(admin), "update_parish", "parish", parish.id, ",".join(data.keys()))
     return _parish_to_out(parish)
