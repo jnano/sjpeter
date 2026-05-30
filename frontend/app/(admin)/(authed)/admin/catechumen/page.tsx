@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import ClassDetail from "./ClassDetail";
 import ApplicationsSection from "./ApplicationsSection";
+import PageContentEditor from "./PageContentEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -207,6 +208,8 @@ export default function AdminCatechumenPage() {
       <p className="text-sm text-[var(--color-text-muted)] mb-6">
         예비자교리 차수를 등록하고 참여자·세례성사 사진을 관리합니다. 상태(교육중·접수중)는 날짜로 자동 판단됩니다.
       </p>
+
+      <PageContentEditor />
 
       {msg && (
         <p className={`mb-4 text-sm px-3 py-2 rounded-lg ${msg.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{msg.text}</p>

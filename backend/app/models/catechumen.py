@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text, Date, Boolean
+from sqlalchemy.dialects.postgresql import JSONB
 from app.core.database import Base
 
 # 실제 테이블 생성은 main.py startup 의 raw SQL CREATE TABLE IF NOT EXISTS 가 담당.
@@ -71,4 +72,17 @@ class CatechumenApplication(Base):
     message = Column(Text)                                   # 신청 동기·문의
     status = Column(String(20), nullable=False, server_default="접수")
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CatechumenPage(Base):
+    """예비신자 안내 페이지(/catechumen) 콘텐츠 — 단일 행.
+
+    hero·path_steps·curriculum·schedule·faq·cta 를 content JSON 한 컬럼에 담는다.
+    차수(class)와 무관한 페이지 안내 콘텐츠라 단일 행으로 관리(parish 패턴).
+    행이 없으면 API 가 DEFAULT_PAGE_CONTENT(코드 기본값)를 반환한다."""
+    __tablename__ = "catechumen_page"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(JSONB, nullable=False, default=dict)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

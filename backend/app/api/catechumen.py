@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin, get_current_member
 from app.core.config import settings
+from app.models.catechumen import CatechumenPage
 
 router = APIRouter(prefix="/catechumen", tags=["catechumen"])
 
@@ -515,3 +516,86 @@ def class_album(class_id: int, db: Session = Depends(get_db), member=Depends(get
         "class_id": cls.id, "round_no": cls.round_no, "baptism_at": cls.baptism_at,
         "photos": [_photo_row(r) for r in rows],
     }
+
+
+# ──────────────────────────── 안내 페이지 콘텐츠 (/catechumen) ────────────────────────────
+# 공개 /catechumen 페이지의 hero·4단계·커리큘럼·일정·FAQ·CTA 를 단일 JSON 행으로 관리.
+# 행이 없으면 아래 기본값(현재 시안 문구)을 반환 → 첫 배포·미입력 본당도 정상 노출.
+# "신청 방법" 칼럼의 전화·주소는 공개 페이지에서 parish 정보로 동적 렌더(여기 포함 안 함).
+
+DEFAULT_PAGE_CONTENT = {
+    "hero": {
+        "eyebrow": "예비신자 모집 · 2026 가을학기",
+        "title_normal": "한 걸음만 다가오시면,",
+        "title_em": "나머지는 함께 걷겠습니다.",
+        "body": "가톨릭에 처음이신 분, 다시 돌아오고 싶으신 분 모두 환영합니다. 매주 한 번의 수업과 미사로 9개월간 함께 신앙의 길을 걷습니다.",
+        "stats": [
+            {"v": "9개월", "l": "전체 과정"},
+            {"v": "주 1회", "l": "교리 수업"},
+            {"v": "무료", "l": "교재 포함"},
+            {"v": "2026.09", "l": "가을 학기 개강"},
+        ],
+    },
+    "path_steps": [
+        {"n": "01", "when": "9월", "title": "신청과 환영", "body": "등록과 첫 만남. 본당 공동체의 환영을 받고, 동료 예비신자들과 인사합니다.", "done": True},
+        {"n": "02", "when": "10월 — 1월", "title": "예비교리", "body": "매주 한 번 교리 수업과 주일 미사 참례. 가톨릭 신앙의 기초를 배웁니다.", "done": False},
+        {"n": "03", "when": "2월 — 4월", "title": "사순 시기 준비", "body": "선택받은 예비신자(Elect)로 선포되어, 사순 시기를 함께 묵상하며 준비합니다.", "done": False},
+        {"n": "04", "when": "부활 성야", "title": "세례 · 첫영성체", "body": "부활 성야 미사에서 세례·견진·첫영성체를 한 번에 받게 됩니다.", "done": False},
+    ],
+    "curriculum": [
+        {"term": "1학기 · 9월—12월", "title": "하느님과 그리스도", "period": "총 14주 · 화요일 19:30",
+         "items": ["① 신앙이란 무엇인가", "② **삼위일체**: 성부·성자·성령", "③ 그리스도의 생애와 가르침", "④ 십자가의 의미", "⑤ 부활과 영원한 생명"]},
+        {"term": "2학기 · 1월—3월", "title": "교회와 성사", "period": "총 12주 · 화요일 19:30",
+         "items": ["① 교회의 의미와 사도성", "② **일곱 성사**: 세례·견진·성체", "③ 미사와 전례", "④ 고해와 화해", "⑤ 성모님과 성인들"]},
+        {"term": "3학기 · 3월—4월", "title": "그리스도인의 삶", "period": "총 6주 + 사순 피정",
+         "items": ["① 십계명과 양심", "② **기도의 삶**: 매일·매주", "③ 사랑과 정의", "④ 사순 시기 영성", "⑤ 부활 성야 준비"]},
+    ],
+    "schedule": [
+        {"label": "개강", "value": "2026년 9월 1일 (화)", "sub": "입학 미사 19:00 · 본당 성전"},
+        {"label": "수업", "value": "매주 화요일 19:30 — 21:00", "sub": "본당 회합실"},
+        {"label": "미사", "value": "주일 10:30 교중 미사 참례", "sub": "예비신자도 함께 참여 가능"},
+        {"label": "종강", "value": "2027년 부활 성야 (4월 3일)", "sub": "세례·견진·첫영성체"},
+        {"label": "교재", "value": "『가톨릭 교회 입문』 (무료 배부)", "sub": "한국천주교중앙협의회"},
+    ],
+    "faq": [
+        {"q": "전혀 모르는데 괜찮을까요?", "a": '네, 가장 환영합니다. 예비신자 과정은 "이미 알고 있는 분"이 아니라 "알아가고 싶은 분"을 위한 자리입니다.'},
+        {"q": "비용이 드나요?", "a": "완전 무료입니다. 교재와 자료는 본당에서 제공합니다. 부담 없이 시작하세요."},
+        {"q": "몇 번 빠져도 되나요?", "a": "2회 이상 결석 시 보충 수업을 안내드립니다. 다만 핵심 주제(부활·성사 등)는 가급적 참석을 권장합니다."},
+        {"q": "가족과 함께 참여할 수 있나요?", "a": "네, 가족·친구가 함께 신청하시면 더 좋습니다. 부부 동반 예비신자 비율이 30% 정도입니다."},
+        {"q": "세례명은 어떻게 정하나요?", "a": "과정 중 성인 사전과 함께 자신의 마음에 와 닿는 성인의 이름을 정하게 됩니다. 대부모도 함께 정합니다."},
+        {"q": "중도에 그만둬도 되나요?", "a": "물론입니다. 신앙은 강요로 시작될 수 없습니다. 다만 한 학기는 끝까지 들어보시기를 권합니다."},
+    ],
+    "cta": {
+        "eyebrow": "함께 걸어요",
+        "title_normal": "한 줄의 신청서가",
+        "title_em": "한 생의 신앙으로 자라납니다.",
+    },
+}
+
+
+class PageContentIn(BaseModel):
+    content: dict
+
+
+@router.get("/page-content")
+def get_page_content(db: Session = Depends(get_db)):
+    """공개 — 안내 페이지 콘텐츠. 저장된 행이 없으면 기본값 반환."""
+    row = db.query(CatechumenPage).first()
+    if row and row.content:
+        return row.content
+    return DEFAULT_PAGE_CONTENT
+
+
+@router.put("/page-content")
+def update_page_content(body: PageContentIn, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Admin — 안내 페이지 콘텐츠 저장(단일 행 upsert)."""
+    row = db.query(CatechumenPage).first()
+    if row is None:
+        row = CatechumenPage(content=body.content)
+        db.add(row)
+    else:
+        row.content = body.content
+    db.commit()
+    db.refresh(row)
+    log_action(db, get_admin_identifier(admin), "update_catechumen_page", "catechumen_page", row.id, "")
+    return row.content
