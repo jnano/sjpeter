@@ -43,7 +43,6 @@ interface Extraction {
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   temporal_reason: string | null;
   importance: "high" | "normal" | "low";
-  weekly_bundle: boolean;
   expires_at: string | null;
   status: "pending" | "approved" | "rejected";
   target_board_id: number | null;
@@ -64,12 +63,11 @@ interface CommunityGroup {
   slug?: string | null;
 }
 
-/** 항목별 검토 입력 (시점/분과/알림/묶음/만료) — approve 시 body 에 담아 보냄. */
+/** 항목별 검토 입력 (시점/분과/알림/만료/고정) — approve 시 body 에 담아 보냄. */
 interface ReviewState {
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   group_ids: number[];
   notify: boolean;
-  weekly_bundle: boolean;
   expires_at: string | null;  // YYYY-MM-DD
   is_pinned: boolean;         // 공지를 게시판 상단 고정으로 등록
 }
@@ -208,7 +206,6 @@ export default function ExtractionsPage() {
               temporal_kind: tk,
               group_ids: [],  // 카탈로그 도착 후 후보 매칭 (별도 effect)
               notify: (e.importance ?? "normal") === "high",
-              weekly_bundle: !!e.weekly_bundle,
               expires_at: e.expires_at ? e.expires_at.slice(0, 10) : null,
               is_pinned: false,
             };
@@ -261,15 +258,14 @@ export default function ExtractionsPage() {
       ...prev,
       [extId]: {
         temporal_kind: "unknown", group_ids: [], notify: true,
-        weekly_bundle: false, expires_at: null, is_pinned: false,
+        expires_at: null, is_pinned: false,
         ...(prev[extId] ?? {}), ...patch,
       },
     }));
   }
 
   async function approve(ext: Extraction, options?: { notifyOverride?: boolean }) {
-    // 공지는 board_id 없이 자동 라우팅 — notice/this-week 분기('이번주만 유효')·is_pinned 를
-    // 백엔드 _apply_extraction_routing 가 처리. board_id 를 강제하면 weekly_bundle 분기가 무시됨.
+    // 공지는 board_id 없이 자동 라우팅 — notice 게시판·is_pinned 를 백엔드가 처리.
     const autoRoute = ext.event_type === "공지";
     const boardId = selectedBoard[ext.id];
     if (!autoRoute && !boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
@@ -291,7 +287,6 @@ export default function ExtractionsPage() {
         body: JSON.stringify({
           board_id: autoRoute ? null : boardId,
           community_group_ids: review.group_ids,
-          weekly_bundle: (review as ReviewState).weekly_bundle,
           expires_at: (review as ReviewState).expires_at
             ? new Date((review as ReviewState).expires_at + "T00:00:00").toISOString()
             : null,
@@ -1065,18 +1060,9 @@ function ExtractionCard({
                 ))}
             </select>
           </div>
-          {/* 이번주 묶음·만료일 (공지 묻힘 회피) */}
+          {/* 상단 고정·만료일 — 공지 한정 (게시판 노출 제어) */}
           {ext.event_type === "공지" && (
-            <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!review.weekly_bundle}
-                  onChange={(e) => onReviewChange({ weekly_bundle: e.target.checked })}
-                  className="accent-[var(--color-primary)]"
-                />
-                <span>📋 이번 주만 유효 (this-week 게시판으로)</span>
-              </label>
+            <div className="space-y-2 pt-2 border-t border-[var(--color-border)]/60">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1084,22 +1070,22 @@ function ExtractionCard({
                   onChange={(e) => onReviewChange({ is_pinned: e.target.checked })}
                   className="accent-[var(--color-primary)]"
                 />
-                <span>📌 상단 고정 (목록 맨 위에 항상 노출)</span>
+                <span>📌 상단 고정 (목록 맨 위에 항상 노출 · 만료 제외)</span>
               </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
+                  <span aria-hidden="true">📆</span> 만료일
+                </span>
+                <input
+                  type="date"
+                  value={review.expires_at ?? ""}
+                  onChange={(e) => onReviewChange({ expires_at: e.target.value || null })}
+                  className="border border-[var(--color-border)] rounded px-2 py-0.5 text-[11px] bg-white"
+                />
+                <span className="text-[11px] text-[var(--color-text-muted)]">지나면 공지 목록에서 자동 숨김 (발행일+30일 자동 지정). 상단 고정 글은 만료 제외.</span>
+              </div>
             </div>
           )}
-          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
-            <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
-              <span aria-hidden="true">📆</span> 만료일
-            </span>
-            <input
-              type="date"
-              value={review.expires_at ?? ""}
-              onChange={(e) => onReviewChange({ expires_at: e.target.value || null })}
-              className="border border-[var(--color-border)] rounded px-2 py-0.5 text-[11px] bg-white"
-            />
-            <span className="text-[11px] text-[var(--color-text-muted)]">지나면 목록에서 자동 숨김. AI 추정: event_date+1일 또는 발행일+7일</span>
-          </div>
           {/* 알림 발송 토글 */}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 cursor-pointer">
@@ -1176,7 +1162,7 @@ function ExtractionCard({
       {!isSpecial && (
         <div className="pt-1 space-y-2">
           {isNotice ? (
-            /* 공지 → 공지사항 등록 (notice/this-week 자동 라우팅, 게시판 선택 불필요) */
+            /* 공지 → 공지사항 등록 (notice 게시판 자동 라우팅, 게시판 선택 불필요) */
             <div className="space-y-2">
               <div className="flex gap-2">
                 <button

@@ -31,7 +31,6 @@ class BulletinExtraction(Base):
 
     # v1.5.336: AI 추출 라우팅 개편 — 자잘한 안내가 공지 묻는 문제 해결.
     importance = Column(String(10), nullable=False, server_default="normal")  # high|normal|low
-    weekly_bundle = Column(Boolean, nullable=False, server_default="false")   # true → /boards/this-week
     expires_at = Column(DateTime, nullable=True)  # 만료일. event_date+1일 또는 7일 후 default
 
     fingerprint = Column(String(64), index=True)   # 중복 감지용 해시

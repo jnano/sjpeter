@@ -121,10 +121,6 @@ importance (중요도):
 - "normal": 일반 안내·행사·모임·모집
 - "low": 자잘한 변동(주차 안내, 분과 내부 공지, 단체 소공지, 회의 일정 등)
 
-weekly_bundle (이번 주만 유효한 단발성 안내):
-- true: 이번 주만 보면 되는 안내(예: 이번 주일 주차 안내, 일회성 모집 마감 안내, 한 차례 모임 알림). 만료되면 자동 정리됨.
-- false: 영속적 공지(주임신부 변경, 미사 시간 변경, 본당 정책 등). notice 게시판 영구 노출.
-
 JSON 형식 (설명·코드펜스 없이):
 {{"events": [
   {{
@@ -141,8 +137,7 @@ JSON 형식 (설명·코드펜스 없이):
     "event_type": "공지|행사|모임|묵상|지표",
     "temporal_kind": "future|timeless|past|unknown",
     "temporal_reason": "30자 이내 또는 null",
-    "importance": "high|normal|low",
-    "weekly_bundle": true
+    "importance": "high|normal|low"
   }}
 ]}}
 

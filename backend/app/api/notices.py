@@ -8,7 +8,7 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -120,7 +120,11 @@ def list_notices(db: Session = Depends(get_db)):
     posts = (
         db.query(Post)
         .options(joinedload(Post.attachments))
-        .filter(Post.board_id == board_id, Post.is_published == True)
+        .filter(
+            Post.board_id == board_id, Post.is_published == True,
+            # 만료일 지난 글은 숨김. 단 상단 고정(is_pinned) 글은 만료 제외 → 항상 노출
+            or_(Post.is_pinned == True, Post.expires_at.is_(None), Post.expires_at > datetime.utcnow()),
+        )
         .order_by(desc(Post.is_pinned), desc(Post.created_at))
         .all()
     )
@@ -145,10 +149,12 @@ def list_notices_paged(
         .order_by(desc(Post.created_at))
         .all()
     )
+    # 일반 공지(비고정)만 페이지네이션 + 만료 필터. 고정(pinned)은 위에서 항상 전체 반환 → 만료 제외.
     base = db.query(Post).filter(
         Post.board_id == board_id,
         Post.is_published == True,
         Post.is_pinned == False,
+        or_(Post.expires_at.is_(None), Post.expires_at > datetime.utcnow()),
     )
     total = base.count()
     items = (

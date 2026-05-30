@@ -529,8 +529,7 @@ class ExtractionOut(BaseModel):
     pull_quote: Optional[str] = None      # 묵상 — 강조 인용구
     temporal_kind: str = "unknown"
     temporal_reason: Optional[str] = None
-    importance: str = "normal"           # v1.5.336: high|normal|low
-    weekly_bundle: bool = False           # true → this-week 게시판 자동 라우팅
+    importance: str = "normal"           # high|normal|low
     expires_at: Optional[datetime] = None
     status: str
     target_board_id: Optional[int]
@@ -778,20 +777,16 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             if parsed_date < _date.today():
                 temporal_kind = "past"
 
-        # v1.5.336: 중요도·이번주묶음·만료일 — AI 추정값 (없거나 잘못된 값은 안전 default)
+        # 중요도·만료일 — AI 추정값 (없거나 잘못된 값은 안전 default)
         importance = (ev.get("importance") or "normal").strip().lower()
         if importance not in ("high", "normal", "low"):
             importance = "normal"
-        weekly_bundle = bool(ev.get("weekly_bundle"))
-        # 만료일 추정: event_date 가 있으면 그 다음날, 없으면 발행일 + 7일
+        # 만료일: 발행일 + 30일 자동 (공지 자동 숨김용. 검토에서 수정 가능, 공지에만 의미)
         from datetime import timedelta as _td, datetime as _dt
-        if parsed_date:
-            expires_at = _dt.combine(parsed_date + _td(days=1), _dt.min.time())
-        else:
-            from app.models.bulletin import Bulletin as _Bul
-            _b = db.query(_Bul).filter(_Bul.id == bulletin_id).first()
-            base_date = _b.published_date if _b and _b.published_date else _dt.utcnow().date()
-            expires_at = _dt.combine(base_date + _td(days=7), _dt.min.time())
+        from app.models.bulletin import Bulletin as _Bul
+        _b = db.query(_Bul).filter(_Bul.id == bulletin_id).first()
+        base_date = _b.published_date if _b and _b.published_date else _dt.utcnow().date()
+        expires_at = _dt.combine(base_date + _td(days=30), _dt.min.time())
 
         # 묵상 전용 필드 — AI 가 분리 추출한 성경구절·실천·강조인용 (오타교정 적용).
         # 묵상이 아니면 보통 null. 승인 폼 초기값으로 사용됨.
@@ -810,7 +805,6 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             temporal_kind=temporal_kind,
             temporal_reason=ev.get("temporal_reason"),
             importance=importance,
-            weekly_bundle=weekly_bundle,
             expires_at=expires_at,
             fingerprint=fp, status="pending",
         )
@@ -1148,18 +1142,14 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
             _repin_latest_meditation(db)
         return ext
 
-    # 2. 공지 → posts (notice 또는 this-week 게시판)
-    # v1.5.336: weekly_bundle=true 면 this-week 게시판으로, 아니면 notice 게시판.
-    #   이번 주만 유효한 자잘한 안내가 영속 공지를 묻는 문제를 분리.
+    # 2. 공지 → posts (notice 게시판)
     if event_type == "공지":
         notice_board = db.query(Board).filter(Board.slug == "notice", Board.is_active == True).first()
-        weekly_board = db.query(Board).filter(Board.slug == "this-week", Board.is_active == True).first()
-        # weekly_bundle=true + this-week 게시판 존재 → this-week 로 라우팅
-        primary_board = weekly_board if (ext.weekly_bundle and weekly_board) else notice_board
+        primary_board = notice_board
         # 게시판이 없으면 ai-extract 으로 graceful fallback (초기 셋업·운영 안전장치)
         target = primary_board or ai_board
         if not target:
-            raise HTTPException(status_code=500, detail="'notice'·'this-week'·'ai-extract' 게시판이 모두 없습니다. 게시판 설정을 확인하세요.")
+            raise HTTPException(status_code=500, detail="'notice'·'ai-extract' 게시판이 모두 없습니다. 게시판 설정을 확인하세요.")
         post = Post(
             board_id=target.id,
             member_id=None,                # AI/admin 생성 표식
@@ -1432,9 +1422,8 @@ class ApproveBody(BaseModel):
     temporal_kind: Optional[str] = None  # future|timeless|past|unknown
     community_group_ids: Optional[list[int]] = None
     notify: bool = True  # True=발송, False=보류
-    # v1.5.336: 검토에서 admin 이 importance·weekly_bundle·expires_at 조정 가능 (AI 추정값 보정).
+    # 검토에서 admin 이 importance·expires_at 조정 가능 (AI 추정값 보정).
     importance: Optional[str] = None     # high|normal|low
-    weekly_bundle: Optional[bool] = None  # true → this-week 게시판
     expires_at: Optional[datetime] = None
     # 검토 단계에서 공지를 게시판 상단 고정으로 등록 (posts.is_pinned)
     is_pinned: bool = False
@@ -1464,11 +1453,9 @@ def approve_extraction(
         if body.content is not None: ext.content = body.content
         if body.event_date is not None: ext.event_date = body.event_date
         if body.location is not None: ext.location = body.location
-        # v1.5.336: importance·weekly_bundle·expires_at — admin 검토 보정값
+        # importance·expires_at — admin 검토 보정값
         if body.importance is not None and body.importance in ("high", "normal", "low"):
             ext.importance = body.importance
-        if body.weekly_bundle is not None:
-            ext.weekly_bundle = body.weekly_bundle
         if body.expires_at is not None:
             ext.expires_at = body.expires_at
 
