@@ -1084,7 +1084,7 @@ function ExtractionCard({
                   onChange={(e) => onReviewChange({ expires_at: e.target.value || null })}
                   className="border border-[var(--color-border)] rounded px-2 py-0.5 text-[11px] bg-white"
                 />
-                <span className="text-[11px] text-[var(--color-text-muted)]">지나면 공지 목록에서 자동 숨김 (발행일+30일 자동 지정). 상단 고정 글은 만료 제외.</span>
+                <span className="text-[11px] text-[var(--color-text-muted)]">지나면 공지 목록에서 자동 숨김 (발행일+10일 자동 지정). 상단 고정 글은 만료 제외.</span>
               </div>
             </div>
           )}

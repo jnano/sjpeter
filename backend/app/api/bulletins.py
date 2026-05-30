@@ -778,12 +778,12 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         importance = (ev.get("importance") or "normal").strip().lower()
         if importance not in ("high", "normal", "low"):
             importance = "normal"
-        # 만료일: 발행일 + 30일 자동 (공지 자동 숨김용. 검토에서 수정 가능, 공지에만 의미)
+        # 만료일: 발행일 + 10일 자동 (공지 자동 숨김용. 검토에서 수정 가능, 공지에만 의미)
         from datetime import timedelta as _td, datetime as _dt
         from app.models.bulletin import Bulletin as _Bul
         _b = db.query(_Bul).filter(_Bul.id == bulletin_id).first()
         base_date = _b.published_date if _b and _b.published_date else _dt.utcnow().date()
-        expires_at = _dt.combine(base_date + _td(days=30), _dt.min.time())
+        expires_at = _dt.combine(base_date + _td(days=10), _dt.min.time())
 
         # 묵상 전용 필드 — AI 가 분리 추출한 성경구절·실천·강조인용 (오타교정 적용).
         # 묵상이 아니면 보통 null. 승인 폼 초기값으로 사용됨.
