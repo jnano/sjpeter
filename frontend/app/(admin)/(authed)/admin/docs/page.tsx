@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.430";
+export const CURRENT_VERSION = "1.5.431";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.431", date: "2026-05-30", tag: "기능", items: ["게시판 kind 신설 — '일반(타이틀+리스트)' (kind='titlelist'). /admin/boards 형식 드롭다운에 옵션 추가(생성 폼+편집 폼 양쪽) + kindLabel 매핑 + 하늘색 안내 박스. 신규 컴포넌트 TitleListBoard 신설(boards/[slug]/) — 공지사항 톤의 단순 리스트: 상단 '전체 N건' 헤더 + 검색 폼(옵션) + 흰 카드 안에 [고정] + 제목 + 댓글수[N] + MM.DD 3컬럼 ul. 작성자/조회수/뷰 전환/카테고리 칩/정렬 모두 노출 안 함. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 가 board.kind==='titlelist' 분기로 새 컴포넌트 라우팅. 백엔드 kind 컬럼은 자유 문자열이라 마이그레이션 불필요"] },
   { version: "1.5.430", date: "2026-05-30", tag: "수정", items: ["다크·와인 버튼 원복 — (1) /council 조직도 deputy(ink) 단 제거 → lead(와인) + regular(흰 outlined) 2단 구조로 회귀. 회장단·총무·재무가 분과장과 같은 outlined 톤. (2) /pastor PriestBlock 와인 role-pill·본명 와인 알약 원복 → 와인 선 + uppercase eyebrow + 평문 본명(이전 staff 톤). 헤로 카드·이력 timeline 은 시안 그대로 유지. (3) 공공 액션 버튼 ink → 고정 다크 원복 — .site-cta(헤더 CTA), /bulletin '지금 읽기' CTA, /word TTS 들으며 묵상하기 버튼·tooltip, /meditation·/prayer·/boards toast 5종 모두 background:var(--color-text). 칩·탭·CTA 카드(.ab-cta, .pr-today, /construction hero, /word gospel 카드, /offering hero, /history EraFilter, /bulletin 연도 필터, /calendar 토글·칩·미니캘, /groups 필터, /word ReadTabs)는 ink 유지 — '필터/카드는 ink, 액션 버튼은 고정 다크' 의 원칙 정리"] },
   { version: "1.5.429", date: "2026-05-30", tag: "디자인", items: ["/pastor·/council 시안 정밀 이식 — ~/Downloads/시안/faithandme/priest.html + council.html 톤. /pastor: PriestBlock 신설 — bg-2 surface rounded-3xl 헤로 카드(✠ 220px deco) + 320px 인물 사진(aspect 4/5) + 와인 role-pill ✠ 아이콘 + 큰 이름(40px) + 본명 와인 6% 알약 + 축일 메타 보더 + 큰 따옴표 인용문(와인 강조) + 인용 reference. 인사말(인사이드 letter-body 톤) + 이력 timeline-list(연도 와인 굵게 + 설명) — career_items 정규식으로 'YYYY.MM' 추출. 다중 사목자도 각자 priest 헤로 블록 통일. /council: 시안 council.html 적용 — bg-2 intro(eyebrow + h2 + 본당명 자동 + 3 stats[구성원/임원/분과장]) + Org chart(주임=lead 와인 + 회장단=deputy 잉크 + 분과장=regular 흰 + 골드 avatar) + 풀폭 members-table(헤더 NO/이름/직책/분과/임기 + 회장단 와인 avatar + 그 외 골드, 카테고리 정렬). 회의/문의/결의안 등 시안 추가 섹션은 데이터 스키마 없어 생략. 모두 모바일 반응형 그리드"] },
   { version: "1.5.428", date: "2026-05-30", tag: "수정", items: ["잉크 컬러에서 본문 폰트 색은 제외 — admin/skin 잉크 컬러가 본문 글씨까지 물들이던 문제 해소(예: 코발트 선택 시 홈 대시보드 텍스트가 파랗게 변함). globals.css :root 에 --ink-text:#2C2620 고정값 신설(잉크 교체 무관). 'color: var(--ink)' 69곳을 'color: var(--ink-text)' 로 일괄 치환. 배경(background:var(--ink))·보더는 그대로 ink 변수 유지 — 사이트 전반 다크 블록·필터 칩·CTA 는 여전히 잉크 따름. --ink-2/--ink-3 는 원래 고정값(#6B6660·#9E9892)이라 영향 없음"] },
