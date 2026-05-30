@@ -480,6 +480,24 @@ export default function ExtractionsPage() {
     }
   }
 
+  // 공지로 오분류됐지만 날짜성인 항목을 '행사'로 전환 → 카드가 캘린더 분기로 바뀜.
+  // (그 자리에서 캘린더 등록·날짜별 분리 가능. 모임이어야 하면 편집에서 다시 조정)
+  async function convertToCalendar(extId: number) {
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/bulletins/extractions/${extId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: "행사" }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail ?? "유형 변경 실패");
+      const updated: Extraction = await res.json();
+      setExtractions((prev) => prev.map((e) => (e.id === extId ? updated : e)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "캘린더 유형 변경에 실패했습니다.");
+    }
+  }
+
   async function splitByDates(extId: number) {
     setError("");
     // 1단계: 미리보기 — 본문에서 발견된 날짜 수 확인
@@ -808,6 +826,7 @@ export default function ExtractionsPage() {
                         onReject={() => reject(ext.id)}
                         onEdit={() => startEdit(ext)}
                         onSplitByDates={() => splitByDates(ext.id)}
+                        onConvertToCalendar={() => convertToCalendar(ext.id)}
                         processing={!!processing[ext.id]}
                         communityGroups={communityGroups}
                         review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind ?? "unknown", group_ids: [], notify: true }}
@@ -877,6 +896,7 @@ function ExtractionCard({
   onReject,
   onEdit,
   onSplitByDates,
+  onConvertToCalendar,
   processing,
   communityGroups,
   review,
@@ -894,6 +914,7 @@ function ExtractionCard({
   onReject: () => void;
   onEdit?: () => void;
   onSplitByDates?: () => void;
+  onConvertToCalendar?: () => void;
   processing: boolean;
   communityGroups: CommunityGroup[];
   review: ReviewState;
@@ -1179,21 +1200,34 @@ function ExtractionCard({
         <div className="pt-1 space-y-2">
           {isNotice ? (
             /* 공지 → 공지사항 등록 (notice/this-week 자동 라우팅, 게시판 선택 불필요) */
-            <div className="flex gap-2">
-              <button
-                onClick={onApprove}
-                disabled={processing}
-                className="flex-1 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                {processing ? "처리 중…" : "공지사항 등록"}
-              </button>
-              <button
-                onClick={onReject}
-                disabled={processing}
-                className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
-              >
-                거부
-              </button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={onApprove}
+                  disabled={processing}
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  {processing ? "처리 중…" : "공지사항 등록"}
+                </button>
+                <button
+                  onClick={onReject}
+                  disabled={processing}
+                  className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
+                >
+                  거부
+                </button>
+              </div>
+              {/* AI 오분류 교정 — 날짜 신호(event_date 또는 본문 날짜 2개+)가 있으면 캘린더 전환 제안 */}
+              {onConvertToCalendar && (hasDate || distinctDateCount >= 2) && (
+                <button
+                  onClick={onConvertToCalendar}
+                  disabled={processing}
+                  title="공지로 분류됐지만 날짜가 감지됨 — 행사로 바꿔 캘린더에 등록할 수 있습니다"
+                  className="flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 hover:underline disabled:opacity-50"
+                >
+                  📅 날짜가 있는 일정인가요? 캘린더로 보내기 (행사로 전환)
+                </button>
+              )}
             </div>
           ) : isCalendarKind && hasDate ? (
             /* 행사·모임 + 날짜 → 캘린더 등록 (주 액션) + 게시판 미러 옵션 */
