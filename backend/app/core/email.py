@@ -2,6 +2,7 @@ import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, parseaddr
 
 from app.core.config import settings
 from app.core.site_settings import get_setting
@@ -136,7 +137,10 @@ def send_bulletin_notification(emails: list[str], bulletin_info: dict) -> int:
     from app.core.site_settings import get_parish_name
     subject = f"[{get_parish_name()}] {subject_suffix} 등록 안내"
     html = _build_bulletin_html(bulletin_info)
-    sender = get_setting("SMTP_FROM") or smtp_user
+    # 발신 주소는 SMTP_FROM(표시명이 섞여 있어도 주소만 추출) → 없으면 SMTP_USER.
+    # 발신 표시명은 본당명(PARISH_NAME)을 항상 우선 사용 — 본당명 변경 시 자동 반영.
+    sender_addr = parseaddr(get_setting("SMTP_FROM") or "")[1] or smtp_user
+    sender_header = formataddr((get_parish_name(), sender_addr), charset="utf-8")
 
     sent = 0
     try:
@@ -149,11 +153,11 @@ def send_bulletin_notification(emails: list[str], bulletin_info: dict) -> int:
             for email in emails:
                 msg = MIMEMultipart("alternative")
                 msg["Subject"] = subject
-                msg["From"] = sender
+                msg["From"] = sender_header
                 msg["To"] = email
                 msg.attach(MIMEText(html, "html", "utf-8"))
                 try:
-                    smtp.sendmail(sender, [email], msg.as_string())
+                    smtp.sendmail(sender_addr, [email], msg.as_string())
                     sent += 1
                 except Exception as e:
                     logger.error("이메일 발송 실패 (%s): %s", email, e)

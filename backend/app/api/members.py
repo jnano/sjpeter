@@ -6,6 +6,7 @@ import smtplib
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr, parseaddr
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 import csv
@@ -228,9 +229,13 @@ def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str]
         _email_logger.info("[메일 발송 mock] to=%s subject=%s\n%s", to_email, subject, body)
         return
     try:
+        from app.core.site_settings import get_parish_name
+        # 발신 주소는 SMTP_FROM(표시명 섞여 있어도 주소만 추출) → 없으면 SMTP_USER.
+        # 발신 표시명은 본당명(PARISH_NAME)을 항상 우선 사용 — 본당명 변경 시 자동 반영.
+        sender_addr = parseaddr(get_setting("SMTP_FROM") or "")[1] or smtp_user
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = get_setting("SMTP_FROM") or smtp_user
+        msg["From"] = formataddr((get_parish_name(), sender_addr), charset="utf-8")
         msg["To"] = to_email
         # plain → html 순서 (multipart/alternative 는 마지막 part 가 우선 표시)
         msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -242,7 +247,7 @@ def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str]
             server.ehlo()
             server.starttls()
             server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, [to_email], msg.as_string())
+            server.sendmail(sender_addr, [to_email], msg.as_string())
     except Exception as e:
         _email_logger.error("[SMTP 오류] to=%s: %s", to_email, e)
         raise HTTPException(status_code=500, detail="이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.")
