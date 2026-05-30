@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.442";
+export const CURRENT_VERSION = "1.5.443";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.443", date: "2026-05-30", tag: "수정", items: ["스크롤 시 사이드바 '메뉴 접기' 버튼이 sticky 헤더에 반쯤 가려지던 문제 — sticky top 오프셋을 md:top-44(176px) → md:top-52(208px) 로 32px 상향. 4 곳(SectionSidebar 본체·SectionLayout 펼침/접힘 토글·calendar 자체 사이드바) 일괄 적용. topbar+main shell+브레드크럼 띠가 합쳐졌을 때의 실제 sticky 헤더 높이를 충분히 덮음"] },
   { version: "1.5.442", date: "2026-05-30", tag: "디자인", items: ["사이트 전체 페이지 타이틀 영역 배경색을 본문(surface-warm)과 일치시킴 — PageHeader 컴포넌트 wrapper bg-white → bg-[var(--color-surface-warm)]. 브레드크럼·제목·subtitle 이 본문 크림 톤과 동일 색으로 통일. 모든 공개 페이지(/boards/notice, /pastor, /about, /history 등)에 자동 반영. 보더는 그대로 유지해 시각 구분"] },
   { version: "1.5.441", date: "2026-05-30", tag: "수정", items: ["게시판 컬럼 폭 원복 — v1.5.438~440 의 % 비율 실험을 되돌리고 v1.5.437 의 px+가변 colgroup 복귀. 번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70 px, 제목 가변(나머지 공간)"] },
   { version: "1.5.440", date: "2026-05-30", tag: "수정", items: ["게시판 제목 컬럼 폭 60% → 40% 변경. 나머지 N개 컬럼이 60% 를 균등 분배(8개 모두 활성 시 각 8.57%)"] },

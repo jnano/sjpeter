@@ -76,7 +76,7 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
         aria-pressed={collapsed}
         aria-label="메뉴 펼치기"
         title="메뉴 펼치기"
-        className="hidden md:flex items-center justify-center md:sticky md:top-44 z-10 w-7 h-7 -ml-10 -mb-7 bg-white border border-[var(--color-border)] rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
+        className="hidden md:flex items-center justify-center md:sticky md:top-52 z-10 w-7 h-7 -ml-10 -mb-7 bg-white border border-[var(--color-border)] rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-surface-warm)] hover:text-[var(--color-text)] transition-colors"
       >
         <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <polyline points="4 2 6.5 5 4 8" />
@@ -169,7 +169,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
               그러나 overflow-hidden ancestor 는 자식 sticky 의 컨테이너가 되어 sticky 를 깸 →
               이 wrapper 자체에 sticky 를 적용해 viewport 추종 효과 유지 (v1.5.324).
               '메뉴 접기' 토글도 이 sticky 안에 두어 스크롤 시 사진·메뉴와 함께 따라오게 함 (v1.5.368). */}
-          <div className="md:overflow-hidden md:sticky md:self-start md:top-44">
+          <div className="md:overflow-hidden md:sticky md:self-start md:top-52">
             <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
             <SectionSidebar
               groupTitle={effectiveGroup.label}

@@ -900,7 +900,7 @@ export default function CalendarPage() {
             >
               {/* 토글을 sticky 안에 두어 스크롤 시 사진·메뉴와 함께 따라오게 함 (v1.5.368).
                   overflow-hidden 이 SectionSidebar 자체 sticky 를 깨므로 이 wrapper 에 sticky 적용. */}
-              <div className="md:overflow-hidden md:sticky md:self-start md:top-44">
+              <div className="md:overflow-hidden md:sticky md:self-start md:top-52">
                 <SidebarCollapseTab collapsed={collapsed} onToggle={toggleCollapsed} />
                 <SectionSidebar
                   groupTitle={currentGroup.label}
