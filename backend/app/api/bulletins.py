@@ -1539,6 +1539,7 @@ class BulkReviewItem(BaseModel):
     community_group_ids: list[int] | None = None
     temporal_kind: str | None = None
     notify: bool = True
+    is_pinned: bool = False  # 공지를 게시판 상단 고정으로 등록
 
 
 class BulkApproveBody(BaseModel):
@@ -1585,6 +1586,13 @@ def bulk_approve_extractions(
                 gids = user_review.community_group_ids or []
                 tk = user_review.temporal_kind or ext.temporal_kind
                 notify_flag = user_review.notify
+                # 공지가 posts 로 등록된 경우, 검토에서 고정 지정 시 반영
+                if user_review.is_pinned:
+                    post_id = ext.created_notice_id or ext.created_post_id
+                    if post_id:
+                        pinned_post = db.query(Post).filter(Post.id == post_id).first()
+                        if pinned_post:
+                            pinned_post.is_pinned = True
             else:
                 gids = _auto_match_community_groups(db, ext)
                 tk = ext.temporal_kind

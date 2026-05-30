@@ -396,10 +396,10 @@ export default function ExtractionsPage() {
     if (ids.length === 0) return;
     setError(""); setInfo("");
     // 선택된 각 ext 의 현재 review state 동봉 — 사용자가 수동으로 고친 분과·시점·알림 우선
-    const reviews: Record<number, { community_group_ids: number[]; temporal_kind: string; notify: boolean }> = {};
+    const reviews: Record<number, { community_group_ids: number[]; temporal_kind: string; notify: boolean; is_pinned: boolean }> = {};
     for (const id of ids) {
       const r = reviewByExt[id];
-      if (r) reviews[id] = { community_group_ids: r.group_ids, temporal_kind: r.temporal_kind, notify: r.notify };
+      if (r) reviews[id] = { community_group_ids: r.group_ids, temporal_kind: r.temporal_kind, notify: r.notify, is_pinned: r.is_pinned };
     }
     // 분과 미선택 + notify=true 인 항목 추출 — 사용자에게 한 번에 안내
     const noGroupNotify = ids.filter((id) => {
