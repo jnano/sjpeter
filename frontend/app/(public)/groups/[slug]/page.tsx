@@ -59,36 +59,62 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       <PageHeader group="본당 공동체" title="분과와 단체" subtitle={group.name} />
       <SectionLayout autoHero={false}>
         <article className="space-y-8">
-          {/* 분과명 + 설명 — 시안 mission/header 톤 */}
-          <header className="border-b border-[var(--color-border)] pb-7">
-            <span className="inline-flex items-center gap-3 text-[11px] tracking-[0.2em] uppercase text-[var(--color-primary)] font-bold mb-3">
-              <span className="w-6 h-px bg-[var(--color-primary)]" />
-              본당 공동체 · Community
-            </span>
-            <div className="flex items-center flex-wrap gap-3 mb-4">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-text)]">
-                {group.name}
-              </h1>
-              {group.board_slug && (
-                <Link
-                  href={`/boards/${group.board_slug}`}
-                  className="inline-flex items-center gap-1 text-[12px] font-semibold px-3 py-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-full hover:bg-[var(--color-primary)]/5 transition-colors"
-                >
-                  게시판 보기 →
-                </Link>
-              )}
-            </div>
-            {group.description && (
-              <p className="text-[15px] leading-[1.8] text-[var(--color-text)] whitespace-pre-line tracking-tight">
-                {group.description}
-              </p>
-            )}
-            {group.activity_time && (
-              <p className="text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] inline-block px-3 py-1 rounded-full mt-4 font-semibold">
-                {group.activity_time}
-              </p>
-            )}
-          </header>
+          {/* 분과명 + 설명 + 대표 사진 — 시안 mission/header 톤.
+             v1.5.448 — representative_photo_url 이 있으면 우측 사진 + 좌측 텍스트 2단,
+             없으면 텍스트 풀폭. */}
+          {(() => {
+            const repPhoto = group.representative_photo_url
+              ? (group.representative_photo_url.startsWith("http")
+                  ? group.representative_photo_url
+                  : `${API}${group.representative_photo_url}`)
+              : null;
+            const hasRep = !!repPhoto;
+            return (
+              <header className={`border-b border-[var(--color-border)] pb-7 ${hasRep ? "grid grid-cols-1 md:grid-cols-[1fr_240px] gap-7 items-start" : ""}`}>
+                <div>
+                  <span className="inline-flex items-center gap-3 text-[11px] tracking-[0.2em] uppercase text-[var(--color-primary)] font-bold mb-3">
+                    <span className="w-6 h-px bg-[var(--color-primary)]" />
+                    본당 공동체 · Community
+                  </span>
+                  <div className="flex items-center flex-wrap gap-3 mb-4">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-text)]">
+                      {group.name}
+                    </h1>
+                    {group.board_slug && (
+                      <Link
+                        href={`/boards/${group.board_slug}`}
+                        className="inline-flex items-center gap-1 text-[12px] font-semibold px-3 py-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-full hover:bg-[var(--color-primary)]/5 transition-colors"
+                      >
+                        게시판 보기 →
+                      </Link>
+                    )}
+                  </div>
+                  {group.description && (
+                    <p className="text-[15px] leading-[1.8] text-[var(--color-text)] whitespace-pre-line tracking-tight">
+                      {group.description}
+                    </p>
+                  )}
+                  {group.activity_time && (
+                    <p className="text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] inline-block px-3 py-1 rounded-full mt-4 font-semibold">
+                      {group.activity_time}
+                    </p>
+                  )}
+                </div>
+                {hasRep && (
+                  <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-warm)]">
+                    <Image
+                      src={repPhoto!}
+                      alt={`${group.name} 대표 사진`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 240px"
+                      priority
+                    />
+                  </div>
+                )}
+              </header>
+            );
+          })()}
 
           {/* 관심 등록 패널 (분과 + 소속단체 토글) */}
           <GroupInterestSection
