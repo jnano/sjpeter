@@ -490,7 +490,7 @@ function UpcomingStrip({ events, todayStr, onSelect }: { events: Event[]; todayS
         const diff = Math.round((Date.parse(e.event_date) - Date.parse(todayStr)) / 86400000);
         const d = new Date(e.event_date);
         const rel = diff <= 0 ? "오늘" : diff === 1 ? "내일" : diff === 2 ? "모레" : "";
-        const dd = diff <= 0 ? "지금" : `D-${diff}`;
+        const dd = diff <= 0 ? "오늘" : `D-${diff}`;
         return (
           <button key={e.id} data-cat={catKey(e)} onClick={() => onSelect(e)} className="cal-upcard">
             <div className="ribbon">
