@@ -129,6 +129,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: "⚙",
     items: [
       { href: "/admin/settings", label: "사이트 설정", superOnly: true },
+      { href: "/admin/backup", label: "백업", superOnly: true },
       { href: "/admin/reports", label: "장애 신고" },
       { href: "/admin/logs", label: "활동 로그" },
       { href: "/admin/notification-log", label: "알림 발송 로그" },
