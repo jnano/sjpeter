@@ -528,7 +528,7 @@ export default async function HomePage() {
                 placeholder="무엇을 찾으시나요?"
               />
             </div>
-            <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
+            <HomeHero parishName={parish?.name ?? "본당 홈페이지"} parishNameEn={siteConfig.PARISH_NAME_EN ?? ""} />
           </div>
 
           {/* wide(±배너) | even+배너 | even-plain */}
@@ -799,7 +799,7 @@ export default async function HomePage() {
       </div>
       {/* 2. 메인사진 */}
       <div className={`${CONTAINER} py-3`}>
-        <HomeHero parishName={parish?.name ?? "본당 홈페이지"} />
+        <HomeHero parishName={parish?.name ?? "본당 홈페이지"} parishNameEn={siteConfig.PARISH_NAME_EN ?? ""} />
       </div>
       {/* 3. 빠른 메뉴 (성당소개/새항목/주보아카이브) */}
       {wrapSection(quickLinksInner(mobileQuickLinksPayload), "py-3")}

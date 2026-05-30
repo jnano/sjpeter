@@ -19,9 +19,10 @@ const FALLBACK = { id: -1, file_url: "/yakhoun.jpg", original_name: "fallback", 
 
 interface Props {
   parishName: string;
+  parishNameEn?: string;
 }
 
-export default function HomeHero({ parishName }: Props) {
+export default function HomeHero({ parishName, parishNameEn }: Props) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [index, setIndex] = useState(0);
 
@@ -76,9 +77,11 @@ export default function HomeHero({ parishName }: Props) {
         <p className="text-white font-serif font-bold text-sm leading-tight tracking-tight">
           {parishName}
         </p>
-        <p className="text-white/80 text-[10.3px] mt-0.5 tracking-wider">
-          ST. PETER&apos;S CATHEDRAL · SEJONG
-        </p>
+        {parishNameEn && (
+          <p className="text-white/80 text-[10.3px] mt-0.5 tracking-wider uppercase">
+            {parishNameEn}
+          </p>
+        )}
       </div>
     </div>
   );
