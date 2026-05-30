@@ -18,7 +18,7 @@ function useParishName(): string {
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.457";
+export const CURRENT_VERSION = "1.5.458";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -28,6 +28,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.458", date: "2026-05-30", tag: "인프라", items: ["사무국 운영 가이드(OPERATOR_GUIDE.md) 작성 — 비IT 본당 사무국 대상. 6 섹션: (0) 처음 사용 시 로그인·비밀번호·기본 정보, (1) 매주 하는 일(주보 업로드·공지·일정), (2) 자주 하는 일(회원·사진·분과·사목자), (3) 가끔(백업·메뉴·홈 구성), (4) 문제 발생 시(비밀번호·탈퇴·장애·삭제·외부 키), (5) FAQ 6건, (6) 도움말·문의. INSTALL.md 에 참조 링크 추가"] },
   { version: "1.5.457", date: "2026-05-30", tag: "기능", items: ["멀티 본당 배포 후속 UX. (1) /admin/backup 페이지 신설 — '백업 만들기' 버튼 + 과거 백업 파일 목록(이름·생성일·크기) + cron 안내. confirm() 후 5분 timeout 으로 fetch+blob 다운로드. (2) /members/me/profile 에 '내 정보 다운로드' 섹션 추가 — KISA 정보주체 권리(개인정보 보호법 제35조) 안내 + JWT 헤더 포함 fetch+blob 다운로드 패턴. (3) docs/INSTALL.md 에 '방법 A: Docker Compose 한 줄 설치' 섹션 추가 — docker compose --env-file .env.docker up -d --build 으로 §3~§7 우회 가능. 기존 직접 설치는 '방법 B'"] },
   { version: "1.5.456", date: "2026-05-30", tag: "인프라", items: ["멀티 본당 배포 차단 Top3 일괄 해소. (1) 본당명 하드코딩 제거 — useParishName 훅 신설 후 admin/docs PhilosophyTab·OwnershipTab 5건 동적 치환. /about '세종시' 3건 일반화. backend/main.py 의 static_pages.saint 시드·PagePhotoSlug.saint(/saints/st_peter.jpg fallback) 폐기 후 patron 슬러그로 대체. SMTP_FROM 예시·admin/parish/info placeholder 4건 일반화. (2) Docker + 보안 헤더 + Sentry — backend/Dockerfile·frontend/Dockerfile·docker-compose.yml·.env.docker.example 작성. next.config.ts output:standalone. FastAPI security headers 미들웨어(X-Frame-Options:SAMEORIGIN, X-Content-Type-Options:nosniff, Referrer-Policy, Permissions-Policy, ENV=production 시 HSTS). /api/health 가 SELECT 1 DB 검증 추가(실패 시 503). _init_sentry_if_configured() 가 site_settings.SENTRY_DSN 있고 sentry-sdk 설치 시 자동 활성화. SENTRY_DSN site_settings 시드 추가. (3) 백업·Export·Audit — POST /api/admin/backup/run (pg_dump + uploads tarball, 다운로드 + backups/ 영구 보존) + GET /api/admin/backup/list. GET /api/members/me/export (KISA 정보주체 권리: 프로필·글·댓글·관심분과 JSON 다운로드). update_setting() audit log 추가(비밀 키는 값 자체 기록 금지, set/unset 만)"] },
   { version: "1.5.455", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 후속 4건 완료 — (A) response_model 잔여 보강: BatchBulletinCountsResponse·AiAnalysisStatsResponse(중첩 모델 DurationStats·TopError·EventTypeStat·RecentAnalysis 포함)·BulkApproveResponse·BulletinResultCounts 신설, bulletins.py 5개 endpoint 추가 적용. (B) Header 추가 분할: HeaderUserMenu.tsx 추출(104줄) — Header.tsx 378 → 319 줄. signOut/useRouter import·userMenuRef 도 함께 이전. (C) 게시판 list 캐싱 확대: /boards/[slug] 의 board 설정 fetch 만 revalidate=300 + boards/board:{slug} 태그(notice·posts·post-detail 은 시간 민감성으로 유지). (D) Alembic 워크플로 검증: 4b08e018ed60_verify_workflow_noop.py revision 생성 후 alembic upgrade head 적용, DB version_num 0001_baseline → 4b08e018ed60 정상 갱신 확인. SCHEMA_CHANGES.md 가이드 첫 사례"] },
