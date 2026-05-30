@@ -9,6 +9,7 @@ import { useNavigation } from "./useNavigation";
 import { SEASON_LABELS_KO, type LiturgicalSeason } from "@/lib/season";
 import LogoFallback from "@/components/icons/LogoFallback";
 import NotificationBell from "@/components/NotificationBell";
+import HeaderMobileMenu from "@/components/HeaderMobileMenu";
 
 interface Breadcrumb { group: string; title: string }
 
@@ -360,83 +361,18 @@ export default function Header({ parishName = "본당 홈페이지", parishNameE
         </div>
       </div>
 
-      {/* 모바일 메뉴 — 그룹 아코디언 (기존 동작 유지) */}
-      {menuOpen && (
-        <nav className="md:hidden border-t border-[var(--color-border)] py-2 pb-4 bg-white">
-            <form onSubmit={handleSearch} className="px-3 py-2 flex gap-2">
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="기도문·공지·주보 검색"
-                className="flex-1 px-3 py-2 text-sm rounded-full bg-[var(--color-surface-warm)] text-[var(--color-text)] placeholder-[var(--color-text-muted)] border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-primary)]"
-              />
-              <button type="submit" className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-full">검색</button>
-            </form>
-            {visibleNavGroups.map((group, idx) => {
-              const isActiveGroup = currentGroup?.id === group.id;
-              return (
-                <div key={group.key}>
-                  <button
-                    onClick={() => setOpenGroup(openGroup === idx ? null : idx)}
-                    aria-current={isActiveGroup ? "page" : undefined}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-sm font-medium transition-colors hover:bg-[var(--color-surface-warm)] ${
-                      isActiveGroup
-                        ? "text-[var(--color-primary)] border-l-[3px] border-[var(--color-primary)] bg-[var(--color-surface-warm)]/40"
-                        : "text-[var(--color-text)] border-l-[3px] border-transparent"
-                    }`}
-                  >
-                    <span>{group.label}</span>
-                    <span className={`text-[var(--color-text-muted)] text-xs transition-transform duration-200 ${openGroup === idx ? "rotate-180" : ""}`}>▾</span>
-                  </button>
-                  {openGroup === idx && (
-                    <div className="bg-[var(--color-surface-warm)]/60 border-t border-b border-[var(--color-border)]">
-                      {group.subtitle && (
-                        <div className="px-5 py-2">
-                          <span className="text-[11px] text-[var(--color-text-muted)] tracking-wide">{group.subtitle}</span>
-                        </div>
-                      )}
-                      {group.items.map((item) => (
-                        <div key={item.id}>
-                          <Link
-                            href={item.href}
-                            target={item.is_external ? "_blank" : undefined}
-                            rel={item.is_external ? "noopener noreferrer" : undefined}
-                            onClick={() => { setMenuOpen(false); setOpenGroup(null); }}
-                            className={`block px-7 py-2.5 text-sm transition-colors ${
-                              pathname === item.href ? "text-[var(--color-primary)] font-semibold" : "text-[var(--color-text)] hover:text-[var(--color-primary)]"
-                            }`}
-                          >
-                            {item.label}
-                            {item.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
-                          </Link>
-                          {(item.children?.length ?? 0) > 0 && (
-                            <div className="bg-white/60">
-                              {item.children!.map((c) => (
-                                <Link
-                                  key={c.id}
-                                  href={c.href}
-                                  target={c.is_external ? "_blank" : undefined}
-                                  rel={c.is_external ? "noopener noreferrer" : undefined}
-                                  onClick={() => { setMenuOpen(false); setOpenGroup(null); }}
-                                  className={`block px-11 py-2 text-xs transition-colors ${
-                                    pathname === c.href ? "text-[var(--color-primary)] font-semibold" : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
-                                  }`}
-                                >
-                                  └ {c.label}
-                                  {c.is_external && <span className="text-xs text-gray-400 ml-1">↗</span>}
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
-        )}
+      {/* 모바일 메뉴 — 그룹 아코디언. v1.5.454 HeaderMobileMenu 로 분리. */}
+      <HeaderMobileMenu
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        openGroup={openGroup}
+        setOpenGroup={setOpenGroup}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        handleSearch={handleSearch}
+        visibleNavGroups={visibleNavGroups}
+        pathname={pathname ?? ""}
+      />
     </header>
   );
 }
