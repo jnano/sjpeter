@@ -217,7 +217,7 @@ export default function AdminParishInfoPage() {
               value={info.name_en ?? ""}
               onChange={(e) => setInfo((p) => p && ({ ...p, name_en: e.target.value }))}
               className={`w-full ${inputCls}`}
-              placeholder="St. Peter's Cathedral"
+              placeholder="Parish name in English"
             />
             <p className="text-xs text-gray-400 mt-1">
               헤더 성당명 아래 회색 영문, 홈 대표사진 캡션, 이메일 영문 표기에 사용됩니다. 비워두면 영문 줄이 표시되지 않습니다.
@@ -506,7 +506,7 @@ export default function AdminParishInfoPage() {
                 onChange={(e) => setInfo((p) => p && ({ ...p, description: e.target.value }))}
                 className={`w-full ${inputCls}`}
                 rows={5}
-                placeholder={"세종시에 새로 자라나는 본당으로, 매주 미사와 기도, 분과 활동과 봉사를 통해 그리스도의 제자로 살아가는 공동체입니다.\n\n수호성인의 이름 아래, 한 반석 위에 세워지는 공동체. 우리는 한 해 한 해를 함께 짓고 있습니다."}
+                placeholder={"매주 미사와 기도, 분과 활동과 봉사를 통해 그리스도의 제자로 살아가는 공동체입니다.\n\n수호성인의 이름 아래, 한 반석 위에 세워지는 공동체. 우리는 한 해 한 해를 함께 짓고 있습니다."}
               />
               <p className="text-[11px] text-gray-400 mt-1">빈 줄로 단락을 구분합니다. 줄바꿈은 그대로 표시됩니다.</p>
             </div>

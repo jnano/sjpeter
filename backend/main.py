@@ -1497,7 +1497,7 @@ def _migrate_add_columns():
             ('CURRENT_SEASON',        '현재 전례 시기',         '빈 값=꺼짐 / advent · christmas · lent · easter · ordinary · pentecost', FALSE, '스킨'),
             ('SEASON_AUTO_MODE',      '전례 시기 자동 모드',     'true=오늘 날짜로 자동 계산(CURRENT_SEASON 무시), false=수동 선택값 사용', FALSE, '스킨'),
             ('PARISH_NAME',           '본당 이름',             '사이트 전반·이메일 발신자·메타 태그에 사용',           FALSE, '사이트'),
-            ('PARISH_NAME_EN',        '본당 영문명',           '선택. footer·meta tag 등에 사용 (예: St. Peter''s Cathedral)', FALSE, '사이트'),
+            ('PARISH_NAME_EN',        '본당 영문명',           '선택. footer·meta tag 등 영문 표기에 사용', FALSE, '사이트'),
             ('SENTRY_DSN',            'Sentry DSN',           '선택. 운영 에러·성능 추적용 Sentry 프로젝트 DSN (v1.5.456)', TRUE, '보안')
             ON CONFLICT (key) DO NOTHING
         """))

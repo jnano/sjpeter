@@ -48,7 +48,7 @@ def _build_vars(db: Session) -> dict[str, str]:
 # admin UI 안내용 — 키·설명. 위 _build_vars 와 동기 유지.
 VARIABLE_DOCS: list[dict[str, str]] = [
     {"key": "PARISH_NAME", "desc": "본당 이름"},
-    {"key": "PARISH_NAME_EN", "desc": "본당 영문명 (예: St. Peter's Cathedral)"},
+    {"key": "PARISH_NAME_EN", "desc": "본당 영문명 (영문 표기)"},
     {"key": "PARISH_ADDRESS", "desc": "본당 주소"},
     {"key": "PARISH_PHONE", "desc": "본당 전화번호"},
     {"key": "PARISH_FAX", "desc": "본당 팩스번호"},

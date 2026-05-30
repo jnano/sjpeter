@@ -281,7 +281,7 @@ export default function AdminPagePhotosIndex() {
               <input
                 value={form.fallback_url}
                 onChange={(e) => setForm((p) => ({ ...p, fallback_url: e.target.value }))}
-                placeholder="/saints/st_peter.jpg"
+                placeholder="/photos/sample.jpg"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-400 mt-0.5">사진을 한 장도 등록하지 않았을 때 표시할 폴백 이미지(public/ 경로 또는 절대 URL).</p>
