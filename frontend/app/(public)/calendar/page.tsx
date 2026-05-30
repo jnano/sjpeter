@@ -38,6 +38,7 @@ const KIND_OPTIONS = ["중요", "행사", "모임", "봉사", "순례", "피정"
 
 const FILTER_CATS: { value: string; label: string; cat: string | null }[] = [
   { value: "all", label: "전체", cat: null },
+  { value: "중요", label: "중요", cat: "featured" },
   { value: "행사", label: "행사", cat: "event" },
   { value: "모임", label: "모임", cat: "meeting" },
   { value: "봉사", label: "봉사", cat: "service" },
