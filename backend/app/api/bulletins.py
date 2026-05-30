@@ -539,7 +539,8 @@ class ExtractionOut(BaseModel):
     created_event_id: Optional[int] = None
     created_meditation_id: Optional[int] = None
     created_vision_id: Optional[int] = None
-    created_at: datetime
+    # 방어적 Optional: 정상 행은 항상 채워지지만, 혹시 NULL 이어도 500 대신 null 로 응답.
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

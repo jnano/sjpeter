@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Date, Text, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Date, Text, DateTime, ForeignKey, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
@@ -44,7 +44,9 @@ class BulletinExtraction(Base):
     created_meditation_id = Column(Integer, nullable=True)  # 묵상으로 등록됐을 때 meditations.id
     created_vision_id = Column(Integer, nullable=True)      # 본당 사목지표로 등록됐을 때 visions.id
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # nullable=False + server_default: raw SQL INSERT·마이그레이션 경로에서도 DB 가 NOW() 로 채움.
+    # default(ORM) 만 있으면 ORM 외 INSERT 시 NULL 이 되어 ExtractionOut 직렬화가 500 을 낸다.
+    created_at = Column(DateTime, nullable=False, server_default=text("NOW()"), default=datetime.utcnow)
 
     # passive_deletes=True: DB 의 ON DELETE CASCADE 가 처리하므로 ORM 은 자식 NULL set 시도 금지.
     bulletin = relationship(
