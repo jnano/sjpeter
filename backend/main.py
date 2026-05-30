@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api import bulletins, notices, auth, members, boards, parish, gospel, content, events, archive
 from app.api import settings_api, home_banner, parish_staff, page_photos, menus, pages, construction, banners, util
-from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks, catechumen
+from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks, catechumen, backup
 from app.core.config import settings
 from app.core.database import create_tables
 from contextlib import asynccontextmanager
@@ -21,6 +21,34 @@ logging.basicConfig(
 )
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
+
+
+def _init_sentry_if_configured() -> None:
+    """site_settings.SENTRY_DSN 이 설정돼 있으면 Sentry 초기화 (v1.5.456).
+
+    sentry-sdk 가 설치되지 않으면 silent skip — 의무 의존성 X.
+    설치: pip install 'sentry-sdk[fastapi]'
+    """
+    try:
+        from app.core.site_settings import get_setting
+        dsn = get_setting("SENTRY_DSN") or os.getenv("SENTRY_DSN")
+        if not dsn:
+            return
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        sentry_sdk.init(
+            dsn=dsn,
+            integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_RATE", "0.1")),
+            environment=os.getenv("ENV", "development"),
+            send_default_pii=False,
+        )
+        logging.getLogger(__name__).info("Sentry 초기화 완료")
+    except ImportError:
+        logging.getLogger(__name__).info("sentry-sdk 미설치 — Sentry skip")
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Sentry 초기화 실패: %s", exc)
 
 
 @asynccontextmanager
@@ -40,6 +68,7 @@ async def lifespan(app: FastAPI):
     _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
     _seed_initial_data()
     _seed_auth_secret()
+    _init_sentry_if_configured()  # v1.5.456 — Sentry 조건부 초기화
     yield
     # ── shutdown ── (현재 정리 작업 없음. SQLAlchemy 엔진은 process 종료 시 자동 정리)
 
@@ -69,6 +98,22 @@ if os.getenv("ENABLE_TUNNEL_CORS") == "1":
         )
     _cors_kwargs["allow_origin_regex"] = r"https://.*\.trycloudflare\.com"
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+
+# v1.5.456 — 보안 헤더 미들웨어 (HSTS / X-Frame-Options / X-Content-Type-Options / Referrer-Policy).
+# HSTS 는 HTTPS 환경에서만 의미가 있으나 응답 헤더로 두는 게 표준.
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # production HTTPS 에선 HSTS — 도메인 운영 시작 후 6개월부터 max-age 늘릴 것 권장
+    if os.getenv("ENV", "").lower() == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=15552000; includeSubDomains"
+    return response
+
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(bulletins.router, prefix="/api")
@@ -100,6 +145,7 @@ app.include_router(transport_routes.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(saints.router, prefix="/api")
 app.include_router(setup.router)
+app.include_router(backup.router)  # /api/admin/backup/* — v1.5.456
 app.include_router(onboarding.router)
 app.include_router(home_blocks.router, prefix="/api")
 app.include_router(catechumen.router, prefix="/api")
@@ -1418,7 +1464,7 @@ def _migrate_add_columns():
         conn.execute(text("""
             INSERT INTO site_settings (key, label, description, is_secret, group_name) VALUES
             ('SITE_URL',              '사이트 URL',            '이메일 링크 등에 사용되는 홈페이지 주소',         FALSE, '사이트'),
-            ('SMTP_FROM',             '발신자 이름/주소',       '예: 성베드로성당 <noreply@peter.com>',                  FALSE, '사이트'),
+            ('SMTP_FROM',             '발신자 이름/주소',       '예: 우리 본당 <noreply@example.com>',                   FALSE, '사이트'),
             ('SMTP_HOST',             'SMTP 서버',             '예: smtp.gmail.com',                            FALSE, '이메일'),
             ('SMTP_PORT',             'SMTP 포트',             '일반적으로 587 (TLS)',                           FALSE, '이메일'),
             ('SMTP_USER',             'SMTP 계정',             '발송에 사용할 이메일 계정',                       FALSE, '이메일'),
@@ -1435,7 +1481,8 @@ def _migrate_add_columns():
             ('CURRENT_SEASON',        '현재 전례 시기',         '빈 값=꺼짐 / advent · christmas · lent · easter · ordinary · pentecost', FALSE, '스킨'),
             ('SEASON_AUTO_MODE',      '전례 시기 자동 모드',     'true=오늘 날짜로 자동 계산(CURRENT_SEASON 무시), false=수동 선택값 사용', FALSE, '스킨'),
             ('PARISH_NAME',           '본당 이름',             '사이트 전반·이메일 발신자·메타 태그에 사용',           FALSE, '사이트'),
-            ('PARISH_NAME_EN',        '본당 영문명',           '선택. footer·meta tag 등에 사용 (예: St. Peter''s Cathedral)', FALSE, '사이트')
+            ('PARISH_NAME_EN',        '본당 영문명',           '선택. footer·meta tag 등에 사용 (예: St. Peter''s Cathedral)', FALSE, '사이트'),
+            ('SENTRY_DSN',            'Sentry DSN',           '선택. 운영 에러·성능 추적용 Sentry 프로젝트 DSN (v1.5.456)', TRUE, '보안')
             ON CONFLICT (key) DO NOTHING
         """))
 
@@ -1808,18 +1855,8 @@ def _seed_initial_data():
         # 정적 페이지 초기 데이터
         if not db.query(StaticPage).first():
             pages = [
-                StaticPage(
-                    slug="saint",
-                    title="성 베드로",
-                    subtitle="반석 위에 세운 교회의 수호성인",
-                    body="예수님께서 시몬에게 베드로(반석)라는 이름을 주시며 말씀하셨습니다.\n"
-                         "\"나는 이 반석 위에 내 교회를 세울 터인즉 저승의 세력도 그것을 이기지 못할 것이다.\" (마태 16,18)\n\n"
-                         "본당 수호성인의 신앙과 용기를 본받아,\n"
-                         "이 땅에 하느님 나라를 세워가는 공동체입니다.\n\n"
-                         "갈릴래아 어부 출신의 평범한 사람이었지만, 예수님의 부르심에 응답하여\n"
-                         "교회의 초석이 된 베드로처럼,\n"
-                         "우리 공동체도 날마다 주님께 더 가까이 나아가길 다짐합니다.",
-                ),
+                # v1.5.406 이후 /saint 는 /patron 으로 이전됨 — 시드 폐기.
+                # 새 본당이 자기 수호성인을 /admin/parish/patron 에서 입력.
                 StaticPage(
                     slug="council",
                     title="사목평의회",
@@ -1861,9 +1898,10 @@ def _seed_initial_data():
         from app.models.page_photo import PagePhotoSlug
         if not db.query(PagePhotoSlug).first():
             slug_seed = [
-                PagePhotoSlug(slug="saint", label="성 베드로", public_href="/saint",
-                              description="/saint 본문 상단 히어로 이미지",
-                              fallback_url="/saints/st_peter.jpg", sort_order=0),
+                # v1.5.406 이후 /saint 는 /patron 으로 이전됨 — 시드 항목 폐기 (v1.5.456).
+                PagePhotoSlug(slug="patron", label="수호 성인", public_href="/patron",
+                              description="/patron 상단 히어로 이미지 (수호성인 사진)",
+                              sort_order=0),
                 PagePhotoSlug(slug="history", label="본당 연혁", public_href="/history",
                               description="/history 상단 히어로 이미지", sort_order=1),
                 PagePhotoSlug(slug="vision", label="본당 사목지표", public_href="/vision",
@@ -2038,7 +2076,19 @@ def _seed_saint_popularity(db) -> None:
 
 @app.get("/api/health")
 def health():
+    """헬스체크 — uptime 모니터링용. DB 연결까지 검증 (v1.5.456)."""
     from app.core.site_settings import get_parish_name
+    from app.core.database import engine
+    from sqlalchemy import text as _text
+    try:
+        with engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))
+    except Exception as exc:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=503,
+            content={"status": "degraded", "error": str(exc)[:120]},
+        )
     return {"status": "ok", "project": get_parish_name()}
 
 

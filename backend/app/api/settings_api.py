@@ -141,9 +141,12 @@ def update_setting(
     key: str,
     body: SettingUpdate,
     db: Session = Depends(get_db),
-    _: Admin = Depends(get_current_super_admin),
+    admin: Admin = Depends(get_current_super_admin),
 ):
-    """설정값 저장 — 없는 키는 새로 생성(upsert). 비밀값 빈 입력은 기존값 유지."""
+    """설정값 저장 — 없는 키는 새로 생성(upsert). 비밀값 빈 입력은 기존값 유지.
+    v1.5.456 — 변경 audit log 추가. 비밀 키는 detail 에 값 자체 기록 금지."""
+    from app.core.admin_log import get_admin_identifier, log_action
+
     row = db.query(SiteSetting).filter(SiteSetting.key == key).first()
     if not row:
         # 신규 키 — NOT NULL 컬럼(label, group_name, is_secret) default 채우고 row 생성
@@ -160,16 +163,25 @@ def update_setting(
         db.commit()
         db.refresh(row)
         invalidate(key)
+        log_action(db, get_admin_identifier(admin), "create_setting", "site_setting", None,
+                   f"{key} (신규 자동 생성, is_secret={is_secret})")
         return _to_out(row)
 
     # 비밀값: 빈 문자열이나 None이면 기존값 유지
     if row.is_secret and not body.value:
         return _to_out(row)
 
+    old_was_set = bool(row.value)
     row.value = body.value
     db.commit()
     db.refresh(row)
     invalidate(key)
+    # 비밀 키는 값 자체 기록 금지 — set/unset 여부와 길이만
+    if row.is_secret:
+        detail = f"{key} (비밀 키 변경, 이전={'set' if old_was_set else 'unset'}, 새 길이={len(body.value or '')})"
+    else:
+        detail = f"{key} = {(body.value or '')[:80]}"
+    log_action(db, get_admin_identifier(admin), "update_setting", "site_setting", None, detail)
     return _to_out(row)
 
 

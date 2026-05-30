@@ -666,6 +666,72 @@ def clear_my_name_day(db: Session = Depends(get_db), current: Member = Depends(g
     return _member_out(current)
 
 
+@router.get("/me/export")
+def export_my_data(db: Session = Depends(get_db), current: Member = Depends(get_current_member)):
+    """v1.5.456 — 개인정보 보호법(KISA) 정보주체 권리: 회원 본인 데이터 다운로드.
+
+    프로필 + 작성한 글·댓글 + 관심 분과 + 알림 설정을 JSON 으로 반환.
+    응답은 Content-Disposition 으로 첨부파일 다운로드 유도.
+    """
+    from datetime import datetime
+    from fastapi.responses import JSONResponse
+    from app.models.board import Post, Comment
+
+    # 본인 글
+    posts = db.query(Post).filter(Post.member_id == current.id).all()
+    posts_data = [{
+        "id": p.id,
+        "board_slug": p.board.slug if p.board else None,
+        "title": p.title,
+        "body": p.body,
+        "view_count": p.view_count,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+    } for p in posts]
+
+    # 본인 댓글
+    comments = db.query(Comment).filter(Comment.member_id == current.id).all()
+    comments_data = [{
+        "id": c.id,
+        "post_id": c.post_id,
+        "body": c.body,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+    } for c in comments]
+
+    # 관심 분과 (v1.5.~ member_interests)
+    interests_data: list[dict] = []
+    try:
+        from app.models.member_interest import MemberInterest
+        rows = db.query(MemberInterest).filter(MemberInterest.member_id == current.id).all()
+        interests_data = [{"community_group_id": r.community_group_id} for r in rows]
+    except Exception:
+        pass
+
+    payload = {
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "exported_for": "본인 데이터 전체 다운로드 (개인정보 보호법 제35조)",
+        "profile": {
+            "id": current.id,
+            "email": current.email,
+            "nickname": current.nickname,
+            "phone": current.phone,
+            "baptismal_name": current.baptismal_name,
+            "name_day_month": current.name_day_month,
+            "name_day_day": current.name_day_day,
+            "avatar_url": current.avatar_url,
+            "created_at": current.created_at.isoformat() if current.created_at else None,
+            "last_login_at": current.last_login_at.isoformat() if getattr(current, "last_login_at", None) else None,
+        },
+        "posts": posts_data,
+        "comments": comments_data,
+        "interests": interests_data,
+    }
+    filename = f"my-data-{current.id}-{datetime.utcnow().strftime('%Y%m%d')}.json"
+    return JSONResponse(
+        content=payload,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.delete("/me", status_code=204)
 def delete_me(
     db: Session = Depends(get_db),

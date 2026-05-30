@@ -323,7 +323,7 @@ export default function AdminParishInfoPage() {
               value={info.address ?? ""}
               onChange={(e) => setInfo((p) => p && ({ ...p, address: e.target.value }))}
               className={`w-full ${inputCls}`}
-              placeholder="세종특별자치시 도움5로 00"
+              placeholder="예: 서울특별시 중구 명동길 74"
             />
           </div>
           <div>
@@ -346,7 +346,7 @@ export default function AdminParishInfoPage() {
                   value={info.lat ?? ""}
                   onChange={(e) => setInfo((p) => p && ({ ...p, lat: e.target.value ? parseFloat(e.target.value) : null }))}
                   className={`w-full ${inputCls}`}
-                  placeholder="위도 (예: 36.504012)"
+                  placeholder="위도 (예: 37.563685)"
                 />
               </div>
               <div>
@@ -356,7 +356,7 @@ export default function AdminParishInfoPage() {
                   value={info.lng ?? ""}
                   onChange={(e) => setInfo((p) => p && ({ ...p, lng: e.target.value ? parseFloat(e.target.value) : null }))}
                   className={`w-full ${inputCls}`}
-                  placeholder="경도 (예: 127.249412)"
+                  placeholder="경도 (예: 126.987273)"
                 />
               </div>
             </div>
@@ -632,7 +632,7 @@ function TransportRoutesSection() {
         <textarea
           value={draftDesc}
           onChange={(e) => setDraftDesc(e.target.value)}
-          placeholder="노선 설명 (예: BRT B2 이용 → 정부세종청사북측 정류장 하차, 도보 약 5분)"
+          placeholder="노선 설명 (예: 지하철 4호선 명동역 8번 출구, 도보 약 5분)"
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />

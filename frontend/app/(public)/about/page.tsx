@@ -15,7 +15,7 @@ import {
 export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
-  return { title: "성당 안내", description: `${p.name} 소개 — 세종시 최초 본당` };
+  return { title: "성당 안내", description: `${p.name} 공동체 소개` };
 }
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL;
@@ -131,7 +131,7 @@ export default async function AboutPage() {
 
   return (
     <>
-      <PageHeader group="성당 소개" title="성당 안내" subtitle="세종시 첫 본당, 함께 짓고 함께 머무는 공동체입니다." />
+      <PageHeader group="성당 소개" title="성당 안내" subtitle={`${parish?.name ?? "본당"} 공동체 소개`} />
       <SectionLayout group="about" tools>
         <div className="ab-page">
           <BannerSlider placement="about_top" className="mb-6" />
@@ -228,7 +228,7 @@ export default async function AboutPage() {
               <p style={{ whiteSpace: "pre-line" }}>{parish.description}</p>
             ) : (
               <>
-                <p>세종시에 새로 자라나는 본당으로, 매주 미사와 기도, 분과 활동과 봉사를 통해 그리스도의 제자로 살아가는 공동체입니다.</p>
+                <p>매주 미사와 기도, 분과 활동과 봉사를 통해 그리스도의 제자로 살아가는 공동체입니다.</p>
                 <p>수호성인의 이름 아래, 한 반석 위에 세워지는 공동체. 우리는 한 해 한 해를 함께 짓고 있습니다.</p>
               </>
             )}

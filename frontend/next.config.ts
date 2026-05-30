@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // v1.5.456 — Docker 이미지 최소 번들. node_modules 일부만 standalone 디렉토리에 복사됨.
+  output: "standalone",
   // dev 모드에서 LAN IP로 접속한 브라우저(휴대폰 등)도 HMR/dev 리소스 사용 허용
   allowedDevOrigins: ["121.152.118.40"],
   async redirects() {

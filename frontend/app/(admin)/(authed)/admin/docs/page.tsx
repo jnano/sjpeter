@@ -1,11 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/** 본당명을 동적으로 가져오는 훅 (v1.5.456 멀티 본당 대응) — 하드코딩 제거 목적. */
+function useParishName(): string {
+  const [name, setName] = useState("우리 본당");
+  useEffect(() => {
+    fetch(`${API}/api/parish/`).then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d?.name) setName(d.name);
+    }).catch(() => {});
+  }, []);
+  return name;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.455";
+export const CURRENT_VERSION = "1.5.456";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +28,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.456", date: "2026-05-30", tag: "인프라", items: ["멀티 본당 배포 차단 Top3 일괄 해소. (1) 본당명 하드코딩 제거 — useParishName 훅 신설 후 admin/docs PhilosophyTab·OwnershipTab 5건 동적 치환. /about '세종시' 3건 일반화. backend/main.py 의 static_pages.saint 시드·PagePhotoSlug.saint(/saints/st_peter.jpg fallback) 폐기 후 patron 슬러그로 대체. SMTP_FROM 예시·admin/parish/info placeholder 4건 일반화. (2) Docker + 보안 헤더 + Sentry — backend/Dockerfile·frontend/Dockerfile·docker-compose.yml·.env.docker.example 작성. next.config.ts output:standalone. FastAPI security headers 미들웨어(X-Frame-Options:SAMEORIGIN, X-Content-Type-Options:nosniff, Referrer-Policy, Permissions-Policy, ENV=production 시 HSTS). /api/health 가 SELECT 1 DB 검증 추가(실패 시 503). _init_sentry_if_configured() 가 site_settings.SENTRY_DSN 있고 sentry-sdk 설치 시 자동 활성화. SENTRY_DSN site_settings 시드 추가. (3) 백업·Export·Audit — POST /api/admin/backup/run (pg_dump + uploads tarball, 다운로드 + backups/ 영구 보존) + GET /api/admin/backup/list. GET /api/members/me/export (KISA 정보주체 권리: 프로필·글·댓글·관심분과 JSON 다운로드). update_setting() audit log 추가(비밀 키는 값 자체 기록 금지, set/unset 만)"] },
   { version: "1.5.455", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 후속 4건 완료 — (A) response_model 잔여 보강: BatchBulletinCountsResponse·AiAnalysisStatsResponse(중첩 모델 DurationStats·TopError·EventTypeStat·RecentAnalysis 포함)·BulkApproveResponse·BulletinResultCounts 신설, bulletins.py 5개 endpoint 추가 적용. (B) Header 추가 분할: HeaderUserMenu.tsx 추출(104줄) — Header.tsx 378 → 319 줄. signOut/useRouter import·userMenuRef 도 함께 이전. (C) 게시판 list 캐싱 확대: /boards/[slug] 의 board 설정 fetch 만 revalidate=300 + boards/board:{slug} 태그(notice·posts·post-detail 은 시간 민감성으로 유지). (D) Alembic 워크플로 검증: 4b08e018ed60_verify_workflow_noop.py revision 생성 후 alembic upgrade head 적용, DB version_num 0001_baseline → 4b08e018ed60 정상 갱신 확인. SCHEMA_CHANGES.md 가이드 첫 사례"] },
   { version: "1.5.454", date: "2026-05-30", tag: "인프라", items: ["Header.tsx 분할 — 442 줄 단일 컴포넌트의 모바일 드로어(76 줄)를 HeaderMobileMenu.tsx 로 추출. Header.tsx 378 줄로 축소. 모바일 햄버거 메뉴·검색폼·그룹 아코디언이 독립 컴포넌트로 분리되어 데스크탑/모바일 관심사 분리. 데스크탑 user menu·desktop nav 는 추가 분할이 필요하면 후속(v1.5.455+)에서. 동작·prop 일치 확인"] },
   { version: "1.5.453", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 권고 Top 5 + 부수 정리 일괄 처리. (1) Alembic 워크플로 정상화: backend/docs/SCHEMA_CHANGES.md 작성, _migrate_add_columns 함수 상단에 신규 ALTER 금지 경고, CLAUDE.md DB 마이그레이션 절 갱신. (2) 캐싱 전략: /patron·/pastors·/priests·/vision·/about·/info 6 페이지 force-dynamic → revalidate=300 + 태그 기반 무효화. (3) response_model 보강: app/api/_responses.py 공용 모델 추가(OkResponse·MessageResponse·DeletedIdResponse·BulkDeleteResponse·BackfillCountsResponse·BulletinAiStatusResponse 등) + bulletins/members 9 endpoint 적용. (4) next/image 일괄: ThumbnailImage 공용 컴포넌트 신설 + 6 스킨 갤러리 카드 적용. (5) SessionTimeout eslint-disable 2곳을 logoutRef/resetTimersRef 패턴으로 제거. 부수: print → logging(members.py SMTP 2곳), @app.on_event → lifespan(main.py), CLAUDE.md hard delete 정책 명시, loading.tsx 3개 추가((public)·(public)/boards·(admin)/(authed)/admin). Header.tsx 분할은 SessionTimeout 과 분리해 별도 처리(v1.5.454)"] },
@@ -3239,6 +3253,7 @@ function ChangelogTab() {
 }
 
 function PhilosophyTab() {
+  const parishName = useParishName();
   return (
     <div className="space-y-10 text-sm max-w-2xl mx-auto py-4">
 
@@ -3264,7 +3279,7 @@ function PhilosophyTab() {
         <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-warm)] px-4 py-1.5 text-xs text-[var(--color-text-muted)]">
           <span className="font-mono font-semibold text-[var(--color-primary)]">v{CURRENT_VERSION}</span>
           <span>·</span>
-          <span>세종 성베드로 성당 본당 홈페이지 소프트웨어</span>
+          <span>{parishName} 본당 홈페이지 소프트웨어</span>
         </div>
       </div>
 
@@ -3379,7 +3394,7 @@ function PhilosophyTab() {
           세파스는 소프트웨어입니다. 하지만 그 안에 담기는 것은
         </p>
         <p className="font-serif text-lg font-bold text-[var(--color-primary)]">
-          세종 성베드로 성당 공동체의 시간과 기억입니다.
+          {parishName} 공동체의 시간과 기억입니다.
         </p>
         <p className="text-xs text-[var(--color-text-muted)]">
           &ldquo;너는 베드로이다. 내가 이 반석 위에 내 교회를 세울 것이다.&rdquo; — 마태오 16,18
@@ -3391,6 +3406,7 @@ function PhilosophyTab() {
 }
 
 function OwnershipTab() {
+  const parishName = useParishName();
   return (
     <div className="space-y-6 text-sm max-w-2xl mx-auto">
 
@@ -3417,7 +3433,7 @@ function OwnershipTab() {
         </p>
         <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
           본 시스템을 통해 등록·관리되는 모든 데이터(주보·사진·게시글·회원 정보 등)의 소유권은
-          이를 운영하는 본당 — 본 사이트의 경우 <strong>세종 성베드로 성당</strong> — 에 있습니다.
+          이를 운영하는 본당 — 본 사이트의 경우 <strong>{parishName}</strong> — 에 있습니다.
         </p>
         <p className="text-xs text-[var(--color-text-muted)] mt-3 leading-relaxed">
           본 소프트웨어가 사용하는 <strong>외부 API·서비스</strong>(카카오, AWS Bedrock(Claude) 등)의
@@ -3432,7 +3448,7 @@ function OwnershipTab() {
         <p className="text-amber-800 leading-relaxed">
           본 시스템은 회원 가입 시 이름·이메일·연락처 등 개인정보를 수집합니다.
           수집된 개인정보는 본당 서비스 제공 목적으로만 사용되며,
-          「개인정보 보호법」에 따라 <strong>세종 성베드로 성당</strong>이 처리 책임을 집니다.
+          「개인정보 보호법」에 따라 <strong>{parishName}</strong>이 처리 책임을 집니다.
           개인정보 관련 문의는 본당 사무실 또는 관리자 이메일로 연락하시기 바랍니다.
         </p>
       </div>
@@ -3442,7 +3458,7 @@ function OwnershipTab() {
         <p>
           <span className="font-medium text-[var(--color-text)]">소프트웨어·설계</span> © 강태훈 야고보 (hunskang@gmail.com · 010-5099-9979)
           <span className="mx-2 text-[var(--color-border-dark)]">·</span>
-          <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span> © 세종 성베드로 성당
+          <span className="font-medium text-[var(--color-text)]">데이터·콘텐츠</span> © {parishName}
         </p>
         <p>최초 작성: 2026-5</p>
       </div>

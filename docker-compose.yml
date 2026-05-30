@@ -1,0 +1,69 @@
+# faithandme 멀티 본당 배포용 docker-compose (v1.5.456)
+# 사용:
+#   1) .env.docker 파일 작성 (POSTGRES_PASSWORD, NEXT_PUBLIC_API_URL 등)
+#   2) docker compose --env-file .env.docker up -d --build
+#   3) 첫 부팅 시 backend 가 alembic upgrade + _migrate_add_columns 자동 실행
+#   4) http://localhost:3000/setup 에서 초기 본당 정보·관리자 계정 입력
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cathedral}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-cathedral}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cathedral}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-cathedral}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cathedral}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set (32+ chars)}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (32+ chars)}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ENV: ${ENV:-production}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-200}
+      UPLOAD_DIR: /app/uploads
+      SITE_URL: ${SITE_URL:-http://localhost:3000}
+    volumes:
+      - uploads:/app/uploads
+      - private-uploads:/app/private-uploads
+      - backups:/app/backups
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      BACKEND_INTERNAL_URL: http://backend:8000
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
+      AUTH_TRUST_HOST: "true"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+volumes:
+  pgdata:
+  uploads:
+  private-uploads:
+  backups:
