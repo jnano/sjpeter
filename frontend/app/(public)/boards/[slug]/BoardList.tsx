@@ -180,7 +180,7 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
       <table className="w-full min-w-[680px] border-collapse" style={{ tableLayout: "fixed" }}>
         <colgroup>
           {cols.list_show_number && <col style={{ width: "80px" }} />}
-          <col />{/* 제목 — 가변 */}
+          <col style={{ width: "60%" }} />{/* 제목 — 60% 고정 */}
           {cols.list_show_author && <col style={{ width: "120px" }} />}
           {cols.list_show_date && <col style={{ width: "120px" }} />}
           {cols.list_show_views && <col style={{ width: "70px" }} />}
