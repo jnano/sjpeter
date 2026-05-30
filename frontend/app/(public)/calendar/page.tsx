@@ -20,20 +20,21 @@ const CATEGORY_LABEL: Record<string, string> = {
 const KIND_TO_CAT: Record<string, string> = {
   "행사": "event", "모임": "meeting", "봉사": "service",
   "순례": "pilgrim", "피정": "retreat", "강의": "lecture", "기타": "other",
+  "중요": "featured",  // 중요 일정 — 와인색 강조 (구분 셀렉트의 한 종류)
 };
 // 시안 카테고리 키 → 한글 라벨 (콜로어드 태그 표기)
 const CAT_LABEL: Record<string, string> = {
   event: "행사", meeting: "모임", service: "봉사",
   pilgrim: "순례", retreat: "피정", lecture: "강의", other: "기타",
+  featured: "중요",
 };
 
 function catKey(e: Event): string {
-  if (e.is_featured) return "featured";  // 중요 일정 — 카테고리 색 대신 와인색
   return (e.event_kind && KIND_TO_CAT[e.event_kind]) || "other";
 }
 
-// admin 드롭다운·필터 카테고리 7종 (시안 cat-bar)
-const KIND_OPTIONS = ["행사", "모임", "봉사", "순례", "피정", "강의", "기타"];
+// 구분(event_kind) 드롭다운 옵션 — '중요'는 와인색 강조용 특수 구분
+const KIND_OPTIONS = ["중요", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"];
 
 const FILTER_CATS: { value: string; label: string; cat: string | null }[] = [
   { value: "all", label: "전체", cat: null },
@@ -59,7 +60,6 @@ interface Event {
   category: string;
   status: string;
   event_kind: string | null;
-  is_featured?: boolean;
 }
 
 const VIEW_TABS: { value: ViewMode; label: string }[] = [
@@ -623,7 +623,8 @@ export default function CalendarPage() {
   const [editForm, setEditForm] = useState<{
     title: string; event_date: string; end_date: string;
     start_time: string; location: string; description: string;
-  }>({ title: "", event_date: "", end_date: "", start_time: "", location: "", description: "" });
+    category: string; event_kind: string;
+  }>({ title: "", event_date: "", end_date: "", start_time: "", location: "", description: "", category: "general", event_kind: "행사" });
   const [creatingDate, setCreatingDate] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<{
     title: string; event_date: string; end_date: string;
@@ -655,6 +656,8 @@ export default function CalendarPage() {
       start_time: selected.start_time ?? "",
       location: selected.location ?? "",
       description: selected.description ?? "",
+      category: selected.category ?? "general",
+      event_kind: selected.event_kind ?? "",
     });
     setEditing(true);
   }
@@ -673,9 +676,9 @@ export default function CalendarPage() {
           end_date: editForm.end_date || null,
           start_time: editForm.start_time || null,
           location: editForm.location || null,
-          category: selected.category,
+          category: editForm.category,
           is_public: true,
-          event_kind: selected.event_kind ?? null,
+          event_kind: editForm.event_kind || null,
         }),
       });
       if (!res.ok) {
@@ -1138,6 +1141,19 @@ export default function CalendarPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <input value={editForm.start_time} onChange={(e) => setEditForm((p) => ({ ...p, start_time: e.target.value }))} placeholder="시간 (예: 19:30)" className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm" />
                         <input value={editForm.location} onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))} placeholder="장소" className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select value={editForm.event_kind} onChange={(e) => setEditForm((p) => ({ ...p, event_kind: e.target.value }))} className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white">
+                          {KIND_OPTIONS.map(k => <option key={k} value={k}>구분: {k}</option>)}
+                          <option value="">구분 없음</option>
+                        </select>
+                        <select value={editForm.category} onChange={(e) => setEditForm((p) => ({ ...p, category: e.target.value }))} className="border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm bg-white">
+                          <option value="general">분류: 일반</option>
+                          <option value="liturgy">분류: 전례</option>
+                          <option value="community">분류: 공동체</option>
+                          <option value="education">분류: 교육</option>
+                          <option value="special">분류: 특별행사</option>
+                        </select>
                       </div>
                       <textarea value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} rows={6} placeholder="설명" className="w-full border border-[var(--color-border)] rounded-md px-2 py-1.5 text-sm resize-y" />
                       <div className="flex gap-2 pt-1">

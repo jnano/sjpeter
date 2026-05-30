@@ -21,8 +21,7 @@ class EventIn(BaseModel):
     location: Optional[str] = None
     category: str = "general"
     is_public: bool = True
-    is_featured: bool = False  # 중요 일정 — 공개 캘린더 와인색 강조
-    event_kind: Optional[str] = None  # "행사" | "모임" | null
+    event_kind: Optional[str] = None  # "행사" | "모임" | "중요" | null
 
 
 class EventOut(BaseModel):
@@ -36,7 +35,6 @@ class EventOut(BaseModel):
     category: str
     is_public: bool
     is_ai_generated: bool = False
-    is_featured: bool = False
     status: str = "예정"
     event_kind: Optional[str] = None
 
@@ -57,7 +55,6 @@ def _row_to_dict(row) -> dict:
         "category": row.category,
         "is_public": row.is_public,
         "is_ai_generated": row.is_ai_generated if hasattr(row, "is_ai_generated") else False,
-        "is_featured": row.is_featured if hasattr(row, "is_featured") else False,
         "status": row.status if hasattr(row, "status") else "예정",
         "event_kind": row.event_kind if hasattr(row, "event_kind") else None,
     }
@@ -108,12 +105,12 @@ def events_admin_summary(db: Session = Depends(get_db), _: Admin = Depends(get_c
 def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     initial_status = "기록대기" if body.event_date < date.today() else "예정"
     row = db.execute(text(
-        "INSERT INTO events (title, description, event_date, end_date, start_time, location, category, is_public, is_featured, status, event_kind) "
-        "VALUES (:title, :desc, :edate, :eend, :stime, :loc, :cat, :pub, :feat, :status, :kind) RETURNING *"
+        "INSERT INTO events (title, description, event_date, end_date, start_time, location, category, is_public, status, event_kind) "
+        "VALUES (:title, :desc, :edate, :eend, :stime, :loc, :cat, :pub, :status, :kind) RETURNING *"
     ), {
         "title": body.title, "desc": body.description, "edate": body.event_date,
         "eend": body.end_date, "stime": body.start_time, "loc": body.location,
-        "cat": body.category, "pub": body.is_public, "feat": body.is_featured, "status": initial_status,
+        "cat": body.category, "pub": body.is_public, "status": initial_status,
         "kind": body.event_kind,
     }).fetchone()
     db.commit()
@@ -125,12 +122,12 @@ def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = De
 def update_event(event_id: int, body: EventIn, db: Session = Depends(get_db), _=Depends(get_current_admin)):
     row = db.execute(text(
         "UPDATE events SET title=:title, description=:desc, event_date=:edate, end_date=:eend, "
-        "start_time=:stime, location=:loc, category=:cat, is_public=:pub, is_featured=:feat, event_kind=:kind, updated_at=NOW() "
+        "start_time=:stime, location=:loc, category=:cat, is_public=:pub, event_kind=:kind, updated_at=NOW() "
         "WHERE id=:id RETURNING *"
     ), {
         "title": body.title, "desc": body.description, "edate": body.event_date,
         "eend": body.end_date, "stime": body.start_time, "loc": body.location,
-        "cat": body.category, "pub": body.is_public, "feat": body.is_featured, "id": event_id,
+        "cat": body.category, "pub": body.is_public, "id": event_id,
         "kind": body.event_kind,
     }).fetchone()
     if not row:

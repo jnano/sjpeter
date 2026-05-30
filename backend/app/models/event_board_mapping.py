@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, Text, DateTime, text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, Text, DateTime
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -31,8 +31,6 @@ class Event(Base):
     is_public = Column(Boolean, default=True)
     status = Column(String(20), nullable=False, default="예정")
     is_ai_generated = Column(Boolean, default=False)
-    # 중요 일정 — 공개 캘린더에서 카테고리 색 대신 와인색으로 강조
-    is_featured = Column(Boolean, nullable=False, server_default=text("false"), default=False)
     event_kind = Column(String(10))
     source_bulletin_id = Column(Integer, ForeignKey("bulletins.id", ondelete="CASCADE"), nullable=True, index=True)
     # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 (future|timeless + 미래 날짜만 OK).
