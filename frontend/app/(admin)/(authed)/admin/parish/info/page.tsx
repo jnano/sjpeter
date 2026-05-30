@@ -572,6 +572,7 @@ function TransportRoutesSection() {
       if (res.ok) {
         setDraftLabel(""); setDraftDesc("");
         fetchRoutes();
+        await fetch("/api/revalidate?tag=transport", { method: "POST" });
       }
     } finally {
       setSaving(false);
@@ -595,6 +596,7 @@ function TransportRoutesSection() {
       if (res.ok) {
         setEditingId(null);
         fetchRoutes();
+        await fetch("/api/revalidate?tag=transport", { method: "POST" });
       }
     } finally {
       setSaving(false);
@@ -607,7 +609,10 @@ function TransportRoutesSection() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token ?? ""}` },
     });
-    if (res.ok) fetchRoutes();
+    if (res.ok) {
+      fetchRoutes();
+      await fetch("/api/revalidate?tag=transport", { method: "POST" });
+    }
   }
 
   async function move(id: number, direction: -1 | 1) {
@@ -621,7 +626,10 @@ function TransportRoutesSection() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
       body: JSON.stringify({ ids: newOrder.map((r) => r.id) }),
     });
-    if (res.ok) fetchRoutes();
+    if (res.ok) {
+      fetchRoutes();
+      await fetch("/api/revalidate?tag=transport", { method: "POST" });
+    }
   }
 
   return (

@@ -280,6 +280,7 @@ export default function AdminBoardsPage() {
     if (res.ok) {
       setNewGroupName("");
       fetchAdminGroups();
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
     }
   }
 
@@ -292,7 +293,10 @@ export default function AdminBoardsPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name: name.trim() }),
     });
-    if (res.ok) fetchAdminGroups();
+    if (res.ok) {
+      fetchAdminGroups();
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
+    }
   }
 
   async function deleteGroup(g: BoardAdminGroup) {
@@ -313,6 +317,7 @@ export default function AdminBoardsPage() {
       // 안에 있던 게시판은 ON DELETE SET NULL 로 자동 미분류 처리됨 → 보드 목록 새로고침
       fetchAdminGroups();
       fetchBoards();
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
     }
   }
 
@@ -328,7 +333,10 @@ export default function AdminBoardsPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ ids: sorted.map((x) => x.id) }),
     });
-    if (res.ok) fetchAdminGroups();
+    if (res.ok) {
+      fetchAdminGroups();
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
+    }
   }
 
   async function moveBoardToGroup(board: Board, groupId: number | null) {
@@ -341,6 +349,7 @@ export default function AdminBoardsPage() {
     if (res.ok) {
       const updated: Board = await res.json();
       setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
     }
   }
 
@@ -396,6 +405,7 @@ export default function AdminBoardsPage() {
       setForm({ name: "", slug: "", description: "", access_mode: "write-restricted", posts_per_page: 12, exclude_from_search: false, moderator_id: null, kind: "default" });
       setFormModerator(null);
       setShowForm(false);
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
     } finally {
       setLoading(false);
     }
@@ -411,6 +421,8 @@ export default function AdminBoardsPage() {
     if (res.ok) {
       const updated = await res.json();
       setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
+      await fetch(`/api/revalidate?tag=board:${board.slug}`, { method: "POST" });
     }
   }
 
@@ -424,6 +436,8 @@ export default function AdminBoardsPage() {
     if (res.ok) {
       setBoards((prev) => prev.filter((b) => b.id !== board.id));
       setSelected((s) => { const n = new Set(s); n.delete(board.id); return n; });
+      await fetch("/api/revalidate?tag=boards", { method: "POST" });
+      await fetch(`/api/revalidate?tag=board:${board.slug}`, { method: "POST" });
     }
   }
 
@@ -467,6 +481,7 @@ export default function AdminBoardsPage() {
       if (succeeded.size > 0) {
         setBoards((prev) => prev.filter((b) => !succeeded.has(b.id)));
         setSelected((s) => { const n = new Set(s); succeeded.forEach((id) => n.delete(id)); return n; });
+        await fetch("/api/revalidate?tag=boards", { method: "POST" });
       }
       if (failed.length > 0) {
         alert(`${failed.length}개 삭제 실패: ${failed.join(", ")}`);
@@ -999,6 +1014,8 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
       });
       if (res.ok) {
         onUpdate(await res.json());
+        await fetch("/api/revalidate?tag=boards", { method: "POST" });
+        await fetch(`/api/revalidate?tag=board:${board.slug}`, { method: "POST" });
       } else {
         const data = await res.json().catch(() => ({}));
         setSaveError(data.detail || `저장 실패 (${res.status})`);
@@ -1018,7 +1035,10 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ member_id: member.id }),
     });
-    if (res.ok) setAllowedMembers((prev) => [...prev, { id: member.id, nickname: member.nickname, email: member.email, avatar_url: member.avatar_url }]);
+    if (res.ok) {
+      setAllowedMembers((prev) => [...prev, { id: member.id, nickname: member.nickname, email: member.email, avatar_url: member.avatar_url }]);
+      await fetch(`/api/revalidate?tag=board:${board.slug}`, { method: "POST" });
+    }
   }
 
   async function removeAllowedMember(memberId: number) {
@@ -1027,7 +1047,10 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) setAllowedMembers((prev) => prev.filter((m) => m.id !== memberId));
+    if (res.ok) {
+      setAllowedMembers((prev) => prev.filter((m) => m.id !== memberId));
+      await fetch(`/api/revalidate?tag=board:${board.slug}`, { method: "POST" });
+    }
   }
 
   return (

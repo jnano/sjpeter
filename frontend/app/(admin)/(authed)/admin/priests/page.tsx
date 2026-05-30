@@ -101,6 +101,7 @@ export default function AdminPriestsPage() {
     if (!res.ok) { setMsg({ type: "err", text: "저장에 실패했습니다." }); return; }
     setMsg({ type: "ok", text: "저장되었습니다." });
     setShowForm(false);
+    await fetch("/api/revalidate?tag=priests", { method: "POST" });
     loadAfterMutation();
   }
 
@@ -110,6 +111,7 @@ export default function AdminPriestsPage() {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
     select.remove(id);
+    await fetch("/api/revalidate?tag=priests", { method: "POST" });
     loadAfterMutation();
   }
 
@@ -136,6 +138,7 @@ export default function AdminPriestsPage() {
       const failedCount = results.filter((r) => !r.ok).length;
       if (succeeded.size > 0) {
         select.removeMany(succeeded);
+        await fetch("/api/revalidate?tag=priests", { method: "POST" });
         loadAfterMutation();
       }
       if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
@@ -152,6 +155,7 @@ export default function AdminPriestsPage() {
       method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
     });
     setUploading(null);
+    await fetch("/api/revalidate?tag=priests", { method: "POST" });
     load();
   }
 

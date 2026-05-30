@@ -306,6 +306,7 @@ export function VisionTab() {
     });
     setLoading(false);
     if (res.ok) {
+      await fetch("/api/revalidate?tag=vision", { method: "POST" });
       setMsg(notifyOnCreate ? "추가되었습니다. 수신 동의 회원에게 알림을 발송했습니다." : "추가되었습니다.");
       setForm({ year: new Date().getFullYear(), motto: "", body: "", is_current: false });
       setNotifyOnCreate(false);
@@ -322,7 +323,7 @@ export function VisionTab() {
       body: JSON.stringify(editForm),
     });
     setLoading(false);
-    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+    if (res.ok) { await fetch("/api/revalidate?tag=vision", { method: "POST" }); setMsg("수정되었습니다."); setEditId(null); load(); }
   }
 
   async function remove(id: number) {
@@ -331,6 +332,7 @@ export function VisionTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    await fetch("/api/revalidate?tag=vision", { method: "POST" });
     select.remove(id);
     load();
   }
@@ -352,7 +354,7 @@ export function VisionTab() {
         }),
       );
       const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
-      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      if (succeeded.size > 0) { await fetch("/api/revalidate?tag=vision", { method: "POST" }); select.removeMany(succeeded); load(); }
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
     } finally {
@@ -551,7 +553,7 @@ export function CommunityTab() {
       body: JSON.stringify({ ...form, board_slug: form.board_slug || null }),
     });
     setLoading(false);
-    if (res.ok) { setMsg("추가되었습니다."); setForm({ ...emptyComForm }); setShowCreate(false); load(); }
+    if (res.ok) { await fetch("/api/revalidate?tag=community", { method: "POST" }); setMsg("추가되었습니다."); setForm({ ...emptyComForm }); setShowCreate(false); load(); }
   }
 
   async function update(id: number) {
@@ -562,7 +564,7 @@ export function CommunityTab() {
       body: JSON.stringify({ ...editForm, board_slug: editForm.board_slug || null }),
     });
     setLoading(false);
-    if (res.ok) { setMsg("수정되었습니다."); setEditId(null); load(); }
+    if (res.ok) { await fetch("/api/revalidate?tag=community", { method: "POST" }); setMsg("수정되었습니다."); setEditId(null); load(); }
   }
 
   async function remove(id: number) {
@@ -571,6 +573,7 @@ export function CommunityTab() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${getToken()}` },
     });
+    await fetch("/api/revalidate?tag=community", { method: "POST" });
     select.remove(id);
     load();
   }
@@ -592,7 +595,7 @@ export function CommunityTab() {
         }),
       );
       const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
-      if (succeeded.size > 0) { select.removeMany(succeeded); load(); }
+      if (succeeded.size > 0) { await fetch("/api/revalidate?tag=community", { method: "POST" }); select.removeMany(succeeded); load(); }
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
     } finally {
@@ -888,7 +891,7 @@ function CommunityRepPhotoManager({ group, onChange }: { group: CommunityGroup; 
       const res = await fetch(`${API}/api/content/community/${group.id}/representative-photo`, {
         method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
       });
-      if (res.ok) onChange();
+      if (res.ok) { onChange(); await fetch("/api/revalidate?tag=community", { method: "POST" }); }
       else alert("대표사진 업로드 실패");
     } finally {
       setUploading(false);
@@ -901,7 +904,7 @@ function CommunityRepPhotoManager({ group, onChange }: { group: CommunityGroup; 
     const res = await fetch(`${API}/api/content/community/${group.id}/representative-photo`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
-    if (res.ok) onChange();
+    if (res.ok) { onChange(); await fetch("/api/revalidate?tag=community", { method: "POST" }); }
   }
 
   return (
@@ -956,7 +959,7 @@ function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onC
       const res = await fetch(`${API}/api/content/community/${group.id}/photos`, {
         method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
       });
-      if (res.ok) onChange();
+      if (res.ok) { onChange(); await fetch("/api/revalidate?tag=community", { method: "POST" }); }
       else alert("업로드 실패");
     } finally {
       setUploading(false);
@@ -969,7 +972,7 @@ function CommunityPhotoManager({ group, onChange }: { group: CommunityGroup; onC
     const res = await fetch(`${API}/api/content/community/${group.id}/photos?url=${encodeURIComponent(url)}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
-    if (res.ok) onChange();
+    if (res.ok) { onChange(); await fetch("/api/revalidate?tag=community", { method: "POST" }); }
   }
 
   return (

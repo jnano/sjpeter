@@ -48,6 +48,7 @@ export default function ApplicationsSection({ onChanged }: { onChanged: () => vo
       method: "PUT", headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify({ status }),
     });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     load();
   }
 
@@ -55,12 +56,13 @@ export default function ApplicationsSection({ onChanged }: { onChanged: () => vo
     if (!app.class_id) { alert("연결된 차수가 없습니다. 모집중 차수가 있을 때 신청하면 자동 연결됩니다."); return; }
     if (!confirm(`${app.name || app.member_nickname} 님을 제${app.class_round_no}차 참여자 명단에 추가하고 '등록완료' 처리할까요?`)) return;
     const res = await fetch(`${API}/api/catechumen/applications/${app.id}/to-member`, { method: "POST", headers: authHeader });
-    if (res.ok) { load(); onChanged(); } else { alert("전환에 실패했습니다."); }
+    if (res.ok) { await fetch("/api/revalidate?tag=catechumen", { method: "POST" }); load(); onChanged(); } else { alert("전환에 실패했습니다."); }
   }
 
   async function remove(id: number) {
     if (!confirm("이 신청을 삭제하시겠습니까?")) return;
     await fetch(`${API}/api/catechumen/applications/${id}`, { method: "DELETE", headers: authHeader });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     load();
   }
 

@@ -94,6 +94,7 @@ export default function ClassDetail({ classId, roundNo, onChanged }: {
       }),
     });
     if (res.ok) {
+      await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
       setPName(""); setPBaptismal(""); setPBaptizedAt(""); setPMemberId(null);
       loadDetail(); onChanged();
     }
@@ -102,6 +103,7 @@ export default function ClassDetail({ classId, roundNo, onChanged }: {
   async function delMember(id: number) {
     if (!confirm("참여자를 명단에서 제거하시겠습니까?")) return;
     await fetch(`${API}/api/catechumen/members/${id}`, { method: "DELETE", headers: authHeader });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     loadDetail(); onChanged();
   }
 
@@ -113,6 +115,7 @@ export default function ClassDetail({ classId, roundNo, onChanged }: {
     fd.append("category", category);
     fd.append("file", file);
     await fetch(`${API}/api/catechumen/classes/${classId}/photos`, { method: "POST", headers: authHeader, body: fd });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     setUploading(false);
     setCustomCat("");
     loadDetail(); onChanged();
@@ -121,6 +124,7 @@ export default function ClassDetail({ classId, roundNo, onChanged }: {
   async function delPhoto(id: number) {
     if (!confirm("사진을 삭제하시겠습니까?")) return;
     await fetch(`${API}/api/catechumen/photos/${id}`, { method: "DELETE", headers: authHeader });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     loadDetail(); onChanged();
   }
 

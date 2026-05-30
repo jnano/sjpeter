@@ -108,6 +108,8 @@ export default function AdminPastorsPage() {
       }
       setMsg({ type: "ok", text: "현재 사목자로 복원되었습니다." });
       setShowForm(false);
+      await fetch("/api/revalidate?tag=pastors", { method: "POST" });
+      await fetch("/api/revalidate?tag=parish", { method: "POST" });
       loadAfterMutation();
       return;
     }
@@ -126,6 +128,7 @@ export default function AdminPastorsPage() {
     if (!res.ok) { setMsg({ type: "err", text: "저장에 실패했습니다." }); return; }
     setMsg({ type: "ok", text: "저장되었습니다." });
     setShowForm(false);
+    await fetch("/api/revalidate?tag=pastors", { method: "POST" });
     loadAfterMutation();
   }
 
@@ -135,6 +138,7 @@ export default function AdminPastorsPage() {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
     select.remove(id);
+    await fetch("/api/revalidate?tag=pastors", { method: "POST" });
     loadAfterMutation();
   }
 
@@ -161,6 +165,7 @@ export default function AdminPastorsPage() {
       const failedCount = results.filter((r) => !r.ok).length;
       if (succeeded.size > 0) {
         select.removeMany(succeeded);
+        await fetch("/api/revalidate?tag=pastors", { method: "POST" });
         loadAfterMutation();
       }
       if (failedCount > 0) alert(`${failedCount}건 삭제 실패`);
@@ -177,6 +182,7 @@ export default function AdminPastorsPage() {
       method: "POST", headers: { Authorization: `Bearer ${getToken()}` }, body: fd,
     });
     setUploading(null);
+    await fetch("/api/revalidate?tag=pastors", { method: "POST" });
     load();  // 사진 업로드는 archive counts에 영향 없음
   }
 

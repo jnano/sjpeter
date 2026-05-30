@@ -108,6 +108,7 @@ export default function AdminCatechumenPage() {
       body: JSON.stringify(body),
     });
     if (!res.ok) { setMsg({ type: "err", text: "저장에 실패했습니다." }); return; }
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     setMsg({ type: "ok", text: "저장되었습니다." });
     setShowForm(false); setEditId(null);
     load();
@@ -118,6 +119,7 @@ export default function AdminCatechumenPage() {
     await fetch(`${API}/api/catechumen/classes/${id}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` },
     });
+    await fetch("/api/revalidate?tag=catechumen", { method: "POST" });
     if (selectedId === id) setSelectedId(null);
     load();
   }
