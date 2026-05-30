@@ -156,24 +156,22 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             </section>
           )}
 
-          {/* 소속단체 — 시안 톤 단순 칩 + 우측 rail join-card */}
+          {/* 소속단체 — 칩 클릭 시 단체 상세 페이지로 이동 (v1.5.449).
+             slug 있으면 /groups/{slug}, 없으면 ID fallback /groups/id-{N}. */}
           {subGroups.length > 0 && (
             <section className="bg-white border border-[var(--color-border)] rounded-2xl p-6">
               <h2 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)] mb-4">소속단체</h2>
               <ul className="flex flex-wrap gap-2">
                 {subGroups.map((sg) => {
-                  const href = sg.board_slug
-                    ? `/boards/${sg.board_slug}`
-                    : sg.link_url ?? null;
-                  return href ? (
+                  const href = sg.slug ? `/groups/${sg.slug}` : `/groups/id-${sg.id}`;
+                  return (
                     <li key={sg.id}>
-                      <Link href={href} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--color-surface-warm)] hover:bg-[var(--color-primary)]/10 rounded-full text-[12px] font-semibold text-[var(--color-text)] transition-colors">
+                      <Link
+                        href={href}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--color-surface-warm)] hover:bg-[var(--color-primary)]/10 rounded-full text-[12px] font-semibold text-[var(--color-text)] transition-colors"
+                      >
                         {sg.name}
                       </Link>
-                    </li>
-                  ) : (
-                    <li key={sg.id} className="px-3.5 py-1.5 bg-[var(--color-surface-warm)] rounded-full text-[12px] font-semibold text-[var(--color-text-muted)]">
-                      {sg.name}
                     </li>
                   );
                 })}

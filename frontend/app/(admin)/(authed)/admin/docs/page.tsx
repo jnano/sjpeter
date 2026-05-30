@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.448";
+export const CURRENT_VERSION = "1.5.449";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.449", date: "2026-05-30", tag: "수정", items: ["/groups/[slug] 소속단체 섹션의 단체명 칩 클릭 시 해당 단체 상세 페이지로 이동 — 이전엔 board_slug/link_url 우선, 둘 다 없으면 비활성. 이제 slug 있으면 /groups/{slug}, 없으면 v1.5.447 의 ID fallback /groups/id-{N}. 모든 자식 단체가 항상 클릭 가능"] },
   { version: "1.5.448", date: "2026-05-30", tag: "디자인", items: ["/groups/[slug] 상세 페이지 헤더에 representative_photo_url 추가 — admin/community 에서 등록한 '대표 사진' 이 그동안 /groups 카드 아이콘에만 노출되고 상세 페이지에는 안 나오던 누락 해소. 대표 사진 있으면 헤더가 grid-cols-[1fr_240px] 2단(좌측 텍스트 + 우측 240×300 aspect 4/5 cover) 으로 분리, 없으면 기존 풀폭 텍스트 유지. 모바일은 단일 컬럼 stack. description·activity_time·activities·photo_urls·board_slug·sub-group 표시는 기존 그대로 — 대표 사진만 추가"] },
   { version: "1.5.447", date: "2026-05-30", tag: "기능", items: ["/groups 자세히 ID 기반 fallback — slug·link_url 둘 다 없는 sub-group 30개의 깨진 '자세히 →' 링크 해소. (1) 백엔드 /api/content/community/id/{id} 신규 엔드포인트 (slug 기반과 동일 응답). (2) DeptCard href fallback: slug → /groups/{slug}, 없으면 link_url, 없으면 /groups/id-{N}. (3) /groups/[slug] 의 fetchGroupBySlug 가 'id-{N}' 패턴이면 id 엔드포인트로 자동 라우팅. (4) 자식(parent_id 보유) sub-group 도 자체 상세 페이지 노출 허용 — 기존 parent_id 차단 제거. 모든 그룹이 카드 클릭 시 정상 상세 페이지로 이동"] },
   { version: "1.5.446", date: "2026-05-30", tag: "수정", items: ["admin/council 에 등록한 사진이 공개 /council 에 표시되도록 — Avatar 헬퍼 컴포넌트 신설(photo_url 있으면 <img>, 없으면 이름 끝글자 fallback + 와인/골드 톤). OrgChart Node 와 MembersTable 행의 letter avatar 를 Avatar 로 교체. photo_url 은 절대 URL 이면 그대로, 상대면 API base prefix"] },
