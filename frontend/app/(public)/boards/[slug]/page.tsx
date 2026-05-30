@@ -243,6 +243,16 @@ export default async function BoardPage({
             totalPages={totalPages}
             searchQuery={q}
             showSearch={board.show_search_form}
+            cols={{
+              list_show_number: board.list_show_number,
+              list_show_author: board.list_show_author,
+              list_show_date: board.list_show_date,
+              list_show_views: board.list_show_views,
+              list_show_likes: board.list_show_likes,
+              list_show_comments: board.list_show_comments,
+              list_show_shares: board.list_show_shares,
+              share_enabled: board.share_enabled,
+            }}
           />
         </SectionLayout>
       </>

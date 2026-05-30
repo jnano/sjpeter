@@ -11,21 +11,35 @@ interface Post {
   member: Author | null;
   view_count: number;
   comment_count: number;
+  like_count?: number;
+  share_count?: number;
   created_at: string;
   thumbnail_url: string | null;
   is_pinned: boolean;
 }
 
-function mmdd(iso: string): string {
+export interface TitleListCols {
+  list_show_number: boolean;
+  list_show_author: boolean;
+  list_show_date: boolean;
+  list_show_views: boolean;
+  list_show_likes: boolean;
+  list_show_comments: boolean;
+  list_show_shares: boolean;
+  share_enabled: boolean;
+}
+
+function fmtDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  // YY.MM.DD
+  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /**
- * TitleListBoard — 게시판 kind='titlelist' 전용 단순 타이틀 리스트.
- * 공지사항 톤(home 대시보드의 notice-list-card)을 풀폭으로 옮긴 형태.
- * 작성자/조회수/댓글/썸네일은 노출하지 않고 [고정] + 제목 + 날짜 3 컬럼만.
+ * 게시판 kind='titlelist' 전용 — 전통적 게시판 테이블 톤.
+ * 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수)가 있고
+ * 그 아래 같은 그리드로 정렬된 행 목록. cols 토글에 따라 컬럼 동적 가감.
  */
 export default function TitleListBoard({
   slug,
@@ -35,6 +49,7 @@ export default function TitleListBoard({
   totalPages,
   searchQuery,
   showSearch,
+  cols,
 }: {
   slug: string;
   posts: Post[];
@@ -43,12 +58,39 @@ export default function TitleListBoard({
   totalPages: number;
   searchQuery?: string;
   showSearch: boolean;
+  cols: TitleListCols;
 }) {
   const empty = posts.length === 0;
+  const showShares = cols.list_show_shares && cols.share_enabled;
+
+  // 화면 구성: 활성화된 컬럼만 grid-template-columns 에 포함.
+  const cells: { key: string; head: string; cls: string; cellCls: string }[] = [];
+  if (cols.list_show_number) {
+    cells.push({ key: "no", head: "번호", cls: "w-12 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
+  cells.push({ key: "title", head: "제목", cls: "flex-1 min-w-0 text-left", cellCls: "text-left min-w-0" });
+  if (cols.list_show_author) {
+    cells.push({ key: "author", head: "작성자", cls: "w-24 text-center", cellCls: "text-center truncate" });
+  }
+  if (cols.list_show_date) {
+    cells.push({ key: "date", head: "작성일", cls: "w-20 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
+  if (cols.list_show_views) {
+    cells.push({ key: "views", head: "조회수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
+  if (cols.list_show_likes) {
+    cells.push({ key: "likes", head: "좋아요수", cls: "w-16 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
+  if (cols.list_show_comments) {
+    cells.push({ key: "comments", head: "댓글수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
+  if (showShares) {
+    cells.push({ key: "shares", head: "공유수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  }
 
   return (
     <div className="space-y-4">
-      {/* Section title bar — 풀폭 헤더 (게시판 이름 + 전체 N건) */}
+      {/* 상단 요약 + 검색 */}
       <div className="flex items-baseline justify-between gap-3 pb-3 border-b border-[var(--color-text)]">
         <div className="text-[11px] tracking-[0.16em] uppercase font-bold text-[var(--color-primary)]">
           전체 목록
@@ -58,7 +100,6 @@ export default function TitleListBoard({
         </span>
       </div>
 
-      {/* 검색 폼 (켜둔 경우만) — 단순 텍스트 q 파라미터 */}
       {showSearch && (
         <form action={`/boards/${slug}`} method="get" className="flex items-center gap-2">
           <input
@@ -77,40 +118,109 @@ export default function TitleListBoard({
         </form>
       )}
 
-      {/* 리스트 */}
-      <ul className="bg-white border border-[var(--color-border)] rounded-2xl divide-y divide-[var(--color-border)] overflow-hidden">
-        {empty ? (
-          <li className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
-            {searchQuery ? "검색 결과가 없습니다." : "등록된 글이 없습니다."}
-          </li>
-        ) : (
-          posts.map((p) => (
-            <li key={p.id} className="grid grid-cols-[auto_1fr_auto] gap-3 items-center px-4 sm:px-5 py-3.5">
-              {p.is_pinned ? (
-                <span className="text-[10px] px-2 py-0.5 rounded font-bold tracking-wider bg-[var(--color-primary)] text-white">
-                  고정
+      {/* 테이블 — 헤더 + 행. 데스크탑/태블릿 grid, 모바일 가로 스크롤. */}
+      <div className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="min-w-[640px]">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 sm:px-5 py-3 bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] text-[11px] tracking-[0.08em] uppercase font-bold text-[var(--color-text-muted)]">
+              {cells.map((c) => (
+                <span key={c.key} className={c.cls}>
+                  {c.head}
                 </span>
-              ) : (
-                <span aria-hidden className="w-1 h-1 rounded-full bg-[var(--color-border-dark)] mx-auto" />
-              )}
-              <Link
-                href={`/boards/${slug}/${p.id}`}
-                className="text-[14px] font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] truncate"
-              >
-                {p.title}
-                {p.comment_count > 0 && (
-                  <span className="ml-1.5 text-[11px] font-bold text-[var(--color-primary)] tabular-nums">
-                    [{p.comment_count}]
-                  </span>
-                )}
-              </Link>
-              <span className="text-[12px] text-[var(--color-text-muted)] tabular-nums whitespace-nowrap">
-                {mmdd(p.created_at)}
-              </span>
-            </li>
-          ))
-        )}
-      </ul>
+              ))}
+            </div>
+
+            {/* Rows */}
+            {empty ? (
+              <div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
+                {searchQuery ? "검색 결과가 없습니다." : "등록된 글이 없습니다."}
+              </div>
+            ) : (
+              posts.map((p, i) => {
+                const rowNumber = total - (page - 1) * posts.length - i;
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/boards/${slug}/${p.id}`}
+                    className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-[var(--color-border)] last:border-b-0 text-[13px] hover:bg-[var(--color-surface-warm)]/60 transition-colors"
+                  >
+                    {cells.map((c) => {
+                      switch (c.key) {
+                        case "no":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.is_pinned ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white">
+                                  고정
+                                </span>
+                              ) : (
+                                rowNumber
+                              )}
+                            </span>
+                          );
+                        case "title":
+                          return (
+                            <span key={c.key} className={`${c.cellCls} flex-1 min-w-0 inline-flex items-center gap-1.5`}>
+                              {!cols.list_show_number && p.is_pinned && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">
+                                  고정
+                                </span>
+                              )}
+                              <span className="font-medium text-[var(--color-text)] truncate">{p.title}</span>
+                              {p.thumbnail_url && (
+                                <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">
+                                  📷
+                                </span>
+                              )}
+                            </span>
+                          );
+                        case "author":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.member?.nickname ?? "성당"}
+                            </span>
+                          );
+                        case "date":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {fmtDate(p.created_at)}
+                            </span>
+                          );
+                        case "views":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.view_count}
+                            </span>
+                          );
+                        case "likes":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.like_count ?? 0}
+                            </span>
+                          );
+                        case "comments":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.comment_count}
+                            </span>
+                          );
+                        case "shares":
+                          return (
+                            <span key={c.key} className={c.cellCls}>
+                              {p.share_count ?? 0}
+                            </span>
+                          );
+                      }
+                      return null;
+                    })}
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (

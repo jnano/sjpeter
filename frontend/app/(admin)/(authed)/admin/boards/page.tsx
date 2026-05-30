@@ -1172,7 +1172,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         )}
         {kind === "titlelist" && (
           <p className="w-full text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded px-3 py-2 -mt-1">
-            ⓘ 일반 (타이틀+목록): 공지사항처럼 게시판 이름 헤더 아래 제목만 간결하게 노출됩니다. 본문은 클릭 시 표시됩니다. 작성자/조회수/댓글 토글이 무시되고 제목·고정·날짜만 보입니다.
+            ⓘ 일반 (타이틀+목록): 전통적 게시판 표 형식입니다. 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수)가 있고 그 아래 행이 정렬됩니다. 아래의 &quot;목록 표시 컬럼&quot; 토글로 노출할 컬럼을 선택할 수 있습니다.
           </p>
         )}
         {kind === "gallery" && (

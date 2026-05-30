@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.432";
+export const CURRENT_VERSION = "1.5.433";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.433", date: "2026-05-30", tag: "기능", items: ["게시판 kind='titlelist' 렌더 형태를 전통적 표 형식으로 재작성 — v1.5.431 의 '단순 제목 리스트' 해석을 정정. TitleListBoard 가 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수) bg-warm 띠 + 그 아래 같은 그리드로 정렬된 행 목록을 렌더. 기존 board.list_show_* 토글로 컬럼 노출 동적 가감. 모바일 폭 좁을 때 min-w-[640px] 가로 스크롤. 행에 hover bg, [고정] 뱃지(번호 컬럼 또는 제목 앞), 썸네일 📷 표시. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 에서 board.list_show_* 9 필드를 cols prop 으로 전달. admin/boards 안내 박스도 '공지사항 톤' → '전통적 게시판 표 형식' 으로 정정. /boards/notice 는 전용 라우트(/boards/notice/page.tsx) 가 있어 새 kind 가 적용되지 않으니 다른 게시판으로 테스트해야 함"] },
   { version: "1.5.432", date: "2026-05-30", tag: "수정", items: ["게시판 kind 라벨 '일반(타이틀+리스트)' → '일반(타이틀+목록)' 로 변경 — admin/boards 생성·편집 드롭다운, kindLabel 매핑, 안내 박스, page.tsx 분기 주석까지 4 군데 일괄. kind 값(titlelist)·DB·라우팅 동작은 그대로"] },
   { version: "1.5.431", date: "2026-05-30", tag: "기능", items: ["게시판 kind 신설 — '일반(타이틀+리스트)' (kind='titlelist'). /admin/boards 형식 드롭다운에 옵션 추가(생성 폼+편집 폼 양쪽) + kindLabel 매핑 + 하늘색 안내 박스. 신규 컴포넌트 TitleListBoard 신설(boards/[slug]/) — 공지사항 톤의 단순 리스트: 상단 '전체 N건' 헤더 + 검색 폼(옵션) + 흰 카드 안에 [고정] + 제목 + 댓글수[N] + MM.DD 3컬럼 ul. 작성자/조회수/뷰 전환/카테고리 칩/정렬 모두 노출 안 함. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 가 board.kind==='titlelist' 분기로 새 컴포넌트 라우팅. 백엔드 kind 컬럼은 자유 문자열이라 마이그레이션 불필요"] },
   { version: "1.5.430", date: "2026-05-30", tag: "수정", items: ["다크·와인 버튼 원복 — (1) /council 조직도 deputy(ink) 단 제거 → lead(와인) + regular(흰 outlined) 2단 구조로 회귀. 회장단·총무·재무가 분과장과 같은 outlined 톤. (2) /pastor PriestBlock 와인 role-pill·본명 와인 알약 원복 → 와인 선 + uppercase eyebrow + 평문 본명(이전 staff 톤). 헤로 카드·이력 timeline 은 시안 그대로 유지. (3) 공공 액션 버튼 ink → 고정 다크 원복 — .site-cta(헤더 CTA), /bulletin '지금 읽기' CTA, /word TTS 들으며 묵상하기 버튼·tooltip, /meditation·/prayer·/boards toast 5종 모두 background:var(--color-text). 칩·탭·CTA 카드(.ab-cta, .pr-today, /construction hero, /word gospel 카드, /offering hero, /history EraFilter, /bulletin 연도 필터, /calendar 토글·칩·미니캘, /groups 필터, /word ReadTabs)는 ink 유지 — '필터/카드는 ink, 액션 버튼은 고정 다크' 의 원칙 정리"] },
