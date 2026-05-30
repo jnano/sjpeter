@@ -7,7 +7,8 @@ import SessionSync from "@/components/SessionSync";
 import OnboardingGate from "@/components/OnboardingGate";
 import { MenusProvider } from "@/components/MenusProvider";
 import { fetchServerMenus } from "@/components/fetchServerMenus";
-import { fetchParishMin } from "@/lib/parish";
+import { fetchParishMin, absoluteUrl } from "@/lib/parish";
+import { fetchSiteConfig } from "@/lib/site-config";
 import { fetchCurrentSeason } from "@/lib/season";
 import { fetchCurrentSkin } from "@/lib/skin";
 import { fetchCurrentInkColor, DEFAULT_INK } from "@/lib/ink-color";
@@ -35,16 +36,46 @@ const playfairDisplay = Playfair_Display({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const parish = await fetchParishMin();
+  // 본당 정보(이름·로고)와 SITE_URL 을 함께 읽어 멀티 본당별 메타데이터를 동적 생성.
+  // 로고가 있으면 favicon·OG 이미지로 함께 쓰고, 없으면 정적 app/favicon.ico 로 폴백.
+  const [parish, config] = await Promise.all([fetchParishMin(), fetchSiteConfig()]);
   const dioceseLabel = parish.diocese ? `${parish.diocese} ` : "";
-  return {
+  const description = `${dioceseLabel}${parish.name} 공식 홈페이지. 미사 시간, 주보, 성당 소식을 확인하세요.`;
+  const siteUrl = (config.SITE_URL || "").trim();
+  const logo = absoluteUrl(parish.logo_url);
+
+  const metadata: Metadata = {
     title: {
       default: parish.name,
       template: `%s | ${parish.name}`,
     },
-    description: `${dioceseLabel}${parish.name} 공식 홈페이지. 미사 시간, 주보, 성당 소식을 확인하세요.`,
+    description,
     keywords: [parish.name, parish.diocese, "성당", "가톨릭"].filter(Boolean) as string[],
+    openGraph: {
+      type: "website",
+      siteName: parish.name,
+      title: parish.name,
+      description,
+      ...(siteUrl ? { url: siteUrl } : {}),
+      ...(logo ? { images: [{ url: logo, alt: `${parish.name} 로고` }] } : {}),
+    },
   };
+
+  // SITE_URL 이 유효한 절대 URL 이면 metadataBase 로 지정 (OG 상대 URL 경고 방지).
+  if (siteUrl) {
+    try {
+      metadata.metadataBase = new URL(siteUrl);
+    } catch {
+      // localhost 예시값 등 잘못된 URL 은 무시 — Next.js 기본 동작 유지
+    }
+  }
+
+  // 로고가 업로드된 본당은 favicon 까지 로고로 교체. 미입력 본당은 app/favicon.ico 사용.
+  if (logo) {
+    metadata.icons = { icon: logo, shortcut: logo, apple: logo };
+  }
+
+  return metadata;
 }
 
 export default async function RootLayout({

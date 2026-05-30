@@ -119,7 +119,7 @@ export default function SkinDashboard({
       {/* page head */}
       <div className="page-head">
         <h1>
-          <small>{parish?.name ? `${parish.name} · Dashboard` : "St. Peter's · Dashboard"}</small>
+          <small>{parish?.name ? `${parish.name} · Dashboard` : "본당 홈페이지 · Dashboard"}</small>
           환영합니다, 오늘 공동체의 하루입니다.
         </h1>
         <div className="head-meta">

@@ -54,7 +54,7 @@ export default function MeditationArticle({
         <div className="avatar">{initial}</div>
         <div className="author">
           <b>{meditation.author || "주일 말씀 묵상"}</b>
-          <span>{parishName} · Sejong</span>
+          <span>{parishName}</span>
         </div>
         <div className="pub">
           <b>{fmtDate(meditation.published_date)}</b>
