@@ -4,7 +4,8 @@ import SectionLayout from "@/components/SectionLayout";
 import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 
-export const dynamic = "force-dynamic";
+// v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
+export const revalidate = 300;
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -20,7 +21,7 @@ interface Parish {
 
 async function getParish(): Promise<Parish | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 300, tags: ["parish"] } });
     if (!res.ok) return null;
     return res.json();
   } catch {

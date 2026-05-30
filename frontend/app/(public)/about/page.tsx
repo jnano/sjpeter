@@ -11,7 +11,8 @@ import {
   type CatechumenClass,
 } from "@/lib/catechumen";
 
-export const dynamic = "force-dynamic";
+// v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
+export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
   return { title: "성당 안내", description: `${p.name} 소개 — 세종시 최초 본당` };
@@ -59,7 +60,7 @@ const DAYS: { key: string; label: string; mod?: "sun" | "special" }[] = [
 
 async function getParish(): Promise<ParishOut | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`);
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 300, tags: ["parish"] } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -70,7 +71,7 @@ async function getParish(): Promise<ParishOut | null> {
 // KAKAO_MAP_KEY 는 site_settings DB 단일 source (info 페이지와 동일 패턴).
 async function getMapKey(): Promise<string> {
   try {
-    const res = await fetch(`${API}/api/public/site-config`);
+    const res = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300, tags: ["parish"] } });
     if (!res.ok) return "";
     const cfg = await res.json();
     return cfg.KAKAO_MAP_KEY ?? "";
@@ -81,7 +82,7 @@ async function getMapKey(): Promise<string> {
 
 async function getCatechumenClasses(): Promise<CatechumenClass[]> {
   try {
-    const res = await fetch(`${API}/api/catechumen/classes`);
+    const res = await fetch(`${API}/api/catechumen/classes`, { next: { revalidate: 300, tags: ["catechumen"] } });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -91,7 +92,7 @@ async function getCatechumenClasses(): Promise<CatechumenClass[]> {
 
 async function getCommunityCount(): Promise<number | null> {
   try {
-    const res = await fetch(`${API}/api/content/community`);
+    const res = await fetch(`${API}/api/content/community`, { next: { revalidate: 300, tags: ["community"] } });
     if (!res.ok) return null;
     const data = await res.json();
     return Array.isArray(data) ? data.length : null;

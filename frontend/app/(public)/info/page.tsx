@@ -11,7 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // 좌표가 바뀌면 바로 반영돼야 하므로 캐시하지 않는다
-export const dynamic = "force-dynamic";
+// v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
+export const revalidate = 300;
 
 const API = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -34,7 +35,7 @@ const DAY_ORDER: Record<string, number> = {
 
 async function getParish(): Promise<Parish | null> {
   try {
-    const res = await fetch(`${API}/api/parish/`);
+    const res = await fetch(`${API}/api/parish/`, { next: { revalidate: 300, tags: ["parish"] } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -50,7 +51,7 @@ interface TransportRoute {
 
 async function getTransportRoutes(): Promise<TransportRoute[]> {
   try {
-    const res = await fetch(`${API}/api/transport-routes`);
+    const res = await fetch(`${API}/api/transport-routes`, { next: { revalidate: 300, tags: ["transport"] } });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -62,7 +63,7 @@ export default async function InfoPage() {
   const [parish, transportRoutes] = await Promise.all([getParish(), getTransportRoutes()]);
   let appKey = "";
   try {
-    const cfgRes = await fetch(`${API}/api/public/site-config`);
+    const cfgRes = await fetch(`${API}/api/public/site-config`, { next: { revalidate: 300, tags: ["parish"] } });
     if (cfgRes.ok) {
       const cfg = await cfgRes.json();
       appKey = cfg.KAKAO_MAP_KEY ?? "";

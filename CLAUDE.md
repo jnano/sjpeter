@@ -77,11 +77,31 @@ Tailwind 모바일 레이아웃 먼저, sm:/md: 확장. 60대 신자가 쓸 수 
 
 [[feedback_menu_sidebar_invariant]] 메모리에 자세한 가드 동작·예외 케이스·검증 방법 정리.
 
-## DB 마이그레이션
-Alembic 미설정. 컬럼 추가 시 `backend/main.py`의 startup 블록에 수동 SQL 추가:
-```python
-conn.execute(text("ALTER TABLE 테이블 ADD COLUMN IF NOT EXISTS 컬럼 타입"))
+## DB 마이그레이션 (v1.5.452 이후 — Alembic)
+
+**신규 스키마 변경은 alembic revision 으로만 작성합니다.**
+
+```bash
+cd backend && source venv/bin/activate
+alembic revision --autogenerate -m "add member.foo column"
+# 생성된 versions/XXXX_*.py 검토·수정
+# 서버 재기동 시 _alembic_upgrade_to_head() 가 startup 자동 적용
 ```
+
+- ❌ `backend/main.py` 의 `_migrate_add_columns()` 에 신규 ALTER 추가 금지
+- ✅ 모델 수정 → alembic revision → commit 한 묶음으로
+- 상세 워크플로: `backend/docs/SCHEMA_CHANGES.md`
+
+기존 1100+ 줄 `_migrate_add_columns()` 는 baseline 으로 보존(빈 DB 초기화용).
+
+## 데이터 삭제 정책 (Hard Delete)
+
+이 프로젝트는 **hard delete** 를 사용한다. 글로벌 `~/.claude/CLAUDE.md` 의 `is_deleted` 소프트 삭제 규칙은 본 프로젝트에 **미적용**.
+
+- 게시판/회원 도메인 특성상 사용자 요청·관리자 정리·GDPR 등 hard delete 가 자연스러움
+- `db.delete(obj)` 또는 `DELETE FROM …` 그대로 사용
+- 삭제 전 백업 의무는 별도 (CLAUDE.md §2 "데이터 삭제 전 백업 필수" 참조)
+- `is_active` 토글은 "활성/비활성" 의미로 사용 (삭제와 다름) — Member.is_active, Board.is_active
 
 ## 배포 파일 생성 시 `site_settings` 데이터 포함 (필수)
 

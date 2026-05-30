@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.451";
+export const CURRENT_VERSION = "1.5.453";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.453", date: "2026-05-30", tag: "인프라", items: ["코드 리뷰 권고 Top 5 + 부수 정리 일괄 처리. (1) Alembic 워크플로 정상화: backend/docs/SCHEMA_CHANGES.md 작성, _migrate_add_columns 함수 상단에 신규 ALTER 금지 경고, CLAUDE.md DB 마이그레이션 절 갱신. (2) 캐싱 전략: /patron·/pastors·/priests·/vision·/about·/info 6 페이지 force-dynamic → revalidate=300 + 태그 기반 무효화. (3) response_model 보강: app/api/_responses.py 공용 모델 추가(OkResponse·MessageResponse·DeletedIdResponse·BulkDeleteResponse·BackfillCountsResponse·BulletinAiStatusResponse 등) + bulletins/members 9 endpoint 적용. (4) next/image 일괄: ThumbnailImage 공용 컴포넌트 신설 + 6 스킨 갤러리 카드 적용. (5) SessionTimeout eslint-disable 2곳을 logoutRef/resetTimersRef 패턴으로 제거. 부수: print → logging(members.py SMTP 2곳), @app.on_event → lifespan(main.py), CLAUDE.md hard delete 정책 명시, loading.tsx 3개 추가((public)·(public)/boards·(admin)/(authed)/admin). Header.tsx 분할은 SessionTimeout 과 분리해 별도 처리(v1.5.454)"] },
   { version: "1.5.451", date: "2026-05-30", tag: "기능", items: ["사이드바 부모 분과 wine 하이라이트 — sub-group 상세 페이지에서 부모 분과의 메뉴 항목(예: /groups/building)이 와인색으로 active 표시. SectionLayout·SectionSidebar 에 extraActiveHref prop 추가, matchesHref·isItemActive·findActiveTopLevel 모두 extraActiveHref 일치도 active 처리. /groups/[slug] 페이지가 sub-group 이면 부모 slug 기반 href 를 SectionLayout 에 전달. DesktopRow childActive·dropdown cActive·모바일 Chip 모두 적용 — 부모 분과 메뉴가 펼쳐진 상태에서 와인 bg 로 강조됨"] },
   { version: "1.5.450", date: "2026-05-30", tag: "기능", items: ["sub-group 상세 페이지에 부모 분과 표시·링크 추가 — 헤더 'Community' 아이브로우 아래에 '‹ 부모분과명' chevron 링크 노출. 클릭 시 부모 분과 상세 페이지로 이동(slug 있으면 /groups/{slug}, 없으면 /groups/id-{N}). 본문 어느 분과 소속인지 즉시 인지 + 부모 분과로 이동 경로 확보. 사이드바 부모 하이라이트는 menu 매칭 로직 변경이 커서 별도 작업"] },
   { version: "1.5.449", date: "2026-05-30", tag: "수정", items: ["/groups/[slug] 소속단체 섹션의 단체명 칩 클릭 시 해당 단체 상세 페이지로 이동 — 이전엔 board_slug/link_url 우선, 둘 다 없으면 비활성. 이제 slug 있으면 /groups/{slug}, 없으면 v1.5.447 의 ID fallback /groups/id-{N}. 모든 자식 단체가 항상 클릭 가능"] },

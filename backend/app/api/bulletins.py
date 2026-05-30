@@ -18,6 +18,10 @@ from app.core.admin_log import get_admin_identifier, log_action
 from app.core.auth import get_current_admin
 from app.core.config import settings
 from app.core.email import send_bulletin_notification
+from app.api._responses import (
+    OkResponse, DeletedIdResponse, BulkDeleteResponse,
+    BackfillCountsResponse, BulletinAiStatusResponse, RoutedResponse,
+)
 from app.models.bulletin import Bulletin, BulletinExtractedImage
 from app.models.bulletin_extraction import BulletinExtraction
 from app.models.page_photo import PagePhoto
@@ -166,7 +170,7 @@ async def upload_bulletin(
     return bulletin
 
 
-@router.post("/backfill-thumbnails")
+@router.post("/backfill-thumbnails", response_model=BackfillCountsResponse)
 def backfill_thumbnails(
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin),
@@ -218,7 +222,7 @@ def backfill_thumbnails(
     return {"created": created, "skipped": skipped, "failed": failed, "total": len(rows)}
 
 
-@router.post("/{bulletin_id}/reanalyze")
+@router.post("/{bulletin_id}/reanalyze", response_model=BulletinAiStatusResponse)
 def reanalyze_bulletin(
     bulletin_id: int,
     background_tasks: BackgroundTasks,
@@ -438,7 +442,7 @@ def bulletin_routed_counts(
     }
 
 
-@router.delete("/{bulletin_id}")
+@router.delete("/{bulletin_id}", response_model=OkResponse)
 def delete_bulletin(
     bulletin_id: int,
     db: Session = Depends(get_db),
@@ -2014,7 +2018,7 @@ async def crop_extracted_image(
     return img
 
 
-@router.delete("/extracted-images/{image_id}")
+@router.delete("/extracted-images/{image_id}", response_model=DeletedIdResponse)
 def delete_extracted_image(
     image_id: int,
     db: Session = Depends(get_db),

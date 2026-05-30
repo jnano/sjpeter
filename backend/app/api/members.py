@@ -3,6 +3,7 @@ import os
 import uuid
 import secrets
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request, BackgroundTasks
@@ -20,6 +21,7 @@ from app.core.database import get_db
 from app.core.auth import verify_password, create_access_token, hash_password, get_current_member, get_current_admin, get_current_super_admin, token_expires_in_seconds
 from app.core.config import settings
 from app.core.site_settings import get_setting
+from app.api._responses import OkResponse, MessageResponse
 from app.core.admin_log import log_action, get_admin_identifier
 from app.models.member import Member
 from app.models.admin import Admin
@@ -211,8 +213,11 @@ def is_smtp_available() -> bool:
     return bool((get_setting("SMTP_USER") or "").strip() and (get_setting("SMTP_PASSWORD") or "").strip())
 
 
+_email_logger = logging.getLogger(__name__)
+
+
 def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> None:
-    """이메일 발송. SMTP 미설정 시 콘솔 출력.
+    """이메일 발송. SMTP 미설정 시 logging.info 로 콘솔 기록.
 
     html_body 가 주어지면 multipart/alternative 로 plain + HTML 두 가지를 모두 첨부.
     메일 클라이언트가 HTML 을 우선 표시. plain 은 미지원 클라이언트·spam filter 점수용 fallback.
@@ -220,7 +225,7 @@ def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str]
     smtp_user = get_setting("SMTP_USER")
     smtp_password = get_setting("SMTP_PASSWORD")
     if not smtp_user or not smtp_password:
-        print(f"[메일 발송] {to_email}\n제목: {subject}\n{body}")
+        _email_logger.info("[메일 발송 mock] to=%s subject=%s\n%s", to_email, subject, body)
         return
     try:
         msg = MIMEMultipart("alternative")
@@ -239,7 +244,7 @@ def _send_email(to_email: str, subject: str, body: str, html_body: Optional[str]
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, [to_email], msg.as_string())
     except Exception as e:
-        print(f"[SMTP 오류] {e}")
+        _email_logger.error("[SMTP 오류] to=%s: %s", to_email, e)
         raise HTTPException(status_code=500, detail="이메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.")
 
 
@@ -795,7 +800,7 @@ def _issue_and_send_verification(member: Member, db: Session) -> None:
     _send_verification_email(member.email, verify_url, member.nickname)
 
 
-@router.post("/send-verification", status_code=200)
+@router.post("/send-verification", status_code=200, response_model=MessageResponse)
 def send_verification(
     db: Session = Depends(get_db),
     current: Member = Depends(get_current_member),
@@ -809,7 +814,7 @@ def send_verification(
     return {"message": "인증 메일을 발송했습니다."}
 
 
-@router.get("/verify-email", status_code=200)
+@router.get("/verify-email", status_code=200, response_model=MessageResponse)
 def verify_email(token: str, db: Session = Depends(get_db)):
     """이메일 인증 링크 처리."""
     row = db.execute(text(
@@ -868,7 +873,7 @@ def _create_and_send_reset_token(member_id: int) -> None:
         db.close()
 
 
-@router.post("/forgot-password", status_code=200)
+@router.post("/forgot-password", status_code=200, response_model=MessageResponse)
 @limiter.limit("3/minute")
 def forgot_password(
     request: Request,
@@ -889,7 +894,7 @@ def forgot_password(
     return {"message": "이메일 주소로 재설정 링크를 보냈습니다."}
 
 
-@router.post("/reset-password", status_code=200)
+@router.post("/reset-password", status_code=200, response_model=MessageResponse)
 def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     """토큰으로 비밀번호 재설정."""
     _validate_password(body.password)
@@ -1127,7 +1132,7 @@ def admin_deactivate_member(
     return _to_admin_out(member, db)
 
 
-@router.delete("/admin/{member_id}")
+@router.delete("/admin/{member_id}", response_model=OkResponse)
 def admin_delete_member(
     member_id: int,
     db: Session = Depends(get_db),

@@ -6,7 +6,8 @@ import CrossIcon from "@/components/icons/CrossIcon";
 import { fetchParishMin } from "@/lib/parish";
 
 // admin에서 변경한 데이터가 새로고침 없이 반영되도록 SSR 강제
-export const dynamic = "force-dynamic";
+// v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
@@ -28,7 +29,7 @@ interface Priest {
 
 async function getPriests(): Promise<Priest[]> {
   try {
-    const res = await fetch(`${API}/api/archive/priests`);
+    const res = await fetch(`${API}/api/archive/priests`, { next: { revalidate: 300, tags: ["priests"] } });
     if (!res.ok) return [];
     return res.json();
   } catch { return []; }

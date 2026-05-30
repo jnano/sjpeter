@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThumbnailImage from "@/components/ThumbnailImage";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
 import NoticeEventsTabs from "./NoticeEventsTabs";
 
@@ -347,7 +348,7 @@ export default function SkinDashboard({
                 const href = p.source === "events" ? `/gallery/events/${p.id}` : "/gallery/liturgy";
                 return (
                   <Link key={p.id} href={href} className="gi">
-                    <img src={`${API}${p.thumbnail_url}`} alt={p.title} />
+                    <ThumbnailImage src={p.thumbnail_url} alt={p.title} />
                   </Link>
                 );
               })}

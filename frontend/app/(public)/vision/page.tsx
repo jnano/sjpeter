@@ -5,7 +5,8 @@ import SectionLayout from "@/components/SectionLayout";
 import MarkdownContent from "@/components/MarkdownContent";
 import { fetchParishMin } from "@/lib/parish";
 
-export const dynamic = "force-dynamic";
+// v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
+export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const p = await fetchParishMin();
   return { title: "사목 지표", description: `${p.name} 역대 본당 사목지표` };
@@ -23,7 +24,7 @@ interface VisionOut {
 
 async function getVisions(): Promise<VisionOut[]> {
   try {
-    const res = await fetch(`${API}/api/content/visions`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/content/visions`, { next: { revalidate: 300, tags: ["vision"] } });
     if (!res.ok) return [];
     return res.json();
   } catch {

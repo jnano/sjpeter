@@ -13,6 +13,7 @@ from app.api import settings_api, home_banner, parish_staff, page_photos, menus,
 from app.api import issue_reports, transport_routes, photos, saints, setup, onboarding, home_blocks, catechumen
 from app.core.config import settings
 from app.core.database import create_tables
+from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +22,29 @@ logging.basicConfig(
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
-app = FastAPI(title=settings.PROJECT_NAME)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """애플리케이션 startup/shutdown 처리 (v1.5.453 — FastAPI 0.100+ 권장 패턴).
+
+    @app.on_event("startup") deprecated 대체. 모델 등록 + 스키마 마이그레이션 +
+    초기 데이터 시드 + AUTH_SECRET 1회 발급을 순서대로 수행한다.
+    """
+    # ── startup ──
+    from app.models import bulletin_extraction  # noqa: F401 — 테이블 등록
+    from app.models import member_interest  # noqa: F401 — 회원 관심분과
+    from app.models import construction  # noqa: F401 — 성당 건축 공사 단계·일지
+    from app.models import saint  # noqa: F401 — 가톨릭 성인 사전 (세례명 → 축일)
+    create_tables()
+    _migrate_add_columns()
+    _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
+    _seed_initial_data()
+    _seed_auth_secret()
+    yield
+    # ── shutdown ── (현재 정리 작업 없음. SQLAlchemy 엔진은 process 종료 시 자동 정리)
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
@@ -86,17 +109,7 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
-@app.on_event("startup")
-def startup():
-    from app.models import bulletin_extraction  # noqa: F401 — 테이블 등록
-    from app.models import member_interest  # noqa: F401 — 회원 관심분과
-    from app.models import construction  # noqa: F401 — 성당 건축 공사 단계·일지
-    from app.models import saint  # noqa: F401 — 가톨릭 성인 사전 (세례명 → 축일)
-    create_tables()
-    _migrate_add_columns()
-    _alembic_upgrade_to_head()  # alembic 신규 변경 자동 적용 (도입 후)
-    _seed_initial_data()
-    _seed_auth_secret()
+# v1.5.453 — startup 로직은 위쪽 lifespan() 으로 이동.
 
 
 def _seed_auth_secret() -> None:
@@ -147,7 +160,25 @@ def _alembic_upgrade_to_head() -> None:
 
 
 def _migrate_add_columns():
-    """기존 테이블에 신규 컬럼을 안전하게 추가한다 (IF NOT EXISTS)."""
+    """기존 테이블에 신규 컬럼을 안전하게 추가한다 (IF NOT EXISTS).
+
+    ⚠️ 신규 스키마 변경 금지 — 이 함수에 더 이상 추가하지 마세요. (v1.5.452)
+    -------------------------------------------------------------------
+    이 함수는 v0~v1.5.451 까지 누적된 1100+ 줄 baseline 입니다.
+    신규 스키마 변경(컬럼 추가/제거/rename, 테이블 추가, 인덱스 변경)은
+    반드시 alembic revision 으로 작성합니다:
+
+        cd backend && alembic revision --autogenerate -m "add member.foo column"
+        # 생성된 versions/XXXX_*.py 를 검토·수정한 뒤
+        # 서버 재기동 시 _alembic_upgrade_to_head() 가 자동 적용
+
+    이유:
+    - 이 함수는 다운그레이드/rename/drop 불가, 변경 이력 추적 X
+    - alembic 은 revision 단위 reversible, conflict resolution 가능
+    - 멀티 본당 배포 시 각 인스턴스가 같은 스키마 변경을 정확히 추적 가능
+
+    상세 워크플로: docs/SCHEMA_CHANGES.md
+    """
     from sqlalchemy import text
     from app.core.database import engine
 

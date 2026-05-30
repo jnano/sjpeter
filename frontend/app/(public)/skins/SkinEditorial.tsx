@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThumbnailImage from "@/components/ThumbnailImage";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -266,7 +267,7 @@ export default function SkinEditorial({
               const href = p.source === "events" ? `/gallery/events/${p.id}` : "/gallery/liturgy";
               return (
                 <Link key={p.id} href={href} className={cls}>
-                  <img src={`${API}${p.thumbnail_url}`} alt={p.title} />
+                  <ThumbnailImage src={p.thumbnail_url} alt={p.title} />
                   {i === 0 && galleryCap && <div className="gallery-cap">{galleryCap}</div>}
                 </Link>
               );

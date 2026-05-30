@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThumbnailImage from "@/components/ThumbnailImage";
 import { buildMassRows, type MassEntry } from "@/lib/mass";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -227,7 +228,7 @@ export default function SkinDashboardMobile({
               <div className="gi"><div className="ph">사진 준비 중</div></div>
             ) : gallery.map((p) => (
               <Link key={p.id} href={p.source === "events" ? `/gallery/events/${p.id}` : "/gallery/liturgy"} className="gi">
-                <img src={`${API}${p.thumbnail_url}`} alt={p.title} />
+                <ThumbnailImage src={p.thumbnail_url} alt={p.title} />
               </Link>
             ))}
           </div>

@@ -59,6 +59,10 @@ export default function SessionTimeout() {
   const countTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
   const absoluteTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity  = useRef(0);
+  // v1.5.453 — stale closure 방지용 ref. useEffect 의 exhaustive-deps 비활성화 대체.
+  // logout/resetTimers 가 매 렌더에서 다시 만들어지지만 useEffect 는 deps 최소화 유지.
+  const logoutRef       = useRef<() => void>(() => {});
+  const resetTimersRef  = useRef<() => void>(() => {});
 
   // 관리자 로그인 상태 폴링 (localStorage 변화 감지)
   useEffect(() => {
@@ -125,9 +129,15 @@ export default function SessionTimeout() {
         });
       }, 1000);
 
-      warnTimer.current = setTimeout(logout, WARN_MS);
+      warnTimer.current = setTimeout(() => logoutRef.current(), WARN_MS);
     }, INACTIVE_MS);
   }
+
+  // ref 항상 최신 함수로 동기화 — useEffect 가 stale 클로저를 잡지 않도록 (v1.5.453)
+  useEffect(() => {
+    logoutRef.current = logout;
+    resetTimersRef.current = resetTimers;
+  });
 
   // 절대 만료 감시 (remember 여부와 무관하게 작동)
   useEffect(() => {
@@ -145,7 +155,7 @@ export default function SessionTimeout() {
       const memberExpired = memberAuthed && memberExp > 0 && now >= memberExp;
       const adminExpired = adminLoggedIn && adminExp > 0 && now >= adminExp;
       if (memberExpired || adminExpired) {
-        logout();
+        logoutRef.current();
       }
     };
     check();
@@ -154,7 +164,6 @@ export default function SessionTimeout() {
       if (absoluteTimer.current) clearInterval(absoluteTimer.current);
       absoluteTimer.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthed, memberAuthed, adminLoggedIn, session]);
 
   // idle 타이머
@@ -169,19 +178,18 @@ export default function SessionTimeout() {
       const now = Date.now();
       if (now - lastActivity.current < THROTTLE_MS) return;
       lastActivity.current = now;
-      resetTimers();
+      resetTimersRef.current();
     };
 
     const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
-    resetTimers();
+    resetTimersRef.current();
 
     return () => {
       events.forEach((e) => window.removeEventListener(e, onActivity));
       if (inactiveTimer.current) clearTimeout(inactiveTimer.current);
       clearWarn();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idleEnabled]);
 
   if (!warning) return null;
