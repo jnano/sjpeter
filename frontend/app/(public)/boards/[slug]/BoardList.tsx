@@ -179,31 +179,14 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
     <div className="overflow-x-auto">
       <table className="w-full min-w-[680px] border-collapse" style={{ tableLayout: "fixed" }}>
         <colgroup>
-          {/* 제목 40% 고정. 나머지 컬럼은 활성화된 개수에 따라 60% 균등 분배.
-             table-layout:fixed 와 모든 col 이 % 단위라야 제목이 실제로 40% 차지. */}
-          {(() => {
-            const otherCount =
-              (cols.list_show_number ? 1 : 0) +
-              (cols.list_show_author ? 1 : 0) +
-              (cols.list_show_date ? 1 : 0) +
-              (cols.list_show_views ? 1 : 0) +
-              (cols.list_show_likes ? 1 : 0) +
-              (cols.list_show_comments ? 1 : 0) +
-              (showShares ? 1 : 0);
-            const otherPct = otherCount > 0 ? `${60 / otherCount}%` : "0%";
-            return (
-              <>
-                {cols.list_show_number && <col style={{ width: otherPct }} />}
-                <col style={{ width: "40%" }} />
-                {cols.list_show_author && <col style={{ width: otherPct }} />}
-                {cols.list_show_date && <col style={{ width: otherPct }} />}
-                {cols.list_show_views && <col style={{ width: otherPct }} />}
-                {cols.list_show_likes && <col style={{ width: otherPct }} />}
-                {cols.list_show_comments && <col style={{ width: otherPct }} />}
-                {showShares && <col style={{ width: otherPct }} />}
-              </>
-            );
-          })()}
+          {cols.list_show_number && <col style={{ width: "80px" }} />}
+          <col />{/* 제목 — 가변 */}
+          {cols.list_show_author && <col style={{ width: "120px" }} />}
+          {cols.list_show_date && <col style={{ width: "120px" }} />}
+          {cols.list_show_views && <col style={{ width: "70px" }} />}
+          {cols.list_show_likes && <col style={{ width: "80px" }} />}
+          {cols.list_show_comments && <col style={{ width: "70px" }} />}
+          {showShares && <col style={{ width: "70px" }} />}
         </colgroup>
         <thead>
           <tr className="text-[13px] text-[var(--color-text-muted)] border-y border-[var(--color-border)]">

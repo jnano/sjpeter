@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.440";
+export const CURRENT_VERSION = "1.5.441";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.441", date: "2026-05-30", tag: "수정", items: ["게시판 컬럼 폭 원복 — v1.5.438~440 의 % 비율 실험을 되돌리고 v1.5.437 의 px+가변 colgroup 복귀. 번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70 px, 제목 가변(나머지 공간)"] },
   { version: "1.5.440", date: "2026-05-30", tag: "수정", items: ["게시판 제목 컬럼 폭 60% → 40% 변경. 나머지 N개 컬럼이 60% 를 균등 분배(8개 모두 활성 시 각 8.57%)"] },
   { version: "1.5.439", date: "2026-05-30", tag: "수정", items: ["게시판 제목 60% 폭이 실제 적용되지 않던 문제 해소 — v1.5.438 의 mixed px+% 단위 colgroup 은 table-layout:fixed 가 px 값을 우선 적용 후 남는 폭만 %로 받는 식이라 60%가 효력 없었음. 모든 col 을 % 로 통일: 제목 60% + 나머지 7컬럼이 40% 를 균등 분배(N개 활성 시 각 40/N%). 정확히 총 100% → 제목이 항상 테이블 폭의 60%. 컬럼 토글로 노출 개수가 바뀌어도 균등 재계산"] },
   { version: "1.5.438", date: "2026-05-30", tag: "디자인", items: ["게시판 list 뷰 제목 컬럼 폭을 60% 로 고정 — BoardList.ListView colgroup 의 제목 col 을 가변(1fr) → width:60%. 다른 컬럼(번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70 px) 은 그대로. 화면 폭이 변해도 제목 칸이 항상 테이블 폭의 60% 차지"] },
