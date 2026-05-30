@@ -212,7 +212,7 @@ function MonthView({
                   onClick={() => inMonth && onCreateForDate?.(dateToStr(d))}
                   title={onCreateForDate && inMonth ? "이 날짜에 일정 추가" : undefined}
                   className={`cal-cell-bg ${i < 6 ? "br" : ""} ${inMonth ? "" : "out"}`}
-                  style={{ gridColumn: i + 1, gridRow: "1 / -1" }}
+                  style={{ left: `${(i / 7) * 100}%`, width: `${100 / 7}%` }}
                 />
               );
             })}
