@@ -143,7 +143,12 @@ function DeptCard({
         ? g.representative_photo_url
         : `${API}${g.representative_photo_url}`)
     : null;
-  const href = g.slug ? `/groups/${g.slug}` : g.link_url ?? "#";
+  // slug → /groups/{slug}. 없으면 link_url(외부). 그것도 없으면 ID fallback (/groups/id-{N}).
+  const href = g.slug
+    ? `/groups/${g.slug}`
+    : g.link_url
+      ? g.link_url
+      : `/groups/id-${g.id}`;
 
   return (
     <Link

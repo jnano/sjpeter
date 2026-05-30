@@ -357,6 +357,15 @@ def get_community_by_slug(slug: str, db: Session = Depends(get_db)):
     return group
 
 
+@router.get("/community/id/{group_id}", response_model=CommunityGroupOut)
+def get_community_by_id(group_id: int, db: Session = Depends(get_db)):
+    """slug 미설정 그룹의 fallback 상세 조회용 (/groups/id-{N} 라우팅)."""
+    group = db.query(CommunityGroup).filter(CommunityGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="분과를 찾을 수 없습니다.")
+    return group
+
+
 @router.post("/community", response_model=CommunityGroupOut)
 def create_community(body: CommunityGroupIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     if body.slug:

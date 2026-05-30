@@ -15,7 +15,12 @@ export const dynamic = "force-dynamic";
 
 async function fetchGroupBySlug(slug: string): Promise<CommunityGroup | null> {
   try {
-    const res = await fetch(`${API}/api/content/community/slug/${slug}`, { cache: "no-store" });
+    // 'id-{N}' 패턴은 slug 미설정 그룹의 ID 기반 fallback. /community/id/{N} 으로 조회.
+    const idMatch = slug.match(/^id-(\d+)$/);
+    const endpoint = idMatch
+      ? `${API}/api/content/community/id/${idMatch[1]}`
+      : `${API}/api/content/community/slug/${slug}`;
+    const res = await fetch(endpoint, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -36,7 +41,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const [group, allGroups] = await Promise.all([fetchGroupBySlug(slug), fetchGroups()]);
 
-  if (!group || group.parent_id) notFound();
+  // v1.5.447 — 자식(sub-group) 도 자체 상세 페이지 노출 허용. 부모 parent_id 제약 제거.
+  // ID fallback(/groups/id-{N}) 라우팅으로 들어오는 sub-group 도 정상 렌더.
+  if (!group) notFound();
 
   const subGroups = allGroups
     .filter((g) => g.parent_id === group.id)
