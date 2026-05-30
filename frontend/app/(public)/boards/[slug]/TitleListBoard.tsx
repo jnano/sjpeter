@@ -32,12 +32,18 @@ export interface TitleListCols {
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function daysSince(iso: string): number {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 999;
+  return (Date.now() - d.getTime()) / 86_400_000;
 }
 
 /**
- * 게시판 kind='titlelist' — 전통적 게시판 표 (<table> 시맨틱).
- * <thead> 헤더와 <tbody> 행이 같은 colgroup 폭을 공유 → 자동 정렬.
+ * 게시판 kind='titlelist' — 전통적 본당 게시판 표.
+ * 단순 가로선 테이블. 공지(고정)는 회색 배경 + "공지사항" 라벨. 7일 내 게시글에 New 뱃지.
  */
 export default function TitleListBoard({
   slug,
@@ -71,17 +77,7 @@ export default function TitleListBoard({
     (showShares ? 1 : 0);
 
   return (
-    <div className="space-y-4">
-      {/* 상단 요약 */}
-      <div className="flex items-baseline justify-between gap-3 pb-3 border-b border-[var(--color-text)]">
-        <div className="text-[11px] tracking-[0.16em] uppercase font-bold text-[var(--color-primary)]">
-          전체 목록
-        </div>
-        <span className="text-[12px] font-bold text-[var(--color-text-muted)] tabular-nums">
-          {total}건
-        </span>
-      </div>
-
+    <div className="space-y-5">
       {showSearch && (
         <form action={`/boards/${slug}`} method="get" className="flex items-center gap-2">
           <input
@@ -100,110 +96,118 @@ export default function TitleListBoard({
         </form>
       )}
 
-      {/* 표 */}
-      <div className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse" style={{ tableLayout: "fixed" }}>
-            <colgroup>
-              {cols.list_show_number && <col style={{ width: "56px" }} />}
-              <col />{/* 제목 - 가변 */}
-              {cols.list_show_author && <col style={{ width: "104px" }} />}
-              {cols.list_show_date && <col style={{ width: "92px" }} />}
-              {cols.list_show_views && <col style={{ width: "68px" }} />}
-              {cols.list_show_likes && <col style={{ width: "72px" }} />}
-              {cols.list_show_comments && <col style={{ width: "68px" }} />}
-              {showShares && <col style={{ width: "68px" }} />}
-            </colgroup>
-            <thead>
-              <tr className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] text-[11px] tracking-[0.08em] uppercase font-bold text-[var(--color-text-muted)]">
-                {cols.list_show_number && <th className="px-3 py-3 text-center">번호</th>}
-                <th className="px-3 py-3 text-left">제목</th>
-                {cols.list_show_author && <th className="px-3 py-3 text-center">작성자</th>}
-                {cols.list_show_date && <th className="px-3 py-3 text-center">작성일</th>}
-                {cols.list_show_views && <th className="px-3 py-3 text-center">조회수</th>}
-                {cols.list_show_likes && <th className="px-3 py-3 text-center">좋아요수</th>}
-                {cols.list_show_comments && <th className="px-3 py-3 text-center">댓글수</th>}
-                {showShares && <th className="px-3 py-3 text-center">공유수</th>}
+      {/* 표 — 가로선만, 카드/보더 없음. table-layout:fixed + colgroup 으로 헤더-행 폭 동일. */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse" style={{ tableLayout: "fixed" }}>
+          <colgroup>
+            {cols.list_show_number && <col style={{ width: "80px" }} />}
+            <col />{/* 제목 - 가변 */}
+            {cols.list_show_author && <col style={{ width: "120px" }} />}
+            {cols.list_show_date && <col style={{ width: "120px" }} />}
+            {cols.list_show_views && <col style={{ width: "70px" }} />}
+            {cols.list_show_likes && <col style={{ width: "80px" }} />}
+            {cols.list_show_comments && <col style={{ width: "70px" }} />}
+            {showShares && <col style={{ width: "70px" }} />}
+          </colgroup>
+          <thead>
+            <tr className="text-[13px] text-[var(--color-text-muted)] border-y border-[var(--color-border)]">
+              {cols.list_show_number && <th className="px-4 py-3.5 text-left font-medium">번호</th>}
+              <th className="px-4 py-3.5 text-left font-medium">제목</th>
+              {cols.list_show_author && <th className="px-4 py-3.5 text-left font-medium">작성자</th>}
+              {cols.list_show_date && <th className="px-4 py-3.5 text-left font-medium">작성일</th>}
+              {cols.list_show_views && <th className="px-4 py-3.5 text-left font-medium">조회</th>}
+              {cols.list_show_likes && <th className="px-4 py-3.5 text-left font-medium">좋아요</th>}
+              {cols.list_show_comments && <th className="px-4 py-3.5 text-left font-medium">댓글</th>}
+              {showShares && <th className="px-4 py-3.5 text-left font-medium">공유</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {empty ? (
+              <tr>
+                <td colSpan={colCount} className="px-4 py-16 text-center text-sm text-[var(--color-text-muted)]">
+                  {searchQuery ? "검색 결과가 없습니다." : "등록된 글이 없습니다."}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {empty ? (
-                <tr>
-                  <td colSpan={colCount} className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
-                    {searchQuery ? "검색 결과가 없습니다." : "등록된 글이 없습니다."}
-                  </td>
-                </tr>
-              ) : (
-                posts.map((p, i) => {
-                  const rowNumber = total - (page - 1) * posts.length - i;
-                  const href = `/boards/${slug}/${p.id}`;
-                  return (
-                    <tr
-                      key={p.id}
-                      className="border-b border-[var(--color-border)] last:border-b-0 text-[13px] hover:bg-[var(--color-surface-warm)]/60 transition-colors"
-                    >
-                      {cols.list_show_number && (
-                        <td className="px-3 py-3 text-center tabular-nums text-[var(--color-text-muted)]">
-                          {p.is_pinned ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white">고정</span>
-                          ) : (
-                            rowNumber
-                          )}
-                        </td>
-                      )}
-                      <td className="px-3 py-3 text-left">
-                        <Link href={href} className="flex items-center gap-1.5 min-w-0">
-                          {!cols.list_show_number && p.is_pinned && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">고정</span>
-                          )}
-                          <span className="font-medium text-[var(--color-text)] truncate hover:text-[var(--color-primary)]">{p.title}</span>
-                          {p.thumbnail_url && (
-                            <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
-                          )}
-                        </Link>
+            ) : (
+              posts.map((p, i) => {
+                const rowNumber = total - (page - 1) * posts.length - i;
+                const href = `/boards/${slug}/${p.id}`;
+                const isNew = !p.is_pinned && daysSince(p.created_at) <= 2;
+                const rowBg = p.is_pinned ? "bg-[var(--color-surface-warm)]/60" : "";
+                return (
+                  <tr
+                    key={p.id}
+                    className={`text-[14px] border-b border-[var(--color-border)] ${rowBg} hover:bg-[var(--color-surface-warm)]/40 transition-colors`}
+                  >
+                    {cols.list_show_number && (
+                      <td className="px-4 py-4 text-left text-[var(--color-text-muted)] text-[13px] tabular-nums">
+                        {p.is_pinned ? (
+                          <span className="font-medium text-[var(--color-text-muted)]">공지사항</span>
+                        ) : (
+                          rowNumber
+                        )}
                       </td>
-                      {cols.list_show_author && (
-                        <td className="px-3 py-3 text-center text-[12px] text-[var(--color-text)] truncate">
-                          {p.member?.nickname ?? "성당"}
-                        </td>
-                      )}
-                      {cols.list_show_date && (
-                        <td className="px-3 py-3 text-center text-[12px] tabular-nums text-[var(--color-text-muted)]">
-                          {fmtDate(p.created_at)}
-                        </td>
-                      )}
-                      {cols.list_show_views && (
-                        <td className="px-3 py-3 text-center text-[12px] tabular-nums text-[var(--color-text-muted)]">
-                          {p.view_count}
-                        </td>
-                      )}
-                      {cols.list_show_likes && (
-                        <td className="px-3 py-3 text-center text-[12px] tabular-nums text-[var(--color-text-muted)]">
-                          {p.like_count ?? 0}
-                        </td>
-                      )}
-                      {cols.list_show_comments && (
-                        <td className="px-3 py-3 text-center text-[12px] tabular-nums text-[var(--color-text-muted)]">
-                          {p.comment_count}
-                        </td>
-                      )}
-                      {showShares && (
-                        <td className="px-3 py-3 text-center text-[12px] tabular-nums text-[var(--color-text-muted)]">
-                          {p.share_count ?? 0}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                    <td className="px-4 py-4 text-left">
+                      <Link href={href} className="inline-flex items-center gap-2 min-w-0 max-w-full text-[var(--color-text)] hover:text-[var(--color-primary)]">
+                        {!cols.list_show_number && p.is_pinned && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">고정</span>
+                        )}
+                        {isNew && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-rose-100 text-rose-600 shrink-0">N</span>
+                        )}
+                        <span className="truncate">{p.title}</span>
+                        {p.comment_count > 0 && cols.list_show_comments && (
+                          <span className="text-[12px] text-[var(--color-primary)] tabular-nums shrink-0">
+                            [{p.comment_count}]
+                          </span>
+                        )}
+                        {p.thumbnail_url && (
+                          <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
+                        )}
+                      </Link>
+                    </td>
+                    {cols.list_show_author && (
+                      <td className="px-4 py-4 text-left text-[13px] text-[var(--color-text-muted)] truncate">
+                        {p.member?.nickname ?? "성당"}
+                      </td>
+                    )}
+                    {cols.list_show_date && (
+                      <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                        {fmtDate(p.created_at)}
+                      </td>
+                    )}
+                    {cols.list_show_views && (
+                      <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                        {p.view_count}
+                      </td>
+                    )}
+                    {cols.list_show_likes && (
+                      <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                        {p.like_count ?? 0}
+                      </td>
+                    )}
+                    {cols.list_show_comments && (
+                      <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                        {p.comment_count}
+                      </td>
+                    )}
+                    {showShares && (
+                      <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                        {p.share_count ?? 0}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
-        <nav className="flex justify-center items-center gap-1.5 mt-4" aria-label="페이지">
+        <nav className="flex justify-center items-center gap-1.5 mt-6" aria-label="페이지">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
             const isCur = p === page;
             const qp = new URLSearchParams();

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.435";
+export const CURRENT_VERSION = "1.5.436";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.436", date: "2026-05-30", tag: "디자인", items: ["titlelist 게시판 톤 정정 — 사용자 시안(전형적 본당 게시판)에 맞춰 카드/보더/rounded/색 헤더 제거. 가로선만 있는 단순 표: 상단 카드 wrapper 삭제, '전체 N건' 요약 삭제. 헤더(번호·제목·작성자·작성일·조회·좋아요·댓글·공유) 는 medium weight 13px gray-muted + 가로 보더 상하만. 행 폭: 번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70, 제목 가변. 본문 14px 통일, 패딩 16x16. 고정 게시글은 번호 셀에 '공지사항' 라벨 + bg-warm 60% 배경 행. 2일 이내 신규에 'N' 분홍 뱃지. 날짜 형식 YYYY.MM.DD"] },
   { version: "1.5.435", date: "2026-05-30", tag: "수정", items: ["titlelist 게시판을 <table> 시맨틱으로 재작성 — v1.5.434 의 CSS Grid 가 시각적으로 어긋나 보이던 문제. <colgroup>+<col width> 로 컬럼 폭(번호 56·작성자 104·작성일 92·조회수 68·좋아요수 72·댓글수 68·공유수 68, 제목은 가변) 명시 + table-layout:fixed. <thead>의 <th>와 <tbody>의 <td>가 브라우저 표 정렬 알고리즘으로 자동 픽셀 정렬. 제목은 제목 칸, 작성일은 작성일 칸에 정확히 떨어짐. 빈 결과 안내는 colSpan 활용"] },
   { version: "1.5.434", date: "2026-05-30", tag: "수정", items: ["titlelist 게시판 헤더-행 정렬 어긋남 해소 — v1.5.433 의 flex+개별 width 클래스 방식으로 헤더와 행 셀 폭이 불일치하던 문제. CSS Grid 로 재작성: 활성 컬럼별 track 정의(번호 56px·제목 1fr·작성자 96px·작성일 84px·조회수 60px·좋아요수 68px·댓글수 60px·공유수 60px) → 헤더와 모든 행이 동일 grid-template-columns inline style 공유. 제목은 제목 칸, 작성일은 작성일 칸에 픽셀 단위로 정렬됨. cellContent 헬퍼로 데이터 셀 렌더링 분리"] },
   { version: "1.5.433", date: "2026-05-30", tag: "기능", items: ["게시판 kind='titlelist' 렌더 형태를 전통적 표 형식으로 재작성 — v1.5.431 의 '단순 제목 리스트' 해석을 정정. TitleListBoard 가 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수) bg-warm 띠 + 그 아래 같은 그리드로 정렬된 행 목록을 렌더. 기존 board.list_show_* 토글로 컬럼 노출 동적 가감. 모바일 폭 좁을 때 min-w-[640px] 가로 스크롤. 행에 hover bg, [고정] 뱃지(번호 컬럼 또는 제목 앞), 썸네일 📷 표시. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 에서 board.list_show_* 9 필드를 cols prop 으로 전달. admin/boards 안내 박스도 '공지사항 톤' → '전통적 게시판 표 형식' 으로 정정. /boards/notice 는 전용 라우트(/boards/notice/page.tsx) 가 있어 새 kind 가 적용되지 않으니 다른 게시판으로 테스트해야 함"] },
