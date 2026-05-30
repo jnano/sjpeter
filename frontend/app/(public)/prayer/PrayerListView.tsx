@@ -71,7 +71,17 @@ export default function PrayerListView({ prayers }: { prayers: PrayerItem[] }) {
     return m;
   }, [prayers]);
 
-  const featured = useMemo(() => prayers.find((p) => p.is_featured) ?? null, [prayers]);
+  // 오늘 추천 기도: 관리자 지정(is_featured) 우선, 없으면 날짜 기반으로 매일 1개 랜덤.
+  // 날짜 시드라 하루 동안 고정·자정에 변경. hydration mismatch 회피 위해 랜덤은 마운트 후 적용.
+  const pinned = useMemo(() => prayers.find((p) => p.is_featured) ?? null, [prayers]);
+  const [featured, setFeatured] = useState<PrayerItem | null>(pinned);
+  useEffect(() => {
+    if (pinned) { setFeatured(pinned); return; }
+    if (prayers.length === 0) { setFeatured(null); return; }
+    const d = new Date();
+    const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    setFeatured(prayers[seed % prayers.length]);
+  }, [pinned, prayers]);
 
   const filtered = useMemo(() => {
     let pool = prayers;
