@@ -53,8 +53,9 @@ def _cache_set(key: str, value):
 
 
 async def _fetch_missa_page(date_str: str) -> BeautifulSoup | None:
+    # v1.5.461 — timeout 15→5s. 외부 굿뉴스 서버가 응답 안 하면 사용자가 15초 기다리는 손해.
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=5, follow_redirects=True) as client:
             resp = await client.get(
                 _MISSA_URL,
                 params={"goMonth": date_str},

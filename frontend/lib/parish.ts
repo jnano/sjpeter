@@ -49,14 +49,9 @@ export function absoluteUrl(path: string | null | undefined): string | null {
   return `${API}${path}`;
 }
 
-/** site_settings 의 PARISH_NAME_EN — 헤더 영문 라벨·meta 태그용. 없으면 빈 문자열. */
+/** site_settings 의 PARISH_NAME_EN — 헤더 영문 라벨·meta 태그용. v1.5.461 — site-config 공통 wrapper. */
 export const fetchParishNameEn = cache(async (): Promise<string> => {
-  try {
-    const res = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
-    if (!res.ok) return "";
-    const data = await res.json();
-    return (data.PARISH_NAME_EN || "").trim();
-  } catch {
-    return "";
-  }
+  const { fetchSiteConfig } = await import("./site-config");
+  const data = await fetchSiteConfig();
+  return (data.PARISH_NAME_EN || "").trim();
 });

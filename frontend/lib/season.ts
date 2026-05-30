@@ -35,18 +35,12 @@ const VALID = new Set<string>(Object.keys(SEASON_LABELS));
  * 현재 활성 전례 시기를 server-side에서 가져옵니다.
  * site_settings.CURRENT_SEASON을 백엔드 public-config 엔드포인트로 조회.
  * - 빈 값이거나 유효하지 않은 값이면 null (스킨 꺼짐)
- * - admin 변경이 즉시 반영되도록 cache: "no-store"
- * - React cache로 한 요청 사이클 내 dedup
+ * - v1.5.461 — fetchSiteConfig 공통 wrapper 사용 (4중복 → 1 fetch)
  */
 export const fetchCurrentSeason = cache(async (): Promise<LiturgicalSeason | null> => {
-  try {
-    const res = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data: Record<string, string> = await res.json();
-    const value = data.CURRENT_SEASON?.trim().toLowerCase();
-    if (value && VALID.has(value)) return value as LiturgicalSeason;
-    return null;
-  } catch {
-    return null;
-  }
+  const { fetchSiteConfig } = await import("./site-config");
+  const data = await fetchSiteConfig();
+  const value = data.CURRENT_SEASON?.trim().toLowerCase();
+  if (value && VALID.has(value)) return value as LiturgicalSeason;
+  return null;
 });

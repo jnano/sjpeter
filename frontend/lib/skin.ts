@@ -45,17 +45,12 @@ export const SKIN_OPTIONS: { key: SkinKey; label: string; description: string; p
 
 const VALID = new Set<string>(SKIN_OPTIONS.map((s) => s.key));
 
-/** site_settings.SKIN 값을 server-side 에서 fetch. */
+/** site_settings.SKIN 값을 server-side 에서 fetch. v1.5.461 — site-config 공통 wrapper. */
 export const fetchCurrentSkin = cache(async (): Promise<SkinKey> => {
-  try {
-    const res = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
-    if (!res.ok) return "basic";
-    const data: Record<string, string> = await res.json();
-    const v = (data.SKIN ?? "").trim().toLowerCase();
-    return v && VALID.has(v) ? (v as SkinKey) : "basic";
-  } catch {
-    return "basic";
-  }
+  const { fetchSiteConfig } = await import("./site-config");
+  const data = await fetchSiteConfig();
+  const v = (data.SKIN ?? "").trim().toLowerCase();
+  return v && VALID.has(v) ? (v as SkinKey) : "basic";
 });
 
 /** SKIN 이 Claude Design 시안 기반 본격 스킨인지 — page.tsx 에서 다른 home component 분기 */

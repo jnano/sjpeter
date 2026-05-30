@@ -118,15 +118,10 @@ export function relativeLuminance(hex: string): number {
   return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
 }
 
-/** site_settings.INK_COLOR 를 server-side 에서 fetch. */
+/** site_settings.INK_COLOR 를 server-side 에서 fetch. v1.5.461 — site-config 공통 wrapper. */
 export const fetchCurrentInkColor = cache(async (): Promise<string> => {
-  try {
-    const res = await fetch(`${API}/api/public/site-config`, { cache: "no-store" });
-    if (!res.ok) return DEFAULT_INK;
-    const data: Record<string, string> = await res.json();
-    const v = (data.INK_COLOR ?? "").trim();
-    return isValidHex(v) ? normalizeHex(v) : DEFAULT_INK;
-  } catch {
-    return DEFAULT_INK;
-  }
+  const { fetchSiteConfig } = await import("./site-config");
+  const data = await fetchSiteConfig();
+  const v = (data.INK_COLOR ?? "").trim();
+  return isValidHex(v) ? normalizeHex(v) : DEFAULT_INK;
 });

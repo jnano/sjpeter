@@ -69,6 +69,22 @@ async def lifespan(app: FastAPI):
     _seed_initial_data()
     _seed_auth_secret()
     _init_sentry_if_configured()  # v1.5.456 — Sentry 조건부 초기화
+    # v1.5.461 — gospel/today 사전 워밍: startup 후 비동기로 굿뉴스 1회 호출.
+    # 실패해도 무시(굿뉴스 서버 다운). 첫 사용자가 825ms 기다리는 대신 백그라운드에서 처리.
+    import asyncio
+    async def _warm_gospel():
+        try:
+            await asyncio.sleep(2)  # uvicorn 첫 요청 처리 안정화 후
+            from app.api.gospel import _fetch_missa_page, _cache_set
+            from datetime import date
+            today_iso = date.today().isoformat()
+            soup = await _fetch_missa_page(today_iso)
+            if soup is not None:
+                _cache_set(f"page_{today_iso}", soup)
+                logging.getLogger(__name__).info("gospel 사전 워밍 완료 (%s)", today_iso)
+        except Exception as exc:
+            logging.getLogger(__name__).warning("gospel 워밍 실패 (무시): %s", exc)
+    asyncio.create_task(_warm_gospel())
     yield
     # ── shutdown ── (현재 정리 작업 없음. SQLAlchemy 엔진은 process 종료 시 자동 정리)
 
@@ -1587,6 +1603,21 @@ def _migrate_add_columns():
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_posts_board_expires ON posts(board_id, expires_at)"
         ))
+        # v1.5.461 — 데이터 증가 시 게시판 목록·상세 성능 안전망.
+        # (board_id, created_at DESC) 복합 인덱스: 게시판별 최신순 정렬 쿼리 가속.
+        # comments(post_id)·attachments(post_id) 단일 인덱스: comment_count·첨부 batch 조회 가속.
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_posts_board_created ON posts(board_id, created_at DESC)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_comments_post_id ON comments(post_id)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_attachments_post_id ON attachments(post_id)"
+            ))
+        except Exception:
+            pass
 
         # 분과·단체 태깅 + 사이트 내 알림 (v1.5.290~) — 주보 AI 추출 글의 대상 분과를 태깅,
         # 관심 회원에게 알림 즉시 발송. temporal_kind 로 과거 이벤트는 발송 제외.

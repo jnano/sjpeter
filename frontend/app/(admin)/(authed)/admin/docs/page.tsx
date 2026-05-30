@@ -18,7 +18,7 @@ function useParishName(): string {
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.460";
+export const CURRENT_VERSION = "1.5.461";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -28,6 +28,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.461", date: "2026-05-30", tag: "수정", items: ["전체 페이지 응답 속도 -60~88% 단축. (1) lib/site-config.ts 공통 wrapper 신설 — lib/parish·skin·season·ink-color 가 각자 /api/public/site-config 를 별도 fetch(no-store) 하던 패턴을 단일 fetch + revalidate=60 + parish 태그로 통합. 한 페이지 SSR 에 동일 endpoint 4~5 호출 → 1 호출. (2) gospel/today 사전 워밍: lifespan 에서 startup 2초 후 비동기로 굿뉴스 1회 호출해 _daily_cache 채움. httpx timeout 15→5s 단축. (3) DB 인덱스 3종 추가: posts(board_id, created_at DESC), comments(post_id), attachments(post_id) — 데이터 증가 시 게시판 성능 안전망. 측정 결과(warm 평균 3회): / 1074→339ms(-68%), /about 548→177ms(-68%), /boards/free 1543→178ms(-88% — cold compile 포함), /word 628→145ms(-77%), /calendar 503→135ms(-73%), /pastor·/priests·/info·/vision·/history·/patron·/catechumen 모두 100~155ms 수렴. gospel API 825→3ms(워밍 후)"] },
   { version: "1.5.460", date: "2026-05-30", tag: "인프라", items: ["멀티 본당 배포 후속 권장 4건 완료. (1) Sentry SDK requirements.txt 추가(sentry-sdk[fastapi]>=2.0.0) + venv 실설치(2.61.0) — 백엔드 재기동 시 site_settings.SENTRY_DSN 있으면 자동 활성화. (2) scripts/cron_backup.sh + .crontab.example — pg_dump + uploads tarball + RETENTION_DAYS(기본 30) 자동 정리 + 메일 알림(mail/mailx). bash -n syntax OK. (3) deploy/systemd/ — faithandme-backend.service + faithandme-frontend.service + README.md(EnvironmentFile 경로·nginx reverse proxy snippet 포함). NoNewPrivileges/ProtectSystem/ReadWritePaths 보안 강화. (4) admin/settings SITE_URL 이 localhost/127.0.0.1 일 때 amber 경고 박스 — OAuth callback·메일 본문 링크 깨짐 위험 안내"] },
   { version: "1.5.459", date: "2026-05-30", tag: "인프라", items: ["Docker 정적 검증 + 함정 2개 보강. (1) .dockerignore 추가(backend/frontend) — venv·node_modules·uploads·secrets·.git·docs 제외로 build context 비대·시크릿 누출 방지. (2) NEXT_PUBLIC_API_URL 빌드시점 베이크 이슈 — frontend Dockerfile 에 ARG NEXT_PUBLIC_API_URL 추가 + docker-compose 의 build.args 로 전달. 운영 도메인 변경 시 재빌드 필요(INSTALL.md 경고 박스 추가). 정적 검증 errors=0, warnings 2개 해소. 실제 docker build 는 환경에 Docker 미설치로 미시도"] },
   { version: "1.5.458", date: "2026-05-30", tag: "인프라", items: ["사무국 운영 가이드(OPERATOR_GUIDE.md) 작성 — 비IT 본당 사무국 대상. 6 섹션: (0) 처음 사용 시 로그인·비밀번호·기본 정보, (1) 매주 하는 일(주보 업로드·공지·일정), (2) 자주 하는 일(회원·사진·분과·사목자), (3) 가끔(백업·메뉴·홈 구성), (4) 문제 발생 시(비밀번호·탈퇴·장애·삭제·외부 키), (5) FAQ 6건, (6) 도움말·문의. INSTALL.md 에 참조 링크 추가"] },
