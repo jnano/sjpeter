@@ -112,8 +112,8 @@ event_type 분류 기준:
 - "묵상": "주일 말씀 묵상과 실천", "복음 묵상", "한 줄 묵상", 강론·말씀 나눔 등 영적 양식 본문 (제목 + 성경 구절 출처 + 본문 + 이번 주 실천). 묵상은 아래 scripture·practice·pull_quote 필드도 함께 분리해서 채우세요.
 - "지표": "본당 사목지표", "올해의 사목 방향", "본당 슬로건" 등 본당 사목 방향성 (연간 1회 정도 등장)
 
-temporal_kind (알림 게이트): future(발행일 이후 명시 날짜+미래 톤) | timeless(날짜 없는 모집·신청·안내) | past(지난·후기·보고·끝난 회고) | unknown(모호).
-temporal_reason: 30자 이내, 단순 명사구. unknown 이면 null.
+temporal_kind (알림 게이트 — 2분류): active(진행중·앞으로 유효: 발행일 이후 예정 일정 또는 날짜 없는 모집·신청·상시 안내) | ended(종료됨·알림 불필요: 이미 지난 일·후기·보고·끝난 회고, 또는 시점이 모호해 알림이 부적절한 것). 판단이 애매하면 ended.
+temporal_reason: 30자 이내, 단순 명사구. ended 이면 null 가능.
 groups: 본문 언급 분과·단체명 배열. 없으면 []. group_name 은 groups[0] 와 동일.
 
 importance (중요도):
@@ -135,7 +135,7 @@ JSON 형식 (설명·코드펜스 없이):
     "end_date": "YYYY-MM-DD 또는 null",
     "location": "장소 또는 null",
     "event_type": "공지|행사|모임|묵상|지표",
-    "temporal_kind": "future|timeless|past|unknown",
+    "temporal_kind": "active|ended",
     "temporal_reason": "30자 이내 또는 null",
     "importance": "high|normal|low"
   }}

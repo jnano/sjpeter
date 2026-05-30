@@ -40,7 +40,7 @@ interface Extraction {
   scripture: string | null;
   practice: string | null;
   pull_quote: string | null;
-  temporal_kind: "future" | "timeless" | "past" | "unknown";
+  temporal_kind: "active" | "ended";
   temporal_reason: string | null;
   importance: "high" | "normal" | "low";
   expires_at: string | null;
@@ -65,7 +65,7 @@ interface CommunityGroup {
 
 /** 항목별 검토 입력 (시점/분과/알림/만료/고정) — approve 시 body 에 담아 보냄. */
 interface ReviewState {
-  temporal_kind: "future" | "timeless" | "past" | "unknown";
+  temporal_kind: "active" | "ended";
   group_ids: number[];
   notify: boolean;
   expires_at: string | null;  // YYYY-MM-DD
@@ -73,18 +73,14 @@ interface ReviewState {
 }
 
 const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
-  future:   "미래 행사",
-  timeless: "상시",
-  past:     "지난 이벤트",
-  unknown:  "모호",
+  active: "진행중",
+  ended:  "종료됨",
 };
 
-// 시점 옵션 — 아이콘·설명(hover 툴팁)·알림 발송 여부. 시인성 향상용 메타.
+// 시점 옵션 (2분류) — 진행중=알림 대상 / 종료됨=알림 없음.
 const TEMPORAL_OPTS: { value: ReviewState["temporal_kind"]; icon: string; label: string; hint: string; notifies: boolean }[] = [
-  { value: "future",   icon: "📅", label: "미래 행사",   hint: "발행일 이후 예정된 일정 — 알림 발송",       notifies: true },
-  { value: "timeless", icon: "🔁", label: "상시",        hint: "날짜 없는 모집·안내 — 알림 발송",          notifies: true },
-  { value: "past",     icon: "📜", label: "지난 이벤트", hint: "이미 끝난 일·후기 — 기록용, 알림 차단",    notifies: false },
-  { value: "unknown",  icon: "❓", label: "모호",        hint: "시점이 불분명 — 보류, 알림 차단",          notifies: false },
+  { value: "active", icon: "🔔", label: "진행중", hint: "앞으로 유효한 일정·안내 — 알림 발송 대상 (단, 날짜가 지났으면 발송 안 됨)", notifies: true },
+  { value: "ended",  icon: "📁", label: "종료됨", hint: "이미 지난 일·후기·기록용 — 알림 없음",                                    notifies: false },
 ];
 
 
@@ -191,14 +187,14 @@ export default function ExtractionsPage() {
       setExtractions(data);
       const today = new Date().toISOString().slice(0, 10);
       // AI 추출 후보로 reviewByExt prefill (관리자가 수정 가능)
-      // 옛 주보를 늦게 등록한 경우 — AI 는 future 라도 오늘 이전 날짜면 past 로 보정
+      // 옛 주보를 늦게 등록한 경우 — active 라도 오늘 이전 날짜면 ended 로 보정
       setReviewByExt((prev) => {
         const next = { ...prev };
         for (const e of data) {
           if (!next[e.id]) {
-            let tk = e.temporal_kind ?? "unknown";
-            if (tk === "future" && e.event_date && e.event_date < today) {
-              tk = "past";
+            let tk: ReviewState["temporal_kind"] = e.temporal_kind === "active" ? "active" : "ended";
+            if (tk === "active" && e.event_date && e.event_date < today) {
+              tk = "ended";
             }
             // 디폴트 알림 정책 — AI 가 high 로 판단한 것만 디폴트 true.
             //   normal/low 는 admin 이 명시적으로 켜야 발송 (자잘한 안내가 회원 알림함 묻는 것 회피).
@@ -257,7 +253,7 @@ export default function ExtractionsPage() {
     setReviewByExt((prev) => ({
       ...prev,
       [extId]: {
-        temporal_kind: "unknown", group_ids: [], notify: true,
+        temporal_kind: "ended", group_ids: [], notify: true,
         expires_at: null, is_pinned: false,
         ...(prev[extId] ?? {}), ...patch,
       },
@@ -270,7 +266,7 @@ export default function ExtractionsPage() {
     const boardId = selectedBoard[ext.id];
     if (!autoRoute && !boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
     setError("");
-    const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
+    const review = reviewByExt[ext.id] ?? { temporal_kind: "ended", group_ids: [], notify: true };
     const notify_flag = options?.notifyOverride ?? review.notify;
     // 분과 미선택 + 알림 발송 의도 시 가드 — 발송 대상이 0명이 되어 조용히 누락되는 실수 방지
     if (notify_flag && review.group_ids.length === 0) {
@@ -313,7 +309,7 @@ export default function ExtractionsPage() {
     }
     setError("");
     setProcessing((p) => ({ ...p, [ext.id]: true }));
-    const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
+    const review = reviewByExt[ext.id] ?? { temporal_kind: "ended", group_ids: [], notify: true };
     try {
       const res = await fetch(`${API}/api/bulletins/extractions/${ext.id}/approve-as-event`, {
         method: "POST",
@@ -815,7 +811,7 @@ export default function ExtractionsPage() {
                         onConvertToCalendar={() => convertToCalendar(ext.id)}
                         processing={!!processing[ext.id]}
                         communityGroups={communityGroups}
-                        review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind ?? "unknown", group_ids: [], notify: true }}
+                        review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind === "active" ? "active" : "ended", group_ids: [], notify: true }}
                         onReviewChange={(patch) => setReview(ext.id, patch)}
                         token={token}
                       />
@@ -1013,21 +1009,27 @@ function ExtractionCard({
               options={TEMPORAL_OPTS.map((o) => ({ value: o.value, icon: o.icon, label: o.label, hint: o.hint }))}
             />
             <p className="text-[11px]">
-              <span className="text-green-700">상시·미래 = 알림 발송</span>
+              <span className="text-green-700">🔔 진행중 = 알림 발송</span>
               <span className="text-[var(--color-text-muted)]"> · </span>
-              <span className="text-amber-700">지난 이벤트·모호 = 알림 차단</span>
+              <span className="text-amber-700">📁 종료됨 = 알림 없음</span>
             </p>
+            {/* 게이트 A — 진행중이어도 event_date 가 지났으면 발송 안 됨 */}
+            {review.temporal_kind === "active" && ext.event_date && ext.event_date < new Date().toISOString().slice(0, 10) && (
+              <p className="text-[11px] text-amber-700">⚠️ 날짜({ext.event_date})가 지나 알림은 발송되지 않습니다 (게시판 등록은 정상).</p>
+            )}
             {ext.temporal_reason && (
               <p className="text-[11px] text-[var(--color-text-muted)] italic">AI 판단: {ext.temporal_reason}</p>
             )}
           </div>
-          {/* 대상 분과 — chip 으로 표시 + 추가 드롭다운 */}
+          {/* 대상 분과 — chip 으로 표시 + 추가 드롭다운. 진행중=알림 대상 / 종료됨=관련 분과(기록용) */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
-              <span aria-hidden="true">👥</span> 대상 분과
+              <span aria-hidden="true">👥</span> {review.temporal_kind === "active" ? "대상 분과" : "관련 분과 (기록용)"}
             </span>
             {review.group_ids.length === 0 && (
-              <span className="text-[var(--color-text-muted)]">없음 — 알림 받을 단체</span>
+              <span className="text-[var(--color-text-muted)]">
+                {review.temporal_kind === "active" ? "없음 — 알림 받을 단체" : "없음 — 기록용 분과"}
+              </span>
             )}
             {review.group_ids.map((gid) => {
               const g = communityGroups.find((x) => x.id === gid);
@@ -1086,54 +1088,51 @@ function ExtractionCard({
               </div>
             </div>
           )}
-          {/* 알림 발송 토글 */}
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={review.notify}
-                onChange={(e) => onReviewChange({ notify: e.target.checked })}
-                className="accent-[var(--color-primary)]"
-              />
-              <span className="inline-flex items-center gap-1"><span aria-hidden="true">🔔</span> 승인 시 관심 회원에게 알림 발송</span>
-            </label>
-            {(() => {
-              // 백엔드 _notify_gate_passes 와 동일 로직 시뮬
-              const tk = review.temporal_kind;
-              const today = new Date().toISOString().slice(0, 10);
-              let blockReason: string | null = null;
-              if (tk === "past") blockReason = "지난 이벤트로 분류 — 차단";
-              else if (tk === "unknown") blockReason = "시점 모호 — 차단";
-              else if (tk === "future" && ext.event_date && ext.event_date < today) {
-                blockReason = `event_date ${ext.event_date} 가 오늘 이전 — 차단`;
-              }
-              if (blockReason) {
-                return <span className="text-[11px] text-amber-700">※ {blockReason}</span>;
-              }
-              if (review.group_ids.length === 0) {
-                return <span className="text-[11px] text-[var(--color-text-muted)]">분과 미지정 시 발송 안 됨</span>;
-              }
-              return null;
-            })()}
-          </div>
-          {/* 중복 알림 사전 경고 — 같은 분과·동일 제목 batch 최근 14일 매칭 시 */}
-          {preview && preview.matches.length > 0 && (
-            <div className="mt-1 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-2.5 py-1.5 text-[11px] text-amber-900">
-              <span className="shrink-0">⚠️</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold">중복 알림 주의 — 최근 14일 내 같은 제목·분과로 {preview.matches.length}건 발송됨</p>
-                {preview.matches.slice(0, 2).map((m) => (
-                  <p key={m.batch_id} className="text-amber-800">
-                    · {new Date(m.created_at).toLocaleDateString("ko-KR")} 대상 {m.target_count}명
-                  </p>
-                ))}
+          {/* 알림 발송 — 진행중(active)일 때만. 종료됨이면 알림 자체가 없으므로 영역 숨김 */}
+          {review.temporal_kind === "active" && (
+            <div className="space-y-1 pt-2 border-t border-[var(--color-border)]/60">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={review.notify}
+                    onChange={(e) => onReviewChange({ notify: e.target.checked })}
+                    className="accent-[var(--color-primary)]"
+                  />
+                  <span className="inline-flex items-center gap-1"><span aria-hidden="true">🔔</span> 승인 시 관심 회원에게 알림 발송</span>
+                </label>
+                {(() => {
+                  // 백엔드 _notify_gate_passes 와 동일 (게이트 A) — active 전제. 날짜 지났거나 분과 미지정 시 발송 안 됨.
+                  const today = new Date().toISOString().slice(0, 10);
+                  if (ext.event_date && ext.event_date < today) {
+                    return <span className="text-[11px] text-amber-700">※ 날짜 지남 — 발송 차단</span>;
+                  }
+                  if (review.group_ids.length === 0) {
+                    return <span className="text-[11px] text-[var(--color-text-muted)]">분과 미지정 시 발송 안 됨</span>;
+                  }
+                  return null;
+                })()}
               </div>
+              {/* 중복 알림 사전 경고 — 같은 분과·동일 제목 batch 최근 14일 매칭 시 */}
+              {preview && preview.matches.length > 0 && (
+                <div className="mt-1 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-2.5 py-1.5 text-[11px] text-amber-900">
+                  <span className="shrink-0">⚠️</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold">중복 알림 주의 — 최근 14일 내 같은 제목·분과로 {preview.matches.length}건 발송됨</p>
+                    {preview.matches.slice(0, 2).map((m) => (
+                      <p key={m.batch_id} className="text-amber-800">
+                        · {new Date(m.created_at).toLocaleDateString("ko-KR")} 대상 {m.target_count}명
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {preview && preview.matches.length === 0 && review.group_ids.length > 0 && (
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  예상 발송 대상: 약 {preview.estimated_target_count}명 (분과 회원 중 카톡 알림 동의)
+                </p>
+              )}
             </div>
-          )}
-          {preview && preview.matches.length === 0 && review.group_ids.length > 0 && (
-            <p className="text-[11px] text-[var(--color-text-muted)]">
-              예상 발송 대상: 약 {preview.estimated_target_count}명 (분과 회원 중 카톡 알림 동의)
-            </p>
           )}
         </div>
       )}

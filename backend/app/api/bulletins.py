@@ -527,7 +527,7 @@ class ExtractionOut(BaseModel):
     scripture: Optional[str] = None       # 묵상 — 성경 구절 출처
     practice: Optional[str] = None        # 묵상 — 이번 주 실천 (\n 구분)
     pull_quote: Optional[str] = None      # 묵상 — 강조 인용구
-    temporal_kind: str = "unknown"
+    temporal_kind: str = "ended"         # active(진행중) | ended(종료됨)
     temporal_reason: Optional[str] = None
     importance: str = "normal"           # high|normal|low
     expires_at: Optional[datetime] = None
@@ -765,17 +765,14 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
         if group_candidates is None and ev.get("group_name"):
             group_candidates = [ev["group_name"]]
 
-        # 시점 분류 — AI 가 미응답하면 unknown 으로 안전 default
-        temporal_kind = (ev.get("temporal_kind") or "unknown").strip().lower()
-        if temporal_kind not in ("future", "timeless", "past", "unknown"):
-            temporal_kind = "unknown"
-        # AI 는 주보 발행일 기준 판단(예: 발행일 5/15, 행사 5/17 → future).
-        # 그러나 옛 주보를 늦게 등록하면 추출 시점(오늘)에는 이미 과거.
-        # event_date 가 오늘 이전이면 future → past 로 보정 (검토자 시점 정렬).
-        if temporal_kind == "future" and parsed_date is not None:
+        # 시점 분류 — 2분류(active=진행중·알림대상 / ended=종료·알림아님). 구값·미응답은 안전 매핑.
+        temporal_kind = _norm_temporal(ev.get("temporal_kind"))
+        # 옛 주보를 늦게 등록하면 추출 시점엔 이미 과거 — event_date 가 오늘 이전이면 ended 로 보정
+        # (게이트 A 와 일관: 지난 일정엔 알림 안 감).
+        if temporal_kind == "active" and parsed_date is not None:
             from datetime import date as _date
             if parsed_date < _date.today():
-                temporal_kind = "past"
+                temporal_kind = "ended"
 
         # 중요도·만료일 — AI 추정값 (없거나 잘못된 값은 안전 default)
         importance = (ev.get("importance") or "normal").strip().lower()
@@ -852,21 +849,27 @@ def _expand_groups_bidirectional(db: Session, group_ids: list[int]) -> set[int]:
     return expanded
 
 
-def _notify_gate_passes(temporal_kind: Optional[str], event_date) -> bool:
-    """알림 발송 게이트.
+def _norm_temporal(tk: Optional[str]) -> str:
+    """시점 정규화 — 2분류(active=진행중 / ended=종료됨).
+    구 4값(future/timeless/past/unknown)도 호환 매핑: future·timeless→active, past·unknown→ended."""
+    t = (tk or "").strip().lower()
+    if t in ("active", "future", "timeless"):
+        return "active"
+    return "ended"  # ended · past · unknown · 기타
 
-    - past·unknown·None: 차단
-    - timeless: event_date 무관 항상 통과 (상시·기한 없음 — 정의상 날짜 무관)
-    - future: event_date IS NULL OR event_date >= today (미래여야 자연)
+
+def _notify_gate_passes(temporal_kind: Optional[str], event_date) -> bool:
+    """알림 발송 게이트 (게이트 A).
+
+    - ended·None: 차단
+    - active(진행중): event_date 없으면 발송, 있으면 미래여야 발송 (과거면 차단 — 지난 일정 알림 방지)
     """
-    if temporal_kind == "timeless":
+    if _norm_temporal(temporal_kind) != "active":
+        return False
+    if event_date is None:
         return True
-    if temporal_kind == "future":
-        if event_date is None:
-            return True
-        from datetime import date as _date
-        return event_date >= _date.today()
-    return False  # past · unknown · 기타
+    from datetime import date as _date
+    return event_date >= _date.today()
 
 
 def _fanout_community_notifications(
@@ -995,13 +998,10 @@ def _persist_targets_and_notify(
     - temporal_kind 가 주어졌으면 posts/events 의 temporal_kind 도 업데이트
     """
     from sqlalchemy import text as _text
-    # 1) temporal_kind 정규화 + ext 에 반영
+    # 1) temporal_kind 정규화(active/ended) + ext 에 반영
     if temporal_kind is not None:
-        tk = (temporal_kind or "").strip().lower()
-        if tk not in ("future", "timeless", "past", "unknown"):
-            tk = "unknown"
-        ext.temporal_kind = tk
-    final_tk = ext.temporal_kind or "unknown"
+        ext.temporal_kind = _norm_temporal(temporal_kind)
+    final_tk = _norm_temporal(ext.temporal_kind)
 
     # 2) 대상 post_id / event_id 결정
     post_id = ext.created_post_id or ext.created_notice_id
@@ -1419,7 +1419,7 @@ class ApproveBody(BaseModel):
     event_date: Optional[date] = None
     location: Optional[str] = None
     # 검토 단계에서 확정된 시점 분류·대상 분과·알림 발송 여부
-    temporal_kind: Optional[str] = None  # future|timeless|past|unknown
+    temporal_kind: Optional[str] = None  # active(진행중) | ended(종료됨)
     community_group_ids: Optional[list[int]] = None
     notify: bool = True  # True=발송, False=보류
     # 검토에서 admin 이 importance·expires_at 조정 가능 (AI 추정값 보정).
