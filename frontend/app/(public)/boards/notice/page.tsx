@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import NoticeAdminWriteButton from "./NoticeAdminWriteButton";
@@ -105,7 +107,14 @@ export default async function NoticePage({
   const explicitView: "list" | "card" | "photo" | null =
     sp.view === "photo" ? "photo" : sp.view === "card" ? "card" : sp.view === "list" ? "list" : null;
   const q = (sp.q ?? "").trim();
-  const tab: "current" | "archived" = sp.tab === "archived" ? "archived" : "current";
+
+  // 운영자 이상 판단 — 슈퍼관리자(admin_token/admin_authed 쿠키) 또는 운영자(session.isAdmin).
+  // '지난 공지(만료)'는 운영자 이상만 — 비운영자는 탭 숨김 + tab=archived 직접 접근도 차단.
+  const session = await auth();
+  const ck = await cookies();
+  const adminCookie = ck.get("admin_token")?.value || ck.get("admin_authed")?.value;
+  const isOperator = !!(session as { isAdmin?: boolean } | null)?.isAdmin || !!adminCookie;
+  const tab: "current" | "archived" = (sp.tab === "archived" && isOperator) ? "archived" : "current";
 
   const board = await getBoard();
   if (!board) notFound();
@@ -136,22 +145,24 @@ export default async function NoticePage({
       <SectionLayout autoHero={false}>
         <NoticeAdminWriteButton />
 
-        {/* 현재 공지 / 지난 공지(만료) 탭 */}
-        <div className="flex gap-1.5 mb-3">
-          {([["current", "현재 공지"], ["archived", "지난 공지"]] as const).map(([v, label]) => (
-            <a
-              key={v}
-              href={v === "current" ? "/boards/notice" : "/boards/notice?tab=archived"}
-              className={`text-sm px-3.5 py-1.5 rounded-full border transition-colors ${
-                tab === v
-                  ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                  : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
-              }`}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
+        {/* 현재 공지 / 지난 공지(만료) 탭 — '지난 공지'는 운영자 이상만 */}
+        {isOperator && (
+          <div className="flex gap-1.5 mb-3">
+            {([["current", "현재 공지"], ["archived", "지난 공지"]] as const).map(([v, label]) => (
+              <a
+                key={v}
+                href={v === "current" ? "/boards/notice" : "/boards/notice?tab=archived"}
+                className={`text-sm px-3.5 py-1.5 rounded-full border transition-colors ${
+                  tab === v
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+                }`}
+              >
+                {label}{v === "archived" && <span className="ml-1 text-[10px] opacity-70">운영자</span>}
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* 검색 + 보기 토글 (게시판 설정 따름) */}
         {(board.show_search_form || activeViews.length >= 2) && (
