@@ -72,6 +72,10 @@ interface ReviewState {
   is_pinned: boolean;         // 공지를 게시판 상단 고정으로 등록
 }
 
+const DEFAULT_REVIEW: ReviewState = {
+  temporal_kind: "ended", group_ids: [], notify: true, expires_at: null, is_pinned: false,
+};
+
 const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
   active: "진행중",
   ended:  "종료됨",
@@ -253,8 +257,7 @@ export default function ExtractionsPage() {
     setReviewByExt((prev) => ({
       ...prev,
       [extId]: {
-        temporal_kind: "ended", group_ids: [], notify: true,
-        expires_at: null, is_pinned: false,
+        ...DEFAULT_REVIEW,
         ...(prev[extId] ?? {}), ...patch,
       },
     }));
@@ -811,9 +814,9 @@ export default function ExtractionsPage() {
                         onConvertToCalendar={() => convertToCalendar(ext.id)}
                         processing={!!processing[ext.id]}
                         communityGroups={communityGroups}
-                        review={reviewByExt[ext.id] ?? { temporal_kind: ext.temporal_kind === "active" ? "active" : "ended", group_ids: [], notify: true }}
+                        review={reviewByExt[ext.id] ?? { ...DEFAULT_REVIEW, temporal_kind: ext.temporal_kind === "active" ? "active" : "ended" }}
                         onReviewChange={(patch) => setReview(ext.id, patch)}
-                        token={token}
+                        token={token ?? ""}
                       />
                     )}
                   </div>
