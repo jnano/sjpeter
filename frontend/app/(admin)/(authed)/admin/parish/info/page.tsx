@@ -217,7 +217,7 @@ export default function AdminParishInfoPage() {
               value={info.name_en ?? ""}
               onChange={(e) => setInfo((p) => p && ({ ...p, name_en: e.target.value }))}
               className={`w-full ${inputCls}`}
-              placeholder="Parish name in English"
+              placeholder="Woori Cathedral"
             />
             <p className="text-xs text-gray-400 mt-1">
               헤더 성당명 아래 회색 영문, 홈 대표사진 캡션, 이메일 영문 표기에 사용됩니다. 비워두면 영문 줄이 표시되지 않습니다.
