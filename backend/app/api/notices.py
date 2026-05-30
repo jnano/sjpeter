@@ -6,7 +6,8 @@
 """
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, or_
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ from typing import Optional, List
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.auth import get_current_admin
+from app.core.auth import get_current_admin, optional_bearer_scheme
 from app.core.admin_log import log_action, get_admin_identifier
 from app.core.config import settings
 from app.models.admin import Admin
@@ -144,14 +145,19 @@ def list_notices(db: Session = Depends(get_db)):
 
 @router.get("/paged", response_model=NoticePagedOut)
 def list_notices_paged(
+    request: Request,
     page: int = 1,
     size: int = 0,   # 0 이면 게시판 설정(posts_per_page) 사용
     q: str = "",     # 제목·본문 검색
-    archived: bool = False,  # True 면 만료된 지난 공지만(고정·미만료 제외)
+    archived: bool = False,  # True 면 만료된 지난 공지만(고정·미만료 제외) — 운영자 이상 전용
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
     db: Session = Depends(get_db),
 ):
     """핀 공지는 항상 전체 반환, 일반 공지만 페이지네이션. size=0 이면 게시판 설정 따름.
-    archived=True 면 '지난 공지' 아카이브 — 만료된 일반 공지만, 고정 공지는 없음."""
+    archived=True 면 '지난 공지' 아카이브 — 만료된 일반 공지만, 고정 공지는 없음. 운영자 이상만 접근."""
+    if archived:
+        # 운영자 이상(슈퍼관리자 또는 is_admin 회원)만 — 아니면 401/403 raise
+        get_current_admin(request, credentials, db)
     page = max(1, page)
     board = db.query(Board).filter(Board.slug == NOTICE_SLUG).first()
     if not board:

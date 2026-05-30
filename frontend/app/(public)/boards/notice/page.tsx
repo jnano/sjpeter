@@ -63,12 +63,16 @@ async function getBoard(): Promise<Board | null> {
   } catch { return null; }
 }
 
-async function getNotices(page: number, size: number, q: string, archived: boolean): Promise<NoticePaged | null> {
+async function getNotices(page: number, size: number, q: string, archived: boolean, token?: string): Promise<NoticePaged | null> {
   try {
     const qp = new URLSearchParams({ page: String(page), size: String(size) });
     if (q) qp.set("q", q);
     if (archived) qp.set("archived", "true");
-    const res = await fetch(`${API}/api/notices/paged?${qp}`, { cache: "no-store" });
+    // archived(지난 공지)는 운영자 토큰 필요 — admin_token 쿠키 또는 운영자 세션 토큰을 Bearer 로 전달
+    const res = await fetch(`${API}/api/notices/paged?${qp}`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }
@@ -131,7 +135,9 @@ export default async function NoticePage({
   const currentView = activeViews.some((v) => v.value === requestedView) ? requestedView : fallbackView;
 
   const size = Math.max(1, board.posts_per_page || 20);
-  const data = await getNotices(page, size, q, tab === "archived");
+  // 지난 공지(archived)는 운영자 토큰 전달 (슈퍼관리자 admin_token 쿠키 또는 운영자 세션 토큰)
+  const opToken = ck.get("admin_token")?.value ?? (session as { accessToken?: string } | null)?.accessToken;
+  const data = await getNotices(page, size, q, tab === "archived", tab === "archived" ? opToken : undefined);
   if (!data) notFound();
   const { pinned, items, total } = data;
   const totalPages = Math.max(1, Math.ceil(total / size));
