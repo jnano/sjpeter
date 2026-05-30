@@ -240,12 +240,26 @@ export default function AdminNoticesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const allCheckRef = useRef<HTMLInputElement>(null);
+  // 이동·복사 — 대상 게시판 목록, 모달 모드, 선택 게시판, 처리중
+  const [boards, setBoards] = useState<{ slug: string; name: string }[]>([]);
+  const [bulkAction, setBulkAction] = useState<"move" | "copy" | null>(null);
+  const [targetSlugs, setTargetSlugs] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  useEffect(() => { fetchNotices(); }, []);
+  useEffect(() => { fetchNotices(); fetchBoards(); }, []);
 
   async function fetchNotices() {
     const res = await fetch(`${API}/api/notices/`);
     if (res.ok) setNotices(await res.json());
+  }
+
+  async function fetchBoards() {
+    const res = await fetch(`${API}/api/boards`);
+    if (res.ok) {
+      const data = await res.json();
+      // notice(공지사항) 자신은 이동·복사 대상에서 제외
+      setBoards(data.filter((b: { slug: string }) => b.slug !== "notice").map((b: { slug: string; name: string }) => ({ slug: b.slug, name: b.name })));
+    }
   }
 
   // 월 목록 (내림차순)
@@ -302,6 +316,46 @@ export default function AdminNoticesPage() {
     } finally {
       setBulkDeleting(false);
     }
+  }
+
+  // 선택 공지를 게시판 1개로 이동 (원본이 옮겨감 → 공지 목록에서 사라짐)
+  async function handleBulkMove() {
+    const slug = targetSlugs[0];
+    if (!slug) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch(`${API}/api/boards/posts/bulk-move`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ post_ids: selectedIds, board_slug: slug }),
+      });
+      if (!res.ok) { alert("이동에 실패했습니다."); return; }
+      const r = await res.json();
+      const movedSet = new Set<number>(r.moved ?? []);
+      setNotices((prev) => prev.filter((n) => !movedSet.has(n.id)));  // 이동분 목록에서 제거
+      setSelected(new Set());
+      setBulkAction(null); setTargetSlugs([]);
+      const bn = boards.find((b) => b.slug === slug)?.name ?? slug;
+      alert(`${movedSet.size}건을 '${bn}' 게시판으로 이동했습니다.` + (r.failed?.length ? `\n(${r.failed.length}건 제외)` : ""));
+    } finally { setBulkBusy(false); }
+  }
+
+  // 선택 공지를 여러 게시판으로 복사 (원본 유지)
+  async function handleBulkCopy() {
+    if (targetSlugs.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch(`${API}/api/boards/posts/bulk-copy`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ post_ids: selectedIds, target_slugs: targetSlugs }),
+      });
+      if (!res.ok) { alert("복사에 실패했습니다."); return; }
+      const r = await res.json();
+      setSelected(new Set());
+      setBulkAction(null); setTargetSlugs([]);
+      alert(`${r.created?.length ?? 0}건 복사했습니다 (원본 유지).` + (r.failed?.length ? `\n(${r.failed.length}건 제외)` : ""));
+    } finally { setBulkBusy(false); }
   }
 
   function buildPayload(form: typeof EMPTY_FORM) {
@@ -469,16 +523,83 @@ export default function AdminNoticesPage() {
               </span>
             </label>
             {selected.size > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-                className="text-xs border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {bulkDeleting ? "삭제 중…" : `선택 삭제 (${selected.size})`}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setBulkAction("move"); setTargetSlugs([]); }}
+                  className="text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  이동 ({selected.size})
+                </button>
+                <button
+                  onClick={() => { setBulkAction("copy"); setTargetSlugs([]); }}
+                  className="text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  복사 ({selected.size})
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="text-xs border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  {bulkDeleting ? "삭제 중…" : `선택 삭제 (${selected.size})`}
+                </button>
+              </div>
             )}
           </div>
         </>
+      )}
+
+      {/* 이동·복사 게시판 선택 모달 */}
+      {bulkAction && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !bulkBusy && setBulkAction(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-[var(--color-primary)] mb-1">
+              {bulkAction === "move" ? "게시판으로 이동" : "게시판으로 복사"} ({selected.size}건)
+            </h3>
+            <p className="text-xs text-[var(--color-text-muted)] mb-4">
+              {bulkAction === "move"
+                ? "선택한 공지를 아래 게시판으로 옮깁니다. 이동하면 공지사항 목록에서는 사라집니다."
+                : "선택한 공지를 아래 게시판(들)에 복사합니다. 원본 공지는 그대로 유지됩니다."}
+            </p>
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {boards.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">이동·복사할 다른 게시판이 없습니다.</p>}
+              {boards.map((b) => {
+                const checked = targetSlugs.includes(b.slug);
+                return (
+                  <label key={b.slug} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-warm)] cursor-pointer">
+                    <input
+                      type={bulkAction === "move" ? "radio" : "checkbox"}
+                      name="bulk-target"
+                      checked={checked}
+                      onChange={() => {
+                        if (bulkAction === "move") setTargetSlugs([b.slug]);
+                        else setTargetSlugs((prev) => prev.includes(b.slug) ? prev.filter((s) => s !== b.slug) : [...prev, b.slug]);
+                      }}
+                      className="accent-[var(--color-primary)]"
+                    />
+                    <span className="text-sm">{b.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 pt-4">
+              <button
+                onClick={bulkAction === "move" ? handleBulkMove : handleBulkCopy}
+                disabled={bulkBusy || targetSlugs.length === 0}
+                className="flex-1 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {bulkBusy ? "처리 중…" : bulkAction === "move" ? "이동" : "복사"}
+              </button>
+              <button
+                onClick={() => { setBulkAction(null); setTargetSlugs([]); }}
+                disabled={bulkBusy}
+                className="px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm disabled:opacity-50"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 공지 목록 */}

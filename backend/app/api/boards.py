@@ -1038,6 +1038,92 @@ def copy_post_to_boards(
     return {"created": created, "failed": failed}
 
 
+class BulkMoveBody(BaseModel):
+    post_ids: list[int]
+    board_slug: str  # 이동 대상 게시판 1개
+
+
+class BulkCopyBody(BaseModel):
+    post_ids: list[int]
+    target_slugs: list[str]  # 복사 대상 게시판 여러 개
+
+
+@router.post("/api/boards/posts/bulk-move")
+def bulk_move_posts(body: BulkMoveBody, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    """선택한 게시글들을 게시판 1개로 일괄 이동 (board_id 변경). admin 전용.
+
+    - 원본이 그대로 옮겨감(복사 아님). 공지(notice)였다면 공지 목록에서 사라짐.
+    - 결과: {"moved": [post_id...], "failed": [{id, reason}...]}
+    """
+    from app.core.admin_log import log_action, get_admin_identifier
+    target = db.query(Board).filter(Board.slug == body.board_slug, Board.is_active == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="이동 대상 게시판을 찾을 수 없습니다.")
+    moved: list[int] = []
+    failed: list[dict] = []
+    for pid in body.post_ids:
+        post = db.query(Post).filter(Post.id == pid).first()
+        if not post:
+            failed.append({"id": pid, "reason": "게시글 없음"})
+            continue
+        if post.board_id == target.id:
+            failed.append({"id": pid, "reason": "이미 해당 게시판"})
+            continue
+        post.board_id = target.id
+        moved.append(pid)
+    db.commit()
+    if moved:
+        log_action(db, get_admin_identifier(admin), "posts_bulk_move", "post", None,
+                   f"{len(moved)}건 → {target.slug}: {moved}")
+    return {"moved": moved, "failed": failed}
+
+
+@router.post("/api/boards/posts/bulk-copy")
+def bulk_copy_posts(body: BulkCopyBody, db: Session = Depends(get_db), admin = Depends(get_current_admin)):
+    """선택한 게시글들을 여러 게시판으로 일괄 복사 (원본 유지). admin 전용.
+
+    - title·content·is_pinned·member_id·첨부(file_url 공유) 복제. view_count 리셋.
+    - 결과: {"created": [{post_id, to, new_id}...], "failed": [{id, slug, reason}...]}
+    """
+    from app.core.admin_log import log_action, get_admin_identifier
+    created: list[dict] = []
+    failed: list[dict] = []
+    for pid in body.post_ids:
+        src = db.query(Post).options(joinedload(Post.attachments)).filter(Post.id == pid).first()
+        if not src:
+            failed.append({"id": pid, "reason": "게시글 없음"})
+            continue
+        for ts in body.target_slugs:
+            slug = (ts or "").strip()
+            target = db.query(Board).filter(Board.slug == slug, Board.is_active == True).first()
+            if not target:
+                failed.append({"id": pid, "slug": slug, "reason": "게시판 없음"})
+                continue
+            if target.id == src.board_id:
+                failed.append({"id": pid, "slug": slug, "reason": "원본과 동일 게시판"})
+                continue
+            new_post = Post(
+                board_id=target.id, member_id=src.member_id,
+                title=src.title, content=src.content,
+                is_published=src.is_published, is_pinned=src.is_pinned,
+                category=src.category, view_count=0,
+            )
+            db.add(new_post)
+            db.flush()
+            for att in src.attachments:
+                db.add(Attachment(
+                    post_id=new_post.id, original_name=att.original_name,
+                    stored_name=att.stored_name, file_url=att.file_url,
+                    file_size=att.file_size, is_image=att.is_image,
+                ))
+            created.append({"post_id": pid, "to": slug, "new_id": new_post.id})
+    db.commit()
+    if created:
+        log_action(db, get_admin_identifier(admin), "posts_bulk_copy", "post", None,
+                   f"{len(created)}건 복제: {[(c['post_id'], c['to']) for c in created]}")
+    return {"created": created, "failed": failed}
+
+
 class PostMoveBody(BaseModel):
     target_slug: str
 
