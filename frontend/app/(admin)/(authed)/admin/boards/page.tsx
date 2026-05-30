@@ -110,7 +110,7 @@ function getAdminToken() {
 function kindLabel(k: string): string {
   if (k === "line") return "한 줄";
   if (k === "gallery") return "갤러리";
-  if (k === "titlelist") return "일반 (타이틀+리스트)";
+  if (k === "titlelist") return "일반 (타이틀+목록)";
   return "일반";
 }
 
@@ -585,7 +585,7 @@ export default function AdminBoardsPage() {
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="default">일반 (제목+본문)</option>
-                <option value="titlelist">일반 (타이틀+리스트)</option>
+                <option value="titlelist">일반 (타이틀+목록)</option>
                 <option value="line">한 줄 (메시지 + 추천)</option>
                 <option value="gallery">갤러리 (사진 그리드)</option>
               </select>
@@ -1160,7 +1160,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
             className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
             <option value="default">일반 (제목+본문)</option>
-            <option value="titlelist">일반 (타이틀+리스트)</option>
+            <option value="titlelist">일반 (타이틀+목록)</option>
             <option value="line">한 줄 (메시지 + 추천)</option>
             <option value="gallery">갤러리 (사진 그리드)</option>
           </select>
@@ -1172,7 +1172,7 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         )}
         {kind === "titlelist" && (
           <p className="w-full text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded px-3 py-2 -mt-1">
-            ⓘ 일반 (타이틀+리스트): 공지사항처럼 게시판 이름 헤더 아래 제목만 간결하게 노출됩니다. 본문은 클릭 시 표시됩니다. 작성자/조회수/댓글 토글이 무시되고 제목·고정·날짜만 보입니다.
+            ⓘ 일반 (타이틀+목록): 공지사항처럼 게시판 이름 헤더 아래 제목만 간결하게 노출됩니다. 본문은 클릭 시 표시됩니다. 작성자/조회수/댓글 토글이 무시되고 제목·고정·날짜만 보입니다.
           </p>
         )}
         {kind === "gallery" && (

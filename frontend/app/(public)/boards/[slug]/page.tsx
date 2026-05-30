@@ -214,7 +214,7 @@ export default async function BoardPage({
   ]);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
 
-  // 타이틀+리스트 게시판: 공지사항 톤의 단순 리스트로 표시.
+  // 타이틀+목록 게시판: 공지사항 톤의 단순 목록으로 표시.
   // 작성자/조회수/댓글 토글, 뷰 전환, 카테고리 칩, 정렬 등은 무시되고 제목·고정·날짜만.
   if (board.kind === "titlelist") {
     return (
