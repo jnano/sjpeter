@@ -102,7 +102,7 @@ class EventTypeStat(BaseModel):
 
 class RecentAnalysis(BaseModel):
     id: int
-    issue_number: Optional[str] = None
+    issue_number: Optional[int] = None  # bulletins.issue_number 는 정수 (예: 75호)
     published_date: Optional[str] = None
     ai_status: Optional[str] = None
     ai_started_at: Optional[str] = None
