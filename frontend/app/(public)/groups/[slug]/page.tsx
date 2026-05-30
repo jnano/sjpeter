@@ -60,8 +60,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       <SectionLayout autoHero={false}>
         <article className="space-y-8">
           {/* 분과명 + 설명 + 대표 사진 — 시안 mission/header 톤.
-             v1.5.448 — representative_photo_url 이 있으면 우측 사진 + 좌측 텍스트 2단,
-             없으면 텍스트 풀폭. */}
+             v1.5.448 — representative_photo_url 이 있으면 우측 사진 + 좌측 텍스트 2단.
+             v1.5.450 — sub-group(parent_id 보유) 이면 부모 분과 링크 노출. */}
           {(() => {
             const repPhoto = group.representative_photo_url
               ? (group.representative_photo_url.startsWith("http")
@@ -69,6 +69,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
                   : `${API}${group.representative_photo_url}`)
               : null;
             const hasRep = !!repPhoto;
+            const parent = group.parent_id
+              ? allGroups.find((g) => g.id === group.parent_id)
+              : null;
+            const parentHref = parent
+              ? (parent.slug ? `/groups/${parent.slug}` : `/groups/id-${parent.id}`)
+              : null;
             return (
               <header className={`border-b border-[var(--color-border)] pb-7 ${hasRep ? "grid grid-cols-1 md:grid-cols-[1fr_240px] gap-7 items-start" : ""}`}>
                 <div>
@@ -76,6 +82,19 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
                     <span className="w-6 h-px bg-[var(--color-primary)]" />
                     본당 공동체 · Community
                   </span>
+                  {parent && parentHref && (
+                    <div className="mb-3">
+                      <Link
+                        href={parentHref}
+                        className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <polyline points="6 2 3 5 6 8" />
+                        </svg>
+                        {parent.name}
+                      </Link>
+                    </div>
+                  )}
                   <div className="flex items-center flex-wrap gap-3 mb-4">
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-text)]">
                       {group.name}
