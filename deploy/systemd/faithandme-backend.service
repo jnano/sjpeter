@@ -1,0 +1,50 @@
+# faithandme backend (FastAPI + uvicorn) — systemd unit 샘플 (v1.5.460)
+#
+# 설치:
+#   1) 본 파일을 /etc/systemd/system/ 에 복사
+#      sudo cp deploy/systemd/faithandme-backend.service /etc/systemd/system/
+#   2) 경로·사용자·DATABASE_URL 등 환경변수 자기 환경에 맞게 수정
+#   3) sudo systemctl daemon-reload
+#   4) sudo systemctl enable --now faithandme-backend
+#   5) sudo systemctl status faithandme-backend
+#   6) 로그: sudo journalctl -u faithandme-backend -f
+
+[Unit]
+Description=faithandme FastAPI backend (uvicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=cathedral
+Group=cathedral
+WorkingDirectory=/home/cathedral/faithandme/backend
+
+# 환경 변수 — 가급적 EnvironmentFile 사용 (chmod 600)
+EnvironmentFile=/etc/faithandme/backend.env
+# 또는 인라인:
+# Environment="DATABASE_URL=postgresql+psycopg2://cathedral:pw@localhost/cathedral"
+# Environment="SECRET_KEY=..."
+# Environment="INTERNAL_API_SECRET=..."
+
+# venv 의 python 직접 호출 — PATH 의존성 회피
+ExecStart=/home/cathedral/faithandme/backend/venv/bin/uvicorn main:app \
+    --host 0.0.0.0 --port 8000 --workers 2
+
+# 재시작 정책 — 5초 후 자동 재시작 (10회 한도)
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=10
+StartLimitIntervalSec=60
+
+# 안전 — root 권한 차단·쓰기 디렉토리 제한
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/cathedral/faithandme/backend/uploads /home/cathedral/faithandme/backend/private-uploads /home/cathedral/faithandme/backend/backups
+
+# 자원 — 동시 연결 제한 (uvicorn worker 별)
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

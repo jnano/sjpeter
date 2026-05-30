@@ -1,0 +1,25 @@
+# faithandme 자동 백업 crontab 예시 (v1.5.460)
+#
+# 설치:
+#   crontab -e
+#   아래 줄을 자신의 경로·시간에 맞춰 추가
+#
+# crontab 시간 포맷: 분 시 일 월 요일
+
+# ── 매일 새벽 3시 백업 ──
+0 3 * * * /Users/kangtaehun/Dev/faithandme/scripts/cron_backup.sh >> /var/log/faithandme_backup.log 2>&1
+
+# ── 일요일만 백업 (가벼운 운영) ──
+# 0 3 * * 0 /Users/kangtaehun/Dev/faithandme/scripts/cron_backup.sh >> /var/log/faithandme_backup.log 2>&1
+
+# ── 환경변수 직접 전달 예시 ──
+# 0 3 * * * DB_USER=cathedral DB_NAME=cathedral RETENTION_DAYS=60 PGPASSWORD=secret \
+#   NOTIFY_EMAIL=admin@example.com \
+#   /home/cathedral/faithandme/scripts/cron_backup.sh >> /var/log/faithandme_backup.log 2>&1
+#
+# 주의:
+#   - cron 안에는 환경변수가 제한적입니다. 절대 경로 사용 필수
+#   - PGPASSWORD 를 crontab 에 적으면 보안 위험 — ~/.pgpass 사용 권장
+#     형식: hostname:port:database:username:password
+#     권한: chmod 600 ~/.pgpass
+#   - 메일 알림 사용 시 시스템에 mail/mailx 설치 필요

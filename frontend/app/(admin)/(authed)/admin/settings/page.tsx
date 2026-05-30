@@ -177,6 +177,12 @@ export default function SettingsPage() {
                     ⚠️ <strong>AUTH_SECRET 변경 주의</strong> — JWT 서명 키입니다. 변경하는 즉시 <strong>모든 회원의 로그인 세션이 무효화</strong>되어 강제 로그아웃됩니다. 첫 설치 시 자동 발급된 값이며, 키 유출 등 보안 사고가 아니면 변경하지 마세요. 변경 후에는 서버 재시작이 필요합니다.
                   </div>
                 )}
+                {/* v1.5.460 — SITE_URL 이 localhost 면 OAuth callback 이 깨질 수 있어 경고. */}
+                {s.key === "SITE_URL" && (values[s.key] ?? s.value ?? "").match(/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)/) && (
+                  <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
+                    ⚠️ <strong>운영 도메인 미설정</strong> — SITE_URL 이 localhost 입니다. OAuth(Google/Kakao) 콜백·메일 본문의 링크가 외부 사용자에게 깨져 보입니다. 운영 도메인 결정 후 <code>https://본당도메인.kr</code> 형태로 변경하고, OAuth 제공자(Google Cloud Console / 카카오 개발자센터)의 callback URL 도 함께 등록해 주세요.
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="min-w-0">
                     <label className="block text-sm font-medium text-[var(--color-text)]">

@@ -1,0 +1,47 @@
+# faithandme frontend (Next.js standalone) — systemd unit 샘플 (v1.5.460)
+#
+# 사전 준비:
+#   cd /home/cathedral/faithandme/frontend && npm ci && npm run build
+#   (standalone 빌드 결과: .next/standalone/server.js + .next/static + public)
+#
+# 설치:
+#   1) sudo cp deploy/systemd/faithandme-frontend.service /etc/systemd/system/
+#   2) 환경변수 파일 작성 (NEXT_PUBLIC_API_URL 등은 빌드 시점에 베이크되니
+#      변경 시 build 다시 필요)
+#   3) sudo systemctl daemon-reload && sudo systemctl enable --now faithandme-frontend
+#   4) 로그: sudo journalctl -u faithandme-frontend -f
+
+[Unit]
+Description=faithandme Next.js frontend (standalone)
+After=network.target faithandme-backend.service
+Wants=faithandme-backend.service
+
+[Service]
+Type=simple
+User=cathedral
+Group=cathedral
+WorkingDirectory=/home/cathedral/faithandme/frontend/.next/standalone
+
+EnvironmentFile=/etc/faithandme/frontend.env
+# 또는 인라인:
+# Environment="PORT=3000"
+# Environment="BACKEND_INTERNAL_URL=http://localhost:8000"
+# Environment="INTERNAL_API_SECRET=..."
+# Environment="AUTH_SECRET=..."
+# Environment="AUTH_TRUST_HOST=true"
+
+ExecStart=/usr/bin/node server.js
+
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=10
+StartLimitIntervalSec=60
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

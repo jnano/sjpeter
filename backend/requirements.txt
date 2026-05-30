@@ -17,3 +17,7 @@ beautifulsoup4>=4.14.0
 boto3>=1.34.0
 pdfplumber>=0.11.0
 pymupdf>=1.24.0
+
+# v1.5.460 — 운영 에러·성능 추적 (선택). site_settings.SENTRY_DSN 미설정 시 no-op.
+# 사용 안 할 경우 다음 줄 제거 가능 — main.py 의 _init_sentry_if_configured() 가 ImportError 를 silent skip.
+sentry-sdk[fastapi]>=2.0.0
