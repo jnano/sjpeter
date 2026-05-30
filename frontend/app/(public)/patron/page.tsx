@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 import CrossIcon from "@/components/icons/CrossIcon";
+import MarkdownContent from "@/components/MarkdownContent";
 import { fetchParishMin } from "@/lib/parish";
 
 // v1.5.452 — force-dynamic → 5분 ISR + 태그 기반 무효화. admin 저장 시 revalidateTag 로 즉시 반영.
@@ -74,7 +75,7 @@ export default async function PatronPage() {
     ? (parish.patron_image_url.startsWith("http") ? parish.patron_image_url : `${API}${parish.patron_image_url}`)
     : null;
   const feast = parseFeastDate(parish.patron_feast_day);
-  const introParagraphs = (parish.patron_intro ?? "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const intro = (parish.patron_intro ?? "").trim();
   const quoteLines = (parish.patron_quote ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
 
   return (
@@ -132,15 +133,11 @@ export default async function PatronPage() {
         </section>
 
         {/* ── intro ──────────────────────────────────────── */}
-        {introParagraphs.length > 0 && (
+        {intro && (
           <section className="mb-10">
             <h3 className="text-[13px] tracking-[0.12em] uppercase font-bold text-[var(--color-primary)] mb-4">생애와 신앙</h3>
             <article className="bg-white border border-[var(--color-border)] rounded-2xl p-7 sm:p-10 reading-zoom">
-              {introParagraphs.map((p, i) => (
-                <p key={i} className="text-[15px] sm:text-[16px] leading-[1.85] text-[var(--color-text)] mb-4 last:mb-0 whitespace-pre-line">
-                  {p}
-                </p>
-              ))}
+              <MarkdownContent content={intro} size="base" />
             </article>
           </section>
         )}

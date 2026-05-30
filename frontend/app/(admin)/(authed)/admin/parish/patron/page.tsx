@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { formatErrorDetail } from "@/lib/api";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -219,13 +220,11 @@ export default function AdminParishPatronPage() {
             />
           </Field>
 
-          <Field label="생애·소개" hint="빈 줄 두 번으로 단락 구분.">
-            <textarea
+          <Field label="생애·소개" hint="마크다운 지원 — 제목·목록·굵게·링크 등. 빈 줄로 단락 구분.">
+            <MarkdownEditor
               value={info.patron_intro ?? ""}
-              onChange={(e) => field("patron_intro", e.target.value)}
-              placeholder="시몬 베드로는 갈릴래아 호숫가의 어부였습니다…"
-              rows={10}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm leading-relaxed"
+              onChange={(v) => field("patron_intro", v)}
+              height={320}
             />
           </Field>
         </section>
