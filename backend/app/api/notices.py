@@ -58,6 +58,12 @@ class NoticeOut(BaseModel):
     is_ai_generated: bool = False
     created_at: datetime
     attachments: List[NoticeAttachmentOut] = []
+    # 게시판 설정 컬럼 표시용 — 작성자·조회수·댓글·좋아요·공유
+    author: Optional[str] = None  # 작성 회원 닉네임. None = 관리자/본당
+    view_count: int = 0
+    comment_count: int = 0
+    like_count: int = 0
+    share_count: int = 0
 
 
 class NoticePagedOut(BaseModel):
@@ -97,6 +103,11 @@ def _to_notice_out(post: Post) -> NoticeOut:
         is_ai_generated=(post.member_id is None),  # admin/AI 생성은 member_id=None
         created_at=post.created_at,
         attachments=[_to_attachment_out(a) for a in (post.attachments or [])],
+        author=(getattr(post.member, "nickname", None) if post.member else None),
+        view_count=getattr(post, "view_count", 0) or 0,
+        comment_count=len(post.comments or []),
+        like_count=len(post.likes or []),
+        share_count=getattr(post, "share_count", 0) or 0,
     )
 
 
@@ -134,28 +145,48 @@ def list_notices(db: Session = Depends(get_db)):
 @router.get("/paged", response_model=NoticePagedOut)
 def list_notices_paged(
     page: int = 1,
-    size: int = 20,
+    size: int = 0,   # 0 이면 게시판 설정(posts_per_page) 사용
+    q: str = "",     # 제목·본문 검색
+    archived: bool = False,  # True 면 만료된 지난 공지만(고정·미만료 제외)
     db: Session = Depends(get_db),
 ):
-    """핀 공지는 항상 전체 반환, 일반 공지만 페이지네이션."""
+    """핀 공지는 항상 전체 반환, 일반 공지만 페이지네이션. size=0 이면 게시판 설정 따름.
+    archived=True 면 '지난 공지' 아카이브 — 만료된 일반 공지만, 고정 공지는 없음."""
     page = max(1, page)
+    board = db.query(Board).filter(Board.slug == NOTICE_SLUG).first()
+    if not board:
+        raise HTTPException(status_code=500, detail="공지사항 게시판이 초기화되지 않았습니다.")
+    board_id = board.id
+    if size <= 0:
+        size = max(1, board.posts_per_page or 20)
     size = max(1, min(100, size))
-    board_id = _notice_board_id(db)
+    qx = (q or "").strip()
+    search_cond = or_(Post.title.ilike(f"%{qx}%"), Post.content.ilike(f"%{qx}%")) if qx else None
+    now = datetime.utcnow()
 
-    pinned = (
-        db.query(Post)
-        .options(joinedload(Post.attachments))
-        .filter(Post.board_id == board_id, Post.is_published == True, Post.is_pinned == True)
-        .order_by(desc(Post.created_at))
-        .all()
-    )
-    # 일반 공지(비고정)만 페이지네이션 + 만료 필터. 고정(pinned)은 위에서 항상 전체 반환 → 만료 제외.
-    base = db.query(Post).filter(
-        Post.board_id == board_id,
-        Post.is_published == True,
-        Post.is_pinned == False,
-        or_(Post.expires_at.is_(None), Post.expires_at > datetime.utcnow()),
-    )
+    if archived:
+        # 지난 공지: 만료된 일반 공지만 (고정·미만료 제외)
+        pinned = []
+        base = db.query(Post).filter(
+            Post.board_id == board_id, Post.is_published == True, Post.is_pinned == False,
+            Post.expires_at.isnot(None), Post.expires_at <= now,
+        )
+    else:
+        pinned_q = db.query(Post).options(joinedload(Post.attachments)).filter(
+            Post.board_id == board_id, Post.is_published == True, Post.is_pinned == True,
+        )
+        if search_cond is not None:
+            pinned_q = pinned_q.filter(search_cond)
+        pinned = pinned_q.order_by(desc(Post.created_at)).all()
+        # 일반 공지(비고정)만 페이지네이션 + 만료 필터. 고정(pinned)은 위에서 항상 전체 반환 → 만료 제외.
+        base = db.query(Post).filter(
+            Post.board_id == board_id,
+            Post.is_published == True,
+            Post.is_pinned == False,
+            or_(Post.expires_at.is_(None), Post.expires_at > now),
+        )
+    if search_cond is not None:
+        base = base.filter(search_cond)
     total = base.count()
     items = (
         base.options(joinedload(Post.attachments))
@@ -171,6 +202,28 @@ def list_notices_paged(
         page=page,
         size=size,
     )
+
+
+@router.get("/admin", response_model=list[NoticeOut])
+def list_notices_admin(
+    status: str = "active",  # active(노출 중) | expired(만료됨) | all(전체)
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin),
+):
+    """관리자 공지 조회 — 만료 공지 관리용. status 로 노출중/만료됨/전체 필터."""
+    board_id = _notice_board_id(db)
+    now = datetime.utcnow()
+    base = db.query(Post).options(joinedload(Post.attachments)).filter(
+        Post.board_id == board_id, Post.is_published == True,
+    )
+    if status == "expired":
+        # 만료된 일반 공지만 (고정은 만료 제외이므로 빠짐)
+        base = base.filter(Post.is_pinned == False, Post.expires_at.isnot(None), Post.expires_at <= now)
+    elif status == "active":
+        base = base.filter(or_(Post.is_pinned == True, Post.expires_at.is_(None), Post.expires_at > now))
+    # status == "all": 추가 필터 없음
+    posts = base.order_by(desc(Post.is_pinned), desc(Post.created_at)).all()
+    return [_to_notice_out(p) for p in posts]
 
 
 @router.get("/{notice_id}", response_model=NoticeOut)

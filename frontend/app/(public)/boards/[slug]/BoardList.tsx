@@ -100,13 +100,16 @@ interface Props {
   currentQ?: string;
   currentSort?: string;
   currentCategory?: string;
+  /** 페이지네이션 링크에 항상 유지할 추가 쿼리 (예: 공지 '지난 공지' 탭 {tab:'archived'}) */
+  extraParams?: Record<string, string>;
 }
 
-function pageUrl(slug: string, page: number, view: string, q?: string, sort?: string, category?: string) {
+function pageUrl(slug: string, page: number, view: string, q?: string, sort?: string, category?: string, extra?: Record<string, string>) {
   const qp = new URLSearchParams({ page: String(page), view });
   if (q) qp.set("q", q);
   if (sort && sort !== "latest") qp.set("sort", sort);
   if (category) qp.set("category", category);
+  if (extra) for (const [k, v] of Object.entries(extra)) qp.set(k, v);
   return `/boards/${slug}?${qp}`;
 }
 
@@ -122,7 +125,7 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default function BoardList({ posts, slug, currentPage, totalPages, currentView, kindDefault, cols, currentQ, currentSort, currentCategory }: Props) {
+export default function BoardList({ posts, slug, currentPage, totalPages, currentView, kindDefault, cols, currentQ, currentSort, currentCategory, extraParams }: Props) {
   // 글 상세 → 삭제·뒤로 돌아갈 때 현재 페이지·필터를 복원하기 위해 링크에 from= 첨부
   function detailHref(postId: number) {
     const qp = new URLSearchParams();
@@ -157,6 +160,7 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
           q={currentQ}
           sort={currentSort}
           category={currentCategory}
+          extraParams={extraParams}
         />
       )}
     </>
@@ -365,6 +369,7 @@ function Pagination({
   q,
   sort,
   category,
+  extraParams,
 }: {
   slug: string;
   currentPage: number;
@@ -373,13 +378,14 @@ function Pagination({
   q?: string;
   sort?: string;
   category?: string;
+  extraParams?: Record<string, string>;
 }) {
   const pages = getPaginationRange(currentPage, totalPages);
 
   return (
     <div className="bd-page">
       {currentPage > 1 && (
-        <Link href={pageUrl(slug, currentPage - 1, view, q, sort, category)} aria-label="이전">‹</Link>
+        <Link href={pageUrl(slug, currentPage - 1, view, q, sort, category, extraParams)} aria-label="이전">‹</Link>
       )}
       {pages.map((p, i) =>
         p === "…" ? (
@@ -387,11 +393,11 @@ function Pagination({
         ) : p === currentPage ? (
           <span key={p} className="cur" aria-current="page">{p}</span>
         ) : (
-          <Link key={p} href={pageUrl(slug, p, view, q, sort, category)}>{p}</Link>
+          <Link key={p} href={pageUrl(slug, p, view, q, sort, category, extraParams)}>{p}</Link>
         )
       )}
       {currentPage < totalPages && (
-        <Link href={pageUrl(slug, currentPage + 1, view, q, sort, category)} aria-label="다음">›</Link>
+        <Link href={pageUrl(slug, currentPage + 1, view, q, sort, category, extraParams)} aria-label="다음">›</Link>
       )}
     </div>
   );

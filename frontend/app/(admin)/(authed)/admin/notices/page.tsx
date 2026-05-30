@@ -235,6 +235,8 @@ export default function AdminNoticesPage() {
 
   // 월별 필터
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  // 노출 상태 필터 — active(노출 중) / expired(만료됨) / all(전체)
+  const [statusFilter, setStatusFilter] = useState<"active" | "expired" | "all">("active");
 
   // 다중 선택
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -246,10 +248,14 @@ export default function AdminNoticesPage() {
   const [targetSlugs, setTargetSlugs] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  useEffect(() => { fetchNotices(); fetchBoards(); }, []);
+  useEffect(() => { fetchBoards(); }, []);
+  useEffect(() => { fetchNotices(); }, [statusFilter]);
 
   async function fetchNotices() {
-    const res = await fetch(`${API}/api/notices/`);
+    // admin 전용 — status(노출중/만료됨/전체)별 조회. 만료 공지 관리 가능.
+    const res = await fetch(`${API}/api/notices/admin?status=${statusFilter}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
     if (res.ok) setNotices(await res.json());
   }
 
@@ -483,6 +489,23 @@ export default function AdminNoticesPage() {
           <NoticeForm initial={EMPTY_FORM} onSave={handleCreate} onCancel={() => setShowCreate(false)} />
         </div>
       )}
+
+      {/* 노출 상태 필터 — 노출 중 / 만료됨(지난) / 전체 */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {(["active", "expired", "all"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => { setStatusFilter(v); setSelected(new Set()); setSelectedMonth("all"); }}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              statusFilter === v
+                ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                : "border-[var(--color-border)] hover:bg-[var(--color-surface-warm)]"
+            }`}
+          >
+            {v === "active" ? "노출 중" : v === "expired" ? "만료됨(지난)" : "전체"}
+          </button>
+        ))}
+      </div>
 
       {notices.length > 0 && (
         <>
