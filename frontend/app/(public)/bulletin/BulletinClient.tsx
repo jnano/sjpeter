@@ -158,7 +158,7 @@ export default function BulletinClient({
                 type="button"
                 onClick={() => viewPdf(latest)}
                 disabled={!latest.pdf_url}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-[var(--ink)] text-white rounded-full text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-[var(--color-text)] text-white rounded-full text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <rect x="2" y="2" width="10" height="10" rx="1" />

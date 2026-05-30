@@ -116,23 +116,18 @@ function PriestBlock({ staff }: { staff: Staff }) {
 
         {/* Info */}
         <div className="relative">
-          {/* Role pill */}
-          <span
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-[0.06em] mb-4"
-            style={{ background: "var(--color-primary)", color: "#FFF" }}
-          >
+          {/* v1.5.430 — wine role-pill·본명 알약 원복: 와인 라인 + uppercase eyebrow + 평문 본명 */}
+          <span className="inline-flex items-center gap-2.5 text-[11px] tracking-[0.18em] text-[var(--color-primary)] uppercase font-bold mb-3">
+            <span aria-hidden className="w-5 h-px bg-[var(--color-primary)]" />
             {isPriest && <span aria-hidden>✠</span>}
             {staff.role}
           </span>
 
-          {/* Name + baptismal */}
+          {/* Name + baptismal (평문) */}
           <h2 className="text-[28px] md:text-[40px] font-bold tracking-[-0.03em] leading-[1.1] mb-3 text-[var(--color-text)]">
             {staff.name}
             {staff.title && (
-              <span
-                className="text-[13px] md:text-base px-3 py-1.5 rounded-full font-bold ml-2 align-middle inline-block tracking-wide"
-                style={{ background: "rgba(122,31,43,0.06)", color: "var(--color-primary)" }}
-              >
+              <span className="font-medium text-[14px] md:text-base text-[var(--color-text-muted)] ml-2 tracking-tight align-middle">
                 {staff.title}
               </span>
             )}

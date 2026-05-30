@@ -181,7 +181,7 @@ export default function PrayerListView({ prayers }: { prayers: PrayerItem[] }) {
       )}
 
       {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-[var(--ink)] text-white text-sm px-4 py-2 rounded-full shadow-lg pointer-events-none">{toast}</div>
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-[var(--color-text)] text-white text-sm px-4 py-2 rounded-full shadow-lg pointer-events-none">{toast}</div>
       )}
     </div>
   );

@@ -135,7 +135,7 @@ export default function GospelToolbar({ text, reference, dateIso }: Props) {
         <button
           type="button"
           onClick={playing ? stop : play}
-          className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[var(--ink)] text-white rounded-full text-[13px] font-semibold hover:opacity-90"
+          className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[var(--color-text)] text-white rounded-full text-[13px] font-semibold hover:opacity-90"
         >
           {playing ? (
             <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="3" y="3" width="3" height="8"/><rect x="8" y="3" width="3" height="8"/></svg>
@@ -216,7 +216,7 @@ export default function GospelToolbar({ text, reference, dateIso }: Props) {
       </div>
 
       {msg && (
-        <span className="absolute -top-7 right-2 text-[11px] bg-[var(--ink)] text-white px-2 py-1 rounded shadow">
+        <span className="absolute -top-7 right-2 text-[11px] bg-[var(--color-text)] text-white px-2 py-1 rounded shadow">
           {msg}
         </span>
       )}

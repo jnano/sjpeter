@@ -50,7 +50,7 @@ function OrgChart({ members }: { members: CouncilMember[] }) {
     (m) => m.role.includes("분과장") || m.role.includes("청년회장") || m.role.includes("부장"),
   );
 
-  // org-node 시안 톤
+  // v1.5.430 — deputy ink 단 제거. lead(와인) + regular(흰 outlined) 2단만.
   const Node = ({
     member,
     label,
@@ -58,18 +58,13 @@ function OrgChart({ members }: { members: CouncilMember[] }) {
   }: {
     member?: CouncilMember;
     label?: string;
-    variant?: "lead" | "deputy" | "regular";
+    variant?: "lead" | "regular";
   }) => {
     const bg =
       variant === "lead"
         ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-        : variant === "deputy"
-          ? "bg-[var(--ink)] text-white border-[var(--ink)]"
-          : "bg-white border-[var(--color-border)] text-[var(--color-text)]";
-    const avBg =
-      variant === "regular"
-        ? "bg-[var(--color-accent)] text-[var(--color-text)]"
-        : "bg-[var(--color-accent)] text-[var(--color-text)]";
+        : "bg-white border-[var(--color-border)] text-[var(--color-text)]";
+    const avBg = "bg-[var(--color-accent)] text-[var(--color-text)]";
     const name = member?.name ?? "";
     const role = member?.role ?? label ?? "";
     return (
@@ -98,10 +93,10 @@ function OrgChart({ members }: { members: CouncilMember[] }) {
         <>
           <div className="grid gap-3 md:gap-4 justify-center mb-3" style={{ gridTemplateColumns: `repeat(${Math.min(2, Math.max(1, chairs.length + viceChairs.length))}, minmax(140px, 1fr))`, maxWidth: 520, margin: "0 auto 12px" }}>
             {chairs.slice(0, 2).map((m) => (
-              <Node key={m.id} member={m} variant="deputy" />
+              <Node key={m.id} member={m} variant="regular" />
             ))}
             {viceChairs.slice(0, 2).map((m) => (
-              <Node key={m.id} member={m} variant="deputy" />
+              <Node key={m.id} member={m} variant="regular" />
             ))}
           </div>
           {(heads.length > 0 || treasurers.length > 0) && (
