@@ -276,8 +276,11 @@ export default function ExtractionsPage() {
   }
 
   async function approve(ext: Extraction, options?: { notifyOverride?: boolean }) {
+    // 공지는 board_id 없이 자동 라우팅 — notice/this-week 분기('이번주만 유효')·is_pinned 를
+    // 백엔드 _apply_extraction_routing 가 처리. board_id 를 강제하면 weekly_bundle 분기가 무시됨.
+    const autoRoute = ext.event_type === "공지";
     const boardId = selectedBoard[ext.id];
-    if (!boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
+    if (!autoRoute && !boardId) { setError(`"${ext.title}" 항목의 게시판을 선택해 주세요.`); return; }
     setError("");
     const review = reviewByExt[ext.id] ?? { temporal_kind: "unknown", group_ids: [], notify: true };
     const notify_flag = options?.notifyOverride ?? review.notify;
@@ -294,7 +297,7 @@ export default function ExtractionsPage() {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          board_id: boardId,
+          board_id: autoRoute ? null : boardId,
           community_group_ids: review.group_ids,
           importance: (review as ReviewState).importance,
           weekly_bundle: (review as ReviewState).weekly_bundle,
@@ -901,6 +904,10 @@ function ExtractionCard({
   const isMeditation = ext.event_type === "묵상";
   // 지표·묵상은 일반 게시판/캘린더 라우팅과 분리 — 검토 영역(시점·분과·알림)도 노출 안 함.
   const isSpecial = isVision || isMeditation;
+  // 주 액션 분기: 공지=공지사항 등록 / 행사·모임=캘린더 등록 / 그 외=게시판 등록
+  const isNotice = ext.event_type === "공지";
+  const isCalendarKind = ext.event_type === "행사" || ext.event_type === "모임";
+  const hasDate = !!ext.event_date;
 
   // 중복 알림 사전 경고 — review.group_ids·notify 변경 시 fetch (debounce 400ms)
   const [preview, setPreview] = useState<{ matches: Array<{ batch_id: number; title: string; created_at: string; target_count: number }>; estimated_target_count: number } | null>(null);
@@ -1170,74 +1177,105 @@ function ExtractionCard({
       {/* 액션 영역 — 지표·묵상 제외 (별도 폼이 그 자리 차지) */}
       {!isSpecial && (
         <div className="pt-1 space-y-2">
-          {/* 게시판 승인 행 */}
-          <div className="flex gap-2">
-            <select
-              value={selectedBoardId ?? ""}
-              onChange={(e) => onSelectBoard(Number(e.target.value))}
-              className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
-            >
-              <option value="">게시판 선택…</option>
-              {boards.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            <button
-              onClick={onApprove}
-              disabled={processing || !selectedBoardId}
-              className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-            >
-              {processing ? "처리 중…" : "게시판 등록"}
-            </button>
-          </div>
-          {/* 캘린더 등록 시 게시판에도 카드 미러할지 옵션 — events.id 를 가리키는 짧은 링크 카드만 생성 (본문 중복 없음) */}
-          {ext.event_date && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-              <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={mirrorEnabled}
-                  onChange={(e) => setMirrorEnabled(e.target.checked)}
-                  className="accent-emerald-600"
-                />
-                <span>게시판에도 카드 노출</span>
-              </label>
-              {mirrorEnabled && (
+          {isNotice ? (
+            /* 공지 → 공지사항 등록 (notice/this-week 자동 라우팅, 게시판 선택 불필요) */
+            <div className="flex gap-2">
+              <button
+                onClick={onApprove}
+                disabled={processing}
+                className="flex-1 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {processing ? "처리 중…" : "공지사항 등록"}
+              </button>
+              <button
+                onClick={onReject}
+                disabled={processing}
+                className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
+              >
+                거부
+              </button>
+            </div>
+          ) : isCalendarKind && hasDate ? (
+            /* 행사·모임 + 날짜 → 캘린더 등록 (주 액션) + 게시판 미러 옵션 */
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={mirrorEnabled}
+                    onChange={(e) => setMirrorEnabled(e.target.checked)}
+                    className="accent-emerald-600"
+                  />
+                  <span>게시판에도 카드 노출</span>
+                </label>
+                {mirrorEnabled && (
+                  <select
+                    value={mirrorBoardSlug}
+                    onChange={(e) => setMirrorBoardSlug(e.target.value)}
+                    className="flex-1 border border-emerald-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="">게시판 선택…</option>
+                    {boards.map((b) => (
+                      <option key={b.id} value={b.slug}>{b.name}</option>
+                    ))}
+                  </select>
+                )}
+                <span className="text-emerald-700/70 text-[10px] shrink-0">본문 중복 없음 (캘린더가 권위)</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onApproveAsEvent(mirrorEnabled ? mirrorBoardSlug : undefined)}
+                  disabled={processing || (mirrorEnabled && !mirrorBoardSlug)}
+                  title={(mirrorEnabled && !mirrorBoardSlug) ? "미러 게시판을 선택하세요" : ""}
+                  className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  📅 캘린더 등록{mirrorEnabled && mirrorBoardSlug && " + 게시판 카드"}
+                </button>
+                <button
+                  onClick={onReject}
+                  disabled={processing}
+                  className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
+                >
+                  거부
+                </button>
+              </div>
+            </>
+          ) : (
+            /* 그 외(봉사·순례 등·미분류) + 날짜 없는 행사·모임 → 게시판 선택 후 등록 */
+            <>
+              {isCalendarKind && !hasDate && (
+                <p className="text-[11px] text-amber-700 px-1">
+                  ⓘ 날짜가 없어 캘린더 등록 불가 — 날짜를 입력(편집)하면 캘린더 등록, 아니면 게시판에 등록하세요.
+                </p>
+              )}
+              <div className="flex gap-2">
                 <select
-                  value={mirrorBoardSlug}
-                  onChange={(e) => setMirrorBoardSlug(e.target.value)}
-                  className="flex-1 border border-emerald-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-emerald-500"
+                  value={selectedBoardId ?? ""}
+                  onChange={(e) => onSelectBoard(Number(e.target.value))}
+                  className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] bg-white"
                 >
                   <option value="">게시판 선택…</option>
                   {boards.map((b) => (
-                    <option key={b.id} value={b.slug}>{b.name}</option>
+                    <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
-              )}
-              <span className="text-emerald-700/70 text-[10px] shrink-0">본문 중복 없음 (캘린더가 권위)</span>
-            </div>
+                <button
+                  onClick={onApprove}
+                  disabled={processing || !selectedBoardId}
+                  className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                >
+                  {processing ? "처리 중…" : "게시판 등록"}
+                </button>
+                <button
+                  onClick={onReject}
+                  disabled={processing}
+                  className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
+                >
+                  거부
+                </button>
+              </div>
+            </>
           )}
-          {/* 캘린더 등록 + 거부 행 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => onApproveAsEvent(mirrorEnabled ? mirrorBoardSlug : undefined)}
-              disabled={processing || !ext.event_date || (mirrorEnabled && !mirrorBoardSlug)}
-              title={
-                !ext.event_date ? "날짜 정보가 없어 캘린더 등록 불가" :
-                (mirrorEnabled && !mirrorBoardSlug) ? "미러 게시판을 선택하세요" : ""
-              }
-              className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              📅 캘린더 등록{mirrorEnabled && mirrorBoardSlug && " + 게시판 카드"}{!ext.event_date && " (날짜 없음)"}
-            </button>
-            <button
-              onClick={onReject}
-              disabled={processing}
-              className="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-surface-warm)] rounded-lg text-sm disabled:opacity-50 transition-colors"
-            >
-              거부
-            </button>
-          </div>
         </div>
       )}
     </div>
