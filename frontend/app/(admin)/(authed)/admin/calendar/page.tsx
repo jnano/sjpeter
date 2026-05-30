@@ -64,6 +64,7 @@ interface Event {
   category: string;
   is_public: boolean;
   is_ai_generated: boolean;
+  is_featured: boolean;
   event_kind: string | null;
 }
 
@@ -79,6 +80,7 @@ const EMPTY_FORM: EventFormData = {
   location: null,
   category: "general",
   is_public: true,
+  is_featured: false,
   event_kind: null,
 };
 
@@ -317,15 +319,29 @@ function EventForm({
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="is_public"
-              checked={form.is_public}
-              onChange={(e) => setForm((f) => ({ ...f, is_public: e.target.checked }))}
-              className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
-            />
-            <label htmlFor="is_public" className="text-sm cursor-pointer">공개</label>
+          <div className="flex items-center gap-5 pt-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_public"
+                checked={form.is_public}
+                onChange={(e) => setForm((f) => ({ ...f, is_public: e.target.checked }))}
+                className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+              />
+              <label htmlFor="is_public" className="text-sm cursor-pointer">공개</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_featured"
+                checked={form.is_featured}
+                onChange={(e) => setForm((f) => ({ ...f, is_featured: e.target.checked }))}
+                className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+              />
+              <label htmlFor="is_featured" className="text-sm cursor-pointer" title="공개 캘린더에서 와인색으로 강조됩니다">
+                ⭐ 중요 일정 <span className="text-xs text-[var(--color-text-muted)]">(캘린더 와인색 강조)</span>
+              </label>
+            </div>
           </div>
 
           <div className="md:col-span-2">
@@ -1080,6 +1096,7 @@ export default function AdminCalendarPage() {
                           location: ev.location,
                           category: ev.category,
                           is_public: ev.is_public,
+                          is_featured: ev.is_featured,
                           event_kind: ev.event_kind,
                         }}
                         onSave={(form) => handleEdit(ev.id, form)}
@@ -1137,6 +1154,7 @@ export default function AdminCalendarPage() {
                   location: picked.location,
                   category: picked.category,
                   is_public: picked.is_public,
+                  is_featured: picked.is_featured,
                   event_kind: picked.event_kind,
                 }}
                 onSave={(form) => handleEdit(picked.id, form)}

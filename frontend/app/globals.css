@@ -57,6 +57,7 @@
   --cat-retreat:  #0E7490;  --cat-retreat-bg: #E5F6FA;  /* 피정 - teal */
   --cat-lecture:  #BE185D;  --cat-lecture-bg: #FBEAF1;  /* 강의 - rose */
   --cat-other:    #525252;  --cat-other-bg:   #F2F0EC;  /* 기타 - gray */
+--cat-featured: #7A1F2B;  --cat-featured-bg:#F8E9EC;  /* 중요 - 와인 */
 }
 
 /* 배너 슬라이더 Ken Burns 효과 — 활성 컷이 천천히 확대·이동.
@@ -1826,6 +1827,7 @@ h1, h2, h3, h4, h5, h6 {
 [data-cat="retreat"] { --c: var(--cat-retreat); --c-bg: var(--cat-retreat-bg); }
 [data-cat="lecture"] { --c: var(--cat-lecture); --c-bg: var(--cat-lecture-bg); }
 [data-cat="other"]   { --c: var(--cat-other);   --c-bg: var(--cat-other-bg); }
+[data-cat="featured"]{ --c: var(--cat-featured);--c-bg: var(--cat-featured-bg); }
 
 .cal-root {
   font-family: var(--font-display);

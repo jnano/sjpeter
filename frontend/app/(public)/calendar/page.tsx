@@ -28,6 +28,7 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 function catKey(e: Event): string {
+  if (e.is_featured) return "featured";  // 중요 일정 — 카테고리 색 대신 와인색
   return (e.event_kind && KIND_TO_CAT[e.event_kind]) || "other";
 }
 
@@ -58,6 +59,7 @@ interface Event {
   category: string;
   status: string;
   event_kind: string | null;
+  is_featured?: boolean;
 }
 
 const VIEW_TABS: { value: ViewMode; label: string }[] = [
