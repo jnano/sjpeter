@@ -20,6 +20,11 @@ class BulletinExtraction(Base):
     location = Column(String(200), nullable=True)
     event_type = Column(String(50))        # "순례", "모임", "행사" 등
 
+    # 묵상(event_type="묵상") 전용 — AI 가 분리 추출한 묵상 필드. 승인 시 meditations 로 매핑.
+    scripture = Column(String(300), nullable=True)  # 성경 구절 출처 (예: "마태 25,31-46")
+    practice = Column(Text, nullable=True)          # 이번 주 실천 (한 줄에 하나, \n 구분)
+    pull_quote = Column(Text, nullable=True)        # 강조 인용구
+
     # 시점 분류 — future|timeless|past|unknown. 알림 발송 게이트 입력.
     temporal_kind = Column(String(10), nullable=False, server_default="unknown")
     temporal_reason = Column(Text, nullable=True)  # AI 판단 사유 (관리자 검토에 표시)

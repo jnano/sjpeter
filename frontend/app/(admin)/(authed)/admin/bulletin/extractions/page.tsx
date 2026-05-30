@@ -18,6 +18,9 @@ interface MeditationPayload {
   title: string;
   body: string;
   author: string;
+  scripture: string;
+  practice: string;
+  pull_quote: string;
   is_published: boolean;
   notify: boolean;
 }
@@ -34,6 +37,9 @@ interface Extraction {
   event_date: string | null;
   location: string | null;
   event_type: string | null;
+  scripture: string | null;
+  practice: string | null;
+  pull_quote: string | null;
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   temporal_reason: string | null;
   importance: "high" | "normal" | "low";
@@ -1294,6 +1300,10 @@ function MeditationApproveForm({
   const [title, setTitle] = useState<string>(ext.title);
   const [body, setBody] = useState<string>(initial.body);
   const [author, setAuthor] = useState<string>(initial.author);
+  // AI 가 분리 추출한 묵상 필드를 초기값으로 — 관리자가 검토·보완 후 등록.
+  const [scripture, setScripture] = useState<string>(ext.scripture ?? "");
+  const [practice, setPractice] = useState<string>(ext.practice ?? "");
+  const [pullQuote, setPullQuote] = useState<string>(ext.pull_quote ?? "");
   const [isPublished, setIsPublished] = useState<boolean>(true);
   const [notifyOnApprove, setNotifyOnApprove] = useState<boolean>(false);
 
@@ -1321,11 +1331,38 @@ function MeditationApproveForm({
           className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500"
         />
 
+        <label className="text-xs text-teal-900 pt-1.5">성경 구절</label>
+        <input
+          type="text"
+          value={scripture}
+          onChange={(e) => setScripture(e.target.value)}
+          placeholder="오늘의 복음 — 예: 요한 20,19-23 (선택)"
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500"
+        />
+
         <label className="text-xs text-teal-900 pt-1.5">본문</label>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={5}
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500 leading-relaxed resize-y"
+        />
+
+        <label className="text-xs text-teal-900 pt-1.5">강조 인용</label>
+        <textarea
+          value={pullQuote}
+          onChange={(e) => setPullQuote(e.target.value)}
+          rows={2}
+          placeholder="핵심 한 문장. 마지막 줄 '— 출처' 로 출처 표기 (선택)"
+          className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500 leading-relaxed resize-y"
+        />
+
+        <label className="text-xs text-teal-900 pt-1.5">이번 주 실천</label>
+        <textarea
+          value={practice}
+          onChange={(e) => setPractice(e.target.value)}
+          rows={3}
+          placeholder="한 줄에 하나씩. 번호는 자동 부여 (선택)"
           className="border border-teal-200 rounded-md px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-teal-500 leading-relaxed resize-y"
         />
       </div>
@@ -1360,6 +1397,9 @@ function MeditationApproveForm({
               title: title.trim(),
               body: body.trim(),
               author: author.trim(),
+              scripture: scripture.trim(),
+              practice: practice.trim(),
+              pull_quote: pullQuote.trim(),
               is_published: isPublished,
               notify: notifyOnApprove,
             })

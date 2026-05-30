@@ -524,6 +524,9 @@ class ExtractionOut(BaseModel):
     event_date: Optional[date]
     location: Optional[str]
     event_type: Optional[str]
+    scripture: Optional[str] = None       # 묵상 — 성경 구절 출처
+    practice: Optional[str] = None        # 묵상 — 이번 주 실천 (\n 구분)
+    pull_quote: Optional[str] = None      # 묵상 — 강조 인용구
     temporal_kind: str = "unknown"
     temporal_reason: Optional[str] = None
     importance: str = "normal"           # v1.5.336: high|normal|low
@@ -789,6 +792,12 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             base_date = _b.published_date if _b and _b.published_date else _dt.utcnow().date()
             expires_at = _dt.combine(base_date + _td(days=7), _dt.min.time())
 
+        # 묵상 전용 필드 — AI 가 분리 추출한 성경구절·실천·강조인용 (오타교정 적용).
+        # 묵상이 아니면 보통 null. 승인 폼 초기값으로 사용됨.
+        scripture = fix_typos(ev.get("scripture"), db)
+        practice = fix_typos(ev.get("practice"), db)
+        pull_quote = fix_typos(ev.get("pull_quote"), db)
+
         # 모든 카테고리 — 관리자 검토 대기
         ext = BulletinExtraction(
             bulletin_id=bulletin_id, title=title, content=content_text,
@@ -796,6 +805,7 @@ def _route_and_save_events(db: Session, bulletin: Bulletin, events: list[dict], 
             group_candidates=group_candidates,
             event_date=parsed_date,
             location=ev_location, event_type=event_type,
+            scripture=scripture, practice=practice, pull_quote=pull_quote,
             temporal_kind=temporal_kind,
             temporal_reason=ev.get("temporal_reason"),
             importance=importance,
@@ -1118,11 +1128,13 @@ def _apply_extraction_routing(db: Session, ext: BulletinExtraction) -> BulletinE
         meditation_body = cleaned_text + _format_source_footer(bulletin)
         row = db.execute(
             _text(
-                "INSERT INTO meditations (title, body, author, published_date, is_published, source_bulletin_id, created_at, updated_at) "
-                "VALUES (:title, :body, :author, :pdate, TRUE, :src, :ts, :ts) RETURNING id"
+                "INSERT INTO meditations (title, body, author, scripture, practice, pull_quote, published_date, is_published, source_bulletin_id, created_at, updated_at) "
+                "VALUES (:title, :body, :author, :scripture, :practice, :pull_quote, :pdate, TRUE, :src, :ts, :ts) RETURNING id"
             ),
             {
                 "title": title, "body": meditation_body, "author": meditation_author,
+                "scripture": (ext.scripture or None), "practice": (ext.practice or None),
+                "pull_quote": (ext.pull_quote or None),
                 "pdate": bulletin.published_date, "src": bulletin.id, "ts": published_ts,
             },
         ).first()
@@ -2125,6 +2137,9 @@ class ApproveAsMeditationBody(BaseModel):
     title: str | None = None
     body: str | None = None
     author: str | None = None
+    scripture: str | None = None    # 성경 구절 (오늘의 복음)
+    practice: str | None = None     # 이번 주 실천 (\n 구분)
+    pull_quote: str | None = None   # 강조 인용구
     is_published: bool = True
 
 
@@ -2164,13 +2179,23 @@ def approve_extraction_as_meditation(
     pdate = bulletin.published_date if bulletin else date.today()
     published_ts = datetime.combine(pdate, time(12, 0))
 
+    # 성경구절·실천·강조인용 — 폼이 보내면 그 값, 아니면 AI 추출값(ext) fallback. 빈 문자열은 NULL.
+    def _pick(form_val, ext_val):
+        v = form_val if form_val is not None else ext_val
+        v = (v or "").strip()
+        return v or None
+    scripture = _pick(body.scripture, ext.scripture)
+    practice = _pick(body.practice, ext.practice)
+    pull_quote = _pick(body.pull_quote, ext.pull_quote)
+
     row = db.execute(
         text(
-            "INSERT INTO meditations (title, body, author, published_date, is_published, source_bulletin_id, created_at, updated_at) "
-            "VALUES (:title, :body, :author, :pdate, :pub, :src, :ts, :ts) RETURNING id"
+            "INSERT INTO meditations (title, body, author, scripture, practice, pull_quote, published_date, is_published, source_bulletin_id, created_at, updated_at) "
+            "VALUES (:title, :body, :author, :scripture, :practice, :pull_quote, :pdate, :pub, :src, :ts, :ts) RETURNING id"
         ),
         {
             "title": title, "body": meditation_body, "author": meditation_author,
+            "scripture": scripture, "practice": practice, "pull_quote": pull_quote,
             "pdate": pdate, "pub": body.is_published, "src": ext.bulletin_id, "ts": published_ts,
         },
     ).first()
