@@ -81,6 +81,61 @@ const TEMPORAL_LABEL: Record<ReviewState["temporal_kind"], string> = {
   unknown:  "모호",
 };
 
+// 시점 옵션 — 아이콘·설명(hover 툴팁)·알림 발송 여부. 시인성 향상용 메타.
+const TEMPORAL_OPTS: { value: ReviewState["temporal_kind"]; icon: string; label: string; hint: string; notifies: boolean }[] = [
+  { value: "future",   icon: "📅", label: "미래 행사",   hint: "발행일 이후 예정된 일정 — 알림 발송",       notifies: true },
+  { value: "timeless", icon: "🔁", label: "상시",        hint: "날짜 없는 모집·안내 — 알림 발송",          notifies: true },
+  { value: "past",     icon: "📜", label: "지난 이벤트", hint: "이미 끝난 일·후기 — 기록용, 알림 차단",    notifies: false },
+  { value: "unknown",  icon: "❓", label: "모호",        hint: "시점이 불분명 — 보류, 알림 차단",          notifies: false },
+];
+
+const IMPORTANCE_OPTS: { value: NonNullable<ReviewState["importance"]>; label: string; hint: string; tone: "danger" | "normal" | "muted" }[] = [
+  { value: "high",   label: "★ 중요", hint: "본당 전체에 영향 — 목록 상단 강조",  tone: "danger" },
+  { value: "normal", label: "보통",   hint: "일반 안내·행사·모임",                tone: "normal" },
+  { value: "low",    label: "낮음",   hint: "자잘한 변동 — 눈에 덜 띄게",          tone: "muted" },
+];
+
+/** 세그먼트 버튼 그룹 — 라디오를 클릭형 pill 로. 선택 시 채워진 배경으로 상태가 한눈에 보임. */
+function Segmented<T extends string>({
+  options, value, onChange, name,
+}: {
+  options: { value: T; icon?: string; label: string; hint?: string; tone?: "danger" | "normal" | "muted" }[];
+  value: T;
+  onChange: (v: T) => void;
+  name: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={name} className="inline-flex flex-wrap rounded-lg border border-[var(--color-border)] overflow-hidden bg-white">
+      {options.map((o, i) => {
+        const active = value === o.value;
+        const dangerActive = active && o.tone === "danger";
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            title={o.hint}
+            onClick={() => onChange(o.value)}
+            className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              i > 0 ? "border-l border-[var(--color-border)]" : ""
+            } ${
+              dangerActive
+                ? "bg-red-600 text-white"
+                : active
+                  ? "bg-[var(--color-primary)] text-white"
+                  : `bg-white hover:bg-[var(--color-surface-warm)] ${o.tone === "muted" ? "text-gray-400" : o.tone === "danger" ? "text-red-600" : "text-[var(--color-text)]"}`
+            }`}
+          >
+            {o.icon && <span aria-hidden="true">{o.icon}</span>}
+            <span>{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const ALL_KINDS = ["묵상", "지표", "공지", "행사", "모임", "봉사", "순례", "피정", "강의", "기타"] as const;
 
 // 본문에 등장하는 'M/D' 또는 'M/D(요일)' 패턴 — 백엔드 _DATE_PATTERN 과 동일.
@@ -926,32 +981,36 @@ function ExtractionCard({
       {/* 검토 영역 — 시점·대상 분과·알림 (지표·묵상 제외) */}
       {!isSpecial && (
         <div className="bg-[var(--color-surface-warm)]/60 border border-[var(--color-border)] rounded-lg p-3 space-y-2 text-xs">
-          {/* 시점 분류 */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-[var(--color-text)] shrink-0">시점</span>
-            {(["future", "timeless", "past", "unknown"] as const).map((k) => (
-              <label key={k} className="flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name={`tk-${ext.id}`}
-                  checked={review.temporal_kind === k}
-                  onChange={() => onReviewChange({ temporal_kind: k })}
-                  className="accent-[var(--color-primary)]"
-                />
-                <span>{TEMPORAL_LABEL[k]}</span>
-              </label>
-            ))}
-          </div>
-          {ext.temporal_reason && (
-            <p className="text-[11px] text-[var(--color-text-muted)] italic">
-              AI: {ext.temporal_reason}
+          {/* 시점 분류 — 세그먼트 버튼 + 기능 설명 */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
+                <span aria-hidden="true">⏱</span> 시점
+              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)]">— 알림 발송 여부를 결정합니다</span>
+            </div>
+            <Segmented
+              name="시점"
+              value={review.temporal_kind}
+              onChange={(v) => onReviewChange({ temporal_kind: v })}
+              options={TEMPORAL_OPTS.map((o) => ({ value: o.value, icon: o.icon, label: o.label, hint: o.hint }))}
+            />
+            <p className="text-[11px]">
+              <span className="text-green-700">상시·미래 = 알림 발송</span>
+              <span className="text-[var(--color-text-muted)]"> · </span>
+              <span className="text-amber-700">지난 이벤트·모호 = 알림 차단</span>
             </p>
-          )}
+            {ext.temporal_reason && (
+              <p className="text-[11px] text-[var(--color-text-muted)] italic">AI 판단: {ext.temporal_reason}</p>
+            )}
+          </div>
           {/* 대상 분과 — chip 으로 표시 + 추가 드롭다운 */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-[var(--color-text)] shrink-0">대상 분과</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
+              <span aria-hidden="true">👥</span> 대상 분과
+            </span>
             {review.group_ids.length === 0 && (
-              <span className="text-[var(--color-text-muted)]">없음</span>
+              <span className="text-[var(--color-text-muted)]">없음 — 알림 받을 단체</span>
             )}
             {review.group_ids.map((gid) => {
               const g = communityGroups.find((x) => x.id === gid);
@@ -985,22 +1044,19 @@ function ExtractionCard({
             </select>
           </div>
           {/* v1.5.336: 중요도·이번주 묶음·만료일 (공지 묻힘 회피) */}
-          <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
-            <span className="font-semibold text-[var(--color-text)] shrink-0">중요도</span>
-            {(["high", "normal", "low"] as const).map((imp) => (
-              <label key={imp} className="flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name={`imp-${ext.id}`}
-                  checked={(review.importance ?? "normal") === imp}
-                  onChange={() => onReviewChange({ importance: imp })}
-                  className="accent-[var(--color-primary)]"
-                />
-                <span className={imp === "high" ? "text-red-600 font-semibold" : imp === "low" ? "text-gray-400" : ""}>
-                  {imp === "high" ? "★ 중요" : imp === "normal" ? "보통" : "낮음"}
-                </span>
-              </label>
-            ))}
+          <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]/60">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
+                <span aria-hidden="true">⚑</span> 중요도
+              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)]">— 목록 정렬·강조 수준</span>
+            </div>
+            <Segmented
+              name="중요도"
+              value={review.importance ?? "normal"}
+              onChange={(v) => onReviewChange({ importance: v })}
+              options={IMPORTANCE_OPTS.map((o) => ({ value: o.value, label: o.label, hint: o.hint, tone: o.tone }))}
+            />
           </div>
           {ext.event_type === "공지" && (
             <div className="flex items-center gap-3 flex-wrap">
@@ -1015,8 +1071,10 @@ function ExtractionCard({
               </label>
             </div>
           )}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-[var(--color-text)] shrink-0">만료일</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
+              <span aria-hidden="true">📆</span> 만료일
+            </span>
             <input
               type="date"
               value={review.expires_at ?? ""}
@@ -1034,7 +1092,7 @@ function ExtractionCard({
                 onChange={(e) => onReviewChange({ notify: e.target.checked })}
                 className="accent-[var(--color-primary)]"
               />
-              <span>승인 시 관심 회원에게 알림 발송</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden="true">🔔</span> 승인 시 관심 회원에게 알림 발송</span>
             </label>
             {(() => {
               // 백엔드 _notify_gate_passes 와 동일 로직 시뮬
