@@ -54,10 +54,17 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // v1.5.451 — sub-group 페이지면 부모 분과의 메뉴 href 를 사이드바 강제 활성으로 전달.
+  // 부모는 보통 menu_items 에 /groups/{parent.slug} 로 등록돼 있어 와인색 하이라이트 됨.
+  const parentForSidebar = group.parent_id
+    ? allGroups.find((g) => g.id === group.parent_id)
+    : null;
+  const extraActiveHref = parentForSidebar?.slug ? `/groups/${parentForSidebar.slug}` : undefined;
+
   return (
     <>
       <PageHeader group="본당 공동체" title="분과와 단체" subtitle={group.name} />
-      <SectionLayout autoHero={false}>
+      <SectionLayout autoHero={false} extraActiveHref={extraActiveHref}>
         <article className="space-y-8">
           {/* 분과명 + 설명 + 대표 사진 — 시안 mission/header 톤.
              v1.5.448 — representative_photo_url 이 있으면 우측 사진 + 좌측 텍스트 2단.

@@ -23,30 +23,34 @@ interface Props {
    *  풀폭 본문이 필요한 페이지(/calendar, /gallery 등)용. */
   chipsOnly?: boolean;
   items: MenuItem[];      // 트리 구조 (children 포함)
+  /** pathname 외에 추가로 active 처리할 href (v1.5.451). sub-group 페이지에서 부모 분과 항목 하이라이트용. */
+  extraActiveHref?: string;
 }
 
 /** pathname 이 href 또는 그 자식 경로(예: /boards/liturgy/691) 인지.
- *  v1.5.333: 글 상세 페이지에서도 사이드바 메뉴가 active 로 보이도록 prefix 매칭. */
-function matchesHref(href: string, pathname: string): boolean {
+ *  v1.5.333: 글 상세 페이지에서도 사이드바 메뉴가 active 로 보이도록 prefix 매칭.
+ *  v1.5.451: extraActiveHref 일치도 active 처리. sub-group 페이지에서 부모 분과 하이라이트용. */
+function matchesHref(href: string, pathname: string, extraActiveHref?: string): boolean {
   if (!href) return false;
+  if (extraActiveHref && href === extraActiveHref) return true;
   return href === pathname || pathname.startsWith(href + "/");
 }
 
 /** 현재 pathname이 item이나 그 자식 중 어디에 매칭되는지 */
-function isItemActive(item: MenuItem, pathname: string): boolean {
-  if (matchesHref(item.href, pathname)) return true;
-  return (item.children ?? []).some((c) => isItemActive(c, pathname));
+function isItemActive(item: MenuItem, pathname: string, extraActiveHref?: string): boolean {
+  if (matchesHref(item.href, pathname, extraActiveHref)) return true;
+  return (item.children ?? []).some((c) => isItemActive(c, pathname, extraActiveHref));
 }
 
 /** 현재 pathname에 매칭되는 top-level item을 찾음 (mobile 2-row에서 사용) */
-function findActiveTopLevel(items: MenuItem[], pathname: string): MenuItem | null {
+function findActiveTopLevel(items: MenuItem[], pathname: string, extraActiveHref?: string): MenuItem | null {
   for (const it of items) {
-    if (isItemActive(it, pathname)) return it;
+    if (isItemActive(it, pathname, extraActiveHref)) return it;
   }
   return null;
 }
 
-export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, imagePosition, chipsOnly = false, items }: Props) {
+export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx = 220, heightPx, imagePosition, chipsOnly = false, items, extraActiveHref }: Props) {
   const pathname = usePathname();
   const archiveCounts = useArchiveCounts();
 
@@ -59,13 +63,13 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
       .filter((it) => !isArchiveLinkHidden(it.href, archiveCounts))
       .map((it) => ({ ...it, children: filterArchive(it.children ?? []) }));
   const visibleItems = filterArchive(items);
-  const activeTopLevel = findActiveTopLevel(visibleItems, pathname);
+  const activeTopLevel = findActiveTopLevel(visibleItems, pathname, extraActiveHref);
 
   const resolvedImage =
     imageSrc && imageSrc.startsWith("/uploads/") ? `${API}${imageSrc}` : imageSrc;
 
   function Chip({ item, kind }: { item: MenuItem; kind: "top" | "sub" }) {
-    const active = matchesHref(item.href, pathname) || (kind === "top" && isItemActive(item, pathname));
+    const active = matchesHref(item.href, pathname, extraActiveHref) || (kind === "top" && isItemActive(item, pathname, extraActiveHref));
     return (
       <Link
         href={item.href}
@@ -87,8 +91,8 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
   }
 
   function DesktopRow({ item }: { item: MenuItem }) {
-    const active = matchesHref(item.href, pathname);
-    const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname));
+    const active = matchesHref(item.href, pathname, extraActiveHref);
+    const childActive = (item.children ?? []).some((c) => isItemActive(c, pathname, extraActiveHref));
     const hasChildren = (item.children?.length ?? 0) > 0;
     const [hovered, setHovered] = React.useState(false);
     const [popupMaxH, setPopupMaxH] = React.useState<number>(440);
@@ -157,7 +161,7 @@ export default function SectionSidebar({ groupTitle, imageSrc, imageAlt, widthPx
             <div className="w-56 bg-white border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden" style={{ minWidth: "200px" }}>
             <ul className="py-1 overflow-y-auto overscroll-contain" style={{ maxHeight: `${popupMaxH}px` }}>
               {item.children!.map((c) => {
-                const cActive = matchesHref(c.href, pathname);
+                const cActive = matchesHref(c.href, pathname, extraActiveHref);
                 return (
                   <li key={c.id}>
                     <Link

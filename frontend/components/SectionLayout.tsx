@@ -23,6 +23,10 @@ interface Props {
    *  현재 pathname 과 메뉴 항목 href 가 **정확히** 일치할 때만 사이드바 표시. 정확 일치가 없으면 풀폭 렌더.
    *  ── admin/menus 에 등록되지 않은 페이지에 prefix 부작용으로 사이드바가 자동 붙는 것을 막을 때 사용 (v1.5.413). */
   strictMatch?: boolean;
+  /** 사이드바에서 강제로 'active' 로 표시할 href (v1.5.451).
+   *  pathname 매칭 외에 이 href 와 일치하는 메뉴 항목도 active 처리. 예) sub-group 페이지에서
+   *  부모 분과의 메뉴 항목을 하이라이트하고 싶을 때 부모의 /groups/{slug} 를 넘긴다. */
+  extraActiveHref?: string;
 }
 
 /** 데스크탑 사이드바 접힘 상태 — 전역 (localStorage). 같은 키를 다른 탭/페이지가 공유. */
@@ -112,7 +116,7 @@ export function SidebarCollapseTab({ collapsed, onToggle }: { collapsed: boolean
  * 숨기고 본문을 확장할 수 있다. 상태는 localStorage 전역.
  * 모바일은 사이드바가 본문 위에 column 으로 오므로 토글 영향 받지 않음.
  */
-export default function SectionLayout({ children, autoHero = true, chipsOnly = false, tools = false, strictMatch = false }: Props) {
+export default function SectionLayout({ children, autoHero = true, chipsOnly = false, tools = false, strictMatch = false, extraActiveHref }: Props) {
   const pathname = usePathname() ?? "";
   const { currentGroup } = useNavigation();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
@@ -145,6 +149,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
           groupTitle={effectiveGroup.label}
           items={effectiveGroup.items}
           chipsOnly
+          extraActiveHref={extraActiveHref}
         />
         {autoHero && <AutoPageHero />}
         {children}
@@ -178,6 +183,7 @@ export default function SectionLayout({ children, autoHero = true, chipsOnly = f
               heightPx={effectiveGroup.sidebar_height_px ?? undefined}
               imagePosition={effectiveGroup.sidebar_image_position}
               items={effectiveGroup.items}
+              extraActiveHref={extraActiveHref}
             />
           </div>
         </div>
