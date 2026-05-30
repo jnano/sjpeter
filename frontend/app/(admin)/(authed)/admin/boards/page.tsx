@@ -110,7 +110,6 @@ function getAdminToken() {
 function kindLabel(k: string): string {
   if (k === "line") return "한 줄";
   if (k === "gallery") return "갤러리";
-  if (k === "titlelist") return "일반 (타이틀+목록)";
   return "일반";
 }
 
@@ -585,7 +584,6 @@ export default function AdminBoardsPage() {
                 className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="default">일반 (제목+본문)</option>
-                <option value="titlelist">일반 (타이틀+목록)</option>
                 <option value="line">한 줄 (메시지 + 추천)</option>
                 <option value="gallery">갤러리 (사진 그리드)</option>
               </select>
@@ -1160,7 +1158,6 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
             className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
             <option value="default">일반 (제목+본문)</option>
-            <option value="titlelist">일반 (타이틀+목록)</option>
             <option value="line">한 줄 (메시지 + 추천)</option>
             <option value="gallery">갤러리 (사진 그리드)</option>
           </select>
@@ -1168,11 +1165,6 @@ function BoardSettingsPanel({ board, onUpdate }: { board: Board; onUpdate: (b: B
         {kind === "line" && (
           <p className="w-full text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 -mt-1">
             ⓘ 한 줄 게시판: 회원이 짧은 메시지(예: 봉헌, 기도 청원)와 종류·대상을 남기며, 다른 회원이 &quot;함께 기도합니다&quot; 버튼으로 공감할 수 있습니다.
-          </p>
-        )}
-        {kind === "titlelist" && (
-          <p className="w-full text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded px-3 py-2 -mt-1">
-            ⓘ 일반 (타이틀+목록): 전통적 게시판 표 형식입니다. 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수)가 있고 그 아래 행이 정렬됩니다. 아래의 &quot;목록 표시 컬럼&quot; 토글로 노출할 컬럼을 선택할 수 있습니다.
           </p>
         )}
         {kind === "gallery" && (

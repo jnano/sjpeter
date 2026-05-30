@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.436";
+export const CURRENT_VERSION = "1.5.437";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.437", date: "2026-05-30", tag: "수정", items: ["게시판 list 뷰를 전통 표 형식으로 통합. v1.5.431~v1.5.436 의 별도 'titlelist' kind 옵션을 제거하고, 일반(제목+본문) kind 의 list 뷰 자체를 시안 열린마당 톤으로 재작성. 사용자가 어떤 kind 옵션을 골라도 list 뷰면 표 형식이 적용됨. BoardList.ListView 를 div 그리드 → <table> 시맨틱(<colgroup>+<thead>+<tbody>) 로 교체. 컬럼 폭(번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70, 제목 가변) colgroup 으로 강제. 헤더 medium 13px gray + 상하 가로보더. 행 14px, 공지(고정) 행은 '공지사항' 라벨 + bg-warm. 날짜 YYYY.MM.DD. TitleListBoard 컴포넌트·titlelist 옵션·라우팅 분기 모두 삭제"] },
   { version: "1.5.436", date: "2026-05-30", tag: "디자인", items: ["titlelist 게시판 톤 정정 — 사용자 시안(전형적 본당 게시판)에 맞춰 카드/보더/rounded/색 헤더 제거. 가로선만 있는 단순 표: 상단 카드 wrapper 삭제, '전체 N건' 요약 삭제. 헤더(번호·제목·작성자·작성일·조회·좋아요·댓글·공유) 는 medium weight 13px gray-muted + 가로 보더 상하만. 행 폭: 번호 80·작성자 120·작성일 120·조회 70·좋아요 80·댓글 70·공유 70, 제목 가변. 본문 14px 통일, 패딩 16x16. 고정 게시글은 번호 셀에 '공지사항' 라벨 + bg-warm 60% 배경 행. 2일 이내 신규에 'N' 분홍 뱃지. 날짜 형식 YYYY.MM.DD"] },
   { version: "1.5.435", date: "2026-05-30", tag: "수정", items: ["titlelist 게시판을 <table> 시맨틱으로 재작성 — v1.5.434 의 CSS Grid 가 시각적으로 어긋나 보이던 문제. <colgroup>+<col width> 로 컬럼 폭(번호 56·작성자 104·작성일 92·조회수 68·좋아요수 72·댓글수 68·공유수 68, 제목은 가변) 명시 + table-layout:fixed. <thead>의 <th>와 <tbody>의 <td>가 브라우저 표 정렬 알고리즘으로 자동 픽셀 정렬. 제목은 제목 칸, 작성일은 작성일 칸에 정확히 떨어짐. 빈 결과 안내는 colSpan 활용"] },
   { version: "1.5.434", date: "2026-05-30", tag: "수정", items: ["titlelist 게시판 헤더-행 정렬 어긋남 해소 — v1.5.433 의 flex+개별 width 클래스 방식으로 헤더와 행 셀 폭이 불일치하던 문제. CSS Grid 로 재작성: 활성 컬럼별 track 정의(번호 56px·제목 1fr·작성자 96px·작성일 84px·조회수 60px·좋아요수 68px·댓글수 60px·공유수 60px) → 헤더와 모든 행이 동일 grid-template-columns inline style 공유. 제목은 제목 칸, 작성일은 작성일 칸에 픽셀 단위로 정렬됨. cellContent 헬퍼로 데이터 셀 렌더링 분리"] },

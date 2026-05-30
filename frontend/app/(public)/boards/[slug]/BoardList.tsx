@@ -164,28 +164,120 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
 }
 
 function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
-  // 시안 board.html list-table — 테두리 카드 + grid 행.
+  // v1.5.437 — 전통적 게시판 표 (시안 열린마당 톤). <table> + <colgroup> 으로
+  // 헤더-행 컬럼 폭을 픽셀 단위로 정렬. cols 토글로 컬럼 동적 가감.
+  const showShares = cols.list_show_shares && cols.share_enabled;
+  const empty = posts.length === 0;
+
+  function fmtDate(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   return (
-    <div className="bd-table">
-      {posts.map((post, i) => (
-        <Link key={post.id} href={hrefFor(post.id)} className="bd-row">
-          <span className={`no ${post.is_pinned ? "pin" : ""}`}>
-            {post.is_pinned ? "고정" : cols.list_show_number ? posts.length - i : ""}
-          </span>
-          <span className="title-cell">
-            {!post.member && <AiBadge />}
-            <span className="ttl">{post.title}</span>
-            {cols.list_show_comments && post.comment_count > 0 && <span className="cmt">{post.comment_count}</span>}
-            {post.thumbnail_url && <span className="text-xs text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>}
-            {post.has_video && <VideoBadge inline />}
-          </span>
-          {cols.list_show_author ? <span className="author"><AuthorChip author={post.member} nameFirst /></span> : <span />}
-          {cols.list_show_views ? <span className="views">조회 {post.view_count}</span> : <span />}
-          {cols.list_show_date ? (
-            <span className="date">{new Date(post.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" })}</span>
-          ) : <span />}
-        </Link>
-      ))}
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[680px] border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup>
+          {cols.list_show_number && <col style={{ width: "80px" }} />}
+          <col />{/* 제목 — 가변 */}
+          {cols.list_show_author && <col style={{ width: "120px" }} />}
+          {cols.list_show_date && <col style={{ width: "120px" }} />}
+          {cols.list_show_views && <col style={{ width: "70px" }} />}
+          {cols.list_show_likes && <col style={{ width: "80px" }} />}
+          {cols.list_show_comments && <col style={{ width: "70px" }} />}
+          {showShares && <col style={{ width: "70px" }} />}
+        </colgroup>
+        <thead>
+          <tr className="text-[13px] text-[var(--color-text-muted)] border-y border-[var(--color-border)]">
+            {cols.list_show_number && <th className="px-4 py-3.5 text-left font-medium">번호</th>}
+            <th className="px-4 py-3.5 text-left font-medium">제목</th>
+            {cols.list_show_author && <th className="px-4 py-3.5 text-left font-medium">작성자</th>}
+            {cols.list_show_date && <th className="px-4 py-3.5 text-left font-medium">작성일</th>}
+            {cols.list_show_views && <th className="px-4 py-3.5 text-left font-medium">조회</th>}
+            {cols.list_show_likes && <th className="px-4 py-3.5 text-left font-medium">좋아요</th>}
+            {cols.list_show_comments && <th className="px-4 py-3.5 text-left font-medium">댓글</th>}
+            {showShares && <th className="px-4 py-3.5 text-left font-medium">공유</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {empty ? (
+            <tr>
+              <td
+                colSpan={1 + (cols.list_show_number ? 1 : 0) + (cols.list_show_author ? 1 : 0) + (cols.list_show_date ? 1 : 0) + (cols.list_show_views ? 1 : 0) + (cols.list_show_likes ? 1 : 0) + (cols.list_show_comments ? 1 : 0) + (showShares ? 1 : 0)}
+                className="px-4 py-16 text-center text-sm text-[var(--color-text-muted)]"
+              >
+                아직 작성된 글이 없습니다. 첫 번째 글을 남겨보세요.
+              </td>
+            </tr>
+          ) : (
+            posts.map((post, i) => {
+              const rowNumber = posts.length - i;
+              const href = hrefFor(post.id);
+              const rowBg = post.is_pinned ? "bg-[var(--color-surface-warm)]/60" : "";
+              return (
+                <tr key={post.id} className={`text-[14px] border-b border-[var(--color-border)] ${rowBg} hover:bg-[var(--color-surface-warm)]/40 transition-colors`}>
+                  {cols.list_show_number && (
+                    <td className="px-4 py-4 text-left text-[var(--color-text-muted)] text-[13px] tabular-nums">
+                      {post.is_pinned ? (
+                        <span className="font-medium">공지사항</span>
+                      ) : (
+                        rowNumber
+                      )}
+                    </td>
+                  )}
+                  <td className="px-4 py-4 text-left">
+                    <Link href={href} className="inline-flex items-center gap-2 min-w-0 max-w-full text-[var(--color-text)] hover:text-[var(--color-primary)]">
+                      {!cols.list_show_number && post.is_pinned && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">고정</span>
+                      )}
+                      {!post.member && <AiBadge />}
+                      <span className="truncate">{post.title}</span>
+                      {cols.list_show_comments && post.comment_count > 0 && (
+                        <span className="text-[12px] text-[var(--color-primary)] tabular-nums shrink-0">[{post.comment_count}]</span>
+                      )}
+                      {post.thumbnail_url && (
+                        <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
+                      )}
+                      {post.has_video && <VideoBadge inline />}
+                    </Link>
+                  </td>
+                  {cols.list_show_author && (
+                    <td className="px-4 py-4 text-left text-[13px] text-[var(--color-text-muted)] truncate">
+                      {post.member?.nickname ?? "성당"}
+                    </td>
+                  )}
+                  {cols.list_show_date && (
+                    <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                      {fmtDate(post.created_at)}
+                    </td>
+                  )}
+                  {cols.list_show_views && (
+                    <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                      {post.view_count}
+                    </td>
+                  )}
+                  {cols.list_show_likes && (
+                    <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                      {post.like_count ?? 0}
+                    </td>
+                  )}
+                  {cols.list_show_comments && (
+                    <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                      {post.comment_count}
+                    </td>
+                  )}
+                  {showShares && (
+                    <td className="px-4 py-4 text-left text-[13px] tabular-nums text-[var(--color-text-muted)]">
+                      {post.share_count ?? 0}
+                    </td>
+                  )}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

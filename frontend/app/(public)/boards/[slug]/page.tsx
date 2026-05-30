@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import BoardList from "./BoardList";
 import LineBoard from "./LineBoard";
-import TitleListBoard from "./TitleListBoard";
 import PageHeader from "@/components/PageHeader";
 import SectionLayout from "@/components/SectionLayout";
 
@@ -213,51 +212,6 @@ export default async function BoardPage({
     getCategories(slug),
   ]);
   const totalPages = Math.max(1, Math.ceil(postList.total / postList.posts_per_page));
-
-  // 타이틀+목록 게시판: 공지사항 톤의 단순 목록으로 표시.
-  // 작성자/조회수/댓글 토글, 뷰 전환, 카테고리 칩, 정렬 등은 무시되고 제목·고정·날짜만.
-  if (board.kind === "titlelist") {
-    return (
-      <>
-        <PageHeader
-          group="알림과 게시판"
-          title={board.name}
-          subtitle={board.description || ""}
-          action={
-            canWrite ? (
-              <Link
-                href={`/boards/${slug}/write`}
-                className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white text-xs font-medium rounded-lg transition-colors"
-              >
-                글쓰기
-              </Link>
-            ) : undefined
-          }
-        />
-        <SectionLayout autoHero={false}>
-          <TitleListBoard
-            slug={slug}
-            posts={postList.posts}
-            total={postList.total}
-            page={page}
-            totalPages={totalPages}
-            searchQuery={q}
-            showSearch={board.show_search_form}
-            cols={{
-              list_show_number: board.list_show_number,
-              list_show_author: board.list_show_author,
-              list_show_date: board.list_show_date,
-              list_show_views: board.list_show_views,
-              list_show_likes: board.list_show_likes,
-              list_show_comments: board.list_show_comments,
-              list_show_shares: board.list_show_shares,
-              share_enabled: board.share_enabled,
-            }}
-          />
-        </SectionLayout>
-      </>
-    );
-  }
 
   return (
     <>
