@@ -82,6 +82,25 @@ def list_events(year: int, month: int, db: Session = Depends(get_db)):
     return [_row_to_dict(r) for r in rows]
 
 
+@router.get("/admin/summary")
+def events_admin_summary(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    """대시보드용 행사 요약 — 다가오는 일정 5건·기록대기 수·전체 수."""
+    _auto_transition(db)
+    total = db.execute(text("SELECT COUNT(*) FROM events")).scalar() or 0
+    pending_recording = db.execute(text(
+        "SELECT COUNT(*) FROM events WHERE status = '기록대기'"
+    )).scalar() or 0
+    upcoming = db.execute(text(
+        "SELECT * FROM events WHERE is_public = TRUE AND event_date >= CURRENT_DATE "
+        "ORDER BY event_date, start_time LIMIT 5"
+    )).fetchall()
+    return {
+        "total": total,
+        "pending_recording_count": pending_recording,
+        "upcoming": [_row_to_dict(r) for r in upcoming],
+    }
+
+
 @router.post("/", response_model=EventOut, status_code=201)
 def create_event(body: EventIn, db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
     initial_status = "기록대기" if body.event_date < date.today() else "예정"

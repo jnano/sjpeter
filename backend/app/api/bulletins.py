@@ -57,6 +57,12 @@ class BulletinOut(BaseModel):
         from_attributes = True
 
 
+@router.get("/admin/count")
+def bulletins_admin_count(db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)):
+    """대시보드용 주보 전체 개수."""
+    return {"total": db.query(Bulletin).count()}
+
+
 @router.get("/latest", response_model=BulletinOut)
 def get_latest(db: Session = Depends(get_db)):
     bulletin = (
