@@ -6,6 +6,7 @@ import BulkActionBar from "@/components/BulkActionBar";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatErrorDetail } from "@/lib/api";
+import { ADMIN_ROLE_OPTIONS, adminRoleLabel } from "@/lib/adminRole";
 
 function relativeFromNow(iso: string | null): string {
   if (!iso) return "로그인 기록 없음";
@@ -31,6 +32,7 @@ interface Member {
   social_provider: string | null;
   is_active: boolean;
   is_admin: boolean;
+  admin_role: string | null;
   is_email_verified: boolean;
   has_password: boolean;
   post_count: number;
@@ -224,17 +226,49 @@ export default function AdminMembersPage() {
     if (!confirm(confirmMsg)) return;
     setProcessing((p) => ({ ...p, [member.id]: true }));
     try {
+      const grant = action === "grant-admin";
       const res = await fetch(`${API}/api/members/admin/${member.id}/${action}`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: grant
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { Authorization: `Bearer ${token}` },
+        ...(grant ? { body: JSON.stringify({ admin_role: "operator" }) } : {}),
       });
       if (res.ok) {
+        const updated = await res.json();
         setData((prev) =>
           prev
             ? {
                 ...prev,
                 items: prev.items.map((m) =>
-                  m.id === member.id ? { ...m, is_admin: !m.is_admin } : m
+                  m.id === member.id ? { ...m, is_admin: updated.is_admin, admin_role: updated.admin_role } : m
+                ),
+              }
+            : prev
+        );
+      }
+    } finally {
+      setProcessing((p) => ({ ...p, [member.id]: false }));
+    }
+  }
+
+  // 운영자 등급 변경 (권한 회수 없이 라벨만). grant-admin 을 재호출해 admin_role 갱신.
+  async function setAdminRole(member: Member, role: string) {
+    setProcessing((p) => ({ ...p, [member.id]: true }));
+    try {
+      const res = await fetch(`${API}/api/members/admin/${member.id}/grant-admin`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_role: role }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((m) =>
+                  m.id === member.id ? { ...m, is_admin: updated.is_admin, admin_role: updated.admin_role } : m
                 ),
               }
             : prev
@@ -502,6 +536,7 @@ export default function AdminMembersPage() {
                     onSelect={() => select.toggle(member.id)}
                     onToggle={() => toggleActive(member)}
                     onToggleAdmin={() => toggleAdminRole(member)}
+                    onSetAdminRole={(role) => setAdminRole(member, role)}
                     onResetPassword={() => resetPassword(member)}
                     onDelete={() => deleteMember(member)}
                   />
@@ -559,6 +594,7 @@ function MemberRow({
   onSelect,
   onToggle,
   onToggleAdmin,
+  onSetAdminRole,
   onResetPassword,
   onDelete,
 }: {
@@ -570,6 +606,7 @@ function MemberRow({
   onSelect: () => void;
   onToggle: () => void;
   onToggleAdmin: () => void;
+  onSetAdminRole: (role: string) => void;
   onResetPassword: () => void;
   onDelete: () => void;
 }) {
@@ -656,7 +693,7 @@ function MemberRow({
       {/* 운영자 — 권한 배지 (+ 비밀번호 미설정 경고) */}
       <div className="flex flex-col items-start gap-1">
         {member.is_admin ? (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">운영자</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">{adminRoleLabel(member.admin_role)}</span>
         ) : (
           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">일반</span>
         )}
@@ -676,6 +713,19 @@ function MemberRow({
 
       {/* 관리 버튼 */}
       <div className="flex items-center gap-2 flex-wrap">
+        {isSuper && member.is_admin && (
+          <select
+            value={member.admin_role ?? "operator"}
+            onChange={(e) => onSetAdminRole(e.target.value)}
+            disabled={processing || isSelf}
+            title={isSelf ? selfBlockedTitle : "운영자 표시 등급 (권한은 모두 동급)"}
+            className="text-xs px-2 py-1.5 rounded-lg border border-amber-300 text-amber-700 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {ADMIN_ROLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        )}
         {isSuper && (
           <button
             onClick={onToggleAdmin}

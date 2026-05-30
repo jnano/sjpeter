@@ -44,6 +44,7 @@ class Member(Base):
 
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)   # 운영자 여부 (UI 라벨은 "운영자", DB 컬럼명은 호환 유지)
+    admin_role = Column(String(20), nullable=True)  # 운영자 표시 등급 (is_admin=True 시): vicar|priest|nun|operator. 권한과 무관, 표시 전용
     is_email_verified = Column(Boolean, default=False)
     interest_prompt_completed = Column(Boolean, default=False, nullable=False)  # 관심분과 온보딩 응답 여부
     notify_kakao = Column(Boolean, default=False, nullable=False)               # 카톡 알림 수신 동의 (글로벌)

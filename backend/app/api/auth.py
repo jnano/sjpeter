@@ -36,6 +36,7 @@ class AdminLoginResponse(BaseModel):
     role: str           # "admin" | "member"
     display_name: str
     is_super_admin: bool
+    admin_role: str | None = None   # 표시 등급: 'super'(슈퍼관리자) | vicar|priest|nun|operator
     expires_in: int     # 토큰 유효 시간(초) — 클라이언트 절대 만료 계산용
 
 
@@ -69,6 +70,7 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
             role="admin",
             display_name=admin.username,
             is_super_admin=True,
+            admin_role="super",
             expires_in=token_expires_in_seconds(body.remember),
         )
 
@@ -90,6 +92,7 @@ def admin_login_unified(request: Request, body: AdminLoginRequest, db: Session =
             role="member",
             display_name=member.nickname,
             is_super_admin=False,
+            admin_role=member.admin_role or "operator",
             expires_in=token_expires_in_seconds(body.remember),
         )
 
@@ -143,7 +146,7 @@ def get_admin_me(
     if role == "admin":
         admin = db.query(Admin).filter(Admin.username == payload.get("sub")).first()
         if admin:
-            return {"display_name": admin.username, "role": "admin", "is_super_admin": True}
+            return {"display_name": admin.username, "role": "admin", "is_super_admin": True, "admin_role": "super"}
 
     if role == "member":
         member = db.query(Member).filter(
@@ -152,6 +155,6 @@ def get_admin_me(
             Member.is_active == True,
         ).first()
         if member:
-            return {"display_name": member.nickname, "role": "member", "is_super_admin": False}
+            return {"display_name": member.nickname, "role": "member", "is_super_admin": False, "admin_role": member.admin_role or "operator"}
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 인증 정보입니다.")

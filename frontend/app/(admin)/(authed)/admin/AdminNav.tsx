@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CrossIcon from "@/components/icons/CrossIcon";
+import { adminRoleLabel } from "@/lib/adminRole";
 
 interface Props {
   onMobileMenuClick?: () => void;
@@ -20,10 +21,12 @@ export default function AdminNav({
 }: Props) {
   const router = useRouter();
   const [isSuper, setIsSuper] = useState(false);
+  const [displayRole, setDisplayRole] = useState<string>("");
   const [username, setUsername] = useState<string>("");
 
   useEffect(() => {
     setIsSuper(localStorage.getItem("admin_is_super") === "true");
+    setDisplayRole(localStorage.getItem("admin_display_role") ?? "");
     setUsername(localStorage.getItem("admin_username") ?? "");
   }, []);
 
@@ -79,11 +82,15 @@ export default function AdminNav({
           <span className="font-serif font-bold whitespace-nowrap">관리자</span>
           <span className="hidden md:inline text-white/50 text-sm whitespace-nowrap">— 본당 홈페이지</span>
         </Link>
-        {isSuper && (
+        {isSuper ? (
           <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 shrink-0">
-            최고관리자
+            슈퍼관리자
           </span>
-        )}
+        ) : displayRole ? (
+          <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium bg-amber-400/20 text-amber-200 border border-amber-400/30 shrink-0">
+            {adminRoleLabel(displayRole)}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-1.5">

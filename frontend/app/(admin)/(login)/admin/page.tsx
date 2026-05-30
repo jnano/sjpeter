@@ -26,6 +26,7 @@ function LoginForm() {
       localStorage.removeItem("admin_token");
       localStorage.removeItem("admin_display_name");
       localStorage.removeItem("admin_role");
+      localStorage.removeItem("admin_display_role");
       localStorage.removeItem("admin_is_super");
       localStorage.removeItem("admin_token_exp");
       localStorage.removeItem("admin_remember");
@@ -60,6 +61,7 @@ function LoginForm() {
       localStorage.setItem("admin_token", data.access_token);
       localStorage.setItem("admin_display_name", data.display_name);
       localStorage.setItem("admin_role", data.role);
+      localStorage.setItem("admin_display_role", data.admin_role ?? "");
       localStorage.setItem("admin_is_super", String(data.is_super_admin));
       localStorage.setItem("admin_token_exp", String(absoluteExpiry));
       localStorage.setItem("admin_remember", remember ? "1" : "0");

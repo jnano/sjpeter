@@ -134,6 +134,7 @@ class MemberAdminOut(BaseModel):
     social_provider: Optional[str] = None
     is_active: bool
     is_admin: bool = False
+    admin_role: Optional[str] = None   # 운영자 표시 등급: vicar|priest|nun|operator (is_admin=True 시)
     is_email_verified: bool = False
     has_password: bool = True   # 비밀번호 설정 여부 (소셜 전용 여부 판단용)
     post_count: int = 0
@@ -1129,6 +1130,7 @@ def admin_list_members(
             social_provider=m.social_provider,
             is_active=m.is_active,
             is_admin=m.is_admin,
+            admin_role=m.admin_role,
             is_email_verified=bool(m.is_email_verified),
             has_password=m.hashed_password is not None,
             post_count=post_counts.get(m.id, 0),
@@ -1279,20 +1281,32 @@ def admin_reset_password(
     }
 
 
+# 운영자 표시 등급 — 권한과 무관, 표시 전용. 모두 동일 operator 권한.
+ADMIN_ROLES = {"vicar", "priest", "nun", "operator"}
+
+
+class GrantAdminIn(BaseModel):
+    admin_role: str = "operator"   # vicar|priest|nun|operator
+
+
 @router.patch("/admin/{member_id}/grant-admin", response_model=MemberAdminOut)
 def grant_admin(
     member_id: int,
+    body: Optional[GrantAdminIn] = None,
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_super_admin),
 ):
-    """슈퍼 관리자만 호출 가능 — 회원에게 관리 권한 부여.
+    """슈퍼 관리자만 호출 가능 — 회원에게 관리 권한 부여(겸 등급 변경).
+    admin_role 로 표시 등급(주임신부님·사제·수녀·운영자)을 지정한다. 권한은 모두 동급(operator).
     비밀번호가 없는 소셜 회원도 지정 가능하나, 실제 관리자 패널 로그인은
     비밀번호 설정 후에만 가능하다."""
     member = _get_member_or_404(member_id, db)
+    role = body.admin_role if body and body.admin_role in ADMIN_ROLES else "operator"
     member.is_admin = True
+    member.admin_role = role
     db.commit()
     db.refresh(member)
-    log_action(db, get_admin_identifier(admin), "grant_admin", "member", member.id, member.email)
+    log_action(db, get_admin_identifier(admin), "grant_admin", "member", member.id, f"{member.email} ({role})")
     return _to_admin_out(member, db)
 
 
@@ -1302,9 +1316,10 @@ def revoke_admin(
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_super_admin),
 ):
-    """슈퍼 관리자만 호출 가능 — 회원 관리 권한 회수."""
+    """슈퍼 관리자만 호출 가능 — 회원 관리 권한 회수(등급도 초기화)."""
     member = _get_member_or_404(member_id, db)
     member.is_admin = False
+    member.admin_role = None
     db.commit()
     db.refresh(member)
     log_action(db, get_admin_identifier(admin), "revoke_admin", "member", member.id, member.email)
@@ -1464,6 +1479,7 @@ def _to_admin_out(member: Member, db: Session) -> MemberAdminOut:
         social_provider=member.social_provider,
         is_active=member.is_active,
         is_admin=member.is_admin,
+        admin_role=member.admin_role,
         is_email_verified=bool(member.is_email_verified),
         has_password=member.hashed_password is not None,
         post_count=post_count,
