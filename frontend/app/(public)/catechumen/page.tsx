@@ -89,7 +89,7 @@ function renderEm(text: string) {
 export default async function CatechumenPage() {
   const parish = await getParish();
   const parishName = parish?.name ?? "본당";
-  const phone = parish?.phone ?? "044-000-0000";
+  const phone = parish?.phone ?? "";
 
   return (
     <>
@@ -119,10 +119,12 @@ export default async function CatechumenPage() {
                   <polyline points="7 3 11 6.5 7 10" />
                 </svg>
               </Link>
-              <a href={`tel:${phone}`}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-[var(--color-border)] text-[var(--color-text)] rounded-full text-[13px] font-bold hover:border-[var(--color-text-muted)]">
-                먼저 상담하기
-              </a>
+              {phone && (
+                <a href={`tel:${phone}`}
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-[var(--color-border)] text-[var(--color-text)] rounded-full text-[13px] font-bold hover:border-[var(--color-text-muted)]">
+                  먼저 상담하기
+                </a>
+              )}
             </div>
           </div>
 
@@ -228,13 +230,15 @@ export default async function CatechumenPage() {
                 <small className="block text-[11px] font-normal text-[var(--color-text-muted)] mt-0.5">평일 09:00 — 18:00 · 토 09:00 — 13:00</small>
               </span>
             </div>
-            <div className="grid grid-cols-[64px_1fr] gap-3 py-2.5 border-b border-dashed border-[var(--color-border)]">
-              <span className="text-[11px] tracking-wider uppercase font-bold text-[var(--color-text-muted)] pt-1">전화</span>
-              <span className="text-[14px] font-semibold text-[var(--color-text)]">
-                <a href={`tel:${phone}`} className="hover:text-[var(--color-primary)]">{phone}</a>
-                <small className="block text-[11px] font-normal text-[var(--color-text-muted)] mt-0.5">교육 분과 담당 선생님</small>
-              </span>
-            </div>
+            {phone && (
+              <div className="grid grid-cols-[64px_1fr] gap-3 py-2.5 border-b border-dashed border-[var(--color-border)]">
+                <span className="text-[11px] tracking-wider uppercase font-bold text-[var(--color-text-muted)] pt-1">전화</span>
+                <span className="text-[14px] font-semibold text-[var(--color-text)]">
+                  <a href={`tel:${phone}`} className="hover:text-[var(--color-primary)]">{phone}</a>
+                  <small className="block text-[11px] font-normal text-[var(--color-text-muted)] mt-0.5">교육 분과 담당 선생님</small>
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-[64px_1fr] gap-3 py-2.5">
               <span className="text-[11px] tracking-wider uppercase font-bold text-[var(--color-text-muted)] pt-1">상담</span>
               <span className="text-[14px] font-semibold text-[var(--color-text)]">
@@ -291,10 +295,12 @@ export default async function CatechumenPage() {
                 <polyline points="7 3 11 6.5 7 10" />
               </svg>
             </Link>
-            <a href={`tel:${phone}`}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-bold border border-white/20 text-white hover:bg-white/10">
-              {phone}
-            </a>
+            {phone && (
+              <a href={`tel:${phone}`}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-bold border border-white/20 text-white hover:bg-white/10">
+                {phone}
+              </a>
+            )}
           </div>
         </section>
       </SectionLayout>
