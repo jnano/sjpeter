@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import SectionLayout from "@/components/SectionLayout";
 import MarkdownContent from "@/components/MarkdownContent";
 import ArticleTools from "@/components/ArticleTools";
@@ -21,6 +23,7 @@ interface Notice {
   is_pinned: boolean;
   is_ai_generated?: boolean;
   created_at: string;
+  expires_at?: string | null;
   attachments?: NoticeAttachment[];
 }
 
@@ -52,6 +55,11 @@ export default async function NoticeDetailPage({
   const { postId } = await params;
   const notice = await getNotice(postId);
   if (!notice) notFound();
+
+  // 운영자 이상만 만료일 노출
+  const session = await auth();
+  const ck = await cookies();
+  const isOperator = !!(session as { isAdmin?: boolean } | null)?.isAdmin || !!(ck.get("admin_token")?.value || ck.get("admin_authed")?.value);
 
   return (
     <SectionLayout autoHero={false}>
@@ -96,6 +104,16 @@ export default async function NoticeDetailPage({
               >
                 AI
               </span>
+            )}
+            {/* 만료일 — 운영자 이상만 */}
+            {isOperator && (
+              notice.expires_at ? (
+                <span className={new Date(notice.expires_at) <= new Date() ? "text-red-500" : "text-[var(--color-text-muted)]"}>
+                  📆 만료 {new Date(notice.expires_at).toLocaleDateString("ko-KR")}{new Date(notice.expires_at) <= new Date() ? " (지남)" : ""}
+                </span>
+              ) : (
+                <span className="text-[var(--color-text-muted)]/60">📆 만료 없음</span>
+              )
             )}
           </p>
         </div>

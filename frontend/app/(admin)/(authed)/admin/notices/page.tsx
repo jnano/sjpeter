@@ -27,6 +27,7 @@ interface Notice {
   is_pinned: boolean;
   is_ai_generated: boolean;
   created_at: string;
+  expires_at?: string | null;
   attachments?: NoticeAttachment[];
 }
 
@@ -676,8 +677,17 @@ export default function AdminNoticesPage() {
                   {n.content && (
                     <p className="text-sm text-[var(--color-text-muted)] mt-1 line-clamp-2">{n.content}</p>
                   )}
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    {new Date(n.created_at).toLocaleDateString("ko-KR")}
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1 flex items-center gap-2 flex-wrap">
+                    <span>{new Date(n.created_at).toLocaleDateString("ko-KR")}</span>
+                    {n.expires_at && (() => {
+                      const expired = new Date(n.expires_at) <= new Date();
+                      return (
+                        <span className={expired ? "text-red-500" : "text-[var(--color-text-muted)]"}>
+                          📆 만료 {new Date(n.expires_at).toLocaleDateString("ko-KR")}{expired ? " (지남)" : ""}
+                        </span>
+                      );
+                    })()}
+                    {!n.expires_at && <span className="text-[var(--color-text-muted)]/60">📆 만료 없음</span>}
                   </p>
                 </div>
 

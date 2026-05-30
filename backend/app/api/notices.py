@@ -65,6 +65,7 @@ class NoticeOut(BaseModel):
     comment_count: int = 0
     like_count: int = 0
     share_count: int = 0
+    expires_at: Optional[datetime] = None  # 만료일 — 운영자 화면에서만 표시
 
 
 class NoticePagedOut(BaseModel):
@@ -109,6 +110,7 @@ def _to_notice_out(post: Post) -> NoticeOut:
         comment_count=len(post.comments or []),
         like_count=len(post.likes or []),
         share_count=getattr(post, "share_count", 0) or 0,
+        expires_at=getattr(post, "expires_at", None),
     )
 
 

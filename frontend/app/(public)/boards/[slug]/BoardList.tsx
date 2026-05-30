@@ -75,6 +75,7 @@ interface Post {
   thumbnail_url: string | null;
   has_video?: boolean;
   is_pinned?: boolean;
+  expires_at?: string | null;
 }
 
 export interface BoardCols {
@@ -102,6 +103,8 @@ interface Props {
   currentCategory?: string;
   /** 페이지네이션 링크에 항상 유지할 추가 쿼리 (예: 공지 '지난 공지' 탭 {tab:'archived'}) */
   extraParams?: Record<string, string>;
+  /** 만료일 노출 (공지 목록에서 운영자 이상에게만) */
+  showExpiry?: boolean;
 }
 
 function pageUrl(slug: string, page: number, view: string, q?: string, sort?: string, category?: string, extra?: Record<string, string>) {
@@ -125,7 +128,7 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return pages;
 }
 
-export default function BoardList({ posts, slug, currentPage, totalPages, currentView, kindDefault, cols, currentQ, currentSort, currentCategory, extraParams }: Props) {
+export default function BoardList({ posts, slug, currentPage, totalPages, currentView, kindDefault, cols, currentQ, currentSort, currentCategory, extraParams, showExpiry }: Props) {
   // 글 상세 → 삭제·뒤로 돌아갈 때 현재 페이지·필터를 복원하기 위해 링크에 from= 첨부
   function detailHref(postId: number) {
     const qp = new URLSearchParams();
@@ -144,7 +147,7 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
           아직 작성된 글이 없습니다. 첫 번째 글을 남겨보세요.
         </div>
       ) : currentView === "list" ? (
-        <ListView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
+        <ListView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} showExpiry={showExpiry} />
       ) : currentView === "card" ? (
         <CardView posts={posts} slug={slug} cols={cols} hrefFor={detailHref} />
       ) : (
@@ -167,7 +170,7 @@ export default function BoardList({ posts, slug, currentPage, totalPages, curren
   );
 }
 
-function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string }) {
+function ListView({ posts, slug, cols, hrefFor, showExpiry }: { posts: Post[]; slug: string; cols: BoardCols; hrefFor: (id: number) => string; showExpiry?: boolean }) {
   // v1.5.437 — 전통적 게시판 표 (시안 열린마당 톤). <table> + <colgroup> 으로
   // 헤더-행 컬럼 폭을 픽셀 단위로 정렬. cols 토글로 컬럼 동적 가감.
   const showShares = cols.list_show_shares && cols.share_enabled;
@@ -237,6 +240,14 @@ function ListView({ posts, slug, cols, hrefFor }: { posts: Post[]; slug: string;
                       )}
                       {!post.member && <AiBadge />}
                       <span className="truncate">{post.title}</span>
+                      {showExpiry && post.expires_at && (() => {
+                        const exp = new Date(post.expires_at!) <= new Date();
+                        return (
+                          <span className={`text-[10px] shrink-0 ${exp ? "text-red-500" : "text-[var(--color-text-muted)]"}`} title={`만료 ${new Date(post.expires_at!).toLocaleDateString("ko-KR")}`}>
+                            📆{new Date(post.expires_at!).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}{exp ? " 지남" : ""}
+                          </span>
+                        );
+                      })()}
                       {cols.list_show_comments && post.comment_count > 0 && (
                         <span className="text-[12px] text-[var(--color-primary)] tabular-nums shrink-0">[{post.comment_count}]</span>
                       )}

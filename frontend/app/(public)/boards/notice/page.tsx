@@ -51,6 +51,7 @@ interface Notice {
   comment_count?: number;
   like_count?: number;
   share_count?: number;
+  expires_at?: string | null;
   attachments?: NoticeAtt[];
 }
 interface NoticePaged { pinned: Notice[]; items: Notice[]; total: number }
@@ -92,6 +93,7 @@ function noticeToPost(n: Notice) {
     created_at: n.created_at,
     thumbnail_url: img?.file_url ?? null,
     is_pinned: n.is_pinned,
+    expires_at: n.expires_at ?? null,
   };
 }
 
@@ -225,6 +227,7 @@ export default async function NoticePage({
           }}
           currentQ={q}
           extraParams={tab === "archived" ? { tab: "archived" } : undefined}
+          showExpiry={isOperator}
         />
       </SectionLayout>
     </>
