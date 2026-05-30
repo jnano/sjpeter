@@ -64,12 +64,11 @@ interface CommunityGroup {
   slug?: string | null;
 }
 
-/** 항목별 검토 입력 (시점/분과/알림/중요도/묶음/만료) — approve 시 body 에 담아 보냄. */
+/** 항목별 검토 입력 (시점/분과/알림/묶음/만료) — approve 시 body 에 담아 보냄. */
 interface ReviewState {
   temporal_kind: "future" | "timeless" | "past" | "unknown";
   group_ids: number[];
   notify: boolean;
-  importance: "high" | "normal" | "low";
   weekly_bundle: boolean;
   expires_at: string | null;  // YYYY-MM-DD
   is_pinned: boolean;         // 공지를 게시판 상단 고정으로 등록
@@ -90,11 +89,6 @@ const TEMPORAL_OPTS: { value: ReviewState["temporal_kind"]; icon: string; label:
   { value: "unknown",  icon: "❓", label: "모호",        hint: "시점이 불분명 — 보류, 알림 차단",          notifies: false },
 ];
 
-const IMPORTANCE_OPTS: { value: NonNullable<ReviewState["importance"]>; label: string; hint: string; tone: "danger" | "normal" | "muted" }[] = [
-  { value: "high",   label: "★ 중요", hint: "본당 전체에 영향 — 목록 상단 강조",  tone: "danger" },
-  { value: "normal", label: "보통",   hint: "일반 안내·행사·모임",                tone: "normal" },
-  { value: "low",    label: "낮음",   hint: "자잘한 변동 — 눈에 덜 띄게",          tone: "muted" },
-];
 
 /** 세그먼트 버튼 그룹 — 라디오를 클릭형 pill 로. 선택 시 채워진 배경으로 상태가 한눈에 보임. */
 function Segmented<T extends string>({
@@ -208,14 +202,12 @@ export default function ExtractionsPage() {
             if (tk === "future" && e.event_date && e.event_date < today) {
               tk = "past";
             }
-            // v1.5.336: 디폴트 알림 정책 — importance=high 만 디폴트 true.
+            // 디폴트 알림 정책 — AI 가 high 로 판단한 것만 디폴트 true.
             //   normal/low 는 admin 이 명시적으로 켜야 발송 (자잘한 안내가 회원 알림함 묻는 것 회피).
-            const impPrefill = e.importance ?? "normal";
             next[e.id] = {
               temporal_kind: tk,
               group_ids: [],  // 카탈로그 도착 후 후보 매칭 (별도 effect)
-              notify: impPrefill === "high",
-              importance: impPrefill,
+              notify: (e.importance ?? "normal") === "high",
               weekly_bundle: !!e.weekly_bundle,
               expires_at: e.expires_at ? e.expires_at.slice(0, 10) : null,
               is_pinned: false,
@@ -269,7 +261,7 @@ export default function ExtractionsPage() {
       ...prev,
       [extId]: {
         temporal_kind: "unknown", group_ids: [], notify: true,
-        importance: "normal", weekly_bundle: false, expires_at: null, is_pinned: false,
+        weekly_bundle: false, expires_at: null, is_pinned: false,
         ...(prev[extId] ?? {}), ...patch,
       },
     }));
@@ -299,7 +291,6 @@ export default function ExtractionsPage() {
         body: JSON.stringify({
           board_id: autoRoute ? null : boardId,
           community_group_ids: review.group_ids,
-          importance: (review as ReviewState).importance,
           weekly_bundle: (review as ReviewState).weekly_bundle,
           expires_at: (review as ReviewState).expires_at
             ? new Date((review as ReviewState).expires_at + "T00:00:00").toISOString()
@@ -1074,23 +1065,9 @@ function ExtractionCard({
                 ))}
             </select>
           </div>
-          {/* v1.5.336: 중요도·이번주 묶음·만료일 (공지 묻힘 회피) */}
-          <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]/60">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
-                <span aria-hidden="true">⚑</span> 중요도
-              </span>
-              <span className="text-[11px] text-[var(--color-text-muted)]">— 목록 정렬·강조 수준</span>
-            </div>
-            <Segmented
-              name="중요도"
-              value={review.importance ?? "normal"}
-              onChange={(v) => onReviewChange({ importance: v })}
-              options={IMPORTANCE_OPTS.map((o) => ({ value: o.value, label: o.label, hint: o.hint, tone: o.tone }))}
-            />
-          </div>
+          {/* 이번주 묶음·만료일 (공지 묻힘 회피) */}
           {ext.event_type === "공지" && (
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1111,7 +1088,7 @@ function ExtractionCard({
               </label>
             </div>
           )}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[var(--color-border)]/60">
             <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-text)] shrink-0">
               <span aria-hidden="true">📆</span> 만료일
             </span>
