@@ -41,6 +41,49 @@ function lastChar(name: string) {
   return name.slice(-1);
 }
 
+function resolvePhoto(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${API}${url}`;
+}
+
+/** 사진 있으면 <img>, 없으면 이름 끝 글자. variant 별 색·테두리. */
+function Avatar({
+  member,
+  size = 36,
+  variant = "regular",
+}: {
+  member: CouncilMember | undefined;
+  size?: number;
+  variant?: "lead" | "regular";
+}) {
+  const photo = resolvePhoto(member?.photo_url);
+  const fallbackBg =
+    variant === "lead"
+      ? "bg-[var(--color-primary)] text-white"
+      : "bg-[var(--color-accent)] text-[var(--color-text)]";
+  const dim = { width: size, height: size };
+  if (photo) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={photo}
+        alt={member?.name ?? ""}
+        style={dim}
+        className="rounded-full object-cover shrink-0 border border-[var(--color-border)]"
+      />
+    );
+  }
+  return (
+    <div
+      style={dim}
+      className={`rounded-full flex items-center justify-center font-bold shrink-0 ${fallbackBg}`}
+    >
+      {member ? lastChar(member.name) : "✠"}
+    </div>
+  );
+}
+
 /* ───────── 시안 council.html — Org chart ───────── */
 function OrgChart({ members }: { members: CouncilMember[] }) {
   const chairs = members.filter((m) => m.role.includes("회장") && !m.role.includes("부회장"));
@@ -64,13 +107,12 @@ function OrgChart({ members }: { members: CouncilMember[] }) {
       variant === "lead"
         ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
         : "bg-white border-[var(--color-border)] text-[var(--color-text)]";
-    const avBg = "bg-[var(--color-accent)] text-[var(--color-text)]";
     const name = member?.name ?? "";
     const role = member?.role ?? label ?? "";
     return (
       <div className={`rounded-xl border px-4 py-3 text-center min-w-[140px] ${bg}`}>
-        <div className={`w-9 h-9 rounded-full mx-auto mb-2 flex items-center justify-center text-sm font-bold ${avBg}`}>
-          {name ? lastChar(name) : "✠"}
+        <div className="flex justify-center mb-2">
+          <Avatar member={member} size={36} variant={variant} />
         </div>
         <div className="text-[10px] tracking-[0.08em] uppercase font-bold mb-1 opacity-80">{role}</div>
         <div className="text-[13px] font-bold tracking-tight">
@@ -149,15 +191,7 @@ function MembersTable({ members }: { members: CouncilMember[] }) {
               {String(i + 1).padStart(2, "0")}
             </span>
             <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 ${
-                  isLead
-                    ? "bg-[var(--color-primary)] text-white"
-                    : "bg-[var(--color-accent)] text-[var(--color-text)]"
-                }`}
-              >
-                {lastChar(m.name)}
-              </div>
+              <Avatar member={m} size={36} variant={isLead ? "lead" : "regular"} />
               <div className="min-w-0">
                 <div className="text-[13px] md:text-[14px] font-bold text-[var(--color-text)] truncate">{m.name}</div>
               </div>

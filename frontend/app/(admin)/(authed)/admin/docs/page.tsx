@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.445";
+export const CURRENT_VERSION = "1.5.446";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.446", date: "2026-05-30", tag: "수정", items: ["admin/council 에 등록한 사진이 공개 /council 에 표시되도록 — Avatar 헬퍼 컴포넌트 신설(photo_url 있으면 <img>, 없으면 이름 끝글자 fallback + 와인/골드 톤). OrgChart Node 와 MembersTable 행의 letter avatar 를 Avatar 로 교체. photo_url 은 절대 URL 이면 그대로, 상대면 API base prefix"] },
   { version: "1.5.445", date: "2026-05-30", tag: "수정", items: ["v1.5.442·1.5.444 의 surface-warm 적용 오해 정정 — 사용자 요청은 '본문 바탕색(--color-background, dashboard 스킨 #FAF4F1)' 과 일치였는데 surface-warm(pentecost 시즌 #faf2f3 핑크 톤) 으로 잘못 적용. 세 곳 모두 bg-[var(--color-background)] 로 정정: PageHeader wrapper, .site-topbar(성령강림 띠), Header.tsx 데스크탑 스크롤 브레드크럼 띠. 이제 본문과 정확히 같은 베이지 톤"] },
   { version: "1.5.444", date: "2026-05-30", tag: "디자인", items: ["상단 topbar(전례일·로그인 띠) 배경색을 PageHeader(타이틀 영역) 과 일치 — .site-topbar background: var(--color-background) → var(--color-surface-warm). 성령강림 띠와 분과와 단체 헤더가 같은 크림 톤"] },
   { version: "1.5.443", date: "2026-05-30", tag: "수정", items: ["스크롤 시 사이드바 '메뉴 접기' 버튼이 sticky 헤더에 반쯤 가려지던 문제 — sticky top 오프셋을 md:top-44(176px) → md:top-52(208px) 로 32px 상향. 4 곳(SectionSidebar 본체·SectionLayout 펼침/접힘 토글·calendar 자체 사이드바) 일괄 적용. topbar+main shell+브레드크럼 띠가 합쳐졌을 때의 실제 sticky 헤더 높이를 충분히 덮음"] },
