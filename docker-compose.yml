@@ -49,6 +49,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # 클라이언트 번들에 베이크되는 외부 API URL (v1.5.459).
+        # 운영 시 https://api.example.com 같은 공개 주소로 바꿔야 함.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: unless-stopped
     depends_on:
       backend:

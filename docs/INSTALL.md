@@ -55,6 +55,8 @@ docker compose --env-file .env.docker up -d --build
 - 로그: `docker compose logs -f backend frontend`
 - 중지: `docker compose down`  (볼륨 삭제는 `docker compose down -v`)
 
+> ⚠️ **운영 도메인 변경 시 frontend 재빌드 필수**: `NEXT_PUBLIC_API_URL` 은 빌드 시점에 client 번들에 베이크됩니다. 운영 URL 이 정해지면 `.env.docker` 의 `NEXT_PUBLIC_API_URL=https://api.example.com` 로 바꾸고 `docker compose build frontend && docker compose up -d frontend` 로 재빌드해야 브라우저가 올바른 API URL 을 사용합니다.
+
 이 방법을 쓰면 §3 ~ §7 (PG/Python/Node 직접 설치) 모두 건너뛰고 §8 (admin 첫 설정) 으로 바로 진행.
 
 ---

@@ -6,10 +6,17 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# v1.5.459 — NEXT_PUBLIC_* 는 빌드 시점에 client 번들에 베이크된다.
+# 외부에서 접근할 backend URL 을 docker-compose 의 build.args 로 전달.
+# 운영: https://api.example.com / 개발: http://localhost:8000
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Next.js standalone 빌드 — node_modules 일부만 포함된 최소 번들 생성
-# next.config.ts 에 output: "standalone" 설정 필요. 미설정 시 일반 빌드로 폴백.
+# Next.js standalone 빌드 — node_modules 일부만 포함된 최소 번들 생성.
+# next.config.ts 의 output: "standalone" 으로 .next/standalone/server.js 생성.
 RUN npm run build
 
 FROM node:20-alpine AS runner
