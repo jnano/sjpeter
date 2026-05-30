@@ -32,14 +32,21 @@ export interface TitleListCols {
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  // YY.MM.DD
   return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
+interface Column {
+  key: "no" | "title" | "author" | "date" | "views" | "likes" | "comments" | "shares";
+  head: string;
+  /** grid-template-columns 항목 — 제목은 1fr 로 가변, 나머지는 고정폭. */
+  track: string;
+  /** 헤더·셀 정렬 */
+  align: "left" | "center";
+}
+
 /**
- * 게시판 kind='titlelist' 전용 — 전통적 게시판 테이블 톤.
- * 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수)가 있고
- * 그 아래 같은 그리드로 정렬된 행 목록. cols 토글에 따라 컬럼 동적 가감.
+ * 게시판 kind='titlelist' — 전통적 게시판 표.
+ * CSS Grid (grid-template-columns) 로 헤더와 모든 행이 동일 컬럼 폭으로 정렬됨.
  */
 export default function TitleListBoard({
   slug,
@@ -63,34 +70,61 @@ export default function TitleListBoard({
   const empty = posts.length === 0;
   const showShares = cols.list_show_shares && cols.share_enabled;
 
-  // 화면 구성: 활성화된 컬럼만 grid-template-columns 에 포함.
-  const cells: { key: string; head: string; cls: string; cellCls: string }[] = [];
-  if (cols.list_show_number) {
-    cells.push({ key: "no", head: "번호", cls: "w-12 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+  // 활성 컬럼 정의 (순서대로 출력).
+  const columns: Column[] = [];
+  if (cols.list_show_number) columns.push({ key: "no", head: "번호", track: "56px", align: "center" });
+  columns.push({ key: "title", head: "제목", track: "1fr", align: "left" });
+  if (cols.list_show_author) columns.push({ key: "author", head: "작성자", track: "96px", align: "center" });
+  if (cols.list_show_date) columns.push({ key: "date", head: "작성일", track: "84px", align: "center" });
+  if (cols.list_show_views) columns.push({ key: "views", head: "조회수", track: "60px", align: "center" });
+  if (cols.list_show_likes) columns.push({ key: "likes", head: "좋아요수", track: "68px", align: "center" });
+  if (cols.list_show_comments) columns.push({ key: "comments", head: "댓글수", track: "60px", align: "center" });
+  if (showShares) columns.push({ key: "shares", head: "공유수", track: "60px", align: "center" });
+
+  const gridStyle = { gridTemplateColumns: columns.map((c) => c.track).join(" ") };
+
+  function alignCls(a: "left" | "center"): string {
+    return a === "left" ? "text-left" : "text-center";
   }
-  cells.push({ key: "title", head: "제목", cls: "flex-1 min-w-0 text-left", cellCls: "text-left min-w-0" });
-  if (cols.list_show_author) {
-    cells.push({ key: "author", head: "작성자", cls: "w-24 text-center", cellCls: "text-center truncate" });
-  }
-  if (cols.list_show_date) {
-    cells.push({ key: "date", head: "작성일", cls: "w-20 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
-  }
-  if (cols.list_show_views) {
-    cells.push({ key: "views", head: "조회수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
-  }
-  if (cols.list_show_likes) {
-    cells.push({ key: "likes", head: "좋아요수", cls: "w-16 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
-  }
-  if (cols.list_show_comments) {
-    cells.push({ key: "comments", head: "댓글수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
-  }
-  if (showShares) {
-    cells.push({ key: "shares", head: "공유수", cls: "w-14 text-center", cellCls: "text-center tabular-nums text-[var(--color-text-muted)]" });
+
+  function cellContent(c: Column, p: Post, rowNumber: number) {
+    switch (c.key) {
+      case "no":
+        return p.is_pinned ? (
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white">고정</span>
+        ) : (
+          <span className="tabular-nums text-[var(--color-text-muted)]">{rowNumber}</span>
+        );
+      case "title":
+        return (
+          <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
+            {!cols.list_show_number && p.is_pinned && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">고정</span>
+            )}
+            <span className="font-medium text-[var(--color-text)] truncate">{p.title}</span>
+            {p.thumbnail_url && (
+              <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">📷</span>
+            )}
+          </span>
+        );
+      case "author":
+        return <span className="truncate text-[var(--color-text)] text-[12px]">{p.member?.nickname ?? "성당"}</span>;
+      case "date":
+        return <span className="tabular-nums text-[var(--color-text-muted)] text-[12px]">{fmtDate(p.created_at)}</span>;
+      case "views":
+        return <span className="tabular-nums text-[var(--color-text-muted)] text-[12px]">{p.view_count}</span>;
+      case "likes":
+        return <span className="tabular-nums text-[var(--color-text-muted)] text-[12px]">{p.like_count ?? 0}</span>;
+      case "comments":
+        return <span className="tabular-nums text-[var(--color-text-muted)] text-[12px]">{p.comment_count}</span>;
+      case "shares":
+        return <span className="tabular-nums text-[var(--color-text-muted)] text-[12px]">{p.share_count ?? 0}</span>;
+    }
   }
 
   return (
     <div className="space-y-4">
-      {/* 상단 요약 + 검색 */}
+      {/* 상단 요약 */}
       <div className="flex items-baseline justify-between gap-3 pb-3 border-b border-[var(--color-text)]">
         <div className="text-[11px] tracking-[0.16em] uppercase font-bold text-[var(--color-primary)]">
           전체 목록
@@ -118,20 +152,22 @@ export default function TitleListBoard({
         </form>
       )}
 
-      {/* 테이블 — 헤더 + 행. 데스크탑/태블릿 grid, 모바일 가로 스크롤. */}
+      {/* 테이블 — 헤더와 모든 행이 동일 grid-template-columns 로 정렬. */}
       <div className="bg-white border border-[var(--color-border)] rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 sm:px-5 py-3 bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] text-[11px] tracking-[0.08em] uppercase font-bold text-[var(--color-text-muted)]">
-              {cells.map((c) => (
-                <span key={c.key} className={c.cls}>
+            {/* Header row */}
+            <div
+              className="grid items-center gap-3 px-4 sm:px-5 py-3 bg-[var(--color-surface-warm)] border-b border-[var(--color-border)] text-[11px] tracking-[0.08em] uppercase font-bold text-[var(--color-text-muted)]"
+              style={gridStyle}
+            >
+              {columns.map((c) => (
+                <span key={c.key} className={alignCls(c.align)}>
                   {c.head}
                 </span>
               ))}
             </div>
 
-            {/* Rows */}
             {empty ? (
               <div className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
                 {searchQuery ? "검색 결과가 없습니다." : "등록된 글이 없습니다."}
@@ -143,77 +179,14 @@ export default function TitleListBoard({
                   <Link
                     key={p.id}
                     href={`/boards/${slug}/${p.id}`}
-                    className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-[var(--color-border)] last:border-b-0 text-[13px] hover:bg-[var(--color-surface-warm)]/60 transition-colors"
+                    className="grid items-center gap-3 px-4 sm:px-5 py-3 border-b border-[var(--color-border)] last:border-b-0 text-[13px] hover:bg-[var(--color-surface-warm)]/60 transition-colors"
+                    style={gridStyle}
                   >
-                    {cells.map((c) => {
-                      switch (c.key) {
-                        case "no":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.is_pinned ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white">
-                                  고정
-                                </span>
-                              ) : (
-                                rowNumber
-                              )}
-                            </span>
-                          );
-                        case "title":
-                          return (
-                            <span key={c.key} className={`${c.cellCls} flex-1 min-w-0 inline-flex items-center gap-1.5`}>
-                              {!cols.list_show_number && p.is_pinned && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[var(--color-primary)] text-white shrink-0">
-                                  고정
-                                </span>
-                              )}
-                              <span className="font-medium text-[var(--color-text)] truncate">{p.title}</span>
-                              {p.thumbnail_url && (
-                                <span className="text-[10px] text-[var(--color-text-muted)] shrink-0" title="사진 첨부">
-                                  📷
-                                </span>
-                              )}
-                            </span>
-                          );
-                        case "author":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.member?.nickname ?? "성당"}
-                            </span>
-                          );
-                        case "date":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {fmtDate(p.created_at)}
-                            </span>
-                          );
-                        case "views":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.view_count}
-                            </span>
-                          );
-                        case "likes":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.like_count ?? 0}
-                            </span>
-                          );
-                        case "comments":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.comment_count}
-                            </span>
-                          );
-                        case "shares":
-                          return (
-                            <span key={c.key} className={c.cellCls}>
-                              {p.share_count ?? 0}
-                            </span>
-                          );
-                      }
-                      return null;
-                    })}
+                    {columns.map((c) => (
+                      <span key={c.key} className={`${alignCls(c.align)} min-w-0`}>
+                        {cellContent(c, p, rowNumber)}
+                      </span>
+                    ))}
                   </Link>
                 );
               })

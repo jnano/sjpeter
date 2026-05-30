@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 //  버전 관리: 새 버전 배포 시 CHANGELOG 배열 맨 앞에 항목을 추가하세요.
 //  tag: "기능" | "수정" | "디자인" | "인프라"
 // ─────────────────────────────────────────────────────────────────────────────
-export const CURRENT_VERSION = "1.5.433";
+export const CURRENT_VERSION = "1.5.434";
 export const LAST_UPDATED = "2026-05-30";
 
 // 버전 규칙:
@@ -15,6 +15,7 @@ export const LAST_UPDATED = "2026-05-30";
 type Tag = "기능" | "수정" | "디자인" | "인프라";
 
 const CHANGELOG: { version: string; date: string; tag: Tag; items: string[] }[] = [
+  { version: "1.5.434", date: "2026-05-30", tag: "수정", items: ["titlelist 게시판 헤더-행 정렬 어긋남 해소 — v1.5.433 의 flex+개별 width 클래스 방식으로 헤더와 행 셀 폭이 불일치하던 문제. CSS Grid 로 재작성: 활성 컬럼별 track 정의(번호 56px·제목 1fr·작성자 96px·작성일 84px·조회수 60px·좋아요수 68px·댓글수 60px·공유수 60px) → 헤더와 모든 행이 동일 grid-template-columns inline style 공유. 제목은 제목 칸, 작성일은 작성일 칸에 픽셀 단위로 정렬됨. cellContent 헬퍼로 데이터 셀 렌더링 분리"] },
   { version: "1.5.433", date: "2026-05-30", tag: "기능", items: ["게시판 kind='titlelist' 렌더 형태를 전통적 표 형식으로 재작성 — v1.5.431 의 '단순 제목 리스트' 해석을 정정. TitleListBoard 가 컬럼 헤더(번호·제목·작성자·작성일·조회수·좋아요수·댓글수·공유수) bg-warm 띠 + 그 아래 같은 그리드로 정렬된 행 목록을 렌더. 기존 board.list_show_* 토글로 컬럼 노출 동적 가감. 모바일 폭 좁을 때 min-w-[640px] 가로 스크롤. 행에 hover bg, [고정] 뱃지(번호 컬럼 또는 제목 앞), 썸네일 📷 표시. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 에서 board.list_show_* 9 필드를 cols prop 으로 전달. admin/boards 안내 박스도 '공지사항 톤' → '전통적 게시판 표 형식' 으로 정정. /boards/notice 는 전용 라우트(/boards/notice/page.tsx) 가 있어 새 kind 가 적용되지 않으니 다른 게시판으로 테스트해야 함"] },
   { version: "1.5.432", date: "2026-05-30", tag: "수정", items: ["게시판 kind 라벨 '일반(타이틀+리스트)' → '일반(타이틀+목록)' 로 변경 — admin/boards 생성·편집 드롭다운, kindLabel 매핑, 안내 박스, page.tsx 분기 주석까지 4 군데 일괄. kind 값(titlelist)·DB·라우팅 동작은 그대로"] },
   { version: "1.5.431", date: "2026-05-30", tag: "기능", items: ["게시판 kind 신설 — '일반(타이틀+리스트)' (kind='titlelist'). /admin/boards 형식 드롭다운에 옵션 추가(생성 폼+편집 폼 양쪽) + kindLabel 매핑 + 하늘색 안내 박스. 신규 컴포넌트 TitleListBoard 신설(boards/[slug]/) — 공지사항 톤의 단순 리스트: 상단 '전체 N건' 헤더 + 검색 폼(옵션) + 흰 카드 안에 [고정] + 제목 + 댓글수[N] + MM.DD 3컬럼 ul. 작성자/조회수/뷰 전환/카테고리 칩/정렬 모두 노출 안 함. 페이지네이션은 ink 칩 톤. /boards/[slug]/page.tsx 가 board.kind==='titlelist' 분기로 새 컴포넌트 라우팅. 백엔드 kind 컬럼은 자유 문자열이라 마이그레이션 불필요"] },
