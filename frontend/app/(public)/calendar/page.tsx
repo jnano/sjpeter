@@ -158,6 +158,8 @@ function MonthView({
   const weeks: Date[][] = [];
   for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7));
 
+  const MAX_SINGLE = 3;  // 셀당 단일 이벤트 표시 한도(초과 시 +N)
+
   return (
     <div className="cal-grid">
       <div className="dow-row">
@@ -165,43 +167,115 @@ function MonthView({
           <div key={d} className={`dow ${i === 0 ? "sun" : i === 6 ? "sat" : ""}`}>{d} {DOW_EN[i]}</div>
         ))}
       </div>
-      {weeks.map((week, wi) => (
-        <div key={wi} className="grid grid-cols-7 border-b border-[var(--color-border)] last:border-b-0">
-          {week.map((d, i) => {
-            const ds = dateToStr(d);
-            const inMonth = d.getMonth() === month - 1;
-            const isToday = ds === todayStr;
-            const dow = d.getDay();
-            const dayEvs = events.filter(e => eventOverlapsDate(e, ds)).sort(compareEvents);
-            return (
-              <div
-                key={i}
-                className={`min-h-[130px] p-[10px] pb-3 flex flex-col gap-1 ${i < 6 ? "border-r border-[var(--color-border)]" : ""} ${
-                  inMonth ? "hover:bg-[var(--color-background)]" : "bg-[var(--color-background)] opacity-55"
-                }`}
-              >
+      {weeks.map((week, wi) => {
+        const weekDates = week.map(dateToStr);
+        const wStart = weekDates[0], wEnd = weekDates[6];
+        // 이 주에 걸치는 멀티데이 이벤트 → 주 내 컬럼 범위(0~6)로 clip
+        const bars = events
+          .filter(e => isMultiDay(e) && e.event_date <= wEnd && (e.end_date ?? e.event_date) >= wStart)
+          .map(e => {
+            const si = weekDates.indexOf(e.event_date);
+            const ei = weekDates.indexOf(e.end_date as string);
+            return {
+              e,
+              startIdx: si < 0 ? 0 : si,                       // 이전 주에서 이어지면 0
+              endIdx: ei < 0 ? 6 : ei,                         // 다음 주로 이어지면 6
+              clipStart: e.event_date < wStart,                // 좌측이 잘림(이어짐)
+              clipEnd: (e.end_date ?? e.event_date) > wEnd,    // 우측이 잘림(이어짐)
+              lane: 0,
+            };
+          })
+          .sort((a, b) => a.startIdx - b.startIdx || (b.endIdx - b.startIdx) - (a.endIdx - a.startIdx));
+        // 레인 패킹 — 겹치는 바는 다른 줄(lane)로
+        const laneEnds: number[] = [];
+        for (const b of bars) {
+          let lane = laneEnds.findIndex(end => end < b.startIdx);
+          if (lane < 0) { lane = laneEnds.length; laneEnds.push(b.endIdx); }
+          else laneEnds[lane] = b.endIdx;
+          b.lane = lane;
+        }
+        const maxLanes = laneEnds.length;
+        // 단일 이벤트(비멀티데이)는 컬럼별로 배치
+        const singlesByCol = week.map(d =>
+          events.filter(e => !isMultiDay(e) && eventOverlapsDate(e, dateToStr(d))).sort(compareEvents)
+        );
+        return (
+          <div key={wi} className="cal-week-row">
+            {/* 배경 셀(세로 전체) — 테두리·음영·날짜추가 클릭 */}
+            {week.map((d, i) => {
+              const inMonth = d.getMonth() === month - 1;
+              return (
                 <button
+                  key={`bg${i}`}
                   type="button"
                   disabled={!onCreateForDate || !inMonth}
-                  onClick={() => onCreateForDate?.(ds)}
+                  onClick={() => inMonth && onCreateForDate?.(dateToStr(d))}
                   title={onCreateForDate && inMonth ? "이 날짜에 일정 추가" : undefined}
-                  className={`cal-daynum ${isToday ? "today" : dow === 0 ? "sun" : dow === 6 ? "sat" : ""} ${
-                    onCreateForDate && inMonth ? "cursor-pointer hover:bg-[var(--color-primary)] hover:text-white transition-colors" : ""
-                  }`}
-                >
-                  {d.getDate()}
-                </button>
-                {dayEvs.slice(0, 3).map(e => (
-                  <button key={e.id} data-cat={catKey(e)} onClick={() => onSelect(e)} className="cal-evt evt-soft">
+                  className={`cal-cell-bg ${i < 6 ? "br" : ""} ${inMonth ? "" : "out"}`}
+                  style={{ gridColumn: i + 1, gridRow: "1 / -1" }}
+                />
+              );
+            })}
+            {/* 날짜 숫자(row 1) */}
+            {week.map((d, i) => {
+              const ds = dateToStr(d);
+              const inMonth = d.getMonth() === month - 1;
+              const isToday = ds === todayStr;
+              const dow = d.getDay();
+              return (
+                <div key={`n${i}`} className="cal-cell-num" style={{ gridColumn: i + 1, gridRow: 1 }}>
+                  <span className={`cal-daynum ${isToday ? "today" : dow === 0 ? "sun" : dow === 6 ? "sat" : ""} ${inMonth ? "" : "opacity-40"}`}>
+                    {d.getDate()}
+                  </span>
+                </div>
+              );
+            })}
+            {/* 멀티데이 바(row 2~) — grid-column span 으로 컬럼을 가로지름 */}
+            {bars.map(b => (
+              <button
+                key={`b${b.e.id}`}
+                data-cat={catKey(b.e)}
+                onClick={() => onSelect(b.e)}
+                title={b.e.title}
+                style={{ gridColumn: `${b.startIdx + 1} / ${b.endIdx + 2}`, gridRow: b.lane + 2 }}
+                className={`cal-span evt-soft ${b.clipStart ? "clip-s" : ""} ${b.clipEnd ? "clip-e" : ""}`}
+              >
+                {b.clipStart && <span className="cal-span-arrow">‹</span>}
+                <span className="cal-span-title">{b.e.title}</span>
+                {b.clipEnd && <span className="cal-span-arrow">›</span>}
+              </button>
+            ))}
+            {/* 단일 이벤트(멀티데이 레인 아래) */}
+            {week.map((d, i) => {
+              const evs = singlesByCol[i];
+              const shown = evs.slice(0, MAX_SINGLE);
+              return [
+                ...shown.map((e, j) => (
+                  <button
+                    key={`s${e.id}`}
+                    data-cat={catKey(e)}
+                    onClick={() => onSelect(e)}
+                    title={e.title}
+                    style={{ gridColumn: i + 1, gridRow: 2 + maxLanes + j }}
+                    className="cal-evt evt-soft cal-cell-evt"
+                  >
                     {e.title}
                   </button>
-                ))}
-                {dayEvs.length > 3 && <span className="cal-evt-more">+{dayEvs.length - 3}개 더보기</span>}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                )),
+                ...(evs.length > MAX_SINGLE ? [
+                  <span
+                    key={`m${i}`}
+                    style={{ gridColumn: i + 1, gridRow: 2 + maxLanes + MAX_SINGLE }}
+                    className="cal-evt-more cal-cell-evt"
+                  >
+                    +{evs.length - MAX_SINGLE}개 더보기
+                  </span>,
+                ] : []),
+              ];
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
